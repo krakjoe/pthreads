@@ -19,10 +19,13 @@
 #include "pthreads_event.h"
 #include "pthreads_object.h"
 
+#if COMPILE_DL_PTHREADS
 ZEND_GET_MODULE(pthreads)
+#endif
 
 zend_class_entry 		*pthreads_class_entry;
 zend_class_entry 		*pthreads_mutex_class_entry;
+zend_class_entry		*pthreads_condition_class_entry;
 
 pthread_mutexattr_t		defmutex;
 
@@ -43,6 +46,28 @@ zend_function_entry pthreads_mutex_methods[] = {
 	{NULL, NULL, NULL}
 };
 
+zend_function_entry pthreads_condition_methods[] = {
+	PHP_ME(Cond, create,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, signal,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, wait,			NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, broadcast,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, destroy,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	{NULL, NULL, NULL}
+};
+
+zend_module_entry pthreads_module_entry = {
+  STANDARD_MODULE_HEADER,
+  PHP_PTHREADS_EXTNAME,
+  NULL,
+  PHP_MINIT(pthreads),
+  PHP_MSHUTDOWN(pthreads),
+  NULL,
+  NULL,
+  NULL,
+  PHP_PTHREADS_VERSION,
+  STANDARD_MODULE_PROPERTIES
+};
+
 PHP_MINIT_FUNCTION(pthreads){
 	zend_class_entry te; {
 		INIT_CLASS_ENTRY(
@@ -61,6 +86,15 @@ PHP_MINIT_FUNCTION(pthreads){
 		me.serialize = zend_class_serialize_deny;
 		me.unserialize = zend_class_unserialize_deny;
 		pthreads_mutex_class_entry=zend_register_internal_class(&me TSRMLS_CC);
+	}
+	
+	zend_class_entry ce; {
+		INIT_CLASS_ENTRY(
+			ce, "Cond", pthreads_condition_methods
+		);
+		ce.serialize = zend_class_serialize_deny;
+		ce.unserialize = zend_class_unserialize_deny;
+		pthreads_condition_class_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	}
 	
 	if(pthread_mutexattr_init(&defmutex)==SUCCESS){
@@ -161,7 +195,7 @@ PHP_METHOD(Mutex, create){
 				RETURN_FALSE;
 			break;
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
-				zend_error(E_ERROR, "The system lacked the necessary resources (other than memory) to initialise another mutex"); 
+				zend_error(E_ERROR, "The system lacked the necessary memory to initialise another mutex"); 
 				RETURN_FALSE;
 			break;
 			case EPERM:
@@ -282,4 +316,108 @@ PHP_METHOD(Mutex, destroy){
 	}
 	RETURN_NULL();
 }
+
+PHP_METHOD(Cond, create){
+	pthread_cond_t *condition = (pthread_cond_t*) calloc(1, sizeof(pthread_cond_t));
+	if(condition){
+		switch(pthread_cond_init(condition, NULL)){
+			case SUCCESS: RETURN_LONG((ulong)condition); break;
+			
+			case EAGAIN:
+				zend_error(E_ERROR, "The system lacked the necessary resources (other than memory) to initialise another condition"); 
+				RETURN_FALSE;
+			break;
+			
+			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
+				zend_error(E_ERROR, "The system lacked the necessary memory to initialise another mutex"); 
+				RETURN_FALSE;
+			break;
+			
+			case EBUSY:
+				zend_error(E_ERROR, "The implementation has detected an attempt to re-initialise the object referenced by cond, a previously initialised, but not yet destroyed, condition variable");
+				RETURN_FALSE;
+			break;
+			
+			default: 
+				zend_error(E_ERROR, "Internal error, attempt to initialize condition failed");
+				RETURN_FALSE;
+		}
+	} else zend_error(E_ERROR, "Internal error, failed to allocate memory for condition");
+	RETURN_NULL();
+}
+
+PHP_METHOD(Cond, signal){
+	pthread_cond_t *condition;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition) == SUCCESS && condition){
+		switch(pthread_cond_signal(condition)){
+			case SUCCESS: RETURN_TRUE; break;
+			case EINVAL: 
+				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
+				RETURN_FALSE;
+			break;
+			
+			default:
+				zend_error(E_ERROR, "Internal error, attempt to signal condition failed");
+				RETURN_FALSE;
+		}
+	} 
+	RETURN_NULL();
+}
+
+PHP_METHOD(Cond, broadcast){
+	pthread_cond_t *condition;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition){
+		switch(pthread_cond_broadcast(condition)){
+			case SUCCESS: RETURN_TRUE; break;
+			case EINVAL: 
+				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
+				RETURN_FALSE;
+			break;
+			default:
+				zend_error(E_ERROR, "Internal error, attempt to broadcast condition failed");
+				RETURN_FALSE;
+		}
+	} 
+	RETURN_NULL();
+}
+
+PHP_METHOD(Cond, wait){
+	pthread_cond_t 		*condition;
+	pthread_mutex_t 	*mutex;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &condition, &mutex)==SUCCESS && condition && mutex){
+		switch(pthread_cond_wait(condition, mutex)){
+			case SUCCESS: RETURN_TRUE; break;
+			case EINVAL: 
+				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
+				RETURN_FALSE;
+			break;
+			default:
+				zend_error(E_ERROR, "Internal error, attempt to wait for condition failed");
+				RETURN_FALSE;
+		}
+	} 
+	RETURN_NULL();
+}
+
+PHP_METHOD(Cond, destroy){
+	pthread_cond_t *condition;
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition){
+		switch(pthread_cond_destroy(condition)){
+			case SUCCESS: RETURN_TRUE; break;
+			case EINVAL: 
+				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
+				RETURN_FALSE;
+			break;
+			case EBUSY:
+				zend_error(E_WARNING, "The implementation has detected an attempt to destroy the object referenced by condition while it is referenced by another thread"); 
+				RETURN_FALSE;
+			break;
+			default:
+				zend_error(E_ERROR, "Internal error, attempt to broadcast condition failed");
+				RETURN_FALSE;
+		}
+	} 
+	RETURN_NULL();
+}
+
 #endif
