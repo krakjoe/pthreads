@@ -1,7 +1,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.03"
+#define PHP_PTHREADS_VERSION "0.04"
 
 PHP_MINIT_FUNCTION(pthreads);							/* Initialize class entries and default attributes */
 PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
@@ -12,7 +12,6 @@ PHP_METHOD(Thread, self);								/* Userland method to get current Thread identi
 PHP_METHOD(Thread, busy);								/* Userland method to detect ability to join (wait) without blocking */
 PHP_METHOD(Thread, wait);								/* Userland method to wait for a Thread */
 
-/** @TODO boolean parameter to create and lock mutex **/
 PHP_METHOD(Mutex, create);								/* Userland mutex constructor */
 PHP_METHOD(Mutex, lock);								/* Userland method to lock mutex */
 PHP_METHOD(Mutex, trylock);								/* Userland method to try mutex lock */

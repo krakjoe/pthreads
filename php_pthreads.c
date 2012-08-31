@@ -7,6 +7,9 @@
 #include <php_globals.h>
 #include <php_main.h>
 #include <php_ticks.h>
+#include <ext/standard/php_smart_str.h>
+#include <ext/standard/php_smart_str_public.h>
+#include <ext/standard/php_var.h>
 #include <Zend/zend.h>
 #include <Zend/zend_compile.h>
 #include <Zend/zend_globals.h>
@@ -155,25 +158,30 @@ PHP_METHOD(Thread, busy){
 
 PHP_METHOD(Thread, wait) { 
 	PTHREAD thread = PTHREADS_FETCH;
+	char *result = NULL;
 	if(thread){
 		if(!thread->joined){
 			thread->joined=1;
-			switch(pthread_join(thread->thread, NULL)){
-				case EINVAL: 
-					zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a joinable thread"); 
+			pthread_join(thread->thread, (void**)&result);
+			if(	*result ){
+				const unsigned char *pointer = (const unsigned char *)result;
+				php_unserialize_data_t vars;
+				PHP_VAR_UNSERIALIZE_INIT(vars);
+				if( !php_var_unserialize(
+						&return_value, 
+						&pointer, 
+						pointer+strlen(result), 
+						&vars TSRMLS_CC
+					) ) {
+					PHP_VAR_UNSERIALIZE_DESTROY(vars);
+					zval_dtor(return_value);
+					zend_error(E_WARNING, "The thread responded with data that could not be unserialized");
 					RETURN_FALSE;
-				break; 
-				case ESRCH:
-					zend_error(E_WARNING, "No thread could be found corresponding to that specified by the given thread ID");
-					RETURN_FALSE;
-				break;
-				case EDEADLK:
-					zend_error(E_ERROR, "A deadlock was detected or the value of thread specifies the calling thread");
-					RETURN_FALSE;
-				break;
-				
-				default: 
-					*return_value = thread->result;
+				} else {
+					PHP_VAR_UNSERIALIZE_DESTROY(vars);
+					if(result)
+						free(result);
+				}
 			}
 		} else {
 			zend_error(E_WARNING, "The implementation has detected that the value specified by thread has already been joined");
@@ -189,30 +197,47 @@ PHP_METHOD(Mutex, create){
 	pthread_mutex_t *mutex = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
 	if(mutex){
 		switch(pthread_mutex_init(mutex, &defmutex)){
-			case SUCCESS: RETURN_LONG((ulong)mutex); break;
+			case SUCCESS: 
+				if(ZEND_NUM_ARGS()){
+					zend_bool lock;
+					if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &lock)==SUCCESS) {
+						if(lock){
+							switch(pthread_mutex_lock(mutex)){
+								case SUCCESS: RETURN_LONG((ulong)mutex); break;
+								case EDEADLK: RETURN_LONG((ulong)mutex); break;
+								
+								default: 
+									zend_error(E_ERROR, "An error occured while acquiring lock for newly created mutex");
+									pthread_mutex_destroy(mutex);
+									free(mutex);
+							}
+						} else { RETURN_LONG((ulong)mutex); }
+					}
+				} else { RETURN_LONG((ulong)mutex); }
+			break;
 			case EAGAIN:
 				zend_error(E_ERROR, "The system lacked the necessary resources (other than memory) to initialise another mutex"); 
-				RETURN_FALSE;
+				free(mutex);
 			break;
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
 				zend_error(E_ERROR, "The system lacked the necessary memory to initialise another mutex"); 
-				RETURN_FALSE;
+				free(mutex);
 			break;
 			case EPERM:
 				zend_error(E_ERROR, "The caller does not have the privilege to perform the operation"); 
-				RETURN_FALSE;
+				free(mutex);
 			break;
 			case EBUSY:
 				zend_error(E_ERROR, "The implementation has detected an attempt to re-initialise the object referenced by mutex, a previously initialised, but not yet destroyed, mutex"); 
-				RETURN_FALSE;
+				free(mutex);
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "Internal Error: attempt at mutex locking failed");
-				RETURN_FALSE;
+				zend_error(E_ERROR, "Internal Error: attempt at initializing mutex failed");
+				free(mutex);
 		}
 	} else zend_error(E_ERROR, "Internal Error: failed to allocate memory for mutex");
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Mutex, lock){
@@ -226,19 +251,16 @@ PHP_METHOD(Mutex, lock){
 			break;
 			case EINVAL: 
 				zend_error(E_ERROR, "The value specified by mutex does not refer to an initialised mutex object"); 
-				RETURN_FALSE;
 			break;
 			case E_ERROR: 
 				zend_error(E_ERROR, "The mutex could not be acquired because the maximum number of recursive locks for mutex has been exceeded");
-				RETURN_FALSE;
 			break;
 			
 			default: 
 				zend_error(E_ERROR, "Internal Error: attempt at mutex locking failed");
-				RETURN_FALSE;
 		}
 	}
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Mutex, trylock){
@@ -255,19 +277,16 @@ PHP_METHOD(Mutex, trylock){
 			
 			case EINVAL: 
 				zend_error(E_ERROR, "The value specified by mutex does not refer to an initialised mutex object"); 
-				RETURN_FALSE;
 			break;
 			case EAGAIN: 
 				zend_error(E_ERROR, "The mutex could not be acquired because the maximum number of recursive locks for mutex has been exceeded");
-				RETURN_FALSE;
 			break;
 			
 			default: 
 				zend_error(E_ERROR, "Internal Error: attempt to try mutex locking failed");
-				RETURN_FALSE;
 		}
 	}
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Mutex, unlock){
@@ -277,17 +296,15 @@ PHP_METHOD(Mutex, unlock){
 			case SUCCESS: RETURN_TRUE; break;
 			case EINVAL: 
 				zend_error(E_WARNING, "The value specified by mutex does not refer to an initialised mutex object"); 
-				RETURN_FALSE;
 			break;
 			case EPERM:
 				zend_error(E_WARNING, "The current thread does not own the mutex");
 			break;
 			default:
-				zend_error(E_ERROR, "internal error, attempt to unlock mutex failed");
-				RETURN_FALSE;
+				zend_error(E_ERROR, "Internal error while unlocking mutex, error unknown");
 		}
 	}
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Mutex, destroy){
@@ -298,23 +315,17 @@ PHP_METHOD(Mutex, destroy){
 				free(mutex);
 				RETURN_TRUE;
 			break;
-			
 			case EBUSY:
 				zend_error(E_WARNING, "The implementation has detected an attempt to destroy the object referenced by mutex while it is locked or referenced"); 
-				RETURN_FALSE;
 			break;
-			
 			case EINVAL:
 				zend_error(E_WARNING, "The value specified by mutex does not refer to an initialised mutex object"); 
-				RETURN_FALSE;
 			break;
-			
 			default:
 				zend_error(E_ERROR, "internal error, attempt to destroy mutex failed");
-				RETURN_FALSE;
 		}
 	}
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Cond, create){
@@ -322,28 +333,24 @@ PHP_METHOD(Cond, create){
 	if(condition){
 		switch(pthread_cond_init(condition, NULL)){
 			case SUCCESS: RETURN_LONG((ulong)condition); break;
-			
 			case EAGAIN:
 				zend_error(E_ERROR, "The system lacked the necessary resources (other than memory) to initialise another condition"); 
-				RETURN_FALSE;
+				free(condition);
 			break;
-			
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
-				zend_error(E_ERROR, "The system lacked the necessary memory to initialise another mutex"); 
-				RETURN_FALSE;
+				zend_error(E_ERROR, "The system lacked the necessary memory to initialise another condition"); 
+				free(condition);
 			break;
-			
 			case EBUSY:
 				zend_error(E_ERROR, "The implementation has detected an attempt to re-initialise the object referenced by cond, a previously initialised, but not yet destroyed, condition variable");
-				RETURN_FALSE;
+				free(condition);
 			break;
-			
 			default: 
 				zend_error(E_ERROR, "Internal error, attempt to initialize condition failed");
-				RETURN_FALSE;
+				free(condition);
 		}
 	} else zend_error(E_ERROR, "Internal error, failed to allocate memory for condition");
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Cond, signal){
@@ -353,15 +360,12 @@ PHP_METHOD(Cond, signal){
 			case SUCCESS: RETURN_TRUE; break;
 			case EINVAL: 
 				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
-				RETURN_FALSE;
 			break;
-			
 			default:
 				zend_error(E_ERROR, "Internal error, attempt to signal condition failed");
-				RETURN_FALSE;
 		}
 	} 
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Cond, broadcast){
@@ -371,14 +375,12 @@ PHP_METHOD(Cond, broadcast){
 			case SUCCESS: RETURN_TRUE; break;
 			case EINVAL: 
 				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
-				RETURN_FALSE;
 			break;
 			default:
 				zend_error(E_ERROR, "Internal error, attempt to broadcast condition failed");
-				RETURN_FALSE;
 		}
 	} 
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Cond, wait){
@@ -389,35 +391,33 @@ PHP_METHOD(Cond, wait){
 			case SUCCESS: RETURN_TRUE; break;
 			case EINVAL: 
 				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
-				RETURN_FALSE;
 			break;
 			default:
 				zend_error(E_ERROR, "Internal error, attempt to wait for condition failed");
-				RETURN_FALSE;
 		}
 	} 
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 PHP_METHOD(Cond, destroy){
 	pthread_cond_t *condition;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition){
 		switch(pthread_cond_destroy(condition)){
-			case SUCCESS: RETURN_TRUE; break;
+			case SUCCESS: 
+				free(condition);
+				RETURN_TRUE; 
+			break;
 			case EINVAL: 
 				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
-				RETURN_FALSE;
 			break;
 			case EBUSY:
 				zend_error(E_WARNING, "The implementation has detected an attempt to destroy the object referenced by condition while it is referenced by another thread"); 
-				RETURN_FALSE;
 			break;
 			default:
 				zend_error(E_ERROR, "Internal error, attempt to broadcast condition failed");
-				RETURN_FALSE;
 		}
 	} 
-	RETURN_NULL();
+	RETURN_FALSE;
 }
 
 #endif
