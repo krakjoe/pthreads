@@ -56,7 +56,7 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 
 static void pthreads_detach_from_instance(void * child TSRMLS_DC){
 	PTHREAD thread = (PTHREAD) child;
-	char *result = NULL;
+	char *result = NULL;												/* we need a reference to this to free it for the child */
 	if(thread){
 		if(thread->thread){												/* be certain we reference an actual thread */
 			if(thread->running){										/* if the thread is still running we will join with it */
@@ -91,7 +91,7 @@ static zval * pthreads_copy_symbol(zval **symbol ZEND_FILE_LINE_DC){
 	
 void * PHP_PTHREAD_ROUTINE(void *arg){
 	PTHREAD 	thread = (PTHREAD) arg;
-	char		*result;
+	char		*result = NULL;
 	if(thread){															/* I can't imagine a way for this condition to be false ... */
 		if(thread->runnable){											/* this should always be true, can't hurt to check */
 			HashTable symbols; {										/* copy symbols from class to thread scope while it is locked on event */
@@ -121,22 +121,22 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						if(Z_TYPE_P(retval) != IS_NULL){				/* set result */
 							smart_str 				*output;
 							php_serialize_data_t 	vars;
-							PHP_VAR_SERIALIZE_INIT(vars);
+							PHP_VAR_SERIALIZE_INIT(vars);				/* we serializee the output of the thread */
 							output = (smart_str*) calloc(1, sizeof(smart_str));
-							php_var_serialize(
+							php_var_serialize(							/* this avoids memory leaks and forces the user to only return values that are supported */
 								output, 
 								EG(return_value_ptr_ptr), 
 								&vars TSRMLS_CC
 							);
-							PHP_VAR_SERIALIZE_DESTROY(vars);
-							FREE_ZVAL(retval);
-							result = (char*) calloc(1, output->len+1);
-							memcpy(
+							PHP_VAR_SERIALIZE_DESTROY(vars);			/* this might seem like a compromise, but infact we would have to copy the data somewhere */
+							FREE_ZVAL(retval);							/* there is of course some overhead from the serialization of the result but a good trade off, it buys stability */
+							result = (char*) calloc(1, output->len+1);	/* we allocate memory for the parent to read the result from */
+							memcpy(										/* copy the result to the allocated memory */
 								result, output->c, output->len
 							);
-							smart_str_free(output);
-							free(output);
-							pthreads_fire_event(thread->finished);
+							smart_str_free(output);						/* and free the memory php used for serialization */
+							free(output);								/* and free the pointer to the smart_str */
+							pthreads_fire_event(thread->finished);		/* inform parent we are done, almost */
 						} else pthreads_fire_event(thread->finished);	/* no result, method returned null */
 					} zend_catch {										/** @TODO: report some error somewhere **/
 						if(Z_TYPE_P(retval) != IS_NULL)
@@ -149,10 +149,11 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			}
 		}
 	}
+	
 	if(thread){
-		if(thread->started && !thread->started->fired)
+		if(thread->started && !thread->started->fired)					/* firing started even in case of failure */
 			pthreads_fire_event(thread->started);
-		if(thread->finished && !thread->finished->fired)
+		if(thread->finished && !thread->finished->fired)				/* same with finished */
 			pthreads_fire_event(thread->finished);
 	}
 	

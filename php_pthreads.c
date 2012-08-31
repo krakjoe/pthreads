@@ -36,7 +36,7 @@ zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, start, 		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, self,		NULL, ZEND_ACC_PROTECTED|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, busy,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, wait,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, join,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 
@@ -156,7 +156,7 @@ PHP_METHOD(Thread, busy){
 	RETURN_NULL();
 }
 
-PHP_METHOD(Thread, wait) { 
+PHP_METHOD(Thread, join) { 
 	PTHREAD thread = PTHREADS_FETCH;
 	char *result = NULL;
 	if(thread){

@@ -1,7 +1,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.04"
+#define PHP_PTHREADS_VERSION "0.05"
 
 PHP_MINIT_FUNCTION(pthreads);							/* Initialize class entries and default attributes */
 PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
@@ -9,8 +9,11 @@ PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
 /** @TODO possibly Thread::__construct **/
 PHP_METHOD(Thread, start);								/* Userland method to start a Thread */
 PHP_METHOD(Thread, self);								/* Userland method to get current Thread identifier */
+/** @TODO 	currently Thread::busy reports that we are finished before zend deactivates in the child, this can lead to some blocking **/
+/** 		in a very real sense this reports when the User provided method is finished, which could be more useful to the user **/
+/**			but then, users are free to implement their own syncrhonization with the help of condition/mutex, undecided **/
 PHP_METHOD(Thread, busy);								/* Userland method to detect ability to join (wait) without blocking */
-PHP_METHOD(Thread, wait);								/* Userland method to wait for a Thread */
+PHP_METHOD(Thread, join);								/* Userland method to wait for a Thread and retrieve it's result */
 
 PHP_METHOD(Mutex, create);								/* Userland mutex constructor */
 PHP_METHOD(Mutex, lock);								/* Userland method to lock mutex */
