@@ -125,6 +125,18 @@ PHP_METHOD(Thread, start){
 	int result = -1;
 	if(thread && !thread->started->fired){
 		if(zend_hash_find(&Z_OBJCE_P(getThis())->function_table, "run", sizeof("run"), (void**) &thread->runnable)==SUCCESS){	
+			zval *props;
+			ALLOC_INIT_ZVAL(props);
+			Z_TYPE_P(props)=IS_ARRAY;
+			Z_ARRVAL_P(props)=thread->std.properties;
+			thread->serial = pthreads_serialize(props TSRMLS_CC);
+			FREE_ZVAL(props);
+			
+			if(thread->serial == NULL){
+				zend_error(E_ERROR, "The implementation detected unsupported symbols in your thread, please amend your parameters");
+				RETURN_FALSE;
+			}
+			
 			if((result = pthread_create(
 				&thread->thread, NULL, 
 				PHP_PTHREAD_ROUTINE, 
@@ -158,30 +170,20 @@ PHP_METHOD(Thread, busy){
 
 PHP_METHOD(Thread, join) { 
 	PTHREAD thread = PTHREADS_FETCH;
-	char *result = NULL;
 	if(thread){
 		if(!thread->joined){
 			thread->joined=1;
-			pthread_join(thread->thread, (void**)&result);
-			if(	*result ){
-				const unsigned char *pointer = (const unsigned char *)result;
-				php_unserialize_data_t vars;
-				PHP_VAR_UNSERIALIZE_INIT(vars);
-				if( !php_var_unserialize(
-						&return_value, 
-						&pointer, 
-						pointer+strlen(result), 
-						&vars TSRMLS_CC
-					) ) {
-					PHP_VAR_UNSERIALIZE_DESTROY(vars);
-					zval_dtor(return_value);
-					zend_error(E_WARNING, "The thread responded with data that could not be unserialized");
-					RETURN_FALSE;
-				} else {
-					PHP_VAR_UNSERIALIZE_DESTROY(vars);
-					if(result)
-						free(result);
+			char *result = NULL;
+			if(pthread_join(thread->thread, (void**)&result)==SUCCESS){
+				if(result){
+					pthreads_unserialize_into(result, return_value TSRMLS_CC);
+					free(
+						result
+					);
 				}
+			} else {
+				zend_error(E_WARNING, "The implementation failed to join the value specified by thread");
+				RETURN_FALSE;
 			}
 		} else {
 			zend_error(E_WARNING, "The implementation has detected that the value specified by thread has already been joined");
