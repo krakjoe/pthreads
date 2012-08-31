@@ -9,54 +9,6 @@ static 	void 				pthreads_detach_from_instance(void * child TSRMLS_DC);
 		int 				pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
 		void * 				PHP_PTHREAD_ROUTINE(void *);
 
-
-char *	pthreads_serialize(zval *unserial TSRMLS_DC){
-	char 					*result;
-	smart_str 				*output;
-	php_serialize_data_t 	vars;
-	PHP_VAR_SERIALIZE_INIT(vars);				
-	output = (smart_str*) calloc(1, sizeof(smart_str));
-	php_var_serialize(							
-		output, 
-		&unserial, 
-		&vars TSRMLS_CC
-	);
-	PHP_VAR_SERIALIZE_DESTROY(vars);			
-	result = (char*) calloc(1, output->len+1);	
-	memcpy(										
-		result, output->c, output->len
-	);
-	smart_str_free(output);						
-	free(output);								
-	return result;
-}
-
-int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){
-	const unsigned char *pointer = (const unsigned char *)serial;
-	php_unserialize_data_t vars;
-	PHP_VAR_UNSERIALIZE_INIT(vars);
-	if( !php_var_unserialize(
-			&result, 
-			&pointer, 
-			pointer+strlen(serial), 
-			&vars TSRMLS_CC
-		) ) {
-		PHP_VAR_UNSERIALIZE_DESTROY(vars);
-		zval_dtor(result);
-		zend_error(E_WARNING, "The thread responded with data that could not be unserialized");
-		return FAILURE;
-	} else { PHP_VAR_UNSERIALIZE_DESTROY(vars); }
-	return SUCCESS;
-}
-
-zval *	pthreads_unserialize(char *serial TSRMLS_DC){
-	zval *result;
-	ALLOC_ZVAL(result);
-	if(pthreads_unserialize_into(serial, result TSRMLS_CC)==SUCCESS){
-			return result;
-	} else return NULL;
-}
-
 typedef struct _pthread_construct {						/* Thread internal structure */
 	zend_object 			std;						/* standard entry */
 	pthread_t				thread;						/* internal thread identifier */
@@ -86,11 +38,8 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 	/** @NOTE this fires before the zend engine shuts down **/
 	thread->finished = 		pthreads_create_event();							/* fired when the method has returned a result */
 	zend_object_std_init(&thread->std, entry TSRMLS_CC);						/* initialize standard entry */
-	/** @TODO omit resources and objects from copying operations **/
-	/** @TODO possibly allow closures to be passed, they !should work! if copied sizeof(zend_function*) **/
-	/** @TODO possibly move this out to thread runtime **/
 	zval *temp;
-	zend_hash_copy(																/* copy standard properties */
+	zend_hash_copy(																/* copy standard properties, as yet unused */
 		thread->std.properties,
 		&entry->default_properties,
 		ZVAL_COPY_CTOR,
@@ -136,6 +85,53 @@ static void pthreads_detach_from_instance(void * child TSRMLS_DC){
 	}
 }
 
+char *	pthreads_serialize(zval *unserial TSRMLS_DC){					/* will return newly allocate buffer with serial zval contained */
+	char 					*result;
+	smart_str 				*output;
+	php_serialize_data_t 	vars;
+	PHP_VAR_SERIALIZE_INIT(vars);				
+	output = (smart_str*) calloc(1, sizeof(smart_str));
+	php_var_serialize(							
+		output, 
+		&unserial, 
+		&vars TSRMLS_CC
+	);
+	PHP_VAR_SERIALIZE_DESTROY(vars);			
+	result = (char*) calloc(1, output->len+1);	
+	memcpy(										
+		result, output->c, output->len
+	);
+	smart_str_free(output);						
+	free(output);								
+	return result;														/* remember to free this when you're done with it */
+}
+
+int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){	/* will unserialize a zval into the existing zval */
+	const unsigned char *pointer = (const unsigned char *)serial;
+	php_unserialize_data_t vars;
+	PHP_VAR_UNSERIALIZE_INIT(vars);
+	if( !php_var_unserialize(
+			&result, 
+			&pointer, 
+			pointer+strlen(serial), 
+			&vars TSRMLS_CC
+		) ) {
+		PHP_VAR_UNSERIALIZE_DESTROY(vars);
+		zval_dtor(result);
+		zend_error(E_WARNING, "The thread responded with data that could not be unserialized");
+		return FAILURE;
+	} else { PHP_VAR_UNSERIALIZE_DESTROY(vars); }
+	return SUCCESS;														/* will only destroy the zval if there's an error in deserialization */
+}
+
+zval *	pthreads_unserialize(char *serial TSRMLS_DC){					/* will allocate a zval to contain the unserialized data */
+	zval *result;
+	ALLOC_ZVAL(result);
+	if(pthreads_unserialize_into(serial, result TSRMLS_CC)==SUCCESS){
+			return result;												/* don't forget to free the variable when you're done with it */
+	} else return NULL;													/* will return NULL on failure, maybe should return NULL zval ? */
+}
+
 void * PHP_PTHREAD_ROUTINE(void *arg){
 	PTHREAD 	thread = (PTHREAD) arg;
 	char		*result = NULL;
@@ -159,17 +155,17 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						EG(called_scope)=pthreads_class_entry;			/* setting both called scope and scope allows us to define protected methods in Thread */
 						EG(scope)=pthreads_class_entry;					/* so this needs setting too */
 						zend_execute(EG(active_op_array) TSRMLS_CC);	/** @TODO: set compiled_filename from thread id and something else before here **/
-						if(retval && Z_TYPE_P(retval) != IS_NULL){				/* set result */
-							result = pthreads_serialize(
+						if(retval && Z_TYPE_P(retval) != IS_NULL){		/* check for a result */
+							result = pthreads_serialize(				/* serialize result for parent */
 								retval TSRMLS_CC
 							);
 							pthreads_fire_event(thread->finished);		/* inform parent we are done, almost */
 						} else pthreads_fire_event(thread->finished);	/* no result, method returned null */
-						FREE_ZVAL(symbols);
+						FREE_ZVAL(symbols);								/* free unserialized symbols */
 					} zend_catch {										/** @TODO: report some error somewhere **/
 						if(retval && Z_TYPE_P(retval) != IS_NULL)
-							FREE_ZVAL(retval);
-						FREE_ZVAL(symbols);
+							FREE_ZVAL(retval);							/* free return value */
+						FREE_ZVAL(symbols);								/* free unserialized symbols */
 					} zend_end_try();
 					zend_deactivate_modules(TSRMLS_C);					/* shutdown modules */
 					zend_deactivate(TSRMLS_C);							/* shutdown zend */
@@ -186,6 +182,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			pthreads_fire_event(thread->finished);
 	}
 	
-	pthread_exit((void*)result);											/* leave thread */
+	pthread_exit((void*)result);										/* leave thread */
 } 
 #endif
