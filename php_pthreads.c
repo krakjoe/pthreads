@@ -37,6 +37,8 @@ zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, self,		NULL, ZEND_ACC_PROTECTED|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, busy,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	
+	PHP_ABSTRACT_ME(Thread, run,			NULL)
 	{NULL, NULL, NULL}
 };
 
@@ -137,6 +139,7 @@ PHP_METHOD(Thread, start){
 				RETURN_FALSE;
 			}
 			
+			zend_hash_find(&Z_OBJCE_P(getThis())->function_table, "__prepare", sizeof("__prepare"), (void**) &thread->prepare);
 			if((result = pthread_create(
 				&thread->thread, NULL, 
 				PHP_PTHREAD_ROUTINE, 

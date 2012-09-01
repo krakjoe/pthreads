@@ -1,7 +1,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.07"
+#define PHP_PTHREADS_VERSION "0.08"
 
 PHP_MINIT_FUNCTION(pthreads);							/* Initialize class entries and default attributes */
 PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
@@ -31,7 +31,10 @@ PHP_METHOD(Cond, destroy);								/* Userland method to destroy condition */
 extern zend_module_entry pthreads_module_entry;
 
 #define phpext_pthreads_ptr 							&pthreads_module_entry
+#define PTHREADS_FETCH_ALL(ls, id, type)				((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
 #define PTHREADS_FETCH_CTX(ls, id, type, element)		(((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)
 #define PTHREADS_CG(ls, v)								PTHREADS_FETCH_CTX(ls, compiler_globals_id, zend_compiler_globals*, v)
+#define PTHREADS_CG_ALL(ls)								PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
 #define PTHREADS_EG(ls, v)								PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
+#define PTHREADS_EG_ALL(ls)								PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
 #endif
