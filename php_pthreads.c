@@ -136,9 +136,7 @@ PHP_MSHUTDOWN_FUNCTION(pthreads){
 	return SUCCESS;
 }
 
-/**
-* @TODO Better switch on create
-**/
+/* {{{ proto boolean Thread::start() */
 PHP_METHOD(Thread, start){
 	PTHREAD thread = PTHREADS_FETCH;
 	int result = -1;
@@ -173,9 +171,13 @@ PHP_METHOD(Thread, start){
 		RETURN_TRUE;
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto long Thread::self() */
 PHP_METHOD(Thread, self){ ZVAL_LONG(return_value, (ulong) pthread_self()); }
+/* }}} */
 
+/* {{{ proto boolean Thread::busy() */
 PHP_METHOD(Thread, busy){
 	PTHREAD thread = PTHREADS_FETCH;
 	if(thread){
@@ -187,7 +189,9 @@ PHP_METHOD(Thread, busy){
 	} else zend_error(E_ERROR, "Internal Error: failed to find thread object in instance");
 	RETURN_NULL();
 }
+/* }}} */
 
+/* {{{ proto mixed Thread::join() */
 PHP_METHOD(Thread, join) { 
 	PTHREAD thread = PTHREADS_FETCH;
 	if(thread){
@@ -214,7 +218,9 @@ PHP_METHOD(Thread, join) {
 		RETURN_FALSE;
 	}
 }
+/* }}} */
 
+/* {{{ proto long Mutex::create([boolean lock]) */
 PHP_METHOD(Mutex, create){
 	pthread_mutex_t *mutex = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
 	if(mutex){
@@ -261,7 +267,9 @@ PHP_METHOD(Mutex, create){
 	} else zend_error(E_ERROR, "Internal Error: failed to allocate memory for mutex");
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto boolean Mutex::lock(long mutex) */
 PHP_METHOD(Mutex, lock){
 	pthread_mutex_t *mutex;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex){
@@ -284,7 +292,9 @@ PHP_METHOD(Mutex, lock){
 	}
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto boolean Mutex::trylock(long mutex) */
 PHP_METHOD(Mutex, trylock){
 	pthread_mutex_t *mutex;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex){
@@ -310,7 +320,9 @@ PHP_METHOD(Mutex, trylock){
 	}
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto boolean Mutex::unlock(long mutex) */
 PHP_METHOD(Mutex, unlock){
 	pthread_mutex_t *mutex;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex){
@@ -328,7 +340,9 @@ PHP_METHOD(Mutex, unlock){
 	}
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto boolean Mutex::destroy(long mutex) */
 PHP_METHOD(Mutex, destroy){
 	pthread_mutex_t *mutex;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex){
@@ -349,7 +363,9 @@ PHP_METHOD(Mutex, destroy){
 	}
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto long Cond::create() */
 PHP_METHOD(Cond, create){
 	pthread_cond_t *condition = (pthread_cond_t*) calloc(1, sizeof(pthread_cond_t));
 	if(condition){
@@ -374,7 +390,9 @@ PHP_METHOD(Cond, create){
 	} else zend_error(E_ERROR, "Internal error, failed to allocate memory for condition");
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto boolean Cond::signal(long condition) */
 PHP_METHOD(Cond, signal){
 	pthread_cond_t *condition;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition) == SUCCESS && condition){
@@ -389,7 +407,9 @@ PHP_METHOD(Cond, signal){
 	} 
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto boolean Cond::broadcast(long condition) */
 PHP_METHOD(Cond, broadcast){
 	pthread_cond_t *condition;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition){
@@ -404,7 +424,9 @@ PHP_METHOD(Cond, broadcast){
 	} 
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto boolean Cond::wait(long condition, long mutex) */
 PHP_METHOD(Cond, wait){
 	pthread_cond_t 		*condition;
 	pthread_mutex_t 	*mutex;
@@ -420,7 +442,9 @@ PHP_METHOD(Cond, wait){
 	} 
 	RETURN_FALSE;
 }
+/* }}} */
 
+/* {{{ proto boolean Cond::destroy() */
 PHP_METHOD(Cond, destroy){
 	pthread_cond_t *condition;
 	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition){
@@ -436,10 +460,10 @@ PHP_METHOD(Cond, destroy){
 				zend_error(E_WARNING, "The implementation has detected an attempt to destroy the object referenced by condition while it is referenced by another thread"); 
 			break;
 			default:
-				zend_error(E_ERROR, "Internal error, attempt to broadcast condition failed");
+				zend_error(E_ERROR, "Internal error, attempt to destroy condition failed");
 		}
 	} 
 	RETURN_FALSE;
 }
-
+/* }}} */
 #endif
