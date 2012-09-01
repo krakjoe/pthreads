@@ -104,42 +104,46 @@ static void pthreads_detach_from_instance(void * child TSRMLS_DC){
 }
 
 char *	pthreads_serialize(zval *unserial TSRMLS_DC){					/* will return newly allocate buffer with serial zval contained */
-	char 					*result;
-	smart_str 				*output;
-	php_serialize_data_t 	vars;
-	PHP_VAR_SERIALIZE_INIT(vars);				
-	output = (smart_str*) calloc(1, sizeof(smart_str));
-	php_var_serialize(							
-		output, 
-		&unserial, 
-		&vars TSRMLS_CC
-	);
-	PHP_VAR_SERIALIZE_DESTROY(vars);			
-	result = (char*) calloc(1, output->len+1);	
-	memcpy(										
-		result, output->c, output->len
-	);
-	smart_str_free(output);						
-	free(output);								
+	char 					*result = NULL;
+	if(unserial && Z_TYPE_P(unserial) != IS_NULL){
+		smart_str 				*output;
+		php_serialize_data_t 	vars;
+		PHP_VAR_SERIALIZE_INIT(vars);				
+		output = (smart_str*) calloc(1, sizeof(smart_str));
+		php_var_serialize(							
+			output, 
+			&unserial, 
+			&vars TSRMLS_CC
+		);
+		PHP_VAR_SERIALIZE_DESTROY(vars);			
+		result = (char*) calloc(1, output->len+1);	
+		memcpy(										
+			result, output->c, output->len
+		);
+		smart_str_free(output);						
+		free(output);	
+	}							
 	return result;														/* remember to free this when you're done with it */
 }
 
 int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){	/* will unserialize a zval into the existing zval */
-	const unsigned char *pointer = (const unsigned char *)serial;
-	php_unserialize_data_t vars;
-	PHP_VAR_UNSERIALIZE_INIT(vars);
-	if( !php_var_unserialize(
-			&result, 
-			&pointer, 
-			pointer+strlen(serial), 
-			&vars TSRMLS_CC
-		) ) {
-		PHP_VAR_UNSERIALIZE_DESTROY(vars);
-		zval_dtor(result);
-		zend_error(E_WARNING, "The thread responded with data that could not be unserialized");
-		return FAILURE;
-	} else { PHP_VAR_UNSERIALIZE_DESTROY(vars); }
-	return SUCCESS;														/* will only destroy the zval if there's an error in deserialization */
+	if(serial){
+		const unsigned char *pointer = (const unsigned char *)serial;
+		php_unserialize_data_t vars;
+		PHP_VAR_UNSERIALIZE_INIT(vars);
+		if( !php_var_unserialize(
+				&result, 
+				&pointer, 
+				pointer+strlen(serial), 
+				&vars TSRMLS_CC
+			) ) {
+			PHP_VAR_UNSERIALIZE_DESTROY(vars);
+			zval_dtor(result);
+			zend_error(E_WARNING, "The thread attempted to use symbols that could not be unserialized");
+			return FAILURE;
+		} else { PHP_VAR_UNSERIALIZE_DESTROY(vars); }
+		return SUCCESS;														/* will only destroy the zval if there's an error in deserialization */
+	} else return SUCCESS;
 }
 
 zval *	pthreads_unserialize(char *serial TSRMLS_DC){					/* will allocate a zval to contain the unserialized data */
@@ -168,7 +172,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						EG(current_execute_data)=NULL;					/* no current execute data */
 						EG(called_scope)=pthreads_class_entry;			/* setting both called scope and scope allows us to define protected methods in Thread */
 						EG(scope)=pthreads_class_entry;					/* so this needs setting too */
-						if(thread->prepare){							/* found Thread::prepare */
+						if(thread->prepare){							/* found Thread::__prepare */
 							zval *discard;
 							EG(return_value_ptr_ptr)=&discard;			/* ignore result of this call */
 							EG(active_op_array)=(zend_op_array*) thread->prepare; /* cast method for execution */
@@ -180,8 +184,11 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						} 
 						zend_op_array *op_array = (zend_op_array*) thread->runnable; /* cast method for execution */
 						EG(active_op_array)=op_array;					/* set active op array ( Thread::run ) */
-						symbols = pthreads_unserialize(thread->serial TSRMLS_CC); /* unserialized symbols */
-						EG(active_symbol_table)=Z_ARRVAL_P(symbols);	/* set active symbol table to scoped symbols */
+						if(thread->serial)								/* check for symbols */
+							symbols = pthreads_unserialize(thread->serial TSRMLS_CC); /* unserialized symbols */
+						if(symbols)
+							EG(active_symbol_table)=Z_ARRVAL_P(symbols);	/* set active symbol table to scoped symbols */
+						else EG(active_symbol_table)=&EG(symbol_table);	/* unless they failed to unserialize */
 						EG(return_value_ptr_ptr)=&retval;				/* set pointer to the pointer to the return value */
 						zend_execute(EG(active_op_array) TSRMLS_CC);	/** @TODO: set compiled_filename from thread id and something else before here **/
 						if(retval && Z_TYPE_P(retval) != IS_NULL){		/* check for a result */
@@ -190,11 +197,13 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 							);
 							pthreads_fire_event(thread->finished);		/* inform parent we are done, almost */
 						} else pthreads_fire_event(thread->finished);	/* no result, method returned null */
-						FREE_ZVAL(symbols);								/* free unserialized symbols */
+						if(symbols && Z_TYPE_P(symbols) != IS_NULL){
+							FREE_ZVAL(symbols);							/* free unserialized symbols */
+						}
 					} zend_catch {										/** @TODO: report some error somewhere **/
 						if(retval && Z_TYPE_P(retval) != IS_NULL)
 							FREE_ZVAL(retval);							/* free return value */
-						if(symbols){								/* free unserialized symbols */
+						if(symbols && Z_TYPE_P(symbols) != IS_NULL){	/* free unserialized symbols */
 							FREE_ZVAL(symbols);
 						}
 					} zend_end_try();
