@@ -14,6 +14,7 @@ typedef struct _pthread_construct {						/* Thread internal structure */
 	pthread_t				thread;						/* internal thread identifier */
 	PEVENT					started;					/* started event */
 	PEVENT					finished;					/* finished event */
+	zend_function			*prepare;					/* the prepare method as defined by user */
 	zend_function			*runnable;					/* the run method as defined by user */
 	void					***pls;						/* local storage of parent thread */
 	void					***ls;						/* local storage for thread */
@@ -144,16 +145,27 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 					zend_activate(TSRMLS_C);							/* activate zend for execution of Thread::run */
 					zend_activate_modules(TSRMLS_C);					/* activate extensions */
 					zval *retval;										/* pointer to return value */
-					zval *symbols = pthreads_unserialize(thread->serial TSRMLS_CC); /* unserialized symbols */
+					zval *symbols;
 					zend_first_try {									/* using first_try sets a bailout address */
-						zend_op_array *op_array = (zend_op_array*) thread->runnable;	/* prepare method for execution */
 						EG(in_execution) = 1;							/* set execution flag */
-						EG(return_value_ptr_ptr)=&retval;				/* set pointer to the pointer to the return value */
-						EG(active_op_array)=op_array;					/* set active op array ( Thread::run ) */
 						EG(current_execute_data)=NULL;					/* no current execute data */
-						EG(active_symbol_table)=Z_ARRVAL_P(symbols);	/* set active symbol table to scoped symbols */
 						EG(called_scope)=pthreads_class_entry;			/* setting both called scope and scope allows us to define protected methods in Thread */
 						EG(scope)=pthreads_class_entry;					/* so this needs setting too */
+						if(thread->prepare){							/* found Thread::prepare */
+							zval *discard;
+							EG(return_value_ptr_ptr)=&discard;			/* ignore result of this call */
+							EG(active_op_array)=(zend_op_array*) thread->prepare; /* cast method for execution */
+							zend_execute(
+								EG(active_op_array) TSRMLS_CC			/* prepare thread for runtime */
+							);
+							if(discard && Z_TYPE_P(discard) != IS_NULL)
+								FREE_ZVAL(discard);
+						} 
+						zend_op_array *op_array = (zend_op_array*) thread->runnable; /* cast method for execution */
+						EG(active_op_array)=op_array;					/* set active op array ( Thread::run ) */
+						symbols = pthreads_unserialize(thread->serial TSRMLS_CC); /* unserialized symbols */
+						EG(active_symbol_table)=Z_ARRVAL_P(symbols);	/* set active symbol table to scoped symbols */
+						EG(return_value_ptr_ptr)=&retval;				/* set pointer to the pointer to the return value */
 						zend_execute(EG(active_op_array) TSRMLS_CC);	/** @TODO: set compiled_filename from thread id and something else before here **/
 						if(retval && Z_TYPE_P(retval) != IS_NULL){		/* check for a result */
 							result = pthreads_serialize(				/* serialize result for parent */
@@ -165,11 +177,14 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 					} zend_catch {										/** @TODO: report some error somewhere **/
 						if(retval && Z_TYPE_P(retval) != IS_NULL)
 							FREE_ZVAL(retval);							/* free return value */
-						FREE_ZVAL(symbols);								/* free unserialized symbols */
+						if(symbols){								/* free unserialized symbols */
+							FREE_ZVAL(symbols);
+						}
 					} zend_end_try();
 					zend_deactivate_modules(TSRMLS_C);					/* shutdown modules */
 					zend_deactivate(TSRMLS_C);							/* shutdown zend */
 					tsrm_free_interpreter_context(ctx);					/* free interpreter context */
+					thread->ls = NULL;									/* set this to null to stop injection */
 				}
 			}
 		}
