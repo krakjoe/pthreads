@@ -40,6 +40,33 @@ typedef struct _pthread_construct {						/* Thread internal structure */
 	char					*serial;					/* serialized symbols */
 } THREAD, *PTHREAD;
 
+/*
+	Adding references to class entries ( and possibly method entries when/if they are used )
+	protects from segfaults caused by premature destruction and should take place when the 
+	thread where ce was created is blocking
+*/
+#define PTHREADS_ADD_REFS(thread)	do{\
+	if (thread && thread->std.ce) {\
+		++thread->std.ce->refcount;\
+	}\
+}while(0)
+
+/*
+	Different versions of zend require that refcounts are handled differently to
+	avoid segfaults caused by premature destruction of methods and classes we're
+	using.
+	We can't do much about making the parent block and it doesn't appear to be required for any version
+*/
+#if PHP_VERSION_ID < 50406
+#	define PTHREADS_DEL_REFS(thread)	do{\
+		if(thread && thread->std.ce){\
+			--thread->std.ce->refcount;\
+		}\
+	}while(0)
+#else
+#	define PTHREADS_DEL_REFS(thread)
+#endif
+
 #define PTHREADS_FETCH_FROM_EX(object, ls)				(PTHREAD) zend_object_store_get_object(object, ls)
 #define PTHREADS_FETCH_FROM(object)						(PTHREAD) zend_object_store_get_object(object TSRMLS_CC)
 #define PTHREADS_FETCH									(PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC)
@@ -178,15 +205,16 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 	PTHREAD 	thread = (PTHREAD) arg;
 	char		*result = NULL;
 	
-	if (thread) {															/* I can't imagine a way for this condition to be false ... */
+	if (thread) {														/* I can't imagine a way for this condition to be false ... */
 		if (thread->runnable) {											/* this should always be true, can't hurt to check */
-			thread->std.ce->refcount++;
+			PTHREADS_ADD_REFS(thread);									/* add appropriate references to stop them being prematurely or errornously destroyed  */
 			pthreads_fire_event(thread->started); {						/* allow parent thread to continue */
 				void ***ctx = thread->ls = tsrm_new_interpreter_context(); { /* allocate new interpreter context */
 					tsrm_set_interpreter_context(ctx);					/* set context */
 					TSRMLS_FETCH_FROM_CTX(ctx);							/* switch to new context local storage */
 					zend_activate(TSRMLS_C);							/* activate zend for execution of Thread::run */
 					zend_activate_modules(TSRMLS_C);					/* activate extensions */
+					
 					zval *retval;										/* pointer to return value */
 					zval *symbols;
 					
@@ -195,11 +223,11 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						EG(current_execute_data)=NULL;					/* no current execute data */
 						EG(called_scope)=pthreads_class_entry;			/* setting both called scope and scope allows us to define protected methods in Thread */
 						EG(scope)=pthreads_class_entry;					/* so this needs setting too */
-						if (thread->prepare) {							/* found Thread::__prepare */
+						if (thread->prepare) {	/* found Thread::__prepare */
 							zval *discard;
 							
-							EG(return_value_ptr_ptr)=&discard;			/* ignore result of this call */
-							EG(active_op_array)=(zend_op_array*) thread->prepare; /* cast method for execution */
+							EG(return_value_ptr_ptr)=&discard;					/* ignore result of this call */
+							EG(active_op_array)=&thread->prepare->op_array; 	/* cast method for execution */
 							
 							zend_execute(EG(active_op_array) TSRMLS_CC);
 							
@@ -208,11 +236,9 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 							}
 						}
 						
-						zend_op_array *op_array = (zend_op_array*) thread->runnable; /* cast method for execution */
-						
-						EG(active_op_array)=op_array;					/* set active op array ( Thread::run ) */
-						if (thread->serial)	{							/* check for symbols */
-							symbols = pthreads_unserialize(thread->serial TSRMLS_CC); /* unserialized symbols */
+						EG(active_op_array)=&thread->runnable->op_array;				/* set active op array ( Thread::run ) */
+						if (thread->serial)	{											/* check for symbols */
+							symbols = pthreads_unserialize(thread->serial TSRMLS_CC); 	/* unserialized symbols */
 							if (symbols) {
 								EG(active_symbol_table)=Z_ARRVAL_P(symbols);
 							}
@@ -242,12 +268,9 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 							FREE_ZVAL(symbols);
 						}
 					} zend_end_try();
-
-#if PHP_VERSION_ID < 50406
-					if (thread->std.ce && thread->pls)
-						thread->std.ce->refcount--;
-#endif
-
+															
+					PTHREADS_DEL_REFS(thread);							/* only some versions of the Zend engine require this */
+					
 					zend_deactivate_modules(TSRMLS_C);					/* shutdown modules */
 					zend_deactivate(TSRMLS_C);							/* shutdown zend */
 					
