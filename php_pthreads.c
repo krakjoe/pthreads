@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | pthreads                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) 2006-2011 The PHP Group                                |
+  | Copyright (c) Joe Watkins 2011                                		 |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
