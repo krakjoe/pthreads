@@ -60,12 +60,17 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 	zend_object_std_init(&thread->std, entry TSRMLS_CC);						/* initialize standard entry */
 	
 	zval *temp;
-	zend_hash_copy(																/* copy standard properties, as yet unused */
+#if PHP_VERSION_ID < 50399
+	  zend_hash_copy(															/* copy standard properties, as yet unused */
 		thread->std.properties,
 		&entry->default_properties,
 		ZVAL_COPY_CTOR,
 		&temp, sizeof(zval*)
 	);
+#else
+	object_properties_init(&(thread->std), entry);								/* compatible with 5.4 */
+#endif
+	
 	
 	attach.handle = zend_objects_store_put(										/* standard stuff, store definition */
 		thread,  
