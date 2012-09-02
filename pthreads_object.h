@@ -195,7 +195,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						EG(current_execute_data)=NULL;					/* no current execute data */
 						EG(called_scope)=pthreads_class_entry;			/* setting both called scope and scope allows us to define protected methods in Thread */
 						EG(scope)=pthreads_class_entry;					/* so this needs setting too */
-						if(thread->prepare){							/* found Thread::__prepare */
+						if (thread->prepare) {							/* found Thread::__prepare */
 							zval *discard;
 							
 							EG(return_value_ptr_ptr)=&discard;			/* ignore result of this call */
@@ -203,8 +203,9 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 							
 							zend_execute(EG(active_op_array) TSRMLS_CC);
 							
-							if(discard && Z_TYPE_P(discard) != IS_NULL)
+							if (discard && Z_TYPE_P(discard) != IS_NULL) {
 								FREE_ZVAL(discard);
+							}
 						}
 						
 						zend_op_array *op_array = (zend_op_array*) thread->runnable; /* cast method for execution */

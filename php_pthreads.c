@@ -119,7 +119,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	ce.unserialize = zend_class_unserialize_deny;
 	pthreads_condition_class_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	
-	if( pthread_mutexattr_init(&defmutex)==SUCCESS ){
+	if ( pthread_mutexattr_init(&defmutex)==SUCCESS ) {
 #ifdef DEFAULT_MUTEX_TYPE
 		pthread_mutexattr_settype(
 			&defmutex, 
@@ -171,8 +171,10 @@ PHP_METHOD(Thread, start)
 			} else zend_error(E_ERROR, "Internal Error: thread creation failed, result code %d", result);
 		} else zend_error(E_ERROR, "Internal Error: this Thread does not implement a run method");
 	} else zend_error(E_ERROR, "Internal Error: this thread has already been started, thread objects cannot be re-used");
-	if(result==SUCCESS)
+	
+	if (result==SUCCESS) {
 		RETURN_TRUE;
+	}
 	RETURN_FALSE;
 }
 /* }}} */
@@ -245,9 +247,9 @@ PHP_METHOD(Mutex, create)
 		switch(pthread_mutex_init(mutex, &defmutex)){
 		
 			case SUCCESS: 
-				if(ZEND_NUM_ARGS()){				
-					if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &lock)==SUCCESS) {
-						if(lock){
+				if (ZEND_NUM_ARGS()) {				
+					if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &lock)==SUCCESS) {
+						if (lock) {
 							switch(pthread_mutex_lock(mutex)){
 								case SUCCESS: RETURN_LONG((ulong)mutex); break;
 								case EDEADLK: RETURN_LONG((ulong)mutex); break;
