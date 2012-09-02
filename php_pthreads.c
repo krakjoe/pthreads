@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author: Joe Watkins <joe.watkins@live.co.uk>                        |
+  | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
 #ifndef HAVE_PHP_THREADS
@@ -35,6 +35,7 @@
 #include <Zend/zend_interfaces.h>
 #include <Zend/zend_list.h>
 #include <Zend/zend_object_handlers.h>
+#include <Zend/zend_variables.h>
 #include <Zend/zend_vm.h>
 #include <TSRM/TSRM.h>
 #include "php_pthreads.h"
