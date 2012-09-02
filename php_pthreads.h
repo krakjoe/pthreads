@@ -54,4 +54,4 @@ extern zend_module_entry pthreads_module_entry;
 #define PTHREADS_CG_ALL(ls)								PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
 #define PTHREADS_EG(ls, v)								PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
 #define PTHREADS_EG_ALL(ls)								PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
-#endif
+#endif 
