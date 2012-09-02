@@ -50,40 +50,100 @@ zend_class_entry 		*pthreads_class_entry;
 zend_class_entry 		*pthreads_mutex_class_entry;
 zend_class_entry		*pthreads_condition_class_entry;
 
+/* {{{ defmutex setup 
+		Choose the NP type if it exists as it targets the current system*/
 pthread_mutexattr_t		defmutex;
 #ifdef PTHREAD_MUTEX_ERRORCHECK_NP
 #	define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK_NP
 #elifdef PTHREAD_MUTEX_ERRORCHECK
 #	define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK
 #endif
+/* }}} */
 
+/* {{{ arginfo */
+ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_self, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_busy, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_join, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Mutex_create, 0, 0, 0)
+	ZEND_ARG_INFO(0, lock)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Mutex_lock, 0, 0, 1)
+	ZEND_ARG_INFO(0, mutex)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Mutex_trylock, 0, 0, 1)
+	ZEND_ARG_INFO(0, mutex)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Mutex_unlock, 0, 0, 1)
+	ZEND_ARG_INFO(0, mutex)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Mutex_destroy, 0, 0, 1)
+	ZEND_ARG_INFO(0, mutex)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Cond_create, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Cond_signal, 0, 0, 1)
+	ZEND_ARG_INFO(0, condition)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Cond_wait, 0, 0, 2)
+	ZEND_ARG_INFO(0, condition)
+	ZEND_ARG_INFO(0, mutex)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Cond_broadcast, 0, 0, 1)
+	ZEND_ARG_INFO(0, condition)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Cond_destroy, 0, 0, 1)
+	ZEND_ARG_INFO(0, condition)
+ZEND_END_ARG_INFO()
+/* }}} */
+
+/* {{{ method entries */
 zend_function_entry pthreads_methods[] = {
-	PHP_ME(Thread, start, 		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, self,		NULL, ZEND_ACC_PROTECTED|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, busy,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, join,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, start, 		Thread_start,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, self,		Thread_self, 	ZEND_ACC_PROTECTED|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, busy,		Thread_busy, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, join,		Thread_join, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ABSTRACT_ME(Thread, run,			NULL)
 	{NULL, NULL, NULL}
 };
 
 zend_function_entry pthreads_mutex_methods[] = {
-	PHP_ME(Mutex, create,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, lock, 		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, trylock, 		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, unlock,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, destroy,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, create,		Mutex_create, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, lock, 		Mutex_lock, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, trylock, 		Mutex_trylock,	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, unlock,		Mutex_unlock,	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, destroy,		Mutex_destroy,	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 
 zend_function_entry pthreads_condition_methods[] = {
-	PHP_ME(Cond, create,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, signal,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, wait,			NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, broadcast,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, destroy,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, create,		Cond_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, signal,		Cond_signal, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, wait,			Cond_wait, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, broadcast,		Cond_broadcast, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, destroy,		Cond_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
+/* }}} */
 
+/* {{{ module entry */
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,
@@ -96,7 +156,11 @@ zend_module_entry pthreads_module_entry = {
   PHP_PTHREADS_VERSION,
   STANDARD_MODULE_PROPERTIES
 };
+/* }}} */
 
+/* {{{ module initialization 
+		Create class entries, initialize any default objects required 
+		@TODO look at thread and condition defaults, maybe setup some sensible defaults */
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry te;
@@ -130,13 +194,16 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	return SUCCESS;
 }
+/* }}} */
 
+/* {{{ module shutdown Destroy any default objects created during initialization */
 PHP_MSHUTDOWN_FUNCTION(pthreads)
 {
 	pthread_mutexattr_destroy(&defmutex);
 	
 	return SUCCESS;
 }
+/* }}} */
 
 /* {{{ proto boolean Thread::start()
 		Starts executing your implemented run method in a thread, will return a boolean indication of success */
@@ -155,12 +222,15 @@ PHP_METHOD(Thread, start)
 			thread->serial = pthreads_serialize(props TSRMLS_CC);
 			FREE_ZVAL(props);
 			
+			/* even null serializes, so if we get a NULL pointer then the serialzation failed and we should not continue */
 			if (thread->serial == NULL) {
 				zend_error(E_ERROR, "The implementation detected unsupported symbols in your thread, please amend your parameters");
 				RETURN_FALSE;
 			}
 			
+			/* we do not care if this fails or suceeds */
 			zend_hash_find(&Z_OBJCE_P(getThis())->function_table, "__prepare", sizeof("__prepare"), (void**) &thread->prepare);
+			
 			if ((result = pthread_create(
 				&thread->thread, NULL, 
 				PHP_PTHREAD_ROUTINE, 
@@ -168,9 +238,10 @@ PHP_METHOD(Thread, start)
 			)) == SUCCESS) {
 				thread->running = 1;
 				pthreads_wait_event(thread->started);
-			} else zend_error(E_ERROR, "Internal Error: thread creation failed, result code %d", result);
-		} else zend_error(E_ERROR, "Internal Error: this Thread does not implement a run method");
-	} else zend_error(E_ERROR, "Internal Error: this thread has already been started, thread objects cannot be re-used");
+			} else zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
+			/* this can't really be raised, the declaration of method entries prohibits it, however could show bugs */
+		} else zend_error(E_ERROR, "The implementation cannot read the run method from your implementation");
+	} else zend_error(E_WARNING, "The implementation detected that this thread has already been started and it cannot reuse the Thread");
 	
 	if (result==SUCCESS) {
 		RETURN_TRUE;
@@ -199,8 +270,8 @@ PHP_METHOD(Thread, busy)
 			if (thread->finished->fired) {
 				RETURN_FALSE;
 			} else RETURN_TRUE;
-		} else zend_error(E_WARNING, "The requested thread has not yet been started");
-	} else zend_error(E_ERROR, "Internal Error: failed to find thread object in instance");
+		} else zend_error(E_WARNING, "The implementation detected that the requested thread has not yet been started");
+	} else zend_error(E_ERROR, "The implementation has expereinced an internal error and cannot continue");
 	RETURN_NULL();
 }
 /* }}} */
@@ -221,7 +292,7 @@ PHP_METHOD(Thread, join)
 					free(result);
 				}
 			} else {
-				zend_error(E_WARNING, "The implementation failed to join the value specified by thread");
+				zend_error(E_WARNING, "The implementation detected failure while joining with the referenced thread");
 				RETURN_FALSE;
 			}
 		} else {
@@ -229,7 +300,7 @@ PHP_METHOD(Thread, join)
 			RETURN_TRUE; 
 		}
 	} else {
-		zend_error(E_ERROR, "Internal Error: failed to find thread object in instance");
+		zend_error(E_ERROR, "The implementation has expereinced an internal error and cannot continue");
 		RETURN_FALSE;
 	}
 }
@@ -255,7 +326,7 @@ PHP_METHOD(Mutex, create)
 								case EDEADLK: RETURN_LONG((ulong)mutex); break;
 								
 								default: 
-									zend_error(E_ERROR, "An error occured while acquiring lock for newly created mutex");
+									zend_error(E_ERROR, "The implementation detected an unspecified error while attempting to lock new mutex");
 									pthread_mutex_destroy(mutex);
 									free(mutex);
 							}
@@ -265,30 +336,25 @@ PHP_METHOD(Mutex, create)
 			break;
 		
 			case EAGAIN:
-				zend_error(E_ERROR, "The system lacked the necessary resources (other than memory) to initialise another mutex"); 
+				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary resources (other than memory) to initialise another mutex"); 
 				free(mutex);
 			break;
 			
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
-				zend_error(E_ERROR, "The system lacked the necessary memory to initialise another mutex"); 
+				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary memory to initialise another mutex"); 
 				free(mutex);
 			break;
 			
 			case EPERM:
-				zend_error(E_ERROR, "The caller does not have the privilege to perform the operation"); 
-				free(mutex);
-			break;
-			
-			case EBUSY:
-				zend_error(E_ERROR, "The implementation has detected an attempt to re-initialise the object referenced by mutex, a previously initialised, but not yet destroyed, mutex"); 
+				zend_error(E_ERROR, "The implementation detected that the caller does not have permission to initialize mutex"); 
 				free(mutex);
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "Internal Error: attempt at initializing mutex failed");
+				zend_error(E_ERROR, "The implementation detected an internal error while attempting to initialize mutex");
 				free(mutex);
 		}
-	} else zend_error(E_ERROR, "Internal Error: failed to allocate memory for mutex");
+	} else zend_error(E_ERROR, "The implementation has failed to allocate memory for mutex and cannot continue");
 	RETURN_FALSE;
 }
 /* }}} */
@@ -304,20 +370,22 @@ PHP_METHOD(Mutex, lock)
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EDEADLK:
-				zend_error(E_WARNING, "The current thread already owns the mutex");
+				zend_error(E_WARNING, "The implementation has detected that the calling thread already owns the mutex");
 				RETURN_TRUE;
 			break;
 			
 			case EINVAL: 
-				zend_error(E_ERROR, "The value specified by mutex does not refer to an initialised mutex object"); 
+				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex");  			
 			break;
 			
+			/* 	the default type of mutex prohibits this error from being raised 
+				there may be more control over mutex types in the future so left for completeness */
 			case E_ERROR: 
-				zend_error(E_ERROR, "The mutex could not be acquired because the maximum number of recursive locks for mutex has been exceeded");
+				zend_error(E_WARNING, "The mutex could not be acquired because the maximum number of recursive locks for mutex has been exceeded");
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "Internal Error: attempt at mutex locking failed");
+				zend_error(E_ERROR, "The implementation detected an internal error while locking mutex and cannot continue");
 		}
 	}
 	RETURN_FALSE;
@@ -337,19 +405,21 @@ PHP_METHOD(Mutex, trylock)
 			case EBUSY: RETURN_FALSE; break;
 			
 			case EDEADLK:
-				zend_error(E_WARNING, "The current thread already owns the mutex");
+				zend_error(E_WARNING, "The implementation has detected that the calling thread already owns the mutex");
 				RETURN_TRUE;
 			break;
 			
 			case EINVAL: 
-				zend_error(E_ERROR, "The value specified by mutex does not refer to an initialised mutex object"); 
+				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex");  
 			break;
+			
+			/* again the defmutex setup prohibits this from occuring, present for completeness */
 			case EAGAIN: 
-				zend_error(E_ERROR, "The mutex could not be acquired because the maximum number of recursive locks for mutex has been exceeded");
+				zend_error(E_WARNING, "The implementation detected that the mutex could not be acquired because the maximum number of recursive locks has been exceeded");
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "Internal Error: attempt to try mutex locking failed");
+				zend_error(E_ERROR, "The implementation detected an internal error while trying to lock mutex and cannot continue");
 		}
 	}
 	RETURN_FALSE;
@@ -367,15 +437,15 @@ PHP_METHOD(Mutex, unlock)
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The value specified by mutex does not refer to an initialised mutex object"); 
+				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex"); 
 			break;
 			
 			case EPERM:
-				zend_error(E_WARNING, "The current thread does not own the mutex");
+				zend_error(E_WARNING, "The implementation has detected that the calling thread does not own the mutex");
 			break;
 			
 			default:
-				zend_error(E_ERROR, "Internal error while unlocking mutex, error unknown");
+				zend_error(E_ERROR, "The implementation detected an internal error while unlocking mutex and cannot continue");
 		}
 	}
 	RETURN_FALSE;
@@ -396,15 +466,15 @@ PHP_METHOD(Mutex, destroy)
 			break;
 
 			case EBUSY:
-				zend_error(E_WARNING, "The implementation has detected an attempt to destroy the object referenced by mutex while it is locked or referenced"); 
+				zend_error(E_WARNING, "The implementation has detected an attempt to destroy mutex while it is locked or referenced"); 
 			break;
 			
 			case EINVAL:
-				zend_error(E_WARNING, "The value specified by mutex does not refer to an initialised mutex object"); 
+				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex"); 
 			break;
 			
 			default:
-				zend_error(E_ERROR, "internal error, attempt to destroy mutex failed");
+				zend_error(E_ERROR, "The implementation detected an internal error while attempting to destroy mutex and cannot continue");
 		}
 	}
 	RETURN_FALSE;
@@ -422,25 +492,20 @@ PHP_METHOD(Cond, create)
 			case SUCCESS: RETURN_LONG((ulong)condition); break;
 			
 			case EAGAIN:
-				zend_error(E_ERROR, "The system lacked the necessary resources (other than memory) to initialise another condition"); 
+				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary resources (other than memory) to initialise another condition"); 
 				free(condition);
 			break;
 			
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
-				zend_error(E_ERROR, "The system lacked the necessary memory to initialise another condition"); 
-				free(condition);
-			break;
-			
-			case EBUSY:
-				zend_error(E_ERROR, "The implementation has detected an attempt to re-initialise the object referenced by cond, a previously initialised, but not yet destroyed, condition variable");
+				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary memory to initialise another condition"); 
 				free(condition);
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "Internal error, attempt to initialize condition failed");
+				zend_error(E_ERROR, "The implementation detected an internal error while initializing new condition and cannot conitnue");
 				free(condition);
 		}
-	} else zend_error(E_ERROR, "Internal error, failed to allocate memory for condition");
+	} else zend_error(E_ERROR, "The implementation failed to allocate memory for new condition and cannot continue");
 	RETURN_FALSE;
 }
 /* }}} */
@@ -456,11 +521,11 @@ PHP_METHOD(Cond, signal)
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
+				zend_error(E_WARNING, "The implementation has detected the condition referenced does not refer to a valid condition"); 
 			break;
 			
 			default:
-				zend_error(E_ERROR, "Internal error, attempt to signal condition failed");
+				zend_error(E_ERROR, "The implementation detected an internal error while signaling condition and cannot continue");
 		}
 	} 
 	RETURN_FALSE;
@@ -477,12 +542,12 @@ PHP_METHOD(Cond, broadcast)
 		switch (pthread_cond_broadcast(condition)) {
 			case SUCCESS: RETURN_TRUE; break;
 			
-			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
+			case EINVAL:
+				zend_error(E_WARNING, "The implementation has detected the condition referenced does not refer to a valid condition"); 
 			break;
 			
 			default:
-				zend_error(E_ERROR, "Internal error, attempt to broadcast condition failed");
+				zend_error(E_ERROR, "The implementation detected an internal error while broadcasting condition and cannot continue");
 		}
 	} 
 	RETURN_FALSE;
@@ -501,11 +566,11 @@ PHP_METHOD(Cond, wait)
 			case SUCCESS:  RETURN_TRUE;  break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
+				zend_error(E_WARNING, "The implementation has detected the condition referenced does not refer to a valid conditiond"); 
 			break;
 			
 			default:
-				zend_error(E_ERROR, "Internal error, attempt to wait for condition failed");
+				zend_error(E_ERROR, "Yhe implementation detected an internal error while waiting for condition and cannot continue");
 		}
 	} 
 	RETURN_FALSE;
@@ -526,7 +591,7 @@ PHP_METHOD(Cond, destroy)
 			break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
+				zend_error(E_WARNING, "The implementation has detected the condition referenced does not refer to a valid condition variable"); 
 			break;
 			
 			case EBUSY:
@@ -534,7 +599,7 @@ PHP_METHOD(Cond, destroy)
 			break;
 			
 			default:
-				zend_error(E_ERROR, "Internal error, attempt to destroy condition failed");
+				zend_error(E_ERROR, "The implementation detected an internal error while destroying condition and cannot continue");
 		}
 	} 
 	RETURN_FALSE;
