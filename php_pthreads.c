@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <unistd.h>
 #include <php.h>
 #include <php_globals.h>
 #include <php_main.h>
@@ -69,7 +70,7 @@ zend_function_entry pthreads_mutex_methods[] = {
 	PHP_ME(Mutex, lock, 		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, trylock, 		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, unlock,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, destroy,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, cycle,		NULL, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 
@@ -231,8 +232,6 @@ PHP_METHOD(Thread, join) {
 	}
 }
 /* }}} */
-
-
 
 /* {{{ proto long Mutex::create([boolean lock]) 
 		Will create a new mutex and return it's handle. If lock is true it will lock the mutex before returning the handle to the calling thread */
@@ -449,48 +448,13 @@ PHP_METHOD(Cond, broadcast){
 PHP_METHOD(Cond, wait){
 	pthread_cond_t 		*condition;
 	pthread_mutex_t 	*mutex;
-	zend_bool			cleanup = 0;
-	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &condition, &mutex)==SUCCESS && condition){
-		if(!mutex) {
-			mutex = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
-			if(mutex){
-				cleanup = 1;
-				if(pthread_mutex_init(mutex, &defmutex)==SUCCESS){
-					if(pthread_mutex_lock(mutex)!=SUCCESS){
-						pthread_mutex_destroy(mutex);
-						free(mutex);
-						zend_error(E_ERROR, "The implementation was not able to lock the new mutex");
-						RETURN_FALSE;
-					}
-				} else {
-					free(mutex);
-					zend_error(E_ERROR, "The implementation was not able to initialize the new mutex");
-					RETURN_FALSE;
-				}
-			} else {
-				zend_error(E_ERROR, "The implementation was not able to allocate memory for a new mutex");
-				RETURN_FALSE;
-			}
-		}
-		
+	if(zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &condition, &mutex)==SUCCESS && condition && mutex){
 		switch(pthread_cond_wait(condition, mutex)){
-			case SUCCESS: 
-				if(cleanup){
-					pthread_mutex_unlock(mutex);
-					pthread_mutex_destroy(mutex);
-					free(mutex);
-				}
-				RETURN_TRUE; 
-			break;
+			case SUCCESS:  RETURN_TRUE;  break;
 			case EINVAL: 
 				zend_error(E_WARNING, "The implementation has detected that the value specified by thread does not refer to a valid condition variable"); 
 			break;
 			default:
-				if(cleanup){
-					pthread_mutex_unlock(mutex);
-					pthread_mutex_destroy(mutex);
-					free(mutex);
-				}
 				zend_error(E_ERROR, "Internal error, attempt to wait for condition failed");
 		}
 	} 
