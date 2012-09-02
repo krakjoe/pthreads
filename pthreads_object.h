@@ -81,6 +81,8 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 	
 	attach.handlers = (zend_object_handlers *) zend_get_std_object_handlers();
 	
+	
+	
 	return attach;																/* return attached */
 }
 
@@ -94,7 +96,7 @@ static void pthreads_detach_from_instance(void * child TSRMLS_DC){
 				if (!thread->joined) {									/* if it wasn't already joined */
 					pthread_join(thread->thread, (void*) &result);
 					if (result)											/* check for result and free it's memory */
-						free(result);
+						free(result);	
 				}
 			}
 			
@@ -178,6 +180,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 	
 	if (thread) {															/* I can't imagine a way for this condition to be false ... */
 		if (thread->runnable) {											/* this should always be true, can't hurt to check */
+			thread->std.ce->refcount++;
 			pthreads_fire_event(thread->started); {						/* allow parent thread to continue */
 				void ***ctx = thread->ls = tsrm_new_interpreter_context(); { /* allocate new interpreter context */
 					tsrm_set_interpreter_context(ctx);					/* set context */
@@ -238,9 +241,15 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 							FREE_ZVAL(symbols);
 						}
 					} zend_end_try();
-					
+
+#if PHP_VERSION_ID < 50406
+					if (thread->std.ce && thread->pls)
+						thread->std.ce->refcount--;
+#endif
+
 					zend_deactivate_modules(TSRMLS_C);					/* shutdown modules */
 					zend_deactivate(TSRMLS_C);							/* shutdown zend */
+					
 					tsrm_free_interpreter_context(ctx);					/* free interpreter context */
 					
 					thread->ls = NULL;									/* set this to null to stop injection */

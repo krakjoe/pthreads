@@ -97,7 +97,8 @@ zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_PROPERTIES
 };
 
-PHP_MINIT_FUNCTION(pthreads){
+PHP_MINIT_FUNCTION(pthreads)
+{
 	zend_class_entry te;
 	zend_class_entry me; 
 	zend_class_entry ce;
@@ -130,7 +131,8 @@ PHP_MINIT_FUNCTION(pthreads){
 	return SUCCESS;
 }
 
-PHP_MSHUTDOWN_FUNCTION(pthreads){
+PHP_MSHUTDOWN_FUNCTION(pthreads)
+{
 	pthread_mutexattr_destroy(&defmutex);
 	
 	return SUCCESS;
@@ -138,7 +140,8 @@ PHP_MSHUTDOWN_FUNCTION(pthreads){
 
 /* {{{ proto boolean Thread::start()
 		Starts executing your implemented run method in a thread, will return a boolean indication of success */
-PHP_METHOD(Thread, start){
+PHP_METHOD(Thread, start)
+{
 	PTHREAD thread = PTHREADS_FETCH;
 	int result = -1;
 	zval *props;
@@ -158,7 +161,6 @@ PHP_METHOD(Thread, start){
 			}
 			
 			zend_hash_find(&Z_OBJCE_P(getThis())->function_table, "__prepare", sizeof("__prepare"), (void**) &thread->prepare);
-			
 			if ((result = pthread_create(
 				&thread->thread, NULL, 
 				PHP_PTHREAD_ROUTINE, 
@@ -177,7 +179,8 @@ PHP_METHOD(Thread, start){
 
 /* {{{ proto long Thread::self() 
 		Will return the current thread id from within a thread */
-PHP_METHOD(Thread, self){ 
+PHP_METHOD(Thread, self)
+{ 
 	ZVAL_LONG(return_value, (ulong) pthread_self()); 
 }
 /* }}} */
@@ -185,7 +188,8 @@ PHP_METHOD(Thread, self){
 /* {{{ proto boolean Thread::busy() 
 		Will return true while your method is executing
 		NOTE: the zend engine has to shut down after your method has executed, so !busy !== finished */
-PHP_METHOD(Thread, busy){
+PHP_METHOD(Thread, busy)
+{
 	PTHREAD thread = PTHREADS_FETCH;
 
 	if (thread) {
@@ -201,14 +205,14 @@ PHP_METHOD(Thread, busy){
 
 /* {{{ proto mixed Thread::join() 
 		Will cause the calling thread to block and wait for the output of the referenced thread */
-PHP_METHOD(Thread, join) { 
+PHP_METHOD(Thread, join) 
+{ 
 	PTHREAD thread = PTHREADS_FETCH;
 	char *result = NULL;
 	
 	if (thread) {
 		if (!thread->joined) {
 			thread->joined=1;
-					
 			if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
 				if (result) {
 					pthreads_unserialize_into(result, return_value TSRMLS_CC);
@@ -232,7 +236,8 @@ PHP_METHOD(Thread, join) {
 /* {{{ proto long Mutex::create([boolean lock]) 
 		Will create a new mutex and return it's handle. If lock is true it will lock the mutex before returning the handle to the calling thread.
 		Because of their nature you need to destroy these explicitly with Mutex::destroy */
-PHP_METHOD(Mutex, create){
+PHP_METHOD(Mutex, create)
+{
 	zend_bool lock;
 	pthread_mutex_t *mutex;
 	
@@ -288,7 +293,8 @@ PHP_METHOD(Mutex, create){
 
 /* {{{ proto boolean Mutex::lock(long mutex) 
 		Locks the mutex referenced so that the calling thread owns the mutex */
-PHP_METHOD(Mutex, lock){
+PHP_METHOD(Mutex, lock)
+{
 	pthread_mutex_t *mutex;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
@@ -318,7 +324,8 @@ PHP_METHOD(Mutex, lock){
 
 /* {{{ proto boolean Mutex::trylock(long mutex) 
 		Will attempt to lock the mutex without causing the calling thread to block */
-PHP_METHOD(Mutex, trylock){
+PHP_METHOD(Mutex, trylock)
+{
 	pthread_mutex_t *mutex;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
@@ -349,7 +356,8 @@ PHP_METHOD(Mutex, trylock){
 
 /* {{{ proto boolean Mutex::unlock(long mutex) 
 		Will unlock the mutex referenced */
-PHP_METHOD(Mutex, unlock){
+PHP_METHOD(Mutex, unlock)
+{
 	pthread_mutex_t *mutex;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
@@ -374,7 +382,8 @@ PHP_METHOD(Mutex, unlock){
 
 /* {{{ proto boolean Mutex::destroy(long mutex)
 		Will destroy the mutex referenced and free memory associated */
-PHP_METHOD(Mutex, destroy){
+PHP_METHOD(Mutex, destroy)
+{
 	pthread_mutex_t *mutex;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
@@ -402,7 +411,8 @@ PHP_METHOD(Mutex, destroy){
 
 /* {{{ proto long Cond::create() 
 		This will create a condition, because of their nature you need to destroy these explicitly with Cond::destroy */
-PHP_METHOD(Cond, create){
+PHP_METHOD(Cond, create)
+{
 	pthread_cond_t *condition;
 	
 	if ((condition=(pthread_cond_t*) calloc(1, sizeof(pthread_cond_t)))!=NULL) {
@@ -435,7 +445,8 @@ PHP_METHOD(Cond, create){
 
 /* {{{ proto boolean Cond::signal(long condition) 
 		This will signal a condition */
-PHP_METHOD(Cond, signal){
+PHP_METHOD(Cond, signal)
+{
 	pthread_cond_t *condition;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition) == SUCCESS && condition) {
@@ -456,7 +467,8 @@ PHP_METHOD(Cond, signal){
 
 /* {{{ proto boolean Cond::broadcast(long condition) 
 		This will broadcast a condition */
-PHP_METHOD(Cond, broadcast){
+PHP_METHOD(Cond, broadcast)
+{
 	pthread_cond_t *condition;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition) {
@@ -477,7 +489,8 @@ PHP_METHOD(Cond, broadcast){
 
 /* {{{ proto boolean Cond::wait(long condition, long mutex) 
 		This will wait for a signal or broadcast on condition, you must have mutex locked by the calling thread */
-PHP_METHOD(Cond, wait){
+PHP_METHOD(Cond, wait)
+{
 	pthread_cond_t 		*condition;
 	pthread_mutex_t 	*mutex;
 	
@@ -499,7 +512,8 @@ PHP_METHOD(Cond, wait){
 
 /* {{{ proto boolean Cond::destroy()
 		This will destroy a condition and free the memory associated with it */
-PHP_METHOD(Cond, destroy){
+PHP_METHOD(Cond, destroy)
+{
 	pthread_cond_t *condition;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition) {
