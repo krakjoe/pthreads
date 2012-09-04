@@ -12,11 +12,18 @@ This is enough to test the water, should the extension prove popular and stable 
 
 ## Requirements
 
-* PHP5.3.16 on x64 or x86
+* PHP5.3.16* on x64 or x86
 * ZTS Enabled ( Thread Safety )
 * Posix Threads implementation that PHP will compile with
 
 Testing has been carried out both on x86 and x64 architechtures with varying hardware, this code may work in untested environments, keep me updated ...
+
+## Supported PHP Versions
+
+While pthreads will compile against 5.4, only 5.3 versions are officially supported at this time. 
+There are differences that are still being researched in 5.4 that need to be addressed before pthreads can be used in a 5.4 environment.
+5.2 is unsupported, and will remain that way as the last release in the 5.2 series was 18 months ago; I'd much rather look to supporting future versions than past.
+5.3.16 is the version that I am using to develop the code but I have taken the time to compile against every release in the 5.3 series so far and can report than everything works as intended in all versions from 5.3.
 
 ### Hello World
 ```php
