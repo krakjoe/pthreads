@@ -20,12 +20,9 @@ Testing has been carried out both on x86 and x64 architechtures with varying har
 
 ### *Supported PHP Versions
 
-While pthreads will compile against 5.4, only 5.3 versions are officially supported at this time. 
+pthreads should compile and work well with any version of PHP from 5.3.0 to 5.4.6 as from version 0.14 of pthreads ( committed 05/09/2012 )
 
-There are differences that are still being researched in 5.4 that need to be addressed before pthreads can be used in a 5.4 environment.
-5.3.16 is the version that I am using to develop the code but I have taken the time to compile against every release in the 5.3 series so far and can report than everything works as intended in all versions from 5.3.
-
-5.2 is unsupported, and will remain that way as the last release in the 5.2 series was 18 months ago; I'd much rather look to supporting future versions than past.
+The support for 5.4 is about 5 minutes old, please do report any feedback you have when working with ANY supported version of PHP.
 
 ### Hello World
 
