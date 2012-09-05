@@ -289,8 +289,8 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		**/
 		zend_class_entry 	runnable;								
 		zval 				*runtime;								
-		zend_function		*prepare = NULL;						
-		zend_function		*run = NULL;							
+		zend_function		*prepare;						
+		zend_function		*run;							
 		zval 				*retval = NULL;								
 		zval 				*symbols = NULL;				
 		HashTable			*properties = NULL;
@@ -391,23 +391,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 #endif
 
 					/**
-					* Deserialize symbols from parent context
-					**/
-					if (thread->serial)	{											
-						symbols = pthreads_unserialize(thread->serial TSRMLS_CC); 	
-						if (symbols) {			
-							/**
-							* Now set the properties of the Runnable to the TS symbols
-							**/
-							properties = child->std.properties;
-							child->std.properties=Z_ARRVAL_P(
-								symbols
-							);				
-						}
-						free(thread->serial);
-					}
-					
-					/**
 					* Even if the user does not supply symbols, they may create some
 					**/
 					if (!EG(active_symbol_table)) {
@@ -430,6 +413,23 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						if (discard && Z_TYPE_P(discard) != IS_NULL) {
 							FREE_ZVAL(discard);
 						}
+					}
+					
+					/**
+					* Deserialize symbols from parent context
+					**/
+					if (thread->serial)	{											
+						symbols = pthreads_unserialize(thread->serial TSRMLS_CC); 	
+						if (symbols) {			
+							/**
+							* Now set the properties of the Runnable to the TS symbols
+							**/
+							properties = child->std.properties;
+							child->std.properties=Z_ARRVAL_P(
+								symbols
+							);				
+						}
+						free(thread->serial);
 					}
 					
 					ALLOC_INIT_ZVAL(retval);
