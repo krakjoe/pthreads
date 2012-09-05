@@ -23,14 +23,14 @@ class OOWebRequest extends Thread {
 	*/
 	public function run(){
 		printf("Running Thread #%lu\n", Thread::self());
-		if($request){
-			if($request->url){
-				$request->setStart(microtime(true));
-				$request->setData(file_get_contents($request->url));
-				$request->setFinish(microtime(true));
+		if($this->request){
+			if($this->request->url){
+				$this->request->setStart(microtime(true));
+				$this->request->setData(file_get_contents($this->request->url));
+				$this->request->setFinish(microtime(true));
 			}
 		}
-		return $request;
+		return $this->request;
 	}
 }
 

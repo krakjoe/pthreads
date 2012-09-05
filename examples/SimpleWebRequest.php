@@ -7,13 +7,13 @@ class AsyncWebRequest extends Thread {
 	}
 	
 	public function run(){
-		if($url){
+		if($this->url){
 			/*
 			* If a large amount of data is being requested, you might want to
 			* fsockopen and read using usleep in between reads
 			*/
-			return file_get_contents($url);
-		} else printf("Thread #%lu was not provided a URL\n", Thread::self());
+			return file_get_contents($this->url);
+		} else printf("Thread #%lu was not provided a URL\n", $this->self());
 	}
 }
 

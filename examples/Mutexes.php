@@ -8,16 +8,17 @@ class MyWorkerThread extends Thread {
 	}
 	
 	public function run(){
-		if($mutex)
-			Mutex::lock($mutex);
-		printf("#%lu:<-", Thread::self());
+		if($this->mutex)
+			Mutex::lock($this->mutex);
+		printf("#%lu:<-", $this->self());
 		$i=0;
-		while($i++<$limit){
+		while($i++<$this->limit){
 			echo ".";
 		}
 		printf("->\n");
-		if($mutex)
-			Mutex::unlock($mutex);
+		if($this->mutex)
+			Mutex::unlock($this->mutex);
+		return true;
 	}
 }
 
@@ -26,15 +27,15 @@ $timer = microtime(true);
 $mutex = Mutex::create(true);
 /* create workers */
 $workers = array();
-for($i=0;$i<50;$i++){
+for($i=0;$i<50;$i++){ 
 	$workers[$i]=new MyWorkerThread(rand(30, 100), $mutex);
 	/* they cannot go anywhere, I have the mutex */
 	$workers[$i]->start();
 }
 printf("Release the (muzzled) hounds ... :\n");
 Mutex::unlock($mutex);
-foreach($workers as $worker)
-	$worker->join();
+foreach($workers as $i=> $worker)
+	$workers[$i]->join();
 printf("Muzzled: %f seconds\n", microtime(true)-$timer);
 /* please remember to destroy mutex and condition variables */
 Mutex::destroy($mutex);

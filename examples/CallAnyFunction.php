@@ -12,8 +12,6 @@
 	But here's an example of how you would achieve such a task:
 */
 class Async extends Thread {
-	/* Store the result from join() so you can treat the response as a string maybe */
-	public $result;
 	/**
 	* Provide a passthrough to call_user_func_array
 	**/
@@ -25,7 +23,7 @@ class Async extends Thread {
 	* The smallest thread in the world
 	* @NOTE: the function you're calling had better had serializable results
 	**/
-	public function run(){ return call_user_func_array($method, $params); }
+	public function run(){ return call_user_func_array($this->method, $this->params); }
 	/**
 	* Static method to create your threads from functions ...
 	**/

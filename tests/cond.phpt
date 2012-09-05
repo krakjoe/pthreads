@@ -11,10 +11,11 @@ class CondTest extends Thread{
 	}
 	
 	public function run(){
-		if($cond){
-			var_dump(Mutex::lock($ready));
-			var_dump(Cond::broadcast($cond));
-			var_dump(Mutex::unlock($ready));
+		
+		if($this->cond){
+			var_dump(Mutex::lock($this->ready));
+			var_dump(Cond::broadcast($this->cond)); 
+			var_dump(Mutex::unlock($this->ready));
 			return true;
 		}
 	}

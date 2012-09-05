@@ -17,22 +17,25 @@
  */
 #ifndef HAVE_PTHREADS_OBJECT_H
 #define HAVE_PTHREADS_OBJECT_H
+static 	zend_object_value 		pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC);
+static 	void 					pthreads_detach_from_instance(void * child TSRMLS_DC);
 
-extern 	zend_class_entry *	pthreads_class_entry;		/* needed here because it is assigned statically to the scope in thread */
-static 	zend_object_value 	pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC);
-static 	void 				pthreads_detach_from_instance(void * child TSRMLS_DC);
-		char *				pthreads_serialize(zval *unserial TSRMLS_DC);
-		zval *				pthreads_unserialize(char *serial TSRMLS_DC);
-		int 				pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
-		void * 				PHP_PTHREAD_ROUTINE(void *);
+		zend_function_entry		pthreads_runnable_methods[] = {{NULL, NULL, NULL}};
+static	zend_object_value 		pthreads_attach_to_runnable(zend_class_entry *entry TSRMLS_DC);
+static 	void 					pthreads_detach_from_runnable(void * child TSRMLS_DC);
 
+extern	char *					pthreads_serialize(zval *unserial TSRMLS_DC);
+extern	zval *					pthreads_unserialize(char *serial TSRMLS_DC);
+extern	int 					pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
+
+		void * 					PHP_PTHREAD_ROUTINE(void *);
+		
 typedef struct _pthread_construct {						/* Thread internal structure */
 	zend_object 			std;						/* standard entry */
 	pthread_t				thread;						/* internal thread identifier */
 	PEVENT					started;					/* started event */
 	PEVENT					finished;					/* finished event */
-	zend_function			*prepare;					/* the prepare method as defined by user */
-	zend_function			*runnable;					/* the run method as defined by user */
+	zend_class_entry		*ice;					/* the threading version of the user class */
 	void					***pls;						/* local storage of parent thread */
 	void					***ls;						/* local storage for thread */
 	int						running;					/* flag to indicate thread was started */
@@ -40,55 +43,30 @@ typedef struct _pthread_construct {						/* Thread internal structure */
 	char					*serial;					/* serialized symbols */
 } THREAD, *PTHREAD;
 
-/*
-	Adding references to class entries ( and possibly method entries when/if they are used )
-	protects from segfaults caused by premature destruction and should take place when the 
-	thread where ce was created is blocking
-*/
-#define PTHREADS_ADD_REFS(thread)	do{\
-	if (thread && thread->std.ce) {\
-		++thread->std.ce->refcount;\
-	}\
-}while(0)
-
-/*
-	Different versions of zend require that refcounts are handled differently to
-	avoid segfaults caused by premature destruction of methods and classes we're
-	using.
-	We can't do much about making the parent block and it doesn't appear to be required for any version
-*/
-#if PHP_VERSION_ID < 50406
-#	define PTHREADS_DEL_REFS(thread)	do{\
-		if(thread && thread->std.ce){\
-			--thread->std.ce->refcount;\
-		}\
-	}while(0)
-#else
-#	define PTHREADS_DEL_REFS(thread)
-#endif
-
 #define PTHREADS_FETCH_FROM_EX(object, ls)				(PTHREAD) zend_object_store_get_object(object, ls)
 #define PTHREADS_FETCH_FROM(object)						(PTHREAD) zend_object_store_get_object(object TSRMLS_CC)
 #define PTHREADS_FETCH									(PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC)
 
+/**
+* This is the object constructor for the parent thread, we construct a different objects for instances
+**/
 static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC){
 	zend_object_value attach;
-	PTHREAD thread = calloc(1, sizeof(*thread));								/* allocate memory for thread */
 	
+	PTHREAD thread = calloc(1, sizeof(*thread));								/* allocate memory for thread */	
 	thread->joined = 		0;													/* set flags */
 	thread->running = 		0;													
-	/** @TODO both contexts exist during runtime and are both readable, possibly implement some sharing here */
 	thread->ls	=			NULL;												/* context for new thread */
 	thread->pls = 			tsrm_ls;											/* context for parent */
 	thread->started = 		pthreads_create_event();							/* fired when the parent thread can continue */
-	/** @NOTE this fires before the zend engine shuts down **/
 	thread->finished = 		pthreads_create_event();							/* fired when the method has returned a result */
 	
 	zend_object_std_init(&thread->std, entry TSRMLS_CC);						/* initialize standard entry */
 	
-	zval *temp;
 #if PHP_VERSION_ID < 50399
-	  zend_hash_copy(															/* copy standard properties, as yet unused */
+	 zval *temp;
+	 
+	 zend_hash_copy(															/* copy standard properties, as yet unused */
 		thread->std.properties,
 		&entry->default_properties,
 		ZVAL_COPY_CTOR,
@@ -97,33 +75,74 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 #else
 	object_properties_init(&(thread->std), entry);								/* compatible with 5.4 */
 #endif
-	
-	
+
 	attach.handle = zend_objects_store_put(										/* standard stuff, store definition */
 		thread,  
 		(zend_objects_store_dtor_t) zend_objects_destroy_object, 
 		pthreads_detach_from_instance, 
-		zend_objects_store_clone_obj TSRMLS_CC
+		NULL TSRMLS_CC
 	);
 	
 	attach.handlers = (zend_object_handlers *) zend_get_std_object_handlers();
-	
-	
-	
+
 	return attach;																/* return attached */
 }
 
+/**
+* This is the object constructor for instances
+**/
+static zend_object_value pthreads_attach_to_runnable(zend_class_entry *entry TSRMLS_DC) {
+	zend_object_value	attach;
+	PTHREAD thread		= calloc(1, sizeof(*thread));
+	if (thread) {
+		thread->thread		= pthread_self();
+		thread->joined		= -1;
+		thread->running		= -1;
+		thread->ls			= tsrm_ls;
+		thread->pls			= NULL;
+		
+		zend_object_std_init(&thread->std, entry TSRMLS_CC);						/* initialize standard entry */
+		
+#if PHP_VERSION_ID < 50399
+		 zval *temp;
+		 
+		 zend_hash_copy(															/* copy standard properties, as yet unused */
+			thread->std.properties,
+			&entry->default_properties,
+			ZVAL_COPY_CTOR,
+			&temp, sizeof(zval*)
+		);
+#else
+		object_properties_init(&(thread->std), entry);								/* compatible with 5.4 */
+#endif
+
+		attach.handle = zend_objects_store_put(										/* standard stuff, store definition */
+			thread,  
+			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
+			pthreads_detach_from_runnable, 
+			NULL TSRMLS_CC
+		);
+		
+		attach.handlers = (zend_object_handlers *) zend_get_std_object_handlers();
+	}
+
+	return attach;
+}
+
+/**
+* This is the real destructor for a thread
+**/
 static void pthreads_detach_from_instance(void * child TSRMLS_DC){
 	PTHREAD thread = (PTHREAD) child;
 	char *result = NULL;												/* we need a reference to this to free it for the child */
 	
 	if (thread) {
-		if (thread->thread) {												/* be certain we reference an actual thread */
+		if (thread->thread) {											/* be certain we reference an actual thread */
 			if (thread->running) {										/* if the thread is still running we will join with it */
 				if (!thread->joined) {									/* if it wasn't already joined */
 					pthread_join(thread->thread, (void*) &result);
 					if (result)											/* check for result and free it's memory */
-						free(result);	
+						free(result);
 				}
 			}
 			
@@ -136,10 +155,6 @@ static void pthreads_detach_from_instance(void * child TSRMLS_DC){
 			}
 		}
 		
-		if (thread->serial){												
-			free(thread->serial);										/* free serialized parameters */
-		}
-		
 		if (thread->std.properties){
 			zend_hash_destroy(thread->std.properties);
 			FREE_HASHTABLE(thread->std.properties);						/* free the table they were stored in */
@@ -149,146 +164,330 @@ static void pthreads_detach_from_instance(void * child TSRMLS_DC){
 	}
 }
 
-char *	pthreads_serialize(zval *unserial TSRMLS_DC){					/* will return newly allocate buffer with serial zval contained */
-	char 					*result = NULL;
+static void pthreads_detach_from_runnable(void *child TSRMLS_DC)
+{
+	PTHREAD thread = (PTHREAD) child;
 	
-	if (unserial && Z_TYPE_P(unserial) != IS_NULL) {
-		smart_str 				*output;
-		php_serialize_data_t 	vars;
-		
-		PHP_VAR_SERIALIZE_INIT(vars);				
-		output = (smart_str*) calloc(1, sizeof(smart_str));
-		php_var_serialize(							
-			output, 
-			&unserial, 
-			&vars TSRMLS_CC
-		);
-		PHP_VAR_SERIALIZE_DESTROY(vars);			
-		result = (char*) calloc(1, output->len+1);	
-		memcpy(result, output->c, output->len);
-		smart_str_free(output);						
-		free(output);	
-	}							
-	return result;														/* remember to free this when you're done with it */
-}
-
-int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){	/* will unserialize a zval into the existing zval */
-	if (serial) {
-		const unsigned char *pointer = (const unsigned char *)serial;
-		php_unserialize_data_t vars;
-		
-		PHP_VAR_UNSERIALIZE_INIT(vars);
-		if (!php_var_unserialize(&result, &pointer, pointer+strlen(serial), &vars TSRMLS_CC)) {
-			
-			PHP_VAR_UNSERIALIZE_DESTROY(vars);
-			zval_dtor(result);
-			zend_error(E_WARNING, "The thread attempted to use symbols that could not be unserialized");
-			return FAILURE;
-		} else { 
-			PHP_VAR_UNSERIALIZE_DESTROY(vars);
+	if (thread) {
+		if (thread->std.properties){
+			zend_hash_destroy(thread->std.properties);
+			FREE_HASHTABLE(thread->std.properties);						/* free the table they were stored in */
 		}
+
+#if PHP_VERSION_ID > 50399
+		if (thread->std.properties_table) {
+			zend_hash_destroy(
+				&thread->std.properties_table
+			);
+			free(thread->std.properties_table);
+		}
+#endif
+
+		free(thread);													/* free memory associated with thread */
+	}
+}
+
+#if PHP_VERSION_ID > 50399
+static void zend_extension_op_array_dtor_handler(zend_extension *extension, zend_op_array *op_array TSRMLS_DC)
+{
+	if (extension->op_array_dtor) {
+		extension->op_array_dtor(op_array);
+	}
+}
+
+/**
+* The only difference between this and the release of zend_function_dtor 
+* is we free the run_time_cache if there are no more references to it and the release version free's it regardless
+* Unsure of what this affects and how ...
+**/
+static void pthreads_method_del_ref(zend_function *function);
+static void pthreads_method_del_ref(zend_function *function){
+	if (function && function->type == ZEND_USER_FUNCTION ) {
+		TSRMLS_FETCH();
 		
-		return SUCCESS;														/* will only destroy the zval if there's an error in deserialization */
-	} else return SUCCESS;
-}
+		zend_op_array *op_array = (zend_op_array*) function;
+		
+		if (op_array) {
+			zend_literal *literal = op_array->literals;
+			zend_literal *end;
+			zend_uint i;
 
-zval *	pthreads_unserialize(char *serial TSRMLS_DC){					/* will allocate a zval to contain the unserialized data */
-	zval *result;
-	ALLOC_ZVAL(result);
-	
-	if (pthreads_unserialize_into(serial, result TSRMLS_CC)==SUCCESS) {
-			return result;												/* don't forget to free the variable when you're done with it */
-	} else return NULL;													/* will return NULL on failure, maybe should return NULL zval ? */
-}
+			if (op_array->static_variables) {
+				zend_hash_destroy(op_array->static_variables);
+				FREE_HASHTABLE(op_array->static_variables);
+			}
+		 
+			if (--(*op_array->refcount)>0) {
+				return;
+			}
 
-void * PHP_PTHREAD_ROUTINE(void *arg){
-	PTHREAD 	thread = (PTHREAD) arg;
-	char		*result = NULL;
-	
-	if (thread) {														/* I can't imagine a way for this condition to be false ... */
-		if (thread->runnable) {											/* this should always be true, can't hurt to check */
-			PTHREADS_ADD_REFS(thread);									/* add appropriate references to stop them being prematurely or errornously destroyed  */
-			pthreads_fire_event(thread->started); {						/* allow parent thread to continue */
-				void ***ctx = thread->ls = tsrm_new_interpreter_context(); { /* allocate new interpreter context */
-					tsrm_set_interpreter_context(ctx);					/* set context */
-					TSRMLS_FETCH_FROM_CTX(ctx);							/* switch to new context local storage */
-					zend_activate(TSRMLS_C);							/* activate zend for execution of Thread::run */
-					zend_activate_modules(TSRMLS_C);					/* activate extensions */
-					
-					zval *retval;										/* pointer to return value */
-					zval *symbols;
-					
-					zend_first_try {									/* using first_try sets a bailout address */
-						EG(in_execution) = 1;							/* set execution flag */
-						EG(current_execute_data)=NULL;					/* no current execute data */
-						EG(called_scope)=pthreads_class_entry;			/* setting both called scope and scope allows us to define protected methods in Thread */
-						EG(scope)=pthreads_class_entry;					/* so this needs setting too */
-						if (thread->prepare) {	/* found Thread::__prepare */
-							zval *discard;
-							
-							EG(return_value_ptr_ptr)=&discard;					/* ignore result of this call */
-							EG(active_op_array)=&thread->prepare->op_array; 	/* cast method for execution */
-							
-							zend_execute(EG(active_op_array) TSRMLS_CC);
-							
-							if (discard && Z_TYPE_P(discard) != IS_NULL) {
-								FREE_ZVAL(discard);
-							}
-						}
-						
-						EG(active_op_array)=&thread->runnable->op_array;				/* set active op array ( Thread::run ) */
-						if (thread->serial)	{											/* check for symbols */
-							symbols = pthreads_unserialize(thread->serial TSRMLS_CC); 	/* unserialized symbols */
-							if (symbols) {
-								EG(active_symbol_table)=Z_ARRVAL_P(symbols);
-							}
-						}
-						
-						if (!EG(active_symbol_table)) {
-							EG(active_symbol_table)=&EG(symbol_table);
-						}
-						
-						EG(return_value_ptr_ptr)=&retval;				/* set pointer to the pointer to the return value */
-						zend_execute(EG(active_op_array) TSRMLS_CC);	/** @TODO: set compiled_filename from thread id and something else before here **/
-						if (retval && Z_TYPE_P(retval) != IS_NULL) {		/* check for a result */
-							result = pthreads_serialize(retval TSRMLS_CC);
-							pthreads_fire_event(thread->finished);		/* inform parent we are done, almost */
-						} else {
-							pthreads_fire_event(thread->finished);		/* no result, method returned null */
-						}
-						if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
-							FREE_ZVAL(symbols);							/* free unserialized symbols */
-						}
-					} zend_catch {										/** @TODO: report some error somewhere **/
-						if (retval && Z_TYPE_P(retval) != IS_NULL) {
-							FREE_ZVAL(retval);							/* free return value */
-						}
-													
-						if (symbols && Z_TYPE_P(symbols) != IS_NULL) {	/* free unserialized symbols */
-							FREE_ZVAL(symbols);
-						}
-					} zend_end_try();
-															
-					PTHREADS_DEL_REFS(thread);							/* only some versions of the Zend engine require this */
-					
-					zend_deactivate_modules(TSRMLS_C);					/* shutdown modules */
-					zend_deactivate(TSRMLS_C);							/* shutdown zend */
-					
-					tsrm_free_interpreter_context(ctx);					/* free interpreter context */
-					
-					thread->ls = NULL;									/* set this to null to stop injection */
+			if (op_array->run_time_cache) {	
+				free(
+					op_array->run_time_cache
+				);
+			}
+			
+			free(op_array->refcount);
+
+			if (op_array->vars) {
+				i = op_array->last_var;
+				while (i > 0) {
+					i--;
+					str_free(op_array->vars[i].name);
 				}
+				free(op_array->vars);
+			}
+
+			if (literal) {
+				end = literal + op_array->last_literal;
+				while (literal < end) {
+					zval_dtor(&literal->constant);
+					literal++;
+				}
+				free(op_array->literals);
+			}
+			free(op_array->opcodes);
+
+			if (op_array->function_name) {
+				free((char*)op_array->function_name);
+			}
+			if (op_array->doc_comment) {
+				free((char*)op_array->doc_comment);
+			}
+			if (op_array->brk_cont_array) {
+				free(op_array->brk_cont_array);
+			}
+			if (op_array->try_catch_array) {
+				free(op_array->try_catch_array);
+			}
+			if (op_array->fn_flags & ZEND_ACC_DONE_PASS_TWO) {
+				zend_llist_apply_with_argument(&zend_extensions, (llist_apply_with_arg_func_t) zend_extension_op_array_dtor_handler, op_array TSRMLS_CC);
+			}
+			if (op_array->arg_info) {
+				for (i=0; i<op_array->num_args; i++) {
+					str_free(op_array->arg_info[i].name);
+					if (op_array->arg_info[i].class_name) {
+						str_free(op_array->arg_info[i].class_name);
+					}
+				}
+				free(op_array->arg_info);
 			}
 		}
 	}
+}
+#endif
+
+void * PHP_PTHREAD_ROUTINE(void *arg){
+	PTHREAD 	thread = (PTHREAD) arg;
+	PTHREAD		child = NULL;
+	char		*result = NULL;
 	
 	if (thread) {
-		if (thread->started && !thread->started->fired)					/* firing started even in case of failure */
-			pthreads_fire_event(thread->started);
-		if (thread->finished && !thread->finished->fired)				/* same with finished */
-			pthreads_fire_event(thread->finished);
-	}
 	
-	pthread_exit((void*)result);										/* leave thread */
+		/**
+		* 
+		**/
+		zend_class_entry 	runnable;								
+		zval 				*runtime;								
+		zend_function		*prepare = NULL;						
+		zend_function		*run = NULL;							
+		zval 				*retval = NULL;								
+		zval 				*symbols = NULL;				
+		HashTable			*properties = NULL;
+		
+		/**
+		* Allocate and Initialize an interpreter context for this Thread
+		**/
+		void ***ctx = thread->ls = tsrm_new_interpreter_context(); { 
+	
+			/**
+			* Set Context/TSRMLS
+			**/
+			tsrm_set_interpreter_context(ctx);
+			TSRMLS_FETCH_FROM_CTX(ctx);		
+			
+			/**
+			* Activate Zend
+			**/
+			zend_activate(TSRMLS_C);							
+			zend_activate_modules(TSRMLS_C);					
+			
+			/**
+			* This is where the instance of Runnable is stored and referenced in this thread
+			*/ 
+			MAKE_STD_ZVAL(runtime);
+
+			/**
+			* First some basic executor setup, using zend_first_try sets a sensible bailout address incase of error
+			**/
+			zend_first_try {									
+				EG(in_execution) = 1;							
+				EG(current_execute_data)=NULL;					
+				EG(current_module)=&pthreads_module_entry;
+				
+				/**
+				* This part of the code initializes a new instance of the Runnable object
+				**/
+				INIT_CLASS_ENTRY(
+					runnable, 									
+					"Runnable", 
+					pthreads_runnable_methods
+				);
+				runnable.create_object = pthreads_attach_to_runnable;
+				runnable.serialize = zend_class_serialize_deny;
+				runnable.unserialize = zend_class_unserialize_deny;
+				thread->ice=zend_register_internal_class(
+					&runnable TSRMLS_CC
+				);
+				object_init_ex(runtime, thread->ice);
+				child = PTHREADS_FETCH_FROM(runtime);
+				child->ice	= thread->std.ce;
+				
+				/**
+				* We can now set the executor and scope to reference a thread safe version of $this
+				**/
+				EG(called_scope)=		thread->ice;
+				EG(scope)=				thread->ice;
+				EG(This)=				runtime;
+				
+				/**
+				* This next part will import the users methods into the Runnable instance
+				**/
+				zend_function *tf; {
+					zend_hash_copy(
+						&Z_OBJCE_P(runtime)->function_table, 
+						&thread->std.ce->function_table,
+						(copy_ctor_func_t) function_add_ref,
+						&tf, sizeof(zend_function)
+					);
+				}
+				
+				/**
+				* From here in, do not attempt to write the parent context
+				**/
+				pthreads_fire_event(thread->started); {	
+					
+					/**
+					* Find methods for execution
+					**/
+					zend_hash_find(								
+						&Z_OBJCE_P(runtime)->function_table, 
+						"__prepare", sizeof("__prepare"), 
+						(void**) &prepare
+					);
+					
+					zend_hash_find(
+						&Z_OBJCE_P(runtime)->function_table, 
+						"run", sizeof("run"), 
+						(void**) &run
+					);
+					
+#if PHP_VERSION_ID > 50399
+					/**
+					* NOTE@ run_time_cache
+					*	This has to be handled differently here in 5.4 series PHP because of the addition of run_time_cache
+					**/
+					Z_OBJCE_P(runtime)->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
+#endif
+
+					/**
+					* Deserialize symbols from parent context
+					**/
+					if (thread->serial)	{											
+						symbols = pthreads_unserialize(thread->serial TSRMLS_CC); 	
+						if (symbols) {			
+							/**
+							* Now set the properties of the Runnable to the TS symbols
+							**/
+							properties = child->std.properties;
+							child->std.properties=Z_ARRVAL_P(
+								symbols
+							);				
+						}
+						free(thread->serial);
+					}
+					
+					/**
+					* Even if the user does not supply symbols, they may create some
+					**/
+					if (!EG(active_symbol_table)) {
+						EG(active_symbol_table)=&EG(symbol_table);	
+					}
+					
+					/**
+					* Execution Time
+					**/
+					if (prepare) {				
+						/**
+						* The result of the call to Thread::__prepare is ignored
+						**/
+						zval *discard;
+						EG(return_value_ptr_ptr)=&discard;				
+						EG(active_op_array)=(zend_op_array*)prepare;
+						
+						zend_execute(EG(active_op_array) TSRMLS_CC);
+						
+						if (discard && Z_TYPE_P(discard) != IS_NULL) {
+							FREE_ZVAL(discard);
+						}
+					}
+					
+					ALLOC_INIT_ZVAL(retval);
+					/**
+					* Now time to execute Thread::run
+					**/
+					EG(return_value_ptr_ptr)=&retval;					
+					EG(active_op_array)=(zend_op_array*)run;
+					
+					zend_execute(EG(active_op_array) TSRMLS_CC);
+					
+					/**
+					* Results are serialized too, because it's COMPATIBLE and SAFE
+					**/
+					if (retval && Z_TYPE_P(retval) != IS_NULL) {
+						result = pthreads_serialize(
+							retval TSRMLS_CC
+						);
+						FREE_ZVAL(retval);
+					}
+					FREE_ZVAL(runtime);
+				}
+			} zend_catch {	
+				/**
+				* If anything has gone wrong we need to make sure all memory is released
+				* @NOTE errors in users code cause zend to throw
+				**/
+				if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
+					FREE_ZVAL(symbols);
+				}
+				
+				if (retval && Z_TYPE_P(retval) != IS_NULL){
+					FREE_ZVAL(retval);
+				}
+			} zend_end_try();
+			
+			/**
+			* This ensures original property HashTable is freed
+			**/
+			child->std.properties = properties;
+			/**
+			* Deactivate Zend
+			**/
+			zend_deactivate_modules(TSRMLS_C);					/* shutdown modules */
+			zend_deactivate(TSRMLS_C);							/* shutdown zend */
+			
+			/**
+			* Free Context
+			**/
+			tsrm_free_interpreter_context(ctx);					/* free interpreter context */	
+		}
+		
+		if (thread->started && !thread->started->fired)			/* firing started event in case of failure */
+			pthreads_fire_event(thread->started);
+		if (thread->finished)
+			pthreads_fire_event(thread->finished);				/* more accurate down here, makes busy() more useful */
+	}
+
+	pthread_exit((void*)result);								/* leave thread */
 } 
 #endif
