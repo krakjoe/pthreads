@@ -39,8 +39,8 @@ class AsyncOperation extends Thread {
   }
 
   public function run(){
-    if($arg){
-      printf("Hello %s\n", $arg);
+    if($this->arg){
+      printf("Hello %s\n", $this->arg);
     }
   }
 }

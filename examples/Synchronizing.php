@@ -16,7 +16,7 @@ class Syncrhonizing extends Thread {
 	*/
 	public function run(){
 		/* see, first lock mutex */
-		printf("Running(%d) %f\n", Mutex::lock($lock), microtime(true));
+		printf("Running(%d) %f\n", Mutex::lock($this->lock), microtime(true));
 		/* print some stuff to standard output */
 		$stdout = fopen("php://stdout", "w");
 		while(++$i<rand(200,400)) {
@@ -26,7 +26,7 @@ class Syncrhonizing extends Thread {
 		echo "\n";
 		fflush($stdout);
 		/* and unlock mutex, making it ready for destruction */
-		printf("Returning(%d) %f\n", Mutex::unlock($lock), microtime(true));
+		printf("Returning(%d) %f\n", Mutex::unlock($this->lock), microtime(true));
 		fflush($stdout);
 		/* you should close resources, or not, whatever; I'm not your mother ... */
 		return null;

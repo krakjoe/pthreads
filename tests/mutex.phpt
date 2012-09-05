@@ -1,7 +1,7 @@
 --TEST--
 Test mutex operations
 --DESCRIPTION--
-This test will ensures mutex functionality
+This test will ensures mutex functionality, including error checking
 --FILE--
 <?php
 $mutex = Mutex::create();

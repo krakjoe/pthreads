@@ -30,6 +30,7 @@
 #include <ext/standard/php_var.h>
 #include <Zend/zend.h>
 #include <Zend/zend_compile.h>
+#include <Zend/zend_extensions.h>
 #include <Zend/zend_globals.h>
 #include <Zend/zend_hash.h>
 #include <Zend/zend_interfaces.h>
@@ -40,6 +41,7 @@
 #include <TSRM/TSRM.h>
 #include "php_pthreads.h"
 #include "pthreads_event.h"
+#include "pthreads_serial.h"
 #include "pthreads_object.h"
 
 #if COMPILE_DL_PTHREADS
@@ -49,6 +51,10 @@ ZEND_GET_MODULE(pthreads)
 zend_class_entry 		*pthreads_class_entry;
 zend_class_entry 		*pthreads_mutex_class_entry;
 zend_class_entry		*pthreads_condition_class_entry;
+
+extern	char *			pthreads_serialize(zval *unserial TSRMLS_DC);
+extern	zval *			pthreads_unserialize(char *serial TSRMLS_DC);
+extern	int 			pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
 
 /* {{{ defmutex setup 
 		Choose the NP type if it exists as it targets the current system*/
@@ -68,6 +74,9 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_self, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_busy, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_join, 0, 0, 0)
@@ -116,11 +125,11 @@ ZEND_END_ARG_INFO()
 
 /* {{{ method entries */
 zend_function_entry pthreads_methods[] = {
-	PHP_ME(Thread, start, 		Thread_start,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, self,		Thread_self, 	ZEND_ACC_PROTECTED|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, busy,		Thread_busy, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, join,		Thread_join, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ABSTRACT_ME(Thread, run,			NULL)
+	PHP_ME(				Thread, start, 			Thread_start,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(				Thread, self,			Thread_self, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(				Thread, busy,			Thread_busy, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(				Thread, join,			Thread_join, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ABSTRACT_ME(	Thread, run,			Thread_run)
 	{NULL, NULL, NULL}
 };
 
@@ -134,11 +143,11 @@ zend_function_entry pthreads_mutex_methods[] = {
 };
 
 zend_function_entry pthreads_condition_methods[] = {
-	PHP_ME(Cond, create,		Cond_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, signal,		Cond_signal, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, wait,			Cond_wait, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, create,		Cond_create, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, signal,		Cond_signal, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, wait,			Cond_wait, 		ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Cond, broadcast,		Cond_broadcast, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, destroy,		Cond_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, destroy,		Cond_destroy, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* }}} */
@@ -191,7 +200,8 @@ PHP_MINIT_FUNCTION(pthreads)
 		);
 #endif
 	}
-
+	
+	
 	return SUCCESS;
 }
 /* }}} */
@@ -199,7 +209,9 @@ PHP_MINIT_FUNCTION(pthreads)
 /* {{{ module shutdown Destroy any default objects created during initialization */
 PHP_MSHUTDOWN_FUNCTION(pthreads)
 {
-	pthread_mutexattr_destroy(&defmutex);
+	pthread_mutexattr_destroy(
+		&defmutex
+	);
 	
 	return SUCCESS;
 }
@@ -214,33 +226,45 @@ PHP_METHOD(Thread, start)
 	zval *props;
 	
 	if (thread && !thread->started->fired) {
-		if (zend_hash_find(&Z_OBJCE_P(getThis())->function_table, "run", sizeof("run"), (void**) &thread->runnable)==SUCCESS) {		
+		/**
+		* @NOTE possibly move this to the thread, requires testing
+		*	it might be better to execute this in the thread scope, after the call to Thread::start has returned
+		*	when ThreadExceptions are implemented it can be handled better, for now it can remain here, serialization is pretty fast
+		**/
+		ALLOC_INIT_ZVAL(props);
+		Z_TYPE_P(props)=IS_ARRAY;
+		Z_ARRVAL_P(props)=thread->std.properties;
+		thread->serial = pthreads_serialize(props TSRMLS_CC);
+		FREE_ZVAL(props);
 		
-			ALLOC_INIT_ZVAL(props);
-			Z_TYPE_P(props)=IS_ARRAY;
-			Z_ARRVAL_P(props)=thread->std.properties;
-			thread->serial = pthreads_serialize(props TSRMLS_CC);
-			FREE_ZVAL(props);
-			
-			/* even null serializes, so if we get a NULL pointer then the serialzation failed and we should not continue */
-			if (thread->serial == NULL) {
-				zend_error(E_ERROR, "The implementation detected unsupported symbols in your thread, please amend your parameters");
-				RETURN_FALSE;
-			}
-			
-			/* we do not care if this fails or suceeds */
-			zend_hash_find(&Z_OBJCE_P(getThis())->function_table, "__prepare", sizeof("__prepare"), (void**) &thread->prepare);
-			
-			if ((result = pthread_create(
-				&thread->thread, NULL, 
-				PHP_PTHREAD_ROUTINE, 
-				(void*)thread
-			)) == SUCCESS) {
-				thread->running = 1;
-				pthreads_wait_event(thread->started);
-			} else zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
-			/* this can't really be raised, the declaration of method entries prohibits it, however could show bugs */
-		} else zend_error(E_ERROR, "The implementation cannot read the run method from your implementation");
+		/**
+		* @TODO verify serial
+		*	we could and should deserialize this and check for NULL, the reason being that some private members may corrupt serialization results
+		*	if this is the case deserializing the result can let the user know that they need to handle serialization in a more thread-friendly fashion
+		*	however because of the overhead incurred this is not implemented
+		*	so either verification takes place here with a boolean parameter to disable/enable verification or we provide a Thread::verify that could
+		*	be utilized during development of an application and removed/omitted in production environments
+		**/
+		
+		/* even null serializes, so if we get a NULL pointer then the serialzation failed and we should not continue */
+		if (thread->serial == NULL) {
+			zend_error(E_ERROR, "The implementation detected unsupported symbols in your thread, please amend your parameters");
+			RETURN_FALSE;
+		}
+		
+		if ((result = pthread_create(
+			&thread->thread, NULL, 
+			PHP_PTHREAD_ROUTINE, 
+			(void*)thread
+		)) == SUCCESS) {
+			thread->running = 1;
+			/**
+			* @NOTE
+			*	this hangs on until we have created the threading class entry in the new context, which differs from earlier versions of this code
+			*	that did not require a class entry in the new context, it must hold for that long while references are edited in this and the new context
+			**/ 
+			pthreads_wait_event(thread->started);
+		} else zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
 	} else zend_error(E_WARNING, "The implementation detected that this thread has already been started and it cannot reuse the Thread");
 	
 	if (result==SUCCESS) {
