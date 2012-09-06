@@ -294,6 +294,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		zval 				*retval = NULL;								
 		zval 				*symbols = NULL;				
 		HashTable			*properties = NULL;
+		int					preparation = 0;
 		
 		/**
 		* Allocate and Initialize an interpreter context for this Thread
@@ -370,11 +371,13 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 					/**
 					* Find methods for execution
 					**/
-					zend_hash_find(								
+					if(zend_hash_find(								
 						&Z_OBJCE_P(runtime)->function_table, 
 						"__prepare", sizeof("__prepare"), 
 						(void**) &prepare
-					);
+					)==SUCCESS) {
+						preparation=1;
+					}
 					
 					zend_hash_find(
 						&Z_OBJCE_P(runtime)->function_table, 
@@ -400,7 +403,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 					/**
 					* Execution Time
 					**/
-					if (prepare) {				
+					if (preparation) {				
 						/**
 						* The result of the call to Thread::__prepare is ignored
 						**/
