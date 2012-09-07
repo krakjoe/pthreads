@@ -18,66 +18,79 @@
 #ifndef HAVE_PTHREADS_EVENT_H
 #define HAVE_PTHREADS_EVENT_H
 
-typedef struct _pthread_event {							/* Event internal structure */
-	pthread_mutex_t			*lock;						/* mutex for condition */
-	pthread_cond_t			*cond;						/* event condition */
-	int						fired;						/* flag fired for destruction */
+/* {{{ structs */
+typedef struct _pthread_event {
+	pthread_mutex_t			*lock;
+	pthread_cond_t			*cond;
+	int						fired;
 } EVENT, *PEVENT;
+/* }}} */
 
-PEVENT 	pthreads_create_event();						/* Creates an Event for Thread */
-int 	pthreads_wait_event(PEVENT event);				/* Waits for Event to be fired */
-void 	pthreads_fire_event(PEVENT event);				/* Fires an Event */
-void 	pthreads_destroy_event(PEVENT event);			/* Destroys an Event */
+/* {{{ prototypes */
+PEVENT 	pthreads_create_event();
+int 	pthreads_wait_event(PEVENT event);
+void 	pthreads_fire_event(PEVENT event);
+void 	pthreads_destroy_event(PEVENT event);
+/* }}} */
 
-PEVENT pthreads_create_event(){							/* Allocate and initialize mutex and condition for event */
+/* {{{ Will allocate and initialize a new event */
+PEVENT pthreads_create_event(){							
 	PEVENT event = (PEVENT) calloc(1, sizeof(EVENT));
 	
-	if (event) {										/* Out of memory if this fails */
+	if (event) {
 		event->lock = (pthread_mutex_t*) 	calloc(1, sizeof(pthread_mutex_t));
 		event->cond = (pthread_cond_t*)		calloc(1, sizeof(pthread_cond_t));
-		event->fired = 0;								/* Initialize to 0 for completeness */
+		event->fired = 0;								
 		
-		if (event->lock && event->cond) {					/* Make sure we got the memory we asked for */
-			pthread_mutex_init(event->lock, NULL);		/* And finally initialize the mutex */
-			pthread_cond_init(event->cond, NULL);		/* and the condition for event */
+		if (event->lock && event->cond) {
+			pthread_mutex_init(event->lock, NULL);
+			pthread_cond_init(event->cond, NULL);
 		}
 	}
 	return event;
 }
+/* }}} */
 
-int pthreads_wait_event(PEVENT event){					/* Wait for an event to occur, returns 1 on success */
+/* {{{ Will cause the calling thread to block until the event is fired */
+int pthreads_wait_event(PEVENT event){					
 	if (event) {
 		if (event->lock && event->cond) {
-			pthread_mutex_lock(event->lock);			/* While waiting we have to acquire the lock */
+			pthread_mutex_lock(event->lock);			
 			
-			while (!event->fired) {						/* We use this opportunity to check that the event still hasn't been fired */
-				pthread_cond_wait(event->cond, event->lock); /* Before waiting for it, indefinitely */
-				if (event->fired)						/* One last check before we bail */
+			while (!event->fired) {						
+				pthread_cond_wait(event->cond, event->lock);
+				if (event->fired)
 					break;
 			}
 			
-			pthread_mutex_unlock(event->lock);			/* Release the mutex for event */
-			return 1;									/* An return all good */
-		} else return 0;								/* Possibly mid destruction */
-	} else return 0;									/* Some sort of internal error */
+			pthread_mutex_unlock(event->lock);			
+			return 1;
+		} else return 0;
+	} else return 0;
 }
+/* }}} */
 
-void pthreads_fire_event(PEVENT event){					/* Fire an event, all threads waiting will now unblock and continue executing */
+/* {{{ Firing an event causing all waiting threads to continue */
+void pthreads_fire_event(PEVENT event){
 	if (event) {
 		while (!event->fired) {
-			pthread_mutex_lock(event->lock);			/* this may seem verbose, but is reliable */
+			pthread_mutex_lock(event->lock);
 			
 			if (!event->fired) {
 				event->fired = 1;
-				pthread_cond_broadcast(event->cond);
+				pthread_cond_broadcast(
+					event->cond
+				);
 			}
 			
 			pthread_mutex_unlock(event->lock);
 		}
 	}
 }
+/* }}} */
 
-void pthreads_destroy_event(PEVENT event){				/* Destroy mutex and condition for event object and free memory associated */
+/* {{{ Will destroy an event, if the event is not fired we wait for it */
+void pthreads_destroy_event(PEVENT event){
 	if (event) {
 		if (!event->fired) {
 			pthreads_wait_event(event);
@@ -85,15 +98,16 @@ void pthreads_destroy_event(PEVENT event){				/* Destroy mutex and condition for
 		
 		if (event->lock) {
 			pthread_mutex_destroy(event->lock);
-			free(event->lock);							/* and free it's memory */
+			free(event->lock);
 		}
 		
 		if (event->cond) {
-			pthread_cond_destroy(event->cond);			/* destroy the condition */
+			pthread_cond_destroy(event->cond);
 			free(event->cond);
 		}
 		
-		free(event);									/* free memory associated with event */
+		free(event);
 	}
 }
+/* }}} */
 #endif
