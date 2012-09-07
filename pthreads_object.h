@@ -438,6 +438,13 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						);
 						FREE_ZVAL(return_value);
 					}
+					
+					/*
+					* Free symbols
+					*/
+					if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
+						FREE_ZVAL(symbols);
+					}
 				}
 			} zend_catch {	
 				
