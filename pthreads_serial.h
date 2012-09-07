@@ -17,11 +17,15 @@
  */
 #ifndef HAVE_PTHREADS_SERIAL_H
 #define HAVE_PTHREADS_SERIAL_H
+
+/* {{{ prototypes */
 char *					pthreads_serialize(zval *unserial TSRMLS_DC);
 zval *					pthreads_unserialize(char *serial TSRMLS_DC);
 int 					pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
+/* }}} */
 
-char * pthreads_serialize(zval *unserial TSRMLS_DC){					/* will return newly allocate buffer with serial zval contained */
+/* {{{ Will serialize the zval into a newly allocated buffer which must be free'd by the caller */
+char * pthreads_serialize(zval *unserial TSRMLS_DC){					
 	char 					*result = NULL;
 	
 	if (unserial && Z_TYPE_P(unserial) != IS_NULL) {
@@ -41,10 +45,12 @@ char * pthreads_serialize(zval *unserial TSRMLS_DC){					/* will return newly al
 		smart_str_free(output);						
 		free(output);	
 	}							
-	return result;														/* remember to free this when you're done with it */
+	return result;														
 }
+/* }}} */
 
-int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){	/* will unserialize a zval into the existing zval */
+/* {{{ Will unserialize data into the allocated zval passed */
+int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){	
 	if (serial) {
 		const unsigned char *pointer = (const unsigned char *)serial;
 		php_unserialize_data_t vars;
@@ -54,22 +60,26 @@ int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){	/* will uns
 			
 			PHP_VAR_UNSERIALIZE_DESTROY(vars);
 			zval_dtor(result);
-			zend_error(E_WARNING, "The thread attempted to use symbols that could not be unserialized");
+			zend_error(E_WARNING, "The thread attempted to declare properties that could not be unserialized");
 			return FAILURE;
 		} else { 
 			PHP_VAR_UNSERIALIZE_DESTROY(vars);
 		}
 		
-		return SUCCESS;														/* will only destroy the zval if there's an error in deserialization */
+		return SUCCESS;														
 	} else return SUCCESS;
 }
+/* }}} */
 
-zval *	pthreads_unserialize(char *serial TSRMLS_DC){					/* will allocate a zval to contain the unserialized data */
+/* {{{ Will unserialze data into a newly allocated buffer which must be free'd by the caller */
+zval *	pthreads_unserialize(char *serial TSRMLS_DC){					
 	zval *result;
 	ALLOC_ZVAL(result);
 	
 	if (pthreads_unserialize_into(serial, result TSRMLS_CC)==SUCCESS) {
-			return result;												/* don't forget to free the variable when you're done with it */
-	} else return NULL;													/* will return NULL on failure, maybe should return NULL zval ? */
+			return result;												
+	} else return NULL;
 }
+/* }}} */
+
 #endif

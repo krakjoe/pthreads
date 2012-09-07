@@ -226,25 +226,25 @@ PHP_METHOD(Thread, start)
 	zval *props;
 	
 	if (thread && !thread->started->fired) {
-		/**
+		/*
 		* @NOTE possibly move this to the thread, requires testing
 		*	it might be better to execute this in the thread scope, after the call to Thread::start has returned
 		*	when ThreadExceptions are implemented it can be handled better, for now it can remain here, serialization is pretty fast
-		**/
+		*/
 		ALLOC_INIT_ZVAL(props);
 		Z_TYPE_P(props)=IS_ARRAY;
 		Z_ARRVAL_P(props)=thread->std.properties;
 		thread->serial = pthreads_serialize(props TSRMLS_CC);
 		FREE_ZVAL(props);
 		
-		/**
+		/*
 		* @TODO verify serial
 		*	we could and should deserialize this and check for NULL, the reason being that some private members may corrupt serialization results
 		*	if this is the case deserializing the result can let the user know that they need to handle serialization in a more thread-friendly fashion
 		*	however because of the overhead incurred this is not implemented
 		*	so either verification takes place here with a boolean parameter to disable/enable verification or we provide a Thread::verify that could
 		*	be utilized during development of an application and removed/omitted in production environments
-		**/
+		*/
 		
 		/* even null serializes, so if we get a NULL pointer then the serialzation failed and we should not continue */
 		if (thread->serial == NULL) {
@@ -258,11 +258,11 @@ PHP_METHOD(Thread, start)
 			(void*)thread
 		)) == SUCCESS) {
 			thread->running = 1;
-			/**
+			/*
 			* @NOTE
 			*	this hangs on until we have created the threading class entry in the new context, which differs from earlier versions of this code
 			*	that did not require a class entry in the new context, it must hold for that long while references are edited in this and the new context
-			**/ 
+			*/ 
 			pthreads_wait_event(thread->started);
 		} else zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
 	} else zend_error(E_WARNING, "The implementation detected that this thread has already been started and it cannot reuse the Thread");
