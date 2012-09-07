@@ -438,7 +438,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						);
 						FREE_ZVAL(return_value);
 					}
-					FREE_ZVAL(getThis());
 				}
 			} zend_catch {	
 				
