@@ -33,6 +33,26 @@ void 	pthreads_fire_event(PEVENT event);
 void 	pthreads_destroy_event(PEVENT event);
 /* }}} */
 
+/* {{{ macros */
+#define PTHREADS_STARTED								0
+#define PTHREADS_FINISHED								1
+#define PTHREADS_E(t, e)								t->events[e]
+#define PTHREADS_E_STARTED(t)							PTHREADS_E(t, PTHREADS_STARTED)
+#define PTHREADS_E_FINISHED(t)							PTHREADS_E(t, PTHREADS_FINISHED)
+#define PTHREADS_E_EXISTS(t, e)							(PTHREADS_E(t, e)!=NULL)
+#define PTHREADS_E_CREATE(t, e)							PTHREADS_E(t, e)=pthreads_create_event()
+#define PTHREADS_E_FIRED(t, e)							(PTHREADS_E(t, e)) && PTHREADS_E(t, e)->fired
+#define PTHREADS_E_FIRE(t, e)							pthreads_fire_event(PTHREADS_E(t, e))
+#define PTHREADS_E_WAIT(t, e)							pthreads_wait_event(PTHREADS_E(t, e))
+#define PTHREADS_E_DESTROY(t, e)						pthreads_destroy_event(PTHREADS_E(t, e))
+#define PTHREADS_IS_RUNNING(t)							(t->running && !t->joined)
+#define PTHREADS_IS_JOINED(t)							(t->running && t->joined)
+#define PTHREADS_IS_STARTED(t)							PTHREADS_E_STARTED(t)->fired
+#define PTHREADS_IS_FINISHED(t)							PTHREADS_E_FINISHED(t)->fired
+#define PTHREADS_SET_JOINED(t)							t->joined=1
+#define PTHREADS_SET_RUNNING(t)							t->running=1
+/* }}} */
+
 /* {{{ Will allocate and initialize a new event */
 PEVENT pthreads_create_event(){							
 	PEVENT event = (PEVENT) calloc(1, sizeof(EVENT));
