@@ -51,7 +51,7 @@ Absolutely, this is not a hack, we _don't_ use forking or any other such nonsens
 
 PHP is awesomely powerful, but the simple fact of the matter is, the number of extensions or features a language has doesn't matter one bit. What matters is how many of features or extensions you can utilize in your latest and greatest project.
 We only have about one or two seconds to send a page to a user, in practice we end up picking and choosing which of PHP's features we will use because time is always a factor. Enterprising applications usually have to look to Java or the .NET
-framework if they are designed to do heavy lifting, aggregation, mathematics or the like. As an example, a price comparison website that references 100 other sources has no chance of any speed in PHP, fetching 100 websites using just file_get_contents
+framework if they are designed to do heavy lifting, aggregation, mathematics or the like. As an example, a website that references 100 other sources has no chance of any speed in PHP, fetching 100 websites using just file_get_contents
 in testing takes around 7 to 10 seconds on my testing hardware, far too long for PHP to be a candidate, the exact same code threaded runs in 0.8 to 1.2 seconds. Bringing threads to PHP means you can do such much more in your two seconds, allow you to develop much faster than
 you can in Java or .NET, or any other language ( perhaps ), and as a result, you will be a happier human being, as will your boss, and your projects have virtually no limits ...
 
