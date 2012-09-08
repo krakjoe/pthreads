@@ -18,7 +18,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.19"
+#define PHP_PTHREADS_VERSION "0.20"
 
 PHP_MINIT_FUNCTION(pthreads);							/* Initialize class entries and default attributes */
 PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
@@ -26,6 +26,8 @@ PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
 PHP_METHOD(Thread, start);								/* Userland method to start a Thread */
 PHP_METHOD(Thread, self);								/* Userland method to get current Thread identifier */
 PHP_METHOD(Thread, busy);								/* Userland method to detect ability to join (wait) without blocking */
+PHP_METHOD(Thread, wait);								/* Userland method to cause a thread to wait for notification */
+PHP_METHOD(Thread, notify);								/* Userland method to notify a thread */
 PHP_METHOD(Thread, join);								/* Userland method to wait for a Thread and retrieve it's result */
 
 PHP_METHOD(Mutex, create);								/* Userland mutex constructor */
@@ -35,6 +37,10 @@ PHP_METHOD(Mutex, trylock);								/* Userland method to try mutex lock */
 PHP_METHOD(Mutex, unlock);								/* Userland method to unlock mutex */
 PHP_METHOD(Mutex, destroy);								/* Userland method to destroy mutex */
 
+/*
+* These are destined for replacement with something higher level, they are too difficult to make use out of in the PHP environment
+* They need to be abstracted into events like we have internally
+*/
 PHP_METHOD(Cond, create);								/* Userland method to create a condition */
 PHP_METHOD(Cond, signal);								/* Userland method to signal on conditions */
 PHP_METHOD(Cond, broadcast);							/* Userland method to broadcast on conditions */

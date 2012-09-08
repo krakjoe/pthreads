@@ -76,6 +76,12 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_busy, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_wait, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_notify, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -128,6 +134,8 @@ zend_function_entry pthreads_methods[] = {
 	PHP_ME(				Thread, start, 			Thread_start,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(				Thread, self,			Thread_self, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(				Thread, busy,			Thread_busy, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(				Thread, wait,			Thread_wait,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(				Thread, notify,			Thread_notify,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(				Thread, join,			Thread_join, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ABSTRACT_ME(	Thread, run,			Thread_run)
 	{NULL, NULL, NULL}
@@ -299,6 +307,53 @@ PHP_METHOD(Thread, busy)
 }
 /* }}} */
 
+/* {{{ proto mixed Thread::wait([long timeout]) 
+		Will cause the executing thread to wait for notification, timeout should be specified in microseconds ( millionths )
+		If a thread attempts to wait while join has been called boolean true will be returned
+		If failure occurs parsing parameters ( when present ) occurs boolean false is returned
+		If the wait succeeds 1 will be returned 
+		A timeout while waiting will return 0 
+		If no notifications are sent by the time the thread must destruct the thread is woken automatically before join is performed */
+PHP_METHOD(Thread, wait)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		if( PTHREADS_IS_SELF(thread)) {
+			if( !PTHREADS_IS_JOINED(thread->sig) ){
+				PTHREADS_E_RESET(thread, PTHREADS_WAKE);
+				if (ZEND_NUM_ARGS()) {
+					long timeout;
+					if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &timeout)==SUCCESS) {
+						RETURN_LONG(PTHREADS_E_WAIT_EX(thread, PTHREADS_WAKE, timeout));
+					} else { RETURN_FALSE; }
+				} else { RETURN_LONG(PTHREADS_E_WAIT(thread, PTHREADS_WAKE)); }
+			} else { RETURN_TRUE; }
+		} else zend_error(E_WARNING, "The implementation detected an attempt to use an internal method, do not attempt to wait in this context");
+	}
+}
+/* }}} */
+
+/* {{{ proto boolean Thread::notify() 
+		Will cause the referenced thread to stop waiting and continue executing */
+PHP_METHOD(Thread, notify)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		if (!PTHREADS_IS_SELF(thread)) {
+			if (PTHREADS_IS_RUNNING(thread)) {
+				if (!PTHREADS_IS_JOINED(thread)) {
+					PTHREADS_E_FIRE(thread, 	PTHREADS_WAKE);
+					RETURN_TRUE;
+				} else zend_error(E_WARNING, "The implementation detected an attempt to notify a thread that is already joined");
+			} else zend_error(E_WARNING, "The implementation detected an attempt to notify a thread that has not yet been started");
+		} else zend_error(E_WARNING, "The implementation detected an attempt to use an external method, do not attempt to notify in this context");
+	}
+	RETURN_FALSE;
+}
+/* }}} */
+
 /* {{{ proto mixed Thread::join() 
 		Will cause the calling thread to block and wait for the output of the referenced thread */
 PHP_METHOD(Thread, join) 
@@ -311,6 +366,11 @@ PHP_METHOD(Thread, join)
 			if (PTHREADS_IS_RUNNING(thread)) {
 				if (!PTHREADS_IS_JOINED(thread)) {
 					PTHREADS_SET_JOINED(thread);
+					
+					/*
+					* We must force a waiting thread to wake at this point
+					*/
+					PTHREADS_E_FIRE(thread, PTHREADS_WAKE);
 					if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
 						if (result) {
 							pthreads_unserialize_into(result, return_value TSRMLS_CC);
