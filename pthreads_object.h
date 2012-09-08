@@ -32,22 +32,50 @@ extern	int 					pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
 /* }}} */
 
 /* {{{ structs */
-typedef struct _pthread_construct {						
-	zend_object 			std;						/* standard entry */
-	pthread_t				thread;						/* thread id */
-	PEVENT					started;					/* started event */
-	PEVENT					finished;					/* finished event */
-	void					***ls;						/* local storage */
-	int						running;					/* started flag */
-	int						joined;						/* joined flag */
-	char					*serial;					/* serial buffer */
+typedef struct _pthread_construct {
+	/*
+	* The Standard Entry
+	*/
+	zend_object 			std;
+	
+	/*
+	* The Thread Identifier
+	*/
+	pthread_t				thread;
+	
+	/*
+	* Events
+	*/
+	PEVENT					events[2];	
+
+	/*
+	* Thread Safe Local Storage
+	*/
+	void					***ls;
+	
+	/*
+	* Flags
+	*/
+	int						running;
+	int						joined;
+	int						self;
+	
+	/*
+	* Serial Buffer
+	*/
+	char					*serial;
 } THREAD, *PTHREAD;
 /* }}} */
 
 /* {{{ macros */
-#define PTHREADS_FETCH_FROM_EX(object, ls)				(PTHREAD) zend_object_store_get_object(object, ls)
-#define PTHREADS_FETCH_FROM(object)						(PTHREAD) zend_object_store_get_object(object TSRMLS_CC)
-#define PTHREADS_FETCH									(PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC)
+#define PTHREADS_FETCH_FROM_EX(object, ls)	(PTHREAD) zend_object_store_get_object(object, ls)
+#define PTHREADS_FETCH_FROM(object)			(PTHREAD) zend_object_store_get_object(object TSRMLS_CC)
+#define PTHREADS_FETCH						(PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC)
+#define PTHREADS_SET_SELF(from) do{\
+	self = PTHREADS_FETCH_FROM(from);\
+	self->self = 1;\
+}while(0)
+#define PTHREADS_IS_SELF(t)					(t->self)
 /* }}} */
 
 /* {{{ compat */
@@ -67,13 +95,14 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 	PTHREAD thread = calloc(1, sizeof(*thread));						
 	thread->joined = 		0;
 	thread->running = 		0;
+	thread->self =			0;
 	thread->ls	=			tsrm_ls;
 	
 	/*
-	* The threaded instance must use or destroy these
+	* To be initialized by the calling context
 	*/
-	thread->started = 		pthreads_create_event();
-	thread->finished = 		pthreads_create_event();
+	thread->events[0] =		NULL;
+	thread->events[1] =		NULL;
 	
 	zend_object_std_init(&thread->std, entry TSRMLS_CC);
 	
@@ -119,12 +148,11 @@ static void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 	
 	if (thread) {
 		if (thread->thread) {
-			
 			/*
 			* If the thread is running we must attempt to join
 			*/
-			if (thread->running) {
-				if (!thread->joined) {
+			if (PTHREADS_IS_RUNNING(thread)) {
+				if (!PTHREADS_IS_JOINED(thread)) {
 					
 					/*
 					* We must check for a result even when it's ignored
@@ -140,17 +168,17 @@ static void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 						free(result);
 				}
 			}
-			
-			/*
-			* Destroy events to release resources and allow anything waiting to continue
-			*/
-			if (thread->started) {
-				pthreads_destroy_event(thread->started);
-			}
-			
-			if (thread->finished) {
-				pthreads_destroy_event(thread->finished);
-			}
+		}
+		
+		/*
+		* Destroy events to release resources and allow anything waiting to continue
+		*/
+		if (PTHREADS_E_STARTED(thread)) {
+			PTHREADS_E_DESTROY(thread, PTHREADS_STARTED);
+		}
+		
+		if (PTHREADS_E_FINISHED(thread)) {
+			PTHREADS_E_DESTROY(thread, PTHREADS_FINISHED);
 		}
 		
 		/*
@@ -294,19 +322,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				/*
 				* Fetches a reference to thread from the current context
 				*/
-				self = PTHREADS_FETCH_FROM(getThis());
-				
-				/*
-				* These events are as yet unused in the current context
-				*/
-				self->started->fired=1;
-				self->finished->fired=1;
-				
-				/*
-				* Destroy these by force so they cannot leak or cause deadlocks
-				*/
-				pthreads_destroy_event(self->started);
-				pthreads_destroy_event(self->finished);
+				PTHREADS_SET_SELF(getThis());
 				
 				/*
 				* We can now set the executor and scope to reference a thread safe version of $this
@@ -330,7 +346,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				/*
 				* From here in, do not attempt to write the parent context
 				*/
-				pthreads_fire_event(thread->started); {	
+				PTHREADS_E_FIRE(thread, PTHREADS_STARTED); {	
 				
 					/*
 					* Will signify if the user has declared __prepare magic
@@ -386,10 +402,13 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						* Preparation is run out of context and the return value is ignored
 						*/
 						zval *discard;
+						ALLOC_INIT_ZVAL(discard);
 						EG(return_value_ptr_ptr)=&discard;				
 						EG(active_op_array)=(zend_op_array*)prepare;
 						
-						zend_execute(EG(active_op_array) TSRMLS_CC);
+						zend_try {
+							zend_execute(EG(active_op_array) TSRMLS_CC);
+						} zend_end_try();
 						
 						if (discard && Z_TYPE_P(discard) != IS_NULL) {
 							FREE_ZVAL(discard);
@@ -427,7 +446,9 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 					EG(return_value_ptr_ptr)=&return_value;					
 					EG(active_op_array)=(zend_op_array*)run;
 					
-					zend_execute(EG(active_op_array) TSRMLS_CC);
+					zend_try {
+						zend_execute(EG(active_op_array) TSRMLS_CC);
+					} zend_end_try();
 					
 					/*
 					* Serialize return value into thread result pointer and free source zval
@@ -463,7 +484,15 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			/*
 			* Restoring the pointer to original property table ensures they are free'd
 			*/
-			self->std.properties = properties;
+			if (self)
+				self->std.properties = properties;
+			
+			/*
+			* Free the name of the thread
+			*/
+			if (rename) {
+				free(rename);
+			}
 			
 			/*
 			* Deactivate Zend
@@ -478,23 +507,16 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		}
 		
 		/*
-		* Free the name of the thread
-		*/
-		if (rename) {
-			free(rename);
-		}
-		
-		/*
 		* Checking the started event was fired avoids deadlocks incase of failure elsewhere
 		*/
-		if (thread->started && !thread->started->fired)
-			pthreads_fire_event(thread->started);
+		if (!PTHREADS_E_FIRED(thread, PTHREADS_STARTED))
+			PTHREADS_E_FIRE(thread, PTHREADS_STARTED);
 			
 		/*
 		* This is the last thing we have to do, so inform anyone watching that we are finished
 		*/
-		if (thread->finished)
-			pthreads_fire_event(thread->finished);				
+		if (PTHREADS_E_FINISHED(thread))
+			PTHREADS_E_FIRE(thread, PTHREADS_FINISHED);			
 	}
 
 	/*

@@ -225,47 +225,44 @@ PHP_METHOD(Thread, start)
 	int result = -1;
 	zval *props;
 	
-	if (thread && !thread->started->fired) {
-		/*
-		* @NOTE possibly move this to the thread, requires testing
-		*	it might be better to execute this in the thread scope, after the call to Thread::start has returned
-		*	when ThreadExceptions are implemented it can be handled better, for now it can remain here, serialization is pretty fast
-		*/
-		ALLOC_INIT_ZVAL(props);
-		Z_TYPE_P(props)=IS_ARRAY;
-		Z_ARRVAL_P(props)=thread->std.properties;
-		thread->serial = pthreads_serialize(props TSRMLS_CC);
-		FREE_ZVAL(props);
-		
-		/*
-		* @TODO verify serial
-		*	we could and should deserialize this and check for NULL, the reason being that some private members may corrupt serialization results
-		*	if this is the case deserializing the result can let the user know that they need to handle serialization in a more thread-friendly fashion
-		*	however because of the overhead incurred this is not implemented
-		*	so either verification takes place here with a boolean parameter to disable/enable verification or we provide a Thread::verify that could
-		*	be utilized during development of an application and removed/omitted in production environments
-		*/
-		
-		/* even null serializes, so if we get a NULL pointer then the serialzation failed and we should not continue */
-		if (thread->serial == NULL) {
-			zend_error(E_ERROR, "The implementation detected unsupported symbols in your thread, please amend your parameters");
-			RETURN_FALSE;
-		}
-		
-		if ((result = pthread_create(
-			&thread->thread, NULL, 
-			PHP_PTHREAD_ROUTINE, 
-			(void*)thread
-		)) == SUCCESS) {
-			thread->running = 1;
+	if (!PTHREADS_IS_SELF(thread)) {
+		if (!PTHREADS_IS_RUNNING(thread) && !PTHREADS_E_EXISTS(thread, PTHREADS_STARTED)) {
 			/*
-			* @NOTE
-			*	this hangs on until we have created the threading class entry in the new context, which differs from earlier versions of this code
-			*	that did not require a class entry in the new context, it must hold for that long while references are edited in this and the new context
-			*/ 
-			pthreads_wait_event(thread->started);
-		} else zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
-	} else zend_error(E_WARNING, "The implementation detected that this thread has already been started and it cannot reuse the Thread");
+			* Serializing here keeps the heap happy, so here is where we'll do it ...
+			* @NOTE Verification
+			*	I still feel that some kind of verification is needed before we attempt to run the thread as it will help those new to threading
+			*/
+			ALLOC_INIT_ZVAL(props);
+			Z_TYPE_P(props)=IS_ARRAY;
+			Z_ARRVAL_P(props)=thread->std.properties;
+			thread->serial = pthreads_serialize(props TSRMLS_CC);
+			FREE_ZVAL(props);
+			
+			/* even null serializes, so if we get a NULL pointer then the serialzation failed and we should not continue */
+			if (thread->serial == NULL) {
+				zend_error(E_ERROR, "The implementation detected unsupported symbols in your thread, please amend your parameters");
+				RETURN_FALSE;
+			}
+			
+			/*
+			* Creating events here rather than on attach saves allocs for instances in new threads and makes shutting down cleaner
+			*/
+			PTHREADS_E_CREATE(thread, PTHREADS_STARTED);
+			PTHREADS_E_CREATE(thread, PTHREADS_FINISHED);
+			if ((result = pthread_create(
+				&thread->thread, NULL, 
+				PHP_PTHREAD_ROUTINE, 
+				(void*)thread
+			)) == SUCCESS) {
+				PTHREADS_SET_RUNNING(thread);
+				
+				/*
+				* The calling thread will now block while the new thread is initialized
+				*/
+				PTHREADS_E_WAIT(thread, PTHREADS_STARTED);
+			} else zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
+		} else zend_error(E_WARNING, "The implementation detected that this thread has already been started and it cannot reuse the Thread");
+	} else zend_error(E_WARNING, "The implementation detected an attempt to call an external method, do not attempt to start in this context");
 	
 	if (result==SUCCESS) {
 		RETURN_TRUE;
@@ -290,11 +287,13 @@ PHP_METHOD(Thread, busy)
 	PTHREAD thread = PTHREADS_FETCH;
 
 	if (thread) {
-		if (thread->running) {
-			if (thread->finished->fired) {
-				RETURN_FALSE;
-			} else RETURN_TRUE;
-		} else zend_error(E_WARNING, "The implementation detected that the requested thread has not yet been started");
+		if (!PTHREADS_IS_SELF(thread)) {
+			if (PTHREADS_IS_RUNNING(thread)) {
+				if (PTHREADS_E_FIRED(thread, PTHREADS_FINISHED)) {
+					RETURN_FALSE;
+				} else RETURN_TRUE;
+			} else zend_error(E_WARNING, "The implementation detected that the requested thread has not yet been started");
+		} else { RETURN_TRUE; }
 	} else zend_error(E_ERROR, "The implementation has expereinced an internal error and cannot continue");
 	RETURN_NULL();
 }
@@ -308,20 +307,28 @@ PHP_METHOD(Thread, join)
 	char *result = NULL;
 	
 	if (thread) {
-		if (!thread->joined) {
-			thread->joined=1;
-			if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
-				if (result) {
-					pthreads_unserialize_into(result, return_value TSRMLS_CC);
-					free(result);
+		if (!PTHREADS_IS_SELF(thread)) {
+			if (PTHREADS_IS_RUNNING(thread)) {
+				if (!PTHREADS_IS_JOINED(thread)) {
+					PTHREADS_SET_JOINED(thread);
+					if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
+						if (result) {
+							pthreads_unserialize_into(result, return_value TSRMLS_CC);
+							free(result);
+						}
+					} else {
+						zend_error(E_WARNING, "The implementation detected failure while joining with the referenced thread");
+						RETURN_FALSE;
+					}
+				} else {
+					zend_error(E_WARNING, "The implementation has detected that the value specified by thread has already been joined");
+					RETURN_TRUE; 
 				}
 			} else {
-				zend_error(E_WARNING, "The implementation detected failure while joining with the referenced thread");
-				RETURN_FALSE;
+				zend_error(E_WARNING, "The implementation has detected an attempt to join a thread that is not yet started");
 			}
 		} else {
-			zend_error(E_WARNING, "The implementation has detected that the value specified by thread has already been joined");
-			RETURN_TRUE; 
+			zend_error(E_WARNING, "The implementation detected a call to an external method, do not attempt to join in the this context");
 		}
 	} else {
 		zend_error(E_ERROR, "The implementation has expereinced an internal error and cannot continue");
