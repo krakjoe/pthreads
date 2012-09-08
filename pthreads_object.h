@@ -46,7 +46,7 @@ typedef struct _pthread_construct {
 	/*
 	* Events
 	*/
-	PEVENT					events[2];	
+	PEVENT					events[3];	
 
 	/*
 	* Thread Safe Local Storage
@@ -64,6 +64,11 @@ typedef struct _pthread_construct {
 	* Serial Buffer
 	*/
 	char					*serial;
+	
+	/* 
+	* Significant Other
+	*/
+	struct _pthread_construct *sig;
 } THREAD, *PTHREAD;
 /* }}} */
 
@@ -74,6 +79,8 @@ typedef struct _pthread_construct {
 #define PTHREADS_SET_SELF(from) do{\
 	self = PTHREADS_FETCH_FROM(from);\
 	self->self = 1;\
+	self->sig = thread;\
+	thread->sig = self;\
 }while(0)
 #define PTHREADS_IS_SELF(t)					(t->self)
 /* }}} */
@@ -97,12 +104,14 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 	thread->running = 		0;
 	thread->self =			0;
 	thread->ls	=			tsrm_ls;
+	thread->sig =			NULL;
 	
 	/*
 	* To be initialized by the calling context
 	*/
 	thread->events[0] =		NULL;
 	thread->events[1] =		NULL;
+	thread->events[2] =		NULL;
 	
 	zend_object_std_init(&thread->std, entry TSRMLS_CC);
 	
@@ -173,12 +182,21 @@ static void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 		/*
 		* Destroy events to release resources and allow anything waiting to continue
 		*/
-		if (PTHREADS_E_STARTED(thread)) {
-			PTHREADS_E_DESTROY(thread, PTHREADS_STARTED);
-		}
-		
-		if (PTHREADS_E_FINISHED(thread)) {
-			PTHREADS_E_DESTROY(thread, PTHREADS_FINISHED);
+		if( !PTHREADS_IS_SELF(thread) ){
+			if (PTHREADS_E_STARTED(thread)) {
+				PTHREADS_E_DESTROY(thread, PTHREADS_STARTED);
+			}
+			
+			if (PTHREADS_E_FINISHED(thread)) {
+				PTHREADS_E_DESTROY(thread, PTHREADS_FINISHED);
+			}
+			
+			if (PTHREADS_E_EXISTS(thread, PTHREADS_WAKE)) {
+				if (!PTHREADS_E_FIRED(thread, PTHREADS_WAKE) ){
+					PTHREADS_E_FIRE(thread, PTHREADS_WAKE);
+				}
+				PTHREADS_E_DESTROY(thread, PTHREADS_WAKE);
+			}
 		}
 		
 		/*
@@ -323,6 +341,12 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				* Fetches a reference to thread from the current context
 				*/
 				PTHREADS_SET_SELF(getThis());
+
+				/*
+				* Setup wake event
+				*/
+				PTHREADS_E_CREATE(self, PTHREADS_WAKE);
+				PTHREADS_E(thread, PTHREADS_WAKE)=PTHREADS_E(self, PTHREADS_WAKE);
 				
 				/*
 				* We can now set the executor and scope to reference a thread safe version of $this
