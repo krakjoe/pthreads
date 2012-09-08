@@ -20,7 +20,7 @@ Testing has been carried out both on x86 and x64 architechtures with varying har
 
 ### Supported PHP Versions
 
-pthreads should compile and work in any version of PHP from 5.3.0 to 5.4.16 ( the current 5.4 release ), many versions of PHP are used in testing from both 5.3 and 5.4 series
+pthreads should compile and work in any version of PHP from 5.3.0 to 5.4.7, many versions of PHP are used in testing from both 5.3 and 5.4 series
 
 ### Hello World
 
@@ -49,7 +49,7 @@ if($thread->start())
 
 Absolutely, this is not a hack, we _don't_ use forking or any other such nonsense, what you create are honest to goodness posix threads that are completely compatible with PHP and safe ... this is true multi-threading :)
 
-PHP is awesomely powerful, but the simple fact of the matter is, the number of extensions or features a language has doesn't matter one bit. What matters is how many of features or extensions you can utilize in your latest and greatest project.
+PHP is awesomely powerful, but the simple fact of the matter is, the number of extensions or features a language has doesn't matter one bit. What matters is how many features or extensions you can utilize in your latest and greatest project.
 We only have about one or two seconds to send a page to a user, in practice we end up picking and choosing which of PHP's features we will use because time is always a factor. Enterprising applications usually have to look to Java or the .NET
 framework if they are designed to do heavy lifting, aggregation, mathematics or the like. As an example, a website that references 100 other sources has no chance of any speed in PHP, fetching 100 websites using just file_get_contents
 in testing takes around 7 to 10 seconds on my testing hardware, far too long for PHP to be a candidate, the exact same code threaded runs in 0.8 to 1.2 seconds. Bringing threads to PHP means you can do such much more in your two seconds, allow you to develop much faster than
