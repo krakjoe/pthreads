@@ -18,7 +18,7 @@ pthreads was written with simplicity, compatibiilty and efficiency in mind, it's
 
 Testing has been carried out both on x86 and x64 architechtures with varying hardware, this code may work in untested environments, keep me updated ...
 
-### *Supported PHP Versions
+### Supported PHP Versions
 
 pthreads should compile and work in any version of PHP from 5.3.0 to 5.4.16 ( the current 5.4 release ), many versions of PHP are used in testing from both 5.3 and 5.4 series
 
