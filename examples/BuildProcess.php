@@ -1,13 +1,4 @@
 <?php
-/*
-* This code is what is used to test and build pthreads on as many versions of php as I have in my /usr/src folder
-* This is not useful to you but a good example of threading making light work of something very laborious
-* I sit in the root of the source I'm working in so /usr/src/php-5.4.6 for example:
-*	Scan /usr/src for versions of php
-*	Copy current code from ext/pthreads to every version of php in /usr/src
-*	Create a thread for each version to configure, optionally make clean, make and run-tests to ensure my changes are good
-* The script will exit when they finish ...
-*/
 
 class Build extends Thread {
 	
@@ -43,6 +34,7 @@ class Build extends Thread {
 						echo implode("\n", $stdout);
 						echo "\n";
 					}
+						
 				}
 			} else {
 				echo implode("\n", $stdout);

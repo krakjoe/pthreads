@@ -225,16 +225,34 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 }
 /* }}} */
 
-/* {{{ proto boolean Thread::start()
-		Starts executing your implemented run method in a thread, will return a boolean indication of success */
+/* {{{ proto boolean Thread::start([boolean sync])
+		Starts executing your implemented run method in a thread, will return a boolean indication of success
+		If sync is true, your new thread runs synchronized with the current thread until you call notify from within the new thread or the thread ends
+		If sync is false or void, the new thread will run asynchronously to the current thread and this call will return as quickly as possible */
 PHP_METHOD(Thread, start)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	int result = -1;
 	zval *props;
 	
+	/*
+	* Find out if the calling thread will wait for notification before continuing
+	*/
+	if (ZEND_NUM_ARGS()){
+		zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &thread->synchronized);
+	} else thread->synchronized = 0;
+	
+	/*
+	* Ensure we are in the correct context
+	*/
 	if (!PTHREADS_IS_SELF(thread)) {
-		if (!PTHREADS_IS_RUNNING(thread) && !PTHREADS_E_EXISTS(thread, PTHREADS_STARTED)) {
+		
+		/*
+		* Stop multiple starts from occuring
+		*/
+		if (!PTHREADS_IS_STARTED(thread)) {
+			PTHREADS_SET_STARTED(thread);
+			
 			/*
 			* Serializing here keeps the heap happy, so here is where we'll do it ...
 			* @NOTE Verification
@@ -252,29 +270,43 @@ PHP_METHOD(Thread, start)
 				RETURN_FALSE;
 			}
 			
+			
 			/*
-			* Creating events here rather than on attach saves allocs for instances in new threads and makes shutting down cleaner
+			* Initialize Event
 			*/
-			PTHREADS_E_CREATE(thread, PTHREADS_STARTED);
-			PTHREADS_E_CREATE(thread, PTHREADS_FINISHED);
+			PTHREADS_E_CREATE(thread);
+			
+			/*
+			* Set appropriate flags
+			*/
+			PTHREADS_SET_RUNNING(thread);
+			
+			/*
+			* Create the thread
+			*/
 			if ((result = pthread_create(
 				&thread->thread, NULL, 
 				PHP_PTHREAD_ROUTINE, 
 				(void*)thread
 			)) == SUCCESS) {
-				PTHREADS_SET_RUNNING(thread);
-				
 				/*
-				* The calling thread will now block while the new thread is initialized
+				* Wait for appropriate event
 				*/
-				PTHREADS_E_WAIT(thread, PTHREADS_STARTED);
-			} else zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
+				PTHREADS_E_WAIT(thread);
+			} else {
+				/*
+				* Do not attempt to join failed threads at dtor time
+				*/
+				PTHREADS_UNSET_RUNNING(thread);
+				zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
+			}
 		} else zend_error(E_WARNING, "The implementation detected that this thread has already been started and it cannot reuse the Thread");
 	} else zend_error(E_WARNING, "The implementation detected an attempt to call an external method, do not attempt to start in this context");
 	
 	if (result==SUCCESS) {
 		RETURN_TRUE;
 	}
+	
 	RETURN_FALSE;
 }
 /* }}} */
@@ -293,62 +325,50 @@ PHP_METHOD(Thread, self)
 PHP_METHOD(Thread, busy)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-
 	if (thread) {
-		if (!PTHREADS_IS_SELF(thread)) {
-			if (PTHREADS_IS_RUNNING(thread)) {
-				if (PTHREADS_E_FIRED(thread, PTHREADS_FINISHED)) {
-					RETURN_FALSE;
-				} else RETURN_TRUE;
+		if( !PTHREADS_IS_SELF(thread)) {
+			if (PTHREADS_IS_STARTED(thread)) {
+				if (PTHREADS_IS_RUNNING(thread)) {
+					RETURN_TRUE;
+				} else RETURN_FALSE;
 			} else zend_error(E_WARNING, "The implementation detected that the requested thread has not yet been started");
-		} else { RETURN_TRUE; }
+		} else zend_error(E_WARNING, "The implementation detected an attempt to call an external method, do not call Thread::busy in this context");
 	} else zend_error(E_ERROR, "The implementation has expereinced an internal error and cannot continue");
 	RETURN_NULL();
 }
 /* }}} */
 
 /* {{{ proto mixed Thread::wait([long timeout]) 
-		Will cause the executing thread to wait for notification, timeout should be specified in microseconds ( millionths )
-		If a thread attempts to wait while join has been called boolean true will be returned
-		If failure occurs parsing parameters ( when present ) occurs boolean false is returned
-		If the wait succeeds 1 will be returned 
-		A timeout while waiting will return 0 
-		If no notifications are sent by the time the thread must destruct the thread is woken automatically before join is performed */
+		Will return boolean false on any kind of error
+		Will return 0 if waiting fails or timesout 
+		Will return 1 on success */
 PHP_METHOD(Thread, wait)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		if( PTHREADS_IS_SELF(thread)) {
-			if( !PTHREADS_IS_JOINED(thread->sig) ){
-				PTHREADS_E_RESET(thread, PTHREADS_WAKE);
-				if (ZEND_NUM_ARGS()) {
-					long timeout;
-					if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &timeout)==SUCCESS) {
-						RETURN_LONG(PTHREADS_E_WAIT_EX(thread, PTHREADS_WAKE, timeout));
-					} else { RETURN_FALSE; }
-				} else { RETURN_LONG(PTHREADS_E_WAIT(thread, PTHREADS_WAKE)); }
-			} else { RETURN_TRUE; }
-		} else zend_error(E_WARNING, "The implementation detected an attempt to use an internal method, do not attempt to wait in this context");
+		if ((PTHREADS_IS_SELF(thread) && !PTHREADS_IS_JOINED(thread->sig)) || 
+			(!PTHREADS_IS_SELF(thread) && !PTHREADS_IS_JOINED(thread))) {
+			if (ZEND_NUM_ARGS()) {
+				long timeout;
+				if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &timeout)==SUCCESS) {
+					RETURN_LONG(PTHREADS_E_WAIT_EX(thread, timeout));
+				} else { RETURN_FALSE; }
+			} else { RETURN_LONG(PTHREADS_E_WAIT(thread)); }
+		} else { RETURN_FALSE; }
 	}
 }
 /* }}} */
 
-/* {{{ proto boolean Thread::notify() 
-		Will cause the referenced thread to stop waiting and continue executing */
+/* {{{ proto int Thread::notify() 
+		Will cause the referenced thread to stop waiting and continue executing
+		Will return 1 if notifications are sent
+		Will return 0 if nothing is waiting to be notified */
 PHP_METHOD(Thread, notify)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	
 	if (thread) {
-		if (!PTHREADS_IS_SELF(thread)) {
-			if (PTHREADS_IS_RUNNING(thread)) {
-				if (!PTHREADS_IS_JOINED(thread)) {
-					PTHREADS_E_FIRE(thread, 	PTHREADS_WAKE);
-					RETURN_TRUE;
-				} else zend_error(E_WARNING, "The implementation detected an attempt to notify a thread that is already joined");
-			} else zend_error(E_WARNING, "The implementation detected an attempt to notify a thread that has not yet been started");
-		} else zend_error(E_WARNING, "The implementation detected an attempt to use an external method, do not attempt to notify in this context");
+		RETURN_LONG(PTHREADS_E_FIRE(thread));
 	}
 	RETURN_FALSE;
 }
@@ -363,14 +383,17 @@ PHP_METHOD(Thread, join)
 	
 	if (thread) {
 		if (!PTHREADS_IS_SELF(thread)) {
-			if (PTHREADS_IS_RUNNING(thread)) {
+			if (PTHREADS_IS_STARTED(thread)) {
 				if (!PTHREADS_IS_JOINED(thread)) {
 					PTHREADS_SET_JOINED(thread);
 					
 					/*
-					* We must force a waiting thread to wake at this point
+					* We must force threads to wake at this point
 					*/
-					PTHREADS_E_FIRE(thread, PTHREADS_WAKE);
+					if (PTHREADS_IS_BLOCKING(thread)) {
+						PTHREADS_E_FIRE(thread);
+					}
+					
 					if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
 						if (result) {
 							pthreads_unserialize_into(result, return_value TSRMLS_CC);

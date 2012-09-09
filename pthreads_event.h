@@ -18,43 +18,36 @@
 #ifndef HAVE_PTHREADS_EVENT_H
 #define HAVE_PTHREADS_EVENT_H
 
+/* {{{ defaults */
+extern pthread_mutexattr_t defmutex;
+/* }}} */
+
 /* {{{ structs */
 typedef struct _pthread_event {
 	pthread_mutex_t			*lock;
 	pthread_cond_t			*cond;
-	int						fired;
+	int						wait;
+	int						fire;
 } EVENT, *PEVENT;
 /* }}} */
 
 /* {{{ prototypes */
 PEVENT 	pthreads_create_event();
 int 	pthreads_wait_event(PEVENT event);
-void 	pthreads_fire_event(PEVENT event);
+int 	pthreads_fire_event(PEVENT event);
 void 	pthreads_destroy_event(PEVENT event);
+
 /* }}} */
 
 /* {{{ macros */
-#define PTHREADS_STARTED								0
-#define PTHREADS_FINISHED								1
-#define PTHREADS_WAKE									2
-#define PTHREADS_E(t, e)								t->events[e]
-#define PTHREADS_E_STARTED(t)							PTHREADS_E(t, PTHREADS_STARTED)
-#define PTHREADS_E_FINISHED(t)							PTHREADS_E(t, PTHREADS_FINISHED)
-#define PTHREADS_E_WAKE(t)								PTHREADS_E(t, PTHREADS_WAKE)
-#define PTHREADS_E_EXISTS(t, e)							(PTHREADS_E(t, e)!=NULL)
-#define PTHREADS_E_CREATE(t, e)							PTHREADS_E(t, e)=pthreads_create_event()
-#define PTHREADS_E_FIRED(t, e)							(PTHREADS_E(t, e)->fired==1)
-#define PTHREADS_E_FIRE(t, e)							pthreads_fire_event(PTHREADS_E(t, e))
-#define PTHREADS_E_WAIT(t, e)							pthreads_wait_event(PTHREADS_E(t, e))
-#define PTHREADS_E_WAIT_EX(t, e, u)						pthreads_wait_event_ex(PTHREADS_E(t, e), u);
-#define PTHREADS_E_DESTROY(t, e)						pthreads_destroy_event(PTHREADS_E(t, e))
-#define PTHREADS_E_RESET(t, e)							PTHREADS_E(t, e)->fired=0
+#define PTHREADS_E(t)									t->sync
+#define PTHREADS_E_CREATE(t)							t->sync=pthreads_create_event()
+#define PTHREADS_E_FIRE(t)								pthreads_fire_event(t->sync)
+#define PTHREADS_E_WAIT(t)								pthreads_wait_event(t->sync)
+#define PTHREADS_E_WAIT_EX(t, u)						pthreads_wait_event_ex(t->sync, u)
+#define PTHREADS_E_DESTROY(t)							pthreads_destroy_event(t->sync)
+#define PTHREADS_IS_BLOCKING(t)							(PTHREADS_E(t)->wait > PTHREADS_E(t)->fire)
 #define PTHREADS_IS_RUNNING(t)							(t->running && !t->joined)
-#define PTHREADS_IS_JOINED(t)							(t->running && t->joined)
-#define PTHREADS_IS_STARTED(t)							PTHREADS_E_STARTED(t)->fired
-#define PTHREADS_IS_FINISHED(t)							PTHREADS_E_FINISHED(t)->fired
-#define PTHREADS_SET_JOINED(t)							t->joined=1
-#define PTHREADS_SET_RUNNING(t)							t->running=1
 /* }}} */
 
 /* {{{ Will allocate and initialize a new event */
@@ -63,11 +56,12 @@ PEVENT pthreads_create_event(){
 	
 	if (event) {
 		event->lock = (pthread_mutex_t*) 	calloc(1, sizeof(pthread_mutex_t));
-		event->cond = (pthread_cond_t*)		calloc(1, sizeof(pthread_cond_t));
-		event->fired = 0;								
+		event->cond = (pthread_cond_t*)		calloc(1, sizeof(pthread_cond_t));								
+		event->wait = 0;
+		event->fire = 0;
 		
 		if (event->lock && event->cond) {
-			pthread_mutex_init(event->lock, NULL);
+			pthread_mutex_init(event->lock, &defmutex);
 			pthread_cond_init(event->cond, NULL);
 		}
 	}
@@ -75,73 +69,72 @@ PEVENT pthreads_create_event(){
 }
 /* }}} */
 
+
+
 /* {{{ Will cause the calling thread to block until the event is fired */
 #define pthreads_wait_event(e)	pthreads_wait_event_ex(e, 0L);
 /* }}} */
 
 /* {{{ Will cause the calling thread to block until the event is fired or the optional timeout has passed */
 int pthreads_wait_event_ex(PEVENT event, long timeout) {
-	if (event) {
-		if (event->lock && event->cond) {
+	int result = 0;
+	if (event != NULL) {
+		if (++event->wait > event->fire) {
 			pthread_mutex_lock(event->lock);
-			while (!event->fired) {						
-				if (timeout > 0L) {
-					struct timeval now;
-					if (gettimeofday(&now, NULL)==SUCCESS) {
-						struct timespec until;
-						long	nsec = timeout * 1000;
-						if (nsec > 1000000000L) {
-							until.tv_sec = now.tv_sec + (nsec / 1000000000L);
-							until.tv_nsec = (now.tv_usec * 1000) + (nsec % 1000000000L);
-						} else {
-							until.tv_sec = now.tv_sec;
-							until.tv_nsec = (now.tv_usec * 1000) + timeout;	
-						}
-						int rc=pthread_cond_timedwait(event->cond, event->lock, &until);
-						switch(rc){
-							case SUCCESS: return 1;
-							
-							case ETIMEDOUT: 
-								zend_error(E_WARNING, "The implementation detected a timeout while waiting for event"); 
-								return 0;
-							break;
-							
-							default:
-								zend_error(E_WARNING, "The implementation detected an error while waiting for event: %d", rc);
-								return 0;
-						}
-					} else return 0;
-				} else pthread_cond_wait(event->cond, event->lock);
-				if (event->fired)
-					break;
-			}
-			
-			pthread_mutex_unlock(event->lock);			
-			return 1;
-		} else return 0;
-	} else return 0;
+			if (timeout > 0L) {
+				struct timeval now;
+				if (gettimeofday(&now, NULL)==SUCCESS) {
+					struct timespec until;
+					long	nsec = timeout * 1000;
+					if (nsec > 1000000000L) {
+						until.tv_sec = now.tv_sec + (nsec / 1000000000L);
+						until.tv_nsec = (now.tv_usec * 1000) + (nsec % 1000000000L);
+					} else {
+						until.tv_sec = now.tv_sec;
+						until.tv_nsec = (now.tv_usec * 1000) + timeout;	
+					}
+					switch(pthread_cond_timedwait(event->cond, event->lock, &until)){
+						case SUCCESS: result = 1; break;
+						
+						case ETIMEDOUT: 
+							zend_error(E_WARNING, "The implementation detected a timeout while waiting for event"); 
+						break;
+						
+						default:
+							zend_error(E_WARNING, "The implementation detected an error while waiting for event");
+					}
+				}
+			} else result = (pthread_cond_wait(event->cond, event->lock)==SUCCESS) ? 1 : 0;
+			pthread_mutex_unlock(event->lock);
+		} else result = 1;
+	}
+	
+	return result;
 }
 /* }}} */
 
 /* {{{ Firing an event causing all waiting threads to continue */
-void pthreads_fire_event(PEVENT event){
+int pthreads_fire_event(PEVENT event){
+	int result = 0;
 	if (event) {
-		while(!event->fired) {
-			event->fired = 1;
-			pthread_cond_broadcast(
-				event->cond
-			);
+		if (event->wait >= event->fire++){
+			do{
+				pthread_mutex_lock(event->lock);
+				pthread_cond_signal(event->cond);
+				pthread_mutex_unlock(event->lock);
+			} while(++event->fire < event->wait);
+			result = 1;
 		}
 	}
+	return result;
 }
 /* }}} */
 
-/* {{{ Will destroy an event, if the event is not fired we wait for it */
+/* {{{ Will destroy an event, if the event is not fired and there are waiting threads we fire it */
 void pthreads_destroy_event(PEVENT event){
-	if (event) {
-		if (pthread_mutex_trylock(event->lock)==EBUSY) {
+	if (event) {	
+		if (event->wait > event->fire) 
 			pthreads_fire_event(event);
-		} else pthread_mutex_unlock(event->lock);
 		
 		if (event->lock) {
 			pthread_mutex_destroy(event->lock);
@@ -155,6 +148,7 @@ void pthreads_destroy_event(PEVENT event){
 		
 		free(event);
 	}
+	event = NULL;
 }
 /* }}} */
 #endif
