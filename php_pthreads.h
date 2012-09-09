@@ -20,6 +20,10 @@
 #define PHP_PTHREADS_EXTNAME "pthreads"
 #define PHP_PTHREADS_VERSION "0.21"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 PHP_MINIT_FUNCTION(pthreads);							/* Initialize class entries and default attributes */
 PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
 
