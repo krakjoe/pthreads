@@ -18,14 +18,14 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.20"
+#define PHP_PTHREADS_VERSION "0.21"
 
 PHP_MINIT_FUNCTION(pthreads);							/* Initialize class entries and default attributes */
 PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
 
 PHP_METHOD(Thread, start);								/* Userland method to start a Thread */
 PHP_METHOD(Thread, self);								/* Userland method to get current Thread identifier */
-PHP_METHOD(Thread, busy);								/* Userland method to detect ability to join (wait) without blocking */
+PHP_METHOD(Thread, busy);								/* Userland method to detect ability to join without blocking */
 PHP_METHOD(Thread, wait);								/* Userland method to cause a thread to wait for notification */
 PHP_METHOD(Thread, notify);								/* Userland method to notify a thread */
 PHP_METHOD(Thread, join);								/* Userland method to wait for a Thread and retrieve it's result */

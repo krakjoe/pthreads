@@ -6,16 +6,13 @@ This test will verify wait/notify functionality
 <?php
 class ThreadTest extends Thread {
 	public function run(){
-		return $this->wait();
+		return $this->notify();
 	}
 }
 $thread = new ThreadTest();
-if($thread->start()) {
-	usleep(1000*1000); /* simulate some work */
-	var_dump($thread->notify()); /* should return boolean true */
+if($thread->start(true)) {
 	var_dump($thread->join());	 /* should return int 1 */
 }
 ?>
 --EXPECT--
-boolean(true)
 int(1)
