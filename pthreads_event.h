@@ -102,18 +102,32 @@ int pthreads_wait_event_ex(PEVENT event, long timeout) {
 						until.tv_sec = now.tv_sec;
 						until.tv_nsec = (now.tv_usec * 1000) + timeout;	
 					}
+wait_ex:
 					switch(pthread_cond_timedwait(event->cond, event->lock, &until)){
 						case SUCCESS: result = 1; break;
+						case EINVAL: result = 0; break;
 						
 						case ETIMEDOUT: 
 							zend_error(E_WARNING, "The implementation detected a timeout while waiting for event"); 
+							result = 0;
 						break;
-						
-						default:
-							zend_error(E_WARNING, "The implementation detected an error while waiting for event");
+						/*
+						* Protect against spurious wakeups
+						*/
+						default: goto wait_ex;
 					}
 				}
-			} else result = (pthread_cond_wait(event->cond, event->lock)==SUCCESS) ? 1 : 0;
+			} else {
+wait:
+				switch(pthread_cond_wait(event->cond, event->lock)){
+					case SUCCESS: result = 1; break;
+					case EINVAL: result = 0; break;
+					/*
+					* Protect against spurious wakeups
+					*/ 
+					default: goto wait;				
+				}
+			}
 			pthread_mutex_unlock(event->lock);
 		} else {
 			pthread_mutex_unlock(event->change);

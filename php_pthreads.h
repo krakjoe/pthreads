@@ -18,7 +18,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.22"
+#define PHP_PTHREADS_VERSION "0.23"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -26,7 +26,6 @@
 
 PHP_MINIT_FUNCTION(pthreads);
 PHP_MSHUTDOWN_FUNCTION(pthreads);
-
 
 PHP_METHOD(Thread, start);
 PHP_METHOD(Thread, self);
@@ -38,18 +37,12 @@ PHP_METHOD(Thread, join);
 PHP_METHOD(Mutex, create);
 PHP_METHOD(Mutex, lock);
 PHP_METHOD(Mutex, trylock);
-/** @TODO boolean parameter to unlock and destroy **/
 PHP_METHOD(Mutex, unlock);
 PHP_METHOD(Mutex, destroy);
 
-/*
-* These are destined for replacement with something higher level, they are too difficult to make use out of in the PHP environment
-* They need to be abstracted into events like we have internally
-*/
 PHP_METHOD(Cond, create);
 PHP_METHOD(Cond, signal);
 PHP_METHOD(Cond, broadcast);
-/** @TODO: merge functionality of pthread_cond_timedwait into wait **/
 PHP_METHOD(Cond, wait);
 PHP_METHOD(Cond, destroy);
 
