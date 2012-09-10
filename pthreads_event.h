@@ -75,8 +75,6 @@ PEVENT pthreads_create_event(){
 }
 /* }}} */
 
-
-
 /* {{{ Will cause the calling thread to block until the event is fired */
 #define pthreads_wait_event(e)	pthreads_wait_event_ex(e, 0L);
 /* }}} */
@@ -85,9 +83,12 @@ PEVENT pthreads_create_event(){
 	If event was fired before the waiter got here this call will return after recording wait */
 int pthreads_wait_event_ex(PEVENT event, long timeout) {
 	int result = 0;
+	int fires;
+	
 	if (event != NULL) {
 		pthread_mutex_lock(event->change);
-		if (++event->wait > event->fire) {
+		if (event->fire < ++event->wait) {
+			fires = event->fire;
 			pthread_mutex_unlock(event->change);
 			pthread_mutex_lock(event->lock);
 			if (timeout > 0L) {
@@ -104,32 +105,53 @@ int pthreads_wait_event_ex(PEVENT event, long timeout) {
 					}
 wait_ex:
 					switch(pthread_cond_timedwait(event->cond, event->lock, &until)){
-						case SUCCESS: result = 1; break;
-						case EINVAL: result = 0; break;
+						case SUCCESS:
+							/*
+							* Protection from spurious wakeups
+							*/
+							if (pthread_mutex_lock(event->change)==SUCCESS) {
+								if (event->fire <= fires) {
+									goto wait_ex;
+								} else --event->wait;
+								result = 1; 
+								pthread_mutex_unlock(event->change);
+							} else zend_error(E_ERROR, "The implementation detected an internal error and cannot continue");
+						break;
 						
 						case ETIMEDOUT: 
 							zend_error(E_WARNING, "The implementation detected a timeout while waiting for event"); 
+							if (pthread_mutex_lock(event->change)==SUCCESS){
+								--event->wait;
+								pthread_mutex_unlock(event->change);
+							} else zend_error(E_ERROR, "The implementation detected an internal error and cannot continue");
 							result = 0;
 						break;
-						/*
-						* Protect against spurious wakeups
-						*/
-						default: goto wait_ex;
+						
+						default: result = 0;
 					}
 				}
 			} else {
 wait:
 				switch(pthread_cond_wait(event->cond, event->lock)){
-					case SUCCESS: result = 1; break;
-					case EINVAL: result = 0; break;
-					/*
-					* Protect against spurious wakeups
-					*/ 
-					default: goto wait;				
+					case SUCCESS:
+						/*
+						* Protection from spurious wakeups
+						*/
+						if (pthread_mutex_lock(event->change)==SUCCESS) {
+							if (event->fire <= fires) {
+								goto wait;
+							} else --event->wait;
+							result = 1; 
+							pthread_mutex_unlock(event->change);
+						} else zend_error(E_ERROR, "The implementation detected an internal error and cannot continue");
+					break;
+					
+					default: result = 0;
 				}
 			}
 			pthread_mutex_unlock(event->lock);
 		} else {
+			--event->wait;
 			pthread_mutex_unlock(event->change);
 			result = 1;
 		}
@@ -145,16 +167,17 @@ int pthreads_fire_event(PEVENT event){
 	int result = 0;
 	if (event) {
 		pthread_mutex_lock(event->change);
-		if (event->wait >= event->fire++){
+		if (event->wait >= ++event->fire){
 			do{
 				pthread_mutex_unlock(event->change);
 				pthread_mutex_lock(event->lock);
 				pthread_cond_signal(event->cond);
 				pthread_mutex_unlock(event->lock);
 				pthread_mutex_lock(event->change);
-			} while(++event->fire < event->wait);
+			} while(event->wait);
 			result = 1;
 		}
+		--event->fire;
 		pthread_mutex_unlock(event->change);
 	}
 	return result;
