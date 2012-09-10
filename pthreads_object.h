@@ -25,16 +25,16 @@
 /* }}} */
 
 /* {{{ prototypes */
-static 	zend_object_value 		pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC);
-static 	void 					pthreads_detach_from_instance(void * child TSRMLS_DC);
+static 	zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC);
+static 	void pthreads_detach_from_instance(void * child TSRMLS_DC);
 
-		zend_function_entry		pthreads_runnable_methods[] = {{NULL, NULL, NULL}};
+zend_function_entry	pthreads_runnable_methods[] = {{NULL, NULL, NULL}};
 
-extern	char *					pthreads_serialize(zval *unserial TSRMLS_DC);
-extern	zval *					pthreads_unserialize(char *serial TSRMLS_DC);
-extern	int 					pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
+extern	char * pthreads_serialize(zval *unserial TSRMLS_DC);
+extern	zval * pthreads_unserialize(char *serial TSRMLS_DC);
+extern	int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
 
-		void * 					PHP_PTHREAD_ROUTINE(void *);
+void * PHP_PTHREAD_ROUTINE(void *);
 /* }}} */
 
 /* {{{ structs */
@@ -42,39 +42,39 @@ typedef struct _pthread_construct {
 	/*
 	* The Standard Entry
 	*/
-	zend_object 			std;
+	zend_object std;
 	
 	/*
 	* The Thread Identifier
 	*/
-	pthread_t				thread;
+	pthread_t thread;
 	
 	/*
 	* Syncrhonization Event
 	*/
-	PEVENT					sync;	
+	PEVENT sync;	
 
 	/*
 	* Thread Safe Local Storage
 	*/
-	void					***ls;
+	void ***ls;
 	
 	/*
 	* State Management
 	*/
-	pthread_mutex_t			*lock;
-	int						state;
+	pthread_mutex_t *lock;
+	int state;
 	
 	/*
 	* Flags
 	*/
-	zend_bool				self;
-	zend_bool				synchronized;
+	zend_bool self;
+	zend_bool synchronized;
 
 	/*
 	* Serial Buffer
 	*/
-	char					*serial;
+	char *serial;
 	
 	/* 
 	* Significant Other
@@ -115,24 +115,24 @@ static int pthreads_unset_state(PTHREAD thread, int state){
 /* }}} */
 
 /* {{{ macros */
-#define PTHREADS_FETCH_FROM_EX(object, ls)	(PTHREAD) zend_object_store_get_object(object, ls)
-#define PTHREADS_FETCH_FROM(object)			(PTHREAD) zend_object_store_get_object(object TSRMLS_CC)
-#define PTHREADS_FETCH						(PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC)
+#define PTHREADS_FETCH_FROM_EX(object, ls) (PTHREAD) zend_object_store_get_object(object, ls)
+#define PTHREADS_FETCH_FROM(object) (PTHREAD) zend_object_store_get_object(object TSRMLS_CC)
+#define PTHREADS_FETCH (PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC)
 #define PTHREADS_SET_SELF(from) do{\
 	self = PTHREADS_FETCH_FROM(from);\
 	self->self = 1;\
 	self->sig = thread;\
 	thread->sig = self;\
 }while(0)
-#define PTHREADS_IS_SELF(t)					(t->self)
-#define PTHREADS_SET_JOINED(t)				pthreads_set_state(t, PTHREADS_ST_JOINED)
-#define PTHREADS_SET_RUNNING(t)				pthreads_set_state(t, PTHREADS_ST_RUNNING)
-#define PTHREADS_UNSET_RUNNING(t)			pthreads_unset_state(t, PTHREADS_ST_RUNNING)
-#define PTHREADS_IS_JOINED(t)				((pthreads_get_state(t) & PTHREADS_ST_JOINED)==PTHREADS_ST_JOINED)
-#define PTHREADS_IS_STARTED(t)				((pthreads_get_state(t) & PTHREADS_ST_STARTED)==PTHREADS_ST_STARTED)
-#define PTHREADS_IS_RUNNING(t)				((pthreads_get_state(t) & PTHREADS_ST_RUNNING)==PTHREADS_ST_RUNNING)
-#define PTHREADS_SET_STARTED(t)				pthreads_set_state(t, PTHREADS_ST_STARTED)
-#define PTHREADS_ST(t)						pthreads_get_state(t)
+#define PTHREADS_IS_SELF(t)	(t->self)
+#define PTHREADS_SET_JOINED(t) pthreads_set_state(t, PTHREADS_ST_JOINED)
+#define PTHREADS_SET_RUNNING(t)	pthreads_set_state(t, PTHREADS_ST_RUNNING)
+#define PTHREADS_UNSET_RUNNING(t) pthreads_unset_state(t, PTHREADS_ST_RUNNING)
+#define PTHREADS_IS_JOINED(t) ((pthreads_get_state(t) & PTHREADS_ST_JOINED)==PTHREADS_ST_JOINED)
+#define PTHREADS_IS_STARTED(t) ((pthreads_get_state(t) & PTHREADS_ST_STARTED)==PTHREADS_ST_STARTED)
+#define PTHREADS_IS_RUNNING(t) ((pthreads_get_state(t) & PTHREADS_ST_RUNNING)==PTHREADS_ST_RUNNING)
+#define PTHREADS_SET_STARTED(t) pthreads_set_state(t, PTHREADS_ST_STARTED)
+#define PTHREADS_ST(t) pthreads_get_state(t)
 /* }}} */
 
 /* {{{ compat */
@@ -150,10 +150,10 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 	* Allocate an initialize thread object for storage
 	*/
 	PTHREAD thread = calloc(1, sizeof(*thread));			
-	thread->synchronized =	0;
-	thread->self =			0;
-	thread->ls	=			tsrm_ls;
-	thread->sig =			NULL;
+	thread->synchronized = 0;
+	thread->self = 0;
+	thread->ls	= tsrm_ls;
+	thread->sig = NULL;
 	
 	/*
 	* State Initialization
@@ -166,7 +166,7 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 	/*
 	* To be initialized by the calling context
 	*/
-	thread->sync =			NULL;
+	thread->sync = NULL;
 	
 	/*
 	* Standard Entry Initialization
@@ -292,22 +292,22 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 	/*
 	* The thread in the context where it was created
 	*/
-	PTHREAD 	thread 		= (PTHREAD) arg;
+	PTHREAD thread = (PTHREAD) arg;
 	
 	/*
 	* The thread in this context
 	*/
-	PTHREAD		self 		= NULL;
+	PTHREAD	self = NULL;
 	
 	/*
 	* A pointer to the exit value of the thread
 	*/
-	char		*result 	= NULL;
+	char *result = NULL;
 	
 	/*
 	* Allocating a new string for the thread class entry in this context ensures a clean, error free shutdown
 	*/
-	char		*rename		= NULL;
+	char *rename = NULL;
 	
 	if (thread) {									
 	
@@ -319,22 +319,22 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			/*
 			* As always, a pointer to $this
 			*/
-			zval 				*this_ptr;
+			zval *this_ptr;
 			
 			/*
 			* As always, the return value pointer
 			*/
-			zval 				*return_value = NULL;
+			zval *return_value = NULL;
 			
 			/*
 			* Thread safe property store
 			*/
-			zval 				*symbols = NULL;
+			zval *symbols = NULL;
 			
 			/*
 			* Reference to original properties
 			*/
-			HashTable			*properties = NULL;
+			HashTable *properties = NULL;
 			
 			/*
 			* Set Context/TSRMLS
@@ -405,9 +405,9 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				/*
 				* We can now set the executor and scope to reference a thread safe version of $this
 				*/
-				EG(called_scope)=		Z_OBJCE_P(getThis());
-				EG(scope)=				Z_OBJCE_P(getThis());
-				EG(This)=				getThis();
+				EG(called_scope) = Z_OBJCE_P(getThis());
+				EG(scope) = Z_OBJCE_P(getThis());
+				EG(This) = getThis();
 				
 				/*
 				* Import the users object definition
@@ -430,17 +430,17 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				/*
 				* Will signify if the user has declared __prepare magic
 				*/
-				int					preparation = 0;
+				int preparation = 0;
 				
 				/*
 				* Pointer to __prepare megic implementation
 				*/
-				zend_function		*prepare;				
+				zend_function *prepare;				
 
 				/*
 				* Pointer to run implementation
 				*/
-				zend_function		*run;
+				zend_function *run;
 				
 				/*
 				* Find methods for execution

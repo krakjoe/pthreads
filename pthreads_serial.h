@@ -19,18 +19,18 @@
 #define HAVE_PTHREADS_SERIAL_H
 
 /* {{{ prototypes */
-char *					pthreads_serialize(zval *unserial TSRMLS_DC);
-zval *					pthreads_unserialize(char *serial TSRMLS_DC);
-int 					pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
+char * pthreads_serialize(zval *unserial TSRMLS_DC);
+zval * pthreads_unserialize(char *serial TSRMLS_DC);
+int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
 /* }}} */
 
 /* {{{ Will serialize the zval into a newly allocated buffer which must be free'd by the caller */
 char * pthreads_serialize(zval *unserial TSRMLS_DC){					
-	char 					*result = NULL;
+	char *result = NULL;
 	
 	if (unserial && Z_TYPE_P(unserial) != IS_NULL) {
-		smart_str 				*output;
-		php_serialize_data_t 	vars;
+		smart_str *output;
+		php_serialize_data_t vars;
 		
 		PHP_VAR_SERIALIZE_INIT(vars);				
 		output = (smart_str*) calloc(1, sizeof(smart_str));

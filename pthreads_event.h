@@ -28,30 +28,30 @@ extern pthread_mutexattr_t defmutex;
 
 /* {{{ structs */
 typedef struct _pthread_event {
-	pthread_mutex_t			*change;
-	pthread_mutex_t			*lock;
-	pthread_cond_t			*cond;
-	int						wait;
-	int						fire;
+	pthread_mutex_t *change;
+	pthread_mutex_t *lock;
+	pthread_cond_t *cond;
+	int wait;
+	int fire;
 } EVENT, *PEVENT;
 /* }}} */
 
 /* {{{ prototypes */
-PEVENT 	pthreads_create_event();
-int 	pthreads_wait_event(PEVENT event);
-int 	pthreads_fire_event(PEVENT event);
-void 	pthreads_destroy_event(PEVENT event);
+PEVENT pthreads_create_event();
+int pthreads_wait_event(PEVENT event);
+int pthreads_fire_event(PEVENT event);
+void pthreads_destroy_event(PEVENT event);
 
 /* }}} */
 
 /* {{{ macros */
-#define PTHREADS_E(t)									t->sync
-#define PTHREADS_E_CREATE(t)							t->sync=pthreads_create_event()
-#define PTHREADS_E_FIRE(t)								pthreads_fire_event(t->sync)
-#define PTHREADS_E_WAIT(t)								pthreads_wait_event(t->sync)
-#define PTHREADS_E_WAIT_EX(t, u)						pthreads_wait_event_ex(t->sync, u)
-#define PTHREADS_E_DESTROY(t)							pthreads_destroy_event(t->sync)
-#define PTHREADS_IS_BLOCKING(t)							(PTHREADS_E(t)->wait > PTHREADS_E(t)->fire)
+#define PTHREADS_E(t) t->sync
+#define PTHREADS_E_CREATE(t) t->sync=pthreads_create_event()
+#define PTHREADS_E_FIRE(t) pthreads_fire_event(t->sync)
+#define PTHREADS_E_WAIT(t) pthreads_wait_event(t->sync)
+#define PTHREADS_E_WAIT_EX(t, u) pthreads_wait_event_ex(t->sync, u)
+#define PTHREADS_E_DESTROY(t) pthreads_destroy_event(t->sync)
+#define PTHREADS_IS_BLOCKING(t) (PTHREADS_E(t)->wait > PTHREADS_E(t)->fire)
 /* }}} */
 
 /* {{{ Will allocate and initialize a new event */
@@ -59,9 +59,9 @@ PEVENT pthreads_create_event(){
 	PEVENT event = (PEVENT) calloc(1, sizeof(EVENT));
 	
 	if (event) {
-		event->change =	(pthread_mutex_t*) 	calloc(1, sizeof(pthread_mutex_t));
-		event->lock = 	(pthread_mutex_t*) 	calloc(1, sizeof(pthread_mutex_t));
-		event->cond = 	(pthread_cond_t*)	calloc(1, sizeof(pthread_cond_t));								
+		event->change = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
+		event->lock = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
+		event->cond = (pthread_cond_t*) calloc(1, sizeof(pthread_cond_t));								
 		event->wait = 0;
 		event->fire = 0;
 		
