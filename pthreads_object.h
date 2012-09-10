@@ -18,6 +18,12 @@
 #ifndef HAVE_PTHREADS_OBJECT_H
 #define HAVE_PTHREADS_OBJECT_H
 
+/* {{{ state constants */
+#define PTHREADS_ST_STARTED 1
+#define PTHREADS_ST_RUNNING 2
+#define PTHREADS_ST_JOINED	4
+/* }}} */
+
 /* {{{ prototypes */
 static 	zend_object_value 		pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC);
 static 	void 					pthreads_detach_from_instance(void * child TSRMLS_DC);
@@ -54,11 +60,14 @@ typedef struct _pthread_construct {
 	void					***ls;
 	
 	/*
+	* State Management
+	*/
+	pthread_mutex_t			*lock;
+	int						state;
+	
+	/*
 	* Flags
 	*/
-	zend_bool				started;
-	zend_bool				running;
-	zend_bool				joined;
 	zend_bool				self;
 	zend_bool				synchronized;
 
@@ -74,6 +83,37 @@ typedef struct _pthread_construct {
 } THREAD, *PTHREAD;
 /* }}} */
 
+/* {{{ state management */
+static int pthreads_get_state(PTHREAD thread){
+	int result = -1;
+	if (pthread_mutex_lock(thread->lock)==SUCCESS) {
+		result = thread->state;
+		pthread_mutex_unlock(thread->lock);
+	}
+	return result;
+}
+
+static int pthreads_set_state(PTHREAD thread, int state){
+	int result = -1;
+	if (pthread_mutex_lock(thread->lock)==SUCCESS) {
+		thread->state += state;
+		result = thread->state;
+		pthread_mutex_unlock(thread->lock);
+	}
+	return result;
+}
+
+static int pthreads_unset_state(PTHREAD thread, int state){
+	int result = -1;
+	if (pthread_mutex_lock(thread->lock)==SUCCESS) {
+		thread->state -= state;
+		result = thread->state;
+		pthread_mutex_unlock(thread->lock);
+	}
+	return result;
+}
+/* }}} */
+
 /* {{{ macros */
 #define PTHREADS_FETCH_FROM_EX(object, ls)	(PTHREAD) zend_object_store_get_object(object, ls)
 #define PTHREADS_FETCH_FROM(object)			(PTHREAD) zend_object_store_get_object(object TSRMLS_CC)
@@ -85,12 +125,14 @@ typedef struct _pthread_construct {
 	thread->sig = self;\
 }while(0)
 #define PTHREADS_IS_SELF(t)					(t->self)
-#define PTHREADS_IS_JOINED(t)				t->joined
-#define PTHREADS_SET_JOINED(t)				t->joined=1
-#define PTHREADS_SET_RUNNING(t)				t->running=1
-#define PTHREADS_UNSET_RUNNING(t)			t->running=0
-#define PTHREADS_IS_STARTED(t)				t->started
-#define PTHREADS_SET_STARTED(t)				t->started=1
+#define PTHREADS_SET_JOINED(t)				pthreads_set_state(t, PTHREADS_ST_JOINED)
+#define PTHREADS_SET_RUNNING(t)				pthreads_set_state(t, PTHREADS_ST_RUNNING)
+#define PTHREADS_UNSET_RUNNING(t)			pthreads_unset_state(t, PTHREADS_ST_RUNNING)
+#define PTHREADS_IS_JOINED(t)				((pthreads_get_state(t) & PTHREADS_ST_JOINED)==PTHREADS_ST_JOINED)
+#define PTHREADS_IS_STARTED(t)				((pthreads_get_state(t) & PTHREADS_ST_STARTED)==PTHREADS_ST_STARTED)
+#define PTHREADS_IS_RUNNING(t)				((pthreads_get_state(t) & PTHREADS_ST_RUNNING)==PTHREADS_ST_RUNNING)
+#define PTHREADS_SET_STARTED(t)				pthreads_set_state(t, PTHREADS_ST_STARTED)
+#define PTHREADS_ST(t)						pthreads_get_state(t)
 /* }}} */
 
 /* {{{ compat */
@@ -107,19 +149,28 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 	/*
 	* Allocate an initialize thread object for storage
 	*/
-	PTHREAD thread = calloc(1, sizeof(*thread));						
-	thread->joined = 		0;
-	thread->running = 		0;
+	PTHREAD thread = calloc(1, sizeof(*thread));			
 	thread->synchronized =	0;
 	thread->self =			0;
 	thread->ls	=			tsrm_ls;
 	thread->sig =			NULL;
 	
 	/*
+	* State Initialization
+	*/
+	thread->lock = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
+	if (thread->lock)
+		pthread_mutex_init(thread->lock, &defmutex);
+	thread->state = 0;
+	
+	/*
 	* To be initialized by the calling context
 	*/
 	thread->sync =			NULL;
 	
+	/*
+	* Standard Entry Initialization
+	*/ 
 	zend_object_std_init(&thread->std, entry TSRMLS_CC);
 	
 	/*
@@ -218,6 +269,14 @@ static void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 			efree(thread->std.properties_table);
 		}
 #endif		
+
+		/*
+		* Destroy State Lock
+		*/
+		if (thread->lock) {
+			pthread_mutex_destroy(thread->lock);
+			free(thread->lock);
+		}
 
 		/*
 		* Finally free the thread object

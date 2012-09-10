@@ -44,6 +44,10 @@
 #include "pthreads_serial.h"
 #include "pthreads_object.h"
 
+#ifndef ZTS
+#	error "pthreads requires that Thread Safety is enabled, add --enable-maintainer-zts to your PHP build configuration"
+#endif
+
 #if COMPILE_DL_PTHREADS
 ZEND_GET_MODULE(pthreads)
 #endif
@@ -68,6 +72,7 @@ pthread_mutexattr_t		defmutex;
 
 /* {{{ arginfo */
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
+	ZEND_ARG_INFO(0, synchronized)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_self, 0, 0, 0)
