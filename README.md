@@ -7,6 +7,7 @@ This project aims to provide multi-threading that is compatible with PHP based o
 * Posix Threading
 * Mutex
 * Condition Variables
+* Synchronization ( wait/notify )
 
 pthreads was written with simplicity, compatibiilty and efficiency in mind, it's performance beggars belief !!
 
