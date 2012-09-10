@@ -82,6 +82,7 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_busy, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_wait, 0, 0, 0)
+	ZEND_ARG_INFO(0, timeout)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_notify, 0, 0, 0)
@@ -107,6 +108,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Mutex_unlock, 0, 0, 1)
 	ZEND_ARG_INFO(0, mutex)
+	ZEND_ARG_INFO(0, destroy)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Mutex_destroy, 0, 0, 1)
@@ -123,6 +125,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Cond_wait, 0, 0, 2)
 	ZEND_ARG_INFO(0, condition)
 	ZEND_ARG_INFO(0, mutex)
+	ZEND_ARG_INFO(0, timeout)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Cond_broadcast, 0, 0, 1)
@@ -435,7 +438,6 @@ PHP_METHOD(Mutex, create)
 	
 	if ((mutex=(pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t)))!=NULL) {
 		switch(pthread_mutex_init(mutex, &defmutex)){
-		
 			case SUCCESS: 
 				if (ZEND_NUM_ARGS()) {				
 					if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &lock)==SUCCESS) {
@@ -545,15 +547,23 @@ PHP_METHOD(Mutex, trylock)
 }
 /* }}} */
 
-/* {{{ proto boolean Mutex::unlock(long mutex) 
-		Will unlock the mutex referenced */
+/* {{{ proto boolean Mutex::unlock(long mutex, [bool destroy]) 
+		Will unlock the mutex referenced, and optionally destroy it */
 PHP_METHOD(Mutex, unlock)
 {
 	pthread_mutex_t *mutex;
+	zend_bool destroy;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|b", &mutex, &destroy)==SUCCESS && mutex) {
 		switch (pthread_mutex_unlock(mutex)) {
-			case SUCCESS: RETURN_TRUE; break;
+			case SUCCESS: 
+				if (destroy) {
+					pthread_mutex_destroy(mutex);
+					free(mutex);
+				}
+				
+				RETURN_TRUE; 
+			break;
 			
 			case EINVAL: 
 				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex"); 
@@ -608,7 +618,9 @@ PHP_METHOD(Cond, create)
 	
 	if ((condition=(pthread_cond_t*) calloc(1, sizeof(pthread_cond_t)))!=NULL) {
 		switch (pthread_cond_init(condition, NULL)) {
-			case SUCCESS: RETURN_LONG((ulong)condition); break;
+			case SUCCESS: 
+				RETURN_LONG((ulong)condition); 
+			break;
 			
 			case EAGAIN:
 				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary resources (other than memory) to initialise another condition"); 
@@ -673,25 +685,68 @@ PHP_METHOD(Cond, broadcast)
 }
 /* }}} */
 
-/* {{{ proto boolean Cond::wait(long condition, long mutex) 
-		This will wait for a signal or broadcast on condition, you must have mutex locked by the calling thread */
+/* {{{ proto boolean Cond::wait(long condition, long mutex, [long timeout]) 
+		This will wait for a signal or broadcast on condition, you must have mutex locked by the calling thread
+		Timeout should be expressed in microseconds ( millionths ) */
 PHP_METHOD(Cond, wait)
 {
 	pthread_cond_t *condition;
 	pthread_mutex_t *mutex;
+	long timeout = 0L;
+	int	rc;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &condition, &mutex)==SUCCESS && condition && mutex) {
-		switch (pthread_cond_wait(condition, mutex)) {
-			case SUCCESS:  RETURN_TRUE;  break;
-			
-			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected the condition referenced does not refer to a valid conditiond"); 
-			break;
-			
-			default:
-				zend_error(E_ERROR, "Yhe implementation detected an internal error while waiting for condition and cannot continue");
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &condition, &mutex, &timeout)==SUCCESS && condition && mutex) {
+		if (timeout > 0L) {
+			struct timeval now;
+			if (gettimeofday(&now, NULL)==SUCCESS) {
+				struct timespec until;
+				long	nsec = timeout * 1000;
+				if (nsec > 1000000000L) {
+					until.tv_sec = now.tv_sec + (nsec / 1000000000L);
+					until.tv_nsec = (now.tv_usec * 1000) + (nsec % 1000000000L);
+				} else {
+					until.tv_sec = now.tv_sec;
+					until.tv_nsec = (now.tv_usec * 1000) + timeout;	
+				}
+wait_ex:
+				switch(pthread_cond_timedwait(condition, mutex, &until)){
+					case SUCCESS: RETURN_TRUE; break;
+					case EINVAL: 
+						zend_error(E_WARNING, "The implementation has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
+						RETURN_FALSE;
+					break;
+					
+					case ETIMEDOUT: 
+						zend_error(E_WARNING, "The implementation detected a timeout while waiting for condition"); 
+						RETURN_FALSE;
+					break;
+		
+					/*
+					* Protect against spurious wakeups
+					*/
+					default: goto wait_ex;
+				}
+			} else {
+				zend_error(E_ERROR, "The implementation has detected a failure while attempting to get the time from the system");
+				RETURN_FALSE;
+			}
+		} else {
+wait:
+			switch (pthread_cond_wait(condition, mutex)) {
+				case SUCCESS:  RETURN_TRUE; break;
+				
+				case EINVAL: 
+					zend_error(E_WARNING, "The implementation has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
+					RETURN_FALSE;
+				break;
+				
+				/*
+				* Protect against spurious wakeups
+				*/
+				default: goto wait;
+			}
 		}
-	} 
+	}
 	RETURN_FALSE;
 }
 /* }}} */
