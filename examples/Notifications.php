@@ -5,14 +5,19 @@
 */
 class ExampleThread extends Thread {
 	public function run(){
-			printf("The creating thread will not budge until I:");
+			printf("I'm in the thread and you're waiting for me ... ");
 			$this->notify();
+			$this->wait();
+			printf(" ... continue ...\n");
 	}
 }
 
 $t = new ExampleThread();
 
-if ($t->start(true)) {
-	printf(" ... I'm back from start ...");
-}
+if ($t->start(true)) {	
+	printf("I'm back from start to sleep");
+	usleep(1000000); // do some work ...
+	printf(" ... now tell thread to");
+	$t->notify();
+} 
 ?>

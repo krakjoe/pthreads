@@ -217,7 +217,6 @@ PHP_MINIT_FUNCTION(pthreads)
 #endif
 	}
 	
-	
 	return SUCCESS;
 }
 /* }}} */
@@ -693,7 +692,6 @@ PHP_METHOD(Cond, wait)
 	pthread_cond_t *condition;
 	pthread_mutex_t *mutex;
 	long timeout = 0L;
-	int	rc;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &condition, &mutex, &timeout)==SUCCESS && condition && mutex) {
 		if (timeout > 0L) {
@@ -708,7 +706,6 @@ PHP_METHOD(Cond, wait)
 					until.tv_sec = now.tv_sec;
 					until.tv_nsec = (now.tv_usec * 1000) + timeout;	
 				}
-wait_ex:
 				switch(pthread_cond_timedwait(condition, mutex, &until)){
 					case SUCCESS: RETURN_TRUE; break;
 					case EINVAL: 
@@ -720,18 +717,14 @@ wait_ex:
 						zend_error(E_WARNING, "The implementation detected a timeout while waiting for condition"); 
 						RETURN_FALSE;
 					break;
-		
-					/*
-					* Protect against spurious wakeups
-					*/
-					default: goto wait_ex;
+					
+					default: RETURN_FALSE;
 				}
 			} else {
 				zend_error(E_ERROR, "The implementation has detected a failure while attempting to get the time from the system");
 				RETURN_FALSE;
 			}
 		} else {
-wait:
 			switch (pthread_cond_wait(condition, mutex)) {
 				case SUCCESS:  RETURN_TRUE; break;
 				
@@ -740,10 +733,7 @@ wait:
 					RETURN_FALSE;
 				break;
 				
-				/*
-				* Protect against spurious wakeups
-				*/
-				default: goto wait;
+				default: RETURN_FALSE;
 			}
 		}
 	}

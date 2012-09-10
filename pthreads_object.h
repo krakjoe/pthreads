@@ -585,10 +585,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		}
 	}
 
-	if (PTHREADS_IS_BLOCKING(thread)) {
-		PTHREADS_E_FIRE(thread);
-	}
-	
 	PTHREADS_UNSET_RUNNING(thread);
 	
 	/*
