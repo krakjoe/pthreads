@@ -24,41 +24,42 @@
 #include "config.h"
 #endif
 
-PHP_MINIT_FUNCTION(pthreads);							/* Initialize class entries and default attributes */
-PHP_MSHUTDOWN_FUNCTION(pthreads);						/* Destroy default attributes */
+PHP_MINIT_FUNCTION(pthreads);
+PHP_MSHUTDOWN_FUNCTION(pthreads);
 
-PHP_METHOD(Thread, start);								/* Userland method to start a Thread */
-PHP_METHOD(Thread, self);								/* Userland method to get current Thread identifier */
-PHP_METHOD(Thread, busy);								/* Userland method to detect ability to join without blocking */
-PHP_METHOD(Thread, wait);								/* Userland method to cause a thread to wait for notification */
-PHP_METHOD(Thread, notify);								/* Userland method to notify a thread */
-PHP_METHOD(Thread, join);								/* Userland method to wait for a Thread and retrieve it's result */
 
-PHP_METHOD(Mutex, create);								/* Userland mutex constructor */
-PHP_METHOD(Mutex, lock);								/* Userland method to lock mutex */
-PHP_METHOD(Mutex, trylock);								/* Userland method to try mutex lock */
+PHP_METHOD(Thread, start);
+PHP_METHOD(Thread, self);
+PHP_METHOD(Thread, busy);
+PHP_METHOD(Thread, wait);
+PHP_METHOD(Thread, notify);
+PHP_METHOD(Thread, join);
+
+PHP_METHOD(Mutex, create);
+PHP_METHOD(Mutex, lock);
+PHP_METHOD(Mutex, trylock);
 /** @TODO boolean parameter to unlock and destroy **/
-PHP_METHOD(Mutex, unlock);								/* Userland method to unlock mutex */
-PHP_METHOD(Mutex, destroy);								/* Userland method to destroy mutex */
+PHP_METHOD(Mutex, unlock);
+PHP_METHOD(Mutex, destroy);
 
 /*
 * These are destined for replacement with something higher level, they are too difficult to make use out of in the PHP environment
 * They need to be abstracted into events like we have internally
 */
-PHP_METHOD(Cond, create);								/* Userland method to create a condition */
-PHP_METHOD(Cond, signal);								/* Userland method to signal on conditions */
-PHP_METHOD(Cond, broadcast);							/* Userland method to broadcast on conditions */
+PHP_METHOD(Cond, create);
+PHP_METHOD(Cond, signal);
+PHP_METHOD(Cond, broadcast);
 /** @TODO: merge functionality of pthread_cond_timedwait into wait **/
-PHP_METHOD(Cond, wait);									/* Userland method to wait for a condition */
-PHP_METHOD(Cond, destroy);								/* Userland method to destroy condition */
+PHP_METHOD(Cond, wait);
+PHP_METHOD(Cond, destroy);
 
 extern zend_module_entry pthreads_module_entry;
 
-#define phpext_pthreads_ptr 							&pthreads_module_entry
-#define PTHREADS_FETCH_ALL(ls, id, type)				((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
-#define PTHREADS_FETCH_CTX(ls, id, type, element)		(((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)
-#define PTHREADS_CG(ls, v)								PTHREADS_FETCH_CTX(ls, compiler_globals_id, zend_compiler_globals*, v)
-#define PTHREADS_CG_ALL(ls)								PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
-#define PTHREADS_EG(ls, v)								PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
-#define PTHREADS_EG_ALL(ls)								PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
+#define phpext_pthreads_ptr &pthreads_module_entry
+#define PTHREADS_FETCH_ALL(ls, id, type) ((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
+#define PTHREADS_FETCH_CTX(ls, id, type, element) (((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)
+#define PTHREADS_CG(ls, v) PTHREADS_FETCH_CTX(ls, compiler_globals_id, zend_compiler_globals*, v)
+#define PTHREADS_CG_ALL(ls) PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
+#define PTHREADS_EG(ls, v) PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
+#define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
 #endif 

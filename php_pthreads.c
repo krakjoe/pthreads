@@ -52,13 +52,13 @@
 ZEND_GET_MODULE(pthreads)
 #endif
 
-zend_class_entry 		*pthreads_class_entry;
-zend_class_entry 		*pthreads_mutex_class_entry;
-zend_class_entry		*pthreads_condition_class_entry;
+zend_class_entry *pthreads_class_entry;
+zend_class_entry *pthreads_mutex_class_entry;
+zend_class_entry *pthreads_condition_class_entry;
 
-extern	char *			pthreads_serialize(zval *unserial TSRMLS_DC);
-extern	zval *			pthreads_unserialize(char *serial TSRMLS_DC);
-extern	int 			pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
+extern	char * pthreads_serialize(zval *unserial TSRMLS_DC);
+extern	zval * pthreads_unserialize(char *serial TSRMLS_DC);
+extern	int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
 
 /* {{{ defmutex setup 
 		Choose the NP type if it exists as it targets the current system*/
@@ -136,31 +136,31 @@ ZEND_END_ARG_INFO()
 
 /* {{{ method entries */
 zend_function_entry pthreads_methods[] = {
-	PHP_ME(				Thread, start, 			Thread_start,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(				Thread, self,			Thread_self, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(				Thread, busy,			Thread_busy, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(				Thread, wait,			Thread_wait,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(				Thread, notify,			Thread_notify,	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(				Thread, join,			Thread_join, 	ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ABSTRACT_ME(	Thread, run,			Thread_run)
+	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, self, Thread_self, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, busy, Thread_busy, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ABSTRACT_ME(Thread, run, Thread_run)
 	{NULL, NULL, NULL}
 };
 
 zend_function_entry pthreads_mutex_methods[] = {
-	PHP_ME(Mutex, create,		Mutex_create, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, lock, 		Mutex_lock, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, trylock, 		Mutex_trylock,	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, unlock,		Mutex_unlock,	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Mutex, destroy,		Mutex_destroy,	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, create, Mutex_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, lock, Mutex_lock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, trylock, Mutex_trylock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, unlock, Mutex_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Mutex, destroy, Mutex_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 
 zend_function_entry pthreads_condition_methods[] = {
-	PHP_ME(Cond, create,		Cond_create, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, signal,		Cond_signal, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, wait,			Cond_wait, 		ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, broadcast,		Cond_broadcast, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Cond, destroy,		Cond_destroy, 	ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, create, Cond_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, signal, Cond_signal, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, wait, Cond_wait, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, broadcast, Cond_broadcast, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Cond, destroy, Cond_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* }}} */
@@ -677,8 +677,8 @@ PHP_METHOD(Cond, broadcast)
 		This will wait for a signal or broadcast on condition, you must have mutex locked by the calling thread */
 PHP_METHOD(Cond, wait)
 {
-	pthread_cond_t 		*condition;
-	pthread_mutex_t 	*mutex;
+	pthread_cond_t *condition;
+	pthread_mutex_t *mutex;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &condition, &mutex)==SUCCESS && condition && mutex) {
 		switch (pthread_cond_wait(condition, mutex)) {
