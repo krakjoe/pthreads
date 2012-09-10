@@ -15,6 +15,10 @@
   | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
+ 
+/*
+* NOTE: This is likely to be refactored into pthreads_sync.h
+*/
 #ifndef HAVE_PTHREADS_EVENT_H
 #define HAVE_PTHREADS_EVENT_H
 
@@ -24,6 +28,7 @@ extern pthread_mutexattr_t defmutex;
 
 /* {{{ structs */
 typedef struct _pthread_event {
+	pthread_mutex_t			*change;
 	pthread_mutex_t			*lock;
 	pthread_cond_t			*cond;
 	int						wait;
@@ -47,7 +52,6 @@ void 	pthreads_destroy_event(PEVENT event);
 #define PTHREADS_E_WAIT_EX(t, u)						pthreads_wait_event_ex(t->sync, u)
 #define PTHREADS_E_DESTROY(t)							pthreads_destroy_event(t->sync)
 #define PTHREADS_IS_BLOCKING(t)							(PTHREADS_E(t)->wait > PTHREADS_E(t)->fire)
-#define PTHREADS_IS_RUNNING(t)							(t->running && !t->joined)
 /* }}} */
 
 /* {{{ Will allocate and initialize a new event */
@@ -55,12 +59,14 @@ PEVENT pthreads_create_event(){
 	PEVENT event = (PEVENT) calloc(1, sizeof(EVENT));
 	
 	if (event) {
-		event->lock = (pthread_mutex_t*) 	calloc(1, sizeof(pthread_mutex_t));
-		event->cond = (pthread_cond_t*)		calloc(1, sizeof(pthread_cond_t));								
+		event->change =	(pthread_mutex_t*) 	calloc(1, sizeof(pthread_mutex_t));
+		event->lock = 	(pthread_mutex_t*) 	calloc(1, sizeof(pthread_mutex_t));
+		event->cond = 	(pthread_cond_t*)	calloc(1, sizeof(pthread_cond_t));								
 		event->wait = 0;
 		event->fire = 0;
 		
 		if (event->lock && event->cond) {
+			pthread_mutex_init(event->change, &defmutex);
 			pthread_mutex_init(event->lock, &defmutex);
 			pthread_cond_init(event->cond, NULL);
 		}
@@ -75,11 +81,14 @@ PEVENT pthreads_create_event(){
 #define pthreads_wait_event(e)	pthreads_wait_event_ex(e, 0L);
 /* }}} */
 
-/* {{{ Will cause the calling thread to block until the event is fired or the optional timeout has passed */
+/* {{{ Will cause the calling thread to block until the event is fired or the optional timeout has passed 
+	If event was fired before the waiter got here this call will return after recording wait */
 int pthreads_wait_event_ex(PEVENT event, long timeout) {
 	int result = 0;
 	if (event != NULL) {
+		pthread_mutex_lock(event->change);
 		if (++event->wait > event->fire) {
+			pthread_mutex_unlock(event->change);
 			pthread_mutex_lock(event->lock);
 			if (timeout > 0L) {
 				struct timeval now;
@@ -106,25 +115,33 @@ int pthreads_wait_event_ex(PEVENT event, long timeout) {
 				}
 			} else result = (pthread_cond_wait(event->cond, event->lock)==SUCCESS) ? 1 : 0;
 			pthread_mutex_unlock(event->lock);
-		} else result = 1;
+		} else {
+			pthread_mutex_unlock(event->change);
+			result = 1;
+		}
 	}
 	
 	return result;
 }
 /* }}} */
 
-/* {{{ Firing an event causing all waiting threads to continue */
+/* {{{ Firing an event causing all waiting threads to continue 
+		If there is nobody waiting on event this call will return immediately after recording fire */
 int pthreads_fire_event(PEVENT event){
 	int result = 0;
 	if (event) {
+		pthread_mutex_lock(event->change);
 		if (event->wait >= event->fire++){
 			do{
+				pthread_mutex_unlock(event->change);
 				pthread_mutex_lock(event->lock);
 				pthread_cond_signal(event->cond);
 				pthread_mutex_unlock(event->lock);
+				pthread_mutex_lock(event->change);
 			} while(++event->fire < event->wait);
 			result = 1;
 		}
+		pthread_mutex_unlock(event->change);
 	}
 	return result;
 }
@@ -135,6 +152,11 @@ void pthreads_destroy_event(PEVENT event){
 	if (event) {	
 		if (event->wait > event->fire) 
 			pthreads_fire_event(event);
+		
+		if (event->change) {
+			pthread_mutex_destroy(event->change);
+			free(event->change);
+		}
 		
 		if (event->lock) {
 			pthread_mutex_destroy(event->lock);
