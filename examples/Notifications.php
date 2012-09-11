@@ -6,8 +6,11 @@
 class ExampleThread extends Thread {
 	public function run(){
 			printf("I'm in the thread and you're waiting for me ... ");
-			$this->notify();
-			$this->wait();
+			//$this->notify();
+			//$this->wait();
+			//printf(" ... continue ...\n");
+			echo $this->notify();
+			echo $this->wait();
 			printf(" ... continue ...\n");
 	}
 }
