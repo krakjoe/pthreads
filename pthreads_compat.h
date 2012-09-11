@@ -15,11 +15,6 @@
   | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
- 
-/*
-* This header serves to resolve differences in versions of PHP and that is all
-* @NOTE I hope to do away with this header completely, in time ...
-*/
 #ifndef HAVE_PTHREADS_COMPAT_H
 #define HAVE_PTHREADS_COMPAT_H
 
