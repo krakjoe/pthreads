@@ -19,8 +19,12 @@
 #define HAVE_PHP_THREADS
 #include <stdio.h>
 #include <pthread.h>
-#include <sys/time.h>
+#ifndef _WIN32
 #include <unistd.h>
+#include <sys/time.h>
+#else
+#include <time.h>
+#endif
 #include <php.h>
 #include <php_globals.h>
 #include <php_main.h>
@@ -40,6 +44,7 @@
 #include <Zend/zend_vm.h>
 #include <TSRM/TSRM.h>
 #include "php_pthreads.h"
+#include "pthreads_compat.h"
 #include "pthreads_event.h"
 #include "pthreads_serial.h"
 #include "pthreads_object.h"
@@ -63,10 +68,12 @@ extern	int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
 /* {{{ defmutex setup 
 		Choose the NP type if it exists as it targets the current system*/
 pthread_mutexattr_t		defmutex;
-#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-#	define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK_NP
-#elifdef PTHREAD_MUTEX_ERRORCHECK
-#	define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK
+#ifndef _WIN32
+#	ifdef PTHREAD_MUTEX_ERRORCHECK_NP
+#		define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK_NP
+#	elifdef PTHREAD_MUTEX_ERRORCHECK
+#		define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK
+#	endif
 #endif
 /* }}} */
 
@@ -322,7 +329,11 @@ PHP_METHOD(Thread, start)
 		Will return the current thread id from within a thread */
 PHP_METHOD(Thread, self)
 { 
+#ifndef _WIN32
 	ZVAL_LONG(return_value, (ulong) pthread_self()); 
+#else
+	ZVAL_LONG(return_value, (unsigned long) GetCurrentThreadId());
+#endif
 }
 /* }}} */
 
@@ -551,12 +562,12 @@ PHP_METHOD(Mutex, trylock)
 PHP_METHOD(Mutex, unlock)
 {
 	pthread_mutex_t *mutex;
-	zend_bool destroy;
+	zend_bool destroy = 0;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|b", &mutex, &destroy)==SUCCESS && mutex) {
 		switch (pthread_mutex_unlock(mutex)) {
 			case SUCCESS: 
-				if (destroy) {
+				if (destroy > 0) {
 					pthread_mutex_destroy(mutex);
 					free(mutex);
 				}

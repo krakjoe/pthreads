@@ -161,23 +161,19 @@ wait:
 }
 /* }}} */
 
-/* {{{ Firing an event causing all waiting threads to continue 
-		If there is nobody waiting on event this call will return immediately after recording fire */
+/* {{{ Firing causes all waiting threads to continue */
 int pthreads_fire_event(PEVENT event){
 	int result = 0;
 	if (event) {
 		pthread_mutex_lock(event->change);
-		if (event->wait >= ++event->fire){
-			do{
-				pthread_mutex_unlock(event->change);
-				pthread_mutex_lock(event->lock);
-				pthread_cond_signal(event->cond);
-				pthread_mutex_unlock(event->lock);
-				pthread_mutex_lock(event->change);
-			} while(event->wait);
-			result = 1;
-		}
-		--event->fire;
+		do{
+			++event->fire;
+			pthread_mutex_unlock(event->change);
+			pthread_mutex_lock(event->lock);
+			pthread_cond_signal(event->cond);
+			pthread_mutex_unlock(event->lock);
+			pthread_mutex_lock(event->change);
+		} while(event->wait);
 		pthread_mutex_unlock(event->change);
 	}
 	return result;
@@ -187,8 +183,11 @@ int pthreads_fire_event(PEVENT event){
 /* {{{ Will destroy an event, if the event is not fired and there are waiting threads we fire it */
 void pthreads_destroy_event(PEVENT event){
 	if (event) {	
-		if (event->wait > event->fire) 
+		if (event->wait > event->fire){
+			printf("firing ...\n");
 			pthreads_fire_event(event);
+		}
+			
 		
 		if (event->change) {
 			pthread_mutex_destroy(event->change);
