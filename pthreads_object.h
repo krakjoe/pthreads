@@ -221,13 +221,16 @@ static void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 					PTHREADS_SET_JOINED(thread);
 					
 					/*
-					* Get rid of blockages
+					* Here we force blocking threads to wake and warn users of the deadlock
 					*/
 					if (PTHREADS_IS_BLOCKING(thread)) {
+#ifndef _WIN32
+						zend_error(E_WARNING, "The implementation has avoided a deadlock, thread #%lu was waiting for notification", (ulong) pthread_self());
+#else	
+						zend_error(E_WARNING, "The implementation has avoided a deadlock, thread #%lu was waiting for notification", (unsigned long) GetCurrentThreadId());
+#endif
 						PTHREADS_E_FIRE(thread);
 					}
-					
-					
 					
 					pthread_join(thread->thread, (void*) &result);
 					

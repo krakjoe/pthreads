@@ -40,6 +40,7 @@ typedef struct _pthread_event {
 PEVENT pthreads_create_event();
 int pthreads_wait_event(PEVENT event);
 int pthreads_fire_event(PEVENT event);
+int pthreads_blocking_event(PEVENT event);
 void pthreads_destroy_event(PEVENT event);
 
 /* }}} */
@@ -50,8 +51,8 @@ void pthreads_destroy_event(PEVENT event);
 #define PTHREADS_E_FIRE(t) pthreads_fire_event(t->sync)
 #define PTHREADS_E_WAIT(t) pthreads_wait_event(t->sync)
 #define PTHREADS_E_WAIT_EX(t, u) pthreads_wait_event_ex(t->sync, u)
+#define PTHREADS_IS_BLOCKING(t) pthreads_blocking_event(t->sync)
 #define PTHREADS_E_DESTROY(t) pthreads_destroy_event(t->sync)
-#define PTHREADS_IS_BLOCKING(t) (PTHREADS_E(t)->wait > PTHREADS_E(t)->fire)
 /* }}} */
 
 /* {{{ Will allocate and initialize a new event */
@@ -87,74 +88,69 @@ int pthreads_wait_event_ex(PEVENT event, long timeout) {
 	
 	if (event != NULL) {
 		pthread_mutex_lock(event->change);
-		if (event->fire < ++event->wait) {
-			fires = event->fire;
-			pthread_mutex_unlock(event->change);
-			pthread_mutex_lock(event->lock);
-			if (timeout > 0L) {
-				struct timeval now;
-				if (gettimeofday(&now, NULL)==SUCCESS) {
-					struct timespec until;
-					long	nsec = timeout * 1000;
-					if (nsec > 1000000000L) {
-						until.tv_sec = now.tv_sec + (nsec / 1000000000L);
-						until.tv_nsec = (now.tv_usec * 1000) + (nsec % 1000000000L);
-					} else {
-						until.tv_sec = now.tv_sec;
-						until.tv_nsec = (now.tv_usec * 1000) + timeout;	
-					}
-wait_ex:
-					switch(pthread_cond_timedwait(event->cond, event->lock, &until)){
-						case SUCCESS:
-							/*
-							* Protection from spurious wakeups
-							*/
-							if (pthread_mutex_lock(event->change)==SUCCESS) {
-								if (event->fire <= fires) {
-									goto wait_ex;
-								} else --event->wait;
-								result = 1; 
-								pthread_mutex_unlock(event->change);
-							} else zend_error(E_ERROR, "The implementation detected an internal error and cannot continue");
-						break;
-						
-						case ETIMEDOUT: 
-							zend_error(E_WARNING, "The implementation detected a timeout while waiting for event"); 
-							if (pthread_mutex_lock(event->change)==SUCCESS){
-								--event->wait;
-								pthread_mutex_unlock(event->change);
-							} else zend_error(E_ERROR, "The implementation detected an internal error and cannot continue");
-							result = 0;
-						break;
-						
-						default: result = 0;
-					}
+		++event->wait;
+		fires = event->fire;
+		pthread_mutex_unlock(event->change);
+		pthread_mutex_lock(event->lock);
+		if (timeout > 0L) {
+			struct timeval now;
+			if (gettimeofday(&now, NULL)==SUCCESS) {
+				struct timespec until;
+				long	nsec = timeout * 1000;
+				if (nsec > 1000000000L) {
+					until.tv_sec = now.tv_sec + (nsec / 1000000000L);
+					until.tv_nsec = (now.tv_usec * 1000) + (nsec % 1000000000L);
+				} else {
+					until.tv_sec = now.tv_sec;
+					until.tv_nsec = (now.tv_usec * 1000) + timeout;	
 				}
-			} else {
-wait:
-				switch(pthread_cond_wait(event->cond, event->lock)){
+wait_ex:
+				switch(pthread_cond_timedwait(event->cond, event->lock, &until)){
 					case SUCCESS:
 						/*
 						* Protection from spurious wakeups
 						*/
 						if (pthread_mutex_lock(event->change)==SUCCESS) {
 							if (event->fire <= fires) {
-								goto wait;
+								goto wait_ex;
 							} else --event->wait;
 							result = 1; 
 							pthread_mutex_unlock(event->change);
 						} else zend_error(E_ERROR, "The implementation detected an internal error and cannot continue");
 					break;
 					
+					case ETIMEDOUT: 
+						zend_error(E_WARNING, "The implementation detected a timeout while waiting for event"); 
+						if (pthread_mutex_lock(event->change)==SUCCESS){
+							--event->wait;
+							pthread_mutex_unlock(event->change);
+						} else zend_error(E_ERROR, "The implementation detected an internal error and cannot continue");
+						result = 0;
+					break;
+					
 					default: result = 0;
 				}
 			}
-			pthread_mutex_unlock(event->lock);
 		} else {
-			--event->wait;
-			pthread_mutex_unlock(event->change);
-			result = 1;
+wait:
+			switch(pthread_cond_wait(event->cond, event->lock)){
+				case SUCCESS:
+					/*
+					* Protection from spurious wakeups
+					*/
+					if (pthread_mutex_lock(event->change)==SUCCESS) {
+						if (event->fire <= fires) {
+							goto wait;
+						} else --event->wait;
+						result = 1; 
+						pthread_mutex_unlock(event->change);
+					} else zend_error(E_ERROR, "The implementation detected an internal error and cannot continue");
+				break;
+				
+				default: result = 0;
+			}
 		}
+		pthread_mutex_unlock(event->lock);
 	}
 	
 	return result;
@@ -173,21 +169,37 @@ int pthreads_fire_event(PEVENT event){
 			pthread_cond_signal(event->cond);
 			pthread_mutex_unlock(event->lock);
 			pthread_mutex_lock(event->change);
-		} while(event->wait);
+		} while(event->wait > 0);
+		result = !event->wait;
+		if (result)
+			event->fire = 0;
 		pthread_mutex_unlock(event->change);
 	}
 	return result;
 }
 /* }}} */
 
+/* {{{ 	Will return 1 if there are threads waiting on this event
+		Will return -1 if an error occurs */
+int pthreads_blocking_event(PEVENT event){
+	int blocked = 0;
+	if (pthread_mutex_lock(event->change)==SUCCESS) {
+		blocked = (event->wait > 0);
+		pthread_mutex_unlock(event->change);
+	} else blocked = -1;
+	return blocked;
+}
+/* }}} */
+
 /* {{{ Will destroy an event, if the event is not fired and there are waiting threads we fire it */
 void pthreads_destroy_event(PEVENT event){
 	if (event) {	
-		if (event->wait > event->fire){
-			printf("firing ...\n");
-			pthreads_fire_event(event);
+		if (pthreads_blocking_event(event)) {
+			/*
+			* If we wait here it makes the model more reliable, but it'll be hard for new programmers to get used to
+			*/
+			pthreads_wait_event(event);
 		}
-			
 		
 		if (event->change) {
 			pthread_mutex_destroy(event->change);
