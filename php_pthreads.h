@@ -18,7 +18,34 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.27"
+#define PHP_PTHREADS_VERSION "0.28"
+
+#include <stdio.h>
+#include <pthread.h>
+#ifndef _WIN32
+#include <unistd.h>
+#include <sys/time.h>
+#else
+#include <time.h>
+#endif
+#include <php.h>
+#include <php_globals.h>
+#include <php_main.h>
+#include <php_ticks.h>
+#include <ext/standard/php_smart_str.h>
+#include <ext/standard/php_smart_str_public.h>
+#include <ext/standard/php_var.h>
+#include <Zend/zend.h>
+#include <Zend/zend_compile.h>
+#include <Zend/zend_extensions.h>
+#include <Zend/zend_globals.h>
+#include <Zend/zend_hash.h>
+#include <Zend/zend_interfaces.h>
+#include <Zend/zend_list.h>
+#include <Zend/zend_object_handlers.h>
+#include <Zend/zend_variables.h>
+#include <Zend/zend_vm.h>
+#include <TSRM/TSRM.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -33,6 +60,12 @@ PHP_METHOD(Thread, busy);
 PHP_METHOD(Thread, wait);
 PHP_METHOD(Thread, notify);
 PHP_METHOD(Thread, join);
+PHP_METHOD(Thread, lock);
+PHP_METHOD(Thread, unlock);
+
+PHP_METHOD(Thread, getCount);
+PHP_METHOD(Thread, getMax);
+PHP_METHOD(Thread, getPeak);
 
 PHP_METHOD(Mutex, create);
 PHP_METHOD(Mutex, lock);
@@ -48,11 +81,19 @@ PHP_METHOD(Cond, destroy);
 
 extern zend_module_entry pthreads_module_entry;
 
-#define phpext_pthreads_ptr &pthreads_module_entry
 #define PTHREADS_FETCH_ALL(ls, id, type) ((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
 #define PTHREADS_FETCH_CTX(ls, id, type, element) (((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)
 #define PTHREADS_CG(ls, v) PTHREADS_FETCH_CTX(ls, compiler_globals_id, zend_compiler_globals*, v)
 #define PTHREADS_CG_ALL(ls) PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
 #define PTHREADS_EG(ls, v) PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
 #define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
+
+#define phpext_pthreads_ptr &pthreads_module_entry
+
+/* {{{ */
+#ifdef _WIN32
+extern int gettimeofday(struct timeval *restrict tp, void *restrict tzp);
+#endif
+/* }}} */
+
 #endif 

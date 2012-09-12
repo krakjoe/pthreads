@@ -17,36 +17,7 @@
  */
 #ifndef HAVE_PHP_THREADS
 #define HAVE_PHP_THREADS
-#include <stdio.h>
-#include <pthread.h>
-#ifndef _WIN32
-#include <unistd.h>
-#include <sys/time.h>
-#else
-#include <time.h>
-#endif
-#include <php.h>
-#include <php_globals.h>
-#include <php_main.h>
-#include <php_ticks.h>
-#include <ext/standard/php_smart_str.h>
-#include <ext/standard/php_smart_str_public.h>
-#include <ext/standard/php_var.h>
-#include <Zend/zend.h>
-#include <Zend/zend_compile.h>
-#include <Zend/zend_extensions.h>
-#include <Zend/zend_globals.h>
-#include <Zend/zend_hash.h>
-#include <Zend/zend_interfaces.h>
-#include <Zend/zend_list.h>
-#include <Zend/zend_object_handlers.h>
-#include <Zend/zend_variables.h>
-#include <Zend/zend_vm.h>
-#include <TSRM/TSRM.h>
 #include "php_pthreads.h"
-#include "pthreads_compat.h"
-#include "pthreads_serial.h"
-#include "pthreads_object.h"
 
 #ifndef ZTS
 #	error "pthreads requires that Thread Safety is enabled, add --enable-maintainer-zts to your PHP build configuration"
@@ -60,12 +31,8 @@ zend_class_entry *pthreads_class_entry;
 zend_class_entry *pthreads_mutex_class_entry;
 zend_class_entry *pthreads_condition_class_entry;
 
-extern	char * pthreads_serialize(zval *unserial TSRMLS_DC);
-extern	zval * pthreads_unserialize(char *serial TSRMLS_DC);
-extern	int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
-
 /* {{{ defmutex setup 
-		Choose the NP type if it exists as it targets the current system*/
+		Choose the NP type if it exists as it targets the current system */
 pthread_mutexattr_t		defmutex;
 #ifndef _WIN32
 #	ifdef PTHREAD_MUTEX_ERRORCHECK_NP
@@ -76,7 +43,21 @@ pthread_mutexattr_t		defmutex;
 #endif
 /* }}} */
 
+#ifndef HAVE_PTHREADS_COMPAT_H
+#include "pthreads_compat.h"
+#endif
+
+#ifndef HAVE_PTHREADS_SERIAL_H
+#include "pthreads_serial.h"
+#endif
+
+#ifndef HAVE_PTHREADS_GLOBALS_H
+#include "pthreads_globals.h"
+#endif
+
 /* {{{ arginfo */
+
+/* {{{ Thread arginfo */
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
 	ZEND_ARG_INFO(0, synchronized)
 ZEND_END_ARG_INFO()
@@ -100,6 +81,23 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_join, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_lock, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_unlock, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_getCount, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_getMax, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_getPeak, 0, 0, 0)
+ZEND_END_ARG_INFO()
+/* }}} */
+
+/* {{{ Mutex arginfo */
 ZEND_BEGIN_ARG_INFO_EX(Mutex_create, 0, 0, 0)
 	ZEND_ARG_INFO(0, lock)
 ZEND_END_ARG_INFO()
@@ -120,7 +118,9 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Mutex_destroy, 0, 0, 1)
 	ZEND_ARG_INFO(0, mutex)
 ZEND_END_ARG_INFO()
+/* }}} */
 
+/* {{{ Cond arginfo */
 ZEND_BEGIN_ARG_INFO_EX(Cond_create, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -143,7 +143,11 @@ ZEND_BEGIN_ARG_INFO_EX(Cond_destroy, 0, 0, 1)
 ZEND_END_ARG_INFO()
 /* }}} */
 
+/* }}} */
+
 /* {{{ method entries */
+
+/* {{{ Thread method entries */
 zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, self, Thread_self, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -151,10 +155,17 @@ zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, unlock, Thread_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ABSTRACT_ME(Thread, run, Thread_run)
+	PHP_ME(Thread, getCount, Thread_getCount, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, getMax, Thread_getMax, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, getPeak, Thread_getPeak, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
+/* }}} */
 
+/* {{{ Mutex method entries */
 zend_function_entry pthreads_mutex_methods[] = {
 	PHP_ME(Mutex, create, Mutex_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, lock, Mutex_lock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -163,7 +174,9 @@ zend_function_entry pthreads_mutex_methods[] = {
 	PHP_ME(Mutex, destroy, Mutex_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
+/* }}} */
 
+/* {{{ Cond method entries */
 zend_function_entry pthreads_condition_methods[] = {
 	PHP_ME(Cond, create, Cond_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Cond, signal, Cond_signal, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -174,7 +187,9 @@ zend_function_entry pthreads_condition_methods[] = {
 };
 /* }}} */
 
-/* {{{ module entry */
+/* }}} */
+
+/* {{{ pthreads module entry */
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,
@@ -189,9 +204,19 @@ zend_module_entry pthreads_module_entry = {
 };
 /* }}} */
 
-/* {{{ module initialization 
-		Create class entries, initialize any default objects required 
-		@TODO look at thread and condition defaults, maybe setup some sensible defaults */
+/* {{{ INI Entries */
+PHP_INI_BEGIN()
+	/*{{{ pthreads.max allows admins some control over how many threads a user can create */
+	PHP_INI_ENTRY("pthreads.max", "0", PHP_INI_SYSTEM, NULL)
+	/* }}} */
+PHP_INI_END()
+/* }}} */
+
+#ifndef HAVE_PTHREADS_OBJECT_H
+#include "pthreads_object.h"
+#endif
+
+/* {{{ module initialization */
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry te;
@@ -229,13 +254,20 @@ PHP_MINIT_FUNCTION(pthreads)
 #endif
 	}
 	
+	REGISTER_INI_ENTRIES();
+	
+	if (!PTHREADS_G(init)) 
+		PTHREADS_G_INIT();
+	
 	return SUCCESS;
 }
 /* }}} */
 
-/* {{{ module shutdown Destroy any default objects created during initialization */
+/* {{{ module shutdown */
 PHP_MSHUTDOWN_FUNCTION(pthreads)
 {
+	UNREGISTER_INI_ENTRIES();
+	
 	pthread_mutexattr_destroy(
 		&defmutex
 	);
@@ -243,6 +275,8 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 	return SUCCESS;
 }
 /* }}} */
+
+/* {{{ Thread methods */
 
 /* {{{ proto boolean Thread::start([boolean sync])
 		Starts executing your implemented run method in a thread, will return a boolean indication of success
@@ -255,16 +289,23 @@ PHP_METHOD(Thread, start)
 	zval *props;
 	
 	/*
-	* Find out if the calling thread will wait for notification before continuing
-	*/
-	if (ZEND_NUM_ARGS()){
-		zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &thread->synchronized);
-	} else thread->synchronized = 0;
-	
-	/*
 	* Ensure we are in the correct context
 	*/
 	if (!PTHREADS_IS_SELF(thread)) {
+		/*
+		* See if there are any limits in this environment
+		*/
+		if (INI_INT("pthreads.max") && !(PTHREADS_G_COUNT()<INI_INT("pthreads.max"))) {
+			zend_error(E_WARNING, "pthreads has reached the maximum numbers of threads allowed (%lu) by your server administrator", INI_INT("pthreads.max"));
+			RETURN_FALSE;
+		}
+		
+		/*
+		* Find out if the calling thread will wait for notification before continuing
+		*/
+		if (ZEND_NUM_ARGS()){
+			zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &thread->synchronized);
+		} else thread->synchronized = 0;
 		
 		/*
 		* Stop multiple starts from occuring
@@ -285,7 +326,7 @@ PHP_METHOD(Thread, start)
 			
 			/* even null serializes, so if we get a NULL pointer then the serialzation failed and we should not continue */
 			if (thread->serial == NULL) {
-				zend_error(E_ERROR, "The implementation detected unsupported symbols in your thread, please amend your parameters");
+				zend_error(E_ERROR, "pthreads detected unsupported symbols in your thread, please amend your parameters");
 				RETURN_FALSE;
 			}
 			
@@ -302,11 +343,8 @@ PHP_METHOD(Thread, start)
 			/*
 			* Create the thread
 			*/
-			if ((result = pthread_create(
-				&thread->thread, NULL, 
-				PHP_PTHREAD_ROUTINE, 
-				(void*)thread
-			)) == SUCCESS) {
+			if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
+			
 				/*
 				* Release Thread Lock
 				*/
@@ -317,14 +355,15 @@ PHP_METHOD(Thread, start)
 				*/
 				PTHREADS_WAIT(thread);
 			} else {
+			
 				/*
 				* Do not attempt to join failed threads at dtor time
 				*/
 				PTHREADS_UNSET_RUNNING(thread);
-				zend_error(E_ERROR, "The implementation detected an internal error while creating thread (%d)", result);
+				zend_error(E_ERROR, "pthreads detected an internal error while creating thread (%d)", result);
 			}
-		} else zend_error(E_WARNING, "The implementation detected that this thread has already been started and it cannot reuse the Thread");
-	} else zend_error(E_WARNING, "The implementation detected an attempt to call an external method, do not attempt to start in this context");
+		} else zend_error(E_WARNING, "pthreads detected that this thread has already been started and it cannot reuse the Thread");
+	} else zend_error(E_WARNING, "pthreads detected an attempt to call an external method, do not attempt to start in this context");
 	
 	if (result==SUCCESS) {
 		RETURN_TRUE;
@@ -358,9 +397,9 @@ PHP_METHOD(Thread, busy)
 				if (PTHREADS_IS_RUNNING(thread)) {
 					RETURN_TRUE;
 				} else RETURN_FALSE;
-			} else zend_error(E_WARNING, "The implementation detected that the requested thread has not yet been started");
-		} else zend_error(E_WARNING, "The implementation detected an attempt to call an external method, do not call Thread::busy in this context");
-	} else zend_error(E_ERROR, "The implementation has expereinced an internal error and cannot continue");
+			} else zend_error(E_WARNING, "pthreads detected that the requested thread has not yet been started");
+		} else zend_error(E_WARNING, "pthreads detected an attempt to call an external method, do not call Thread::busy in this context");
+	} else zend_error(E_ERROR, "pthreads has expereinced an internal error and cannot continue");
 	RETURN_NULL();
 }
 /* }}} */
@@ -417,7 +456,7 @@ PHP_METHOD(Thread, join)
 					* We must force threads to wake at this point
 					*/
 					if (PTHREADS_IS_BLOCKING(thread)) {
-						zend_error(E_WARNING, "The implementation has avoided a deadlock, the referenced thread was waiting for notification");
+						zend_error(E_WARNING, "pthreads has avoided a deadlock, the referenced thread was waiting for notification");
 						PTHREADS_NOTIFY(thread);
 					}
 					
@@ -429,25 +468,83 @@ PHP_METHOD(Thread, join)
 							free(result);
 						}
 					} else {
-						zend_error(E_WARNING, "The implementation detected failure while joining with the referenced thread");
+						zend_error(E_WARNING, "pthreads detected failure while joining with the referenced thread");
 						RETURN_FALSE;
 					}
 				} else {
-					zend_error(E_WARNING, "The implementation has detected that the value specified by thread has already been joined");
+					zend_error(E_WARNING, "pthreads has detected that the value specified by thread has already been joined");
 					RETURN_TRUE; 
 				}
 			} else {
-				zend_error(E_WARNING, "The implementation has detected an attempt to join a thread that is not yet started");
+				zend_error(E_WARNING, "pthreads has detected an attempt to join a thread that is not yet started");
 			}
 		} else {
-			zend_error(E_WARNING, "The implementation detected a call to an external method, do not attempt to join in the this context");
+			zend_error(E_WARNING, "pthreads detected a call to an external method, do not attempt to join in the this context");
 		}
 	} else {
-		zend_error(E_ERROR, "The implementation has expereinced an internal error and cannot continue");
+		zend_error(E_ERROR, "pthreads has expereinced an internal error and cannot continue");
 		RETURN_FALSE;
 	}
 }
 /* }}} */
+
+/* {{{ proto boolean Thread::lock()
+		Thread::lock shall acquire the thread lock
+		This method is for advanced use only, while you hold a threads lock it's state cannot be changed.
+		Any threads that attempt to read or write the threads state will block on attempting to acquire the lock. */
+PHP_METHOD(Thread, lock)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		RETURN_BOOL(PTHREADS_LOCK(thread));
+	}
+	
+	RETURN_FALSE;
+}
+/* }}} */
+
+/* {{{ proto boolean Thread::unlock() 
+		Thread::unlock shall release the thread lock
+		Always release a threads lock when you are done with it */
+PHP_METHOD(Thread, unlock){
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		RETURN_BOOL(PTHREADS_UNLOCK(thread));
+	}
+	
+	RETURN_FALSE;
+}
+
+/* {{{ proto long Thread::getCount()
+		Will return the number of threads currently running */
+PHP_METHOD(Thread, getCount)
+{
+	RETURN_LONG(PTHREADS_G_COUNT());
+}
+/* }}} */
+
+/* {{{ proto long Thread::getMax()
+		Will return the maximum number of threads you may create in this environment
+		@NOTE this setting very much depends on the kind of environment you're executing php in */
+PHP_METHOD(Thread, getMax)
+{
+	RETURN_LONG(INI_INT("pthreads.max"));
+}
+/* }}} */
+
+/* {{{ proto long Thread::getPeak() 
+	Will return the peak number of threads executing */
+PHP_METHOD(Thread, getPeak)
+{
+	RETURN_LONG(PTHREADS_G_PEAK());
+}
+/* }}} */
+
+/* }}} */
+
+/* {{{ Mutex methods */
 
 /* {{{ proto long Mutex::create([boolean lock]) 
 		Will create a new mutex and return it's handle. If lock is true it will lock the mutex before returning the handle to the calling thread.
@@ -468,7 +565,7 @@ PHP_METHOD(Mutex, create)
 								case EDEADLK: RETURN_LONG((ulong)mutex); break;
 								
 								default: 
-									zend_error(E_ERROR, "The implementation detected an unspecified error while attempting to lock new mutex");
+									zend_error(E_ERROR, "pthreads detected an unspecified error while attempting to lock new mutex");
 									pthread_mutex_destroy(mutex);
 									free(mutex);
 							}
@@ -478,25 +575,25 @@ PHP_METHOD(Mutex, create)
 			break;
 		
 			case EAGAIN:
-				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary resources (other than memory) to initialise another mutex"); 
+				zend_error(E_ERROR, "pthreads detected that the system lacks the necessary resources (other than memory) to initialise another mutex"); 
 				free(mutex);
 			break;
 			
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
-				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary memory to initialise another mutex"); 
+				zend_error(E_ERROR, "pthreads detected that the system lacks the necessary memory to initialise another mutex"); 
 				free(mutex);
 			break;
 			
 			case EPERM:
-				zend_error(E_ERROR, "The implementation detected that the caller does not have permission to initialize mutex"); 
+				zend_error(E_ERROR, "pthreads detected that the caller does not have permission to initialize mutex"); 
 				free(mutex);
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "The implementation detected an internal error while attempting to initialize mutex");
+				zend_error(E_ERROR, "pthreads detected an internal error while attempting to initialize mutex");
 				free(mutex);
 		}
-	} else zend_error(E_ERROR, "The implementation has failed to allocate memory for mutex and cannot continue");
+	} else zend_error(E_ERROR, "pthreads has failed to allocate memory for mutex and cannot continue");
 	RETURN_FALSE;
 }
 /* }}} */
@@ -512,12 +609,12 @@ PHP_METHOD(Mutex, lock)
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EDEADLK:
-				zend_error(E_WARNING, "The implementation has detected that the calling thread already owns the mutex");
+				zend_error(E_WARNING, "pthreads has detected that the calling thread already owns the mutex");
 				RETURN_TRUE;
 			break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex");  			
+				zend_error(E_WARNING, "pthreads has detected that the variable passed is not a valid mutex");  			
 			break;
 			
 			/* 	the default type of mutex prohibits this error from being raised 
@@ -527,7 +624,7 @@ PHP_METHOD(Mutex, lock)
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "The implementation detected an internal error while locking mutex and cannot continue");
+				zend_error(E_ERROR, "pthreads detected an internal error while locking mutex and cannot continue");
 		}
 	}
 	RETURN_FALSE;
@@ -547,21 +644,21 @@ PHP_METHOD(Mutex, trylock)
 			case EBUSY: RETURN_FALSE; break;
 			
 			case EDEADLK:
-				zend_error(E_WARNING, "The implementation has detected that the calling thread already owns the mutex");
+				zend_error(E_WARNING, "pthreads has detected that the calling thread already owns the mutex");
 				RETURN_TRUE;
 			break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex");  
+				zend_error(E_WARNING, "pthreads has detected that the variable passed is not a valid mutex");  
 			break;
 			
 			/* again the defmutex setup prohibits this from occuring, present for completeness */
 			case EAGAIN: 
-				zend_error(E_WARNING, "The implementation detected that the mutex could not be acquired because the maximum number of recursive locks has been exceeded");
+				zend_error(E_WARNING, "pthreads detected that the mutex could not be acquired because the maximum number of recursive locks has been exceeded");
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "The implementation detected an internal error while trying to lock mutex and cannot continue");
+				zend_error(E_ERROR, "pthreads detected an internal error while trying to lock mutex and cannot continue");
 		}
 	}
 	RETURN_FALSE;
@@ -587,15 +684,15 @@ PHP_METHOD(Mutex, unlock)
 			break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex"); 
+				zend_error(E_WARNING, "pthreads has detected that the variable passed is not a valid mutex"); 
 			break;
 			
 			case EPERM:
-				zend_error(E_WARNING, "The implementation has detected that the calling thread does not own the mutex");
+				zend_error(E_WARNING, "pthreads has detected that the calling thread does not own the mutex");
 			break;
 			
 			default:
-				zend_error(E_ERROR, "The implementation detected an internal error while unlocking mutex and cannot continue");
+				zend_error(E_ERROR, "pthreads detected an internal error while unlocking mutex and cannot continue");
 		}
 	}
 	RETURN_FALSE;
@@ -616,20 +713,24 @@ PHP_METHOD(Mutex, destroy)
 			break;
 
 			case EBUSY:
-				zend_error(E_WARNING, "The implementation has detected an attempt to destroy mutex while it is locked or referenced"); 
+				zend_error(E_WARNING, "pthreads has detected an attempt to destroy mutex while it is locked or referenced"); 
 			break;
 			
 			case EINVAL:
-				zend_error(E_WARNING, "The implementation has detected that the variable passed is not a valid mutex"); 
+				zend_error(E_WARNING, "pthreads has detected that the variable passed is not a valid mutex"); 
 			break;
 			
 			default:
-				zend_error(E_ERROR, "The implementation detected an internal error while attempting to destroy mutex and cannot continue");
+				zend_error(E_ERROR, "pthreads detected an internal error while attempting to destroy mutex and cannot continue");
 		}
 	}
 	RETURN_FALSE;
 }
 /* }}} */
+
+/* }}} */
+
+/* {{{ Cond Methods */
 
 /* {{{ proto long Cond::create() 
 		This will create a condition, because of their nature you need to destroy these explicitly with Cond::destroy */
@@ -644,20 +745,20 @@ PHP_METHOD(Cond, create)
 			break;
 			
 			case EAGAIN:
-				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary resources (other than memory) to initialise another condition"); 
+				zend_error(E_ERROR, "pthreads detected that the system lacks the necessary resources (other than memory) to initialise another condition"); 
 				free(condition);
 			break;
 			
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
-				zend_error(E_ERROR, "The implementation detected that the system lacks the necessary memory to initialise another condition"); 
+				zend_error(E_ERROR, "pthreads detected that the system lacks the necessary memory to initialise another condition"); 
 				free(condition);
 			break;
 			
 			default: 
-				zend_error(E_ERROR, "The implementation detected an internal error while initializing new condition and cannot conitnue");
+				zend_error(E_ERROR, "pthreads detected an internal error while initializing new condition and cannot conitnue");
 				free(condition);
 		}
-	} else zend_error(E_ERROR, "The implementation failed to allocate memory for new condition and cannot continue");
+	} else zend_error(E_ERROR, "pthreads failed to allocate memory for new condition and cannot continue");
 	RETURN_FALSE;
 }
 /* }}} */
@@ -673,11 +774,11 @@ PHP_METHOD(Cond, signal)
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected the condition referenced does not refer to a valid condition"); 
+				zend_error(E_WARNING, "pthreads has detected the condition referenced does not refer to a valid condition"); 
 			break;
 			
 			default:
-				zend_error(E_ERROR, "The implementation detected an internal error while signaling condition and cannot continue");
+				zend_error(E_ERROR, "pthreads detected an internal error while signaling condition and cannot continue");
 		}
 	} 
 	RETURN_FALSE;
@@ -695,11 +796,11 @@ PHP_METHOD(Cond, broadcast)
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EINVAL:
-				zend_error(E_WARNING, "The implementation has detected the condition referenced does not refer to a valid condition"); 
+				zend_error(E_WARNING, "pthreads has detected the condition referenced does not refer to a valid condition"); 
 			break;
 			
 			default:
-				zend_error(E_ERROR, "The implementation detected an internal error while broadcasting condition and cannot continue");
+				zend_error(E_ERROR, "pthreads detected an internal error while broadcasting condition and cannot continue");
 		}
 	} 
 	RETURN_FALSE;
@@ -731,19 +832,19 @@ PHP_METHOD(Cond, wait)
 				switch(pthread_cond_timedwait(condition, mutex, &until)){
 					case SUCCESS: RETURN_TRUE; break;
 					case EINVAL: 
-						zend_error(E_WARNING, "The implementation has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
+						zend_error(E_WARNING, "pthreads has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
 						RETURN_FALSE;
 					break;
 					
 					case ETIMEDOUT: 
-						zend_error(E_WARNING, "The implementation detected a timeout while waiting for condition"); 
+						zend_error(E_WARNING, "pthreads detected a timeout while waiting for condition"); 
 						RETURN_FALSE;
 					break;
 					
 					default: RETURN_FALSE;
 				}
 			} else {
-				zend_error(E_ERROR, "The implementation has detected a failure while attempting to get the time from the system");
+				zend_error(E_ERROR, "pthreads has detected a failure while attempting to get the time from the system");
 				RETURN_FALSE;
 			}
 		} else {
@@ -751,7 +852,7 @@ PHP_METHOD(Cond, wait)
 				case SUCCESS:  RETURN_TRUE; break;
 				
 				case EINVAL: 
-					zend_error(E_WARNING, "The implementation has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
+					zend_error(E_WARNING, "pthreads has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
 					RETURN_FALSE;
 				break;
 				
@@ -777,18 +878,20 @@ PHP_METHOD(Cond, destroy)
 			break;
 			
 			case EINVAL: 
-				zend_error(E_WARNING, "The implementation has detected the condition referenced does not refer to a valid condition variable"); 
+				zend_error(E_WARNING, "pthreads has detected the condition referenced does not refer to a valid condition variable"); 
 			break;
 			
 			case EBUSY:
-				zend_error(E_WARNING, "The implementation has detected an attempt to destroy the object referenced by condition while it is referenced by another thread"); 
+				zend_error(E_WARNING, "pthreads has detected an attempt to destroy the object referenced by condition while it is referenced by another thread"); 
 			break;
 			
 			default:
-				zend_error(E_ERROR, "The implementation detected an internal error while destroying condition and cannot continue");
+				zend_error(E_ERROR, "pthreads detected an internal error while destroying condition and cannot continue");
 		}
 	} 
 	RETURN_FALSE;
 }
+/* }}} */
+
 /* }}} */
 #endif
