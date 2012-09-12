@@ -18,7 +18,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.26"
+#define PHP_PTHREADS_VERSION "0.27"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
