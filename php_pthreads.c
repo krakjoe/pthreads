@@ -45,7 +45,6 @@
 #include <TSRM/TSRM.h>
 #include "php_pthreads.h"
 #include "pthreads_compat.h"
-#include "pthreads_event.h"
 #include "pthreads_serial.h"
 #include "pthreads_object.h"
 
@@ -196,8 +195,14 @@ zend_module_entry pthreads_module_entry = {
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry te;
-	zend_class_entry me; 
+	zend_class_entry me;
 	zend_class_entry ce;
+	
+	REGISTER_LONG_CONSTANT("PTHREADS_FAIL", 0, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PTHREADS_ST_STARTED", PTHREADS_ST_STARTED, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PTHREADS_ST_RUNNING", PTHREADS_ST_RUNNING, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PTHREADS_ST_JOINED", PTHREADS_ST_JOINED, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PTHREADS_ST_WAITING", PTHREADS_ST_WAITING, CONST_CS | CONST_PERSISTENT);
 	
 	INIT_CLASS_ENTRY(te, "Thread", pthreads_methods);
 	te.create_object = pthreads_attach_to_instance;
@@ -284,16 +289,15 @@ PHP_METHOD(Thread, start)
 				RETURN_FALSE;
 			}
 			
-			
-			/*
-			* Initialize Event
-			*/
-			PTHREADS_E_CREATE(thread);
-			
 			/*
 			* Set appropriate flags
 			*/
 			PTHREADS_SET_RUNNING(thread);
+			
+			/*
+			* Acquire Thread Lock
+			*/
+			PTHREADS_LOCK(thread);
 			
 			/*
 			* Create the thread
@@ -304,9 +308,14 @@ PHP_METHOD(Thread, start)
 				(void*)thread
 			)) == SUCCESS) {
 				/*
+				* Release Thread Lock
+				*/
+				PTHREADS_UNLOCK(thread);
+				
+				/*
 				* Wait for appropriate event
 				*/
-				PTHREADS_E_WAIT(thread);
+				PTHREADS_WAIT(thread);
 			} else {
 				/*
 				* Do not attempt to join failed threads at dtor time
@@ -357,36 +366,37 @@ PHP_METHOD(Thread, busy)
 /* }}} */
 
 /* {{{ proto mixed Thread::wait([long timeout]) 
-		Will return boolean false on any kind of error
-		Will return 0 if waiting fails or timesout 
-		Will return 1 on success */
+		Will cause the calling process or thread to wait for the referenced thread to notify
+		When a timeout is used and reached will return PTHREADS_FAIL, else the thread state will be returned */
 PHP_METHOD(Thread, wait)
 {
 	PTHREAD thread = PTHREADS_FETCH;
+	long timeout = 0L;
+	
+	if(ZEND_NUM_ARGS()){
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &timeout)!=SUCCESS)
+			RETURN_FALSE;
+	}
 	
 	if (thread) {
-		if ((PTHREADS_IS_SELF(thread) && !PTHREADS_IS_JOINED(thread->sig)) || 
-			(!PTHREADS_IS_SELF(thread) && !PTHREADS_IS_JOINED(thread))) {
-			if (ZEND_NUM_ARGS()) {
-				long timeout;
-				if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &timeout)==SUCCESS) {
-					RETURN_LONG(PTHREADS_E_WAIT_EX(thread, timeout));
-				} else { RETURN_FALSE; }
-			} else { RETURN_LONG(PTHREADS_E_WAIT(thread)); }
-		} else { RETURN_FALSE; }
+		if (!PTHREADS_IS_SELF(thread)) {
+			RETURN_LONG(PTHREADS_WAIT_EX(thread, timeout));
+		} else RETURN_LONG(PTHREADS_WAIT_EX(thread->sig, timeout));
 	}
 }
 /* }}} */
 
-/* {{{ proto int Thread::notify() 
-		Will cause the referenced thread to stop waiting and continue executing
-		Will return 1 if notifications are sent
-		Will return 0 if nothing is waiting to be notified */
+/* {{{ proto int Thread::notify()
+		Notify anyone waiting that they can continue
+		A call to Thread::notify when no one is waiting will cause the thread or process that called it to block until someone waits
+		The return value is the thread state */
 PHP_METHOD(Thread, notify)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	if (thread) {
-		RETURN_LONG(PTHREADS_E_FIRE(thread));
+		if (PTHREADS_IS_SELF(thread)) {
+			RETURN_LONG(PTHREADS_NOTIFY(thread->sig));
+		} else RETURN_LONG(PTHREADS_NOTIFY(thread));
 	}
 	RETURN_FALSE;
 }
@@ -403,14 +413,15 @@ PHP_METHOD(Thread, join)
 		if (!PTHREADS_IS_SELF(thread)) {
 			if (PTHREADS_IS_STARTED(thread)) {
 				if (!PTHREADS_IS_JOINED(thread)) {
-					PTHREADS_SET_JOINED(thread);
-					
 					/*
 					* We must force threads to wake at this point
 					*/
 					if (PTHREADS_IS_BLOCKING(thread)) {
-						PTHREADS_E_FIRE(thread);
+						zend_error(E_WARNING, "The implementation has avoided a deadlock, the referenced thread was waiting for notification");
+						PTHREADS_NOTIFY(thread);
 					}
+					
+					PTHREADS_SET_JOINED(thread);
 					
 					if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
 						if (result) {
