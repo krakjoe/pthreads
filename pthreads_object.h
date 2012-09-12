@@ -18,25 +18,15 @@
 #ifndef HAVE_PTHREADS_OBJECT_H
 #define HAVE_PTHREADS_OBJECT_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 /* {{{ state constants */
 #define PTHREADS_ST_STARTED 1
 #define PTHREADS_ST_RUNNING 2
 #define PTHREADS_ST_JOINED	4
 #define PTHREADS_ST_WAITING	8
-/* }}} */
-
-/* {{{ prototypes */
-static 	zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC);
-static 	void pthreads_detach_from_instance(void * child TSRMLS_DC);
-
-zend_function_entry	pthreads_runnable_methods[] = {{NULL, NULL, NULL}};
-
-extern	char * pthreads_serialize(zval *unserial TSRMLS_DC);
-extern	zval * pthreads_unserialize(char *serial TSRMLS_DC);
-extern	int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
-extern	pthread_mutexattr_t defmutex;
-
-void * PHP_PTHREAD_ROUTINE(void *);
 /* }}} */
 
 /* {{{ structs */
@@ -81,11 +71,10 @@ typedef struct _pthread_construct {
 } THREAD, *PTHREAD;
 /* }}} */
 
-/* {{{ state management */
-int pthreads_get_state(PTHREAD thread);
-int pthreads_set_state(PTHREAD thread, int state);
-int pthreads_set_state_ex(PTHREAD thread, int state, long timeout);
-int pthreads_unset_state(PTHREAD thread, int state);
+/* {{{ prototypes */
+zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC);
+void pthreads_detach_from_instance(void * child TSRMLS_DC);
+void * PHP_PTHREAD_ROUTINE(void *);
 /* }}} */
 
 /* {{{ macros */
@@ -93,31 +82,7 @@ int pthreads_unset_state(PTHREAD thread, int state);
 #define PTHREADS_FETCH_FROM(object) (PTHREAD) zend_object_store_get_object(object TSRMLS_CC)
 #define PTHREADS_FETCH (PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC)
 #define PTHREADS_IS_SELF(t)	(t->self)
-#define PTHREADS_ST(t) pthreads_get_state(t)
-#define PTHREADS_SET_JOINED(t) pthreads_set_state(t, PTHREADS_ST_JOINED)
-#define PTHREADS_SET_RUNNING(t)	pthreads_set_state(t, PTHREADS_ST_RUNNING)
-#define PTHREADS_UNSET_RUNNING(t) pthreads_unset_state(t, PTHREADS_ST_RUNNING)
-#define PTHREADS_IS_JOINED(t) ((PTHREADS_ST(t) & PTHREADS_ST_JOINED)==PTHREADS_ST_JOINED)
-#define PTHREADS_IS_STARTED(t) ((PTHREADS_ST(t) & PTHREADS_ST_STARTED)==PTHREADS_ST_STARTED)
-#define PTHREADS_IS_RUNNING(t) ((PTHREADS_ST(t) & PTHREADS_ST_RUNNING)==PTHREADS_ST_RUNNING)
-#define PTHREADS_SET_STARTED(t) pthreads_set_state(t, PTHREADS_ST_STARTED)
-#define PTHREADS_IS_BLOCKING(t) ((PTHREADS_ST(t) & PTHREADS_ST_WAITING)==PTHREADS_ST_WAITING)
-#define PTHREADS_WAIT(t) pthreads_set_state(t, PTHREADS_ST_WAITING)
-#define PTHREADS_WAIT_EX(t, l) pthreads_set_state_ex(t, PTHREADS_ST_WAITING, l)
-#define PTHREADS_NOTIFY(t) pthreads_unset_state(t, PTHREADS_ST_WAITING)
-#define PTHREADS_LOCK(t) pthread_mutex_lock(t->lock)
-#define PTHREADS_UNLOCK(t) pthread_mutex_unlock(t->lock)
-#define PTHREADS_SET_SELF(from) do{\
-	self = PTHREADS_FETCH_FROM(from);\
-	self->self = 1;\
-	self->sig = thread;\
-	thread->sig = self;\
-	pthreads_set_state(self, PTHREADS_ST_STARTED|PTHREADS_ST_RUNNING);\
-}while(0)
-/* }}} */
-
-/* {{{ state management */
-int pthreads_get_state(PTHREAD thread){
+static inline int pthreads_get_state(PTHREAD thread){
 	int result = -1;
 	if (pthread_mutex_lock(thread->lock)==SUCCESS) {
 		result = thread->state;
@@ -125,8 +90,9 @@ int pthreads_get_state(PTHREAD thread){
 	}
 	return result;
 }
-
-int pthreads_set_state_ex(PTHREAD thread, int state, long timeout){
+#define PTHREADS_ST(t) pthreads_get_state(t)
+#define PTHREADS_IS_BLOCKING(t) ((PTHREADS_ST(t) & PTHREADS_ST_WAITING)==PTHREADS_ST_WAITING)
+static inline int pthreads_set_state_ex(PTHREAD thread, int state, long timeout){
 	int result = -1;
 	struct timeval now;
 	struct timespec until;
@@ -150,27 +116,32 @@ int pthreads_set_state_ex(PTHREAD thread, int state, long timeout){
 	acquire = pthread_mutex_lock(thread->lock);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		thread->state += state;
-		if (state == PTHREADS_ST_WAITING) do {
-			if (timed) {
-				result=!pthread_cond_timedwait(thread->sync, thread->lock, &until);
-			} else pthread_cond_wait(thread->sync, thread->lock);
-		} while((thread->state & PTHREADS_ST_WAITING)==PTHREADS_ST_WAITING);
+		switch(state) {
+			case PTHREADS_ST_WAITING: do {
+				if (timed) {
+						result=!pthread_cond_timedwait(thread->sync, thread->lock, &until);
+				} else pthread_cond_wait(thread->sync, thread->lock);
+			} while((thread->state & PTHREADS_ST_WAITING)==PTHREADS_ST_WAITING); 
+			break;
+			
+			case PTHREADS_ST_RUNNING: PTHREADS_G_ADD(); break;
+		}
+		if (state == PTHREADS_ST_WAITING)
 		if (result == -1)
 			result = thread->state;
 		pthread_mutex_unlock(thread->lock);
-	} else zend_error(E_ERROR, "The implementation has suffered an internal error and cannot continue: %d", acquire);
+	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
 	return result;
 }
 
-int pthreads_set_state(PTHREAD thread, int state) {
+static inline int pthreads_set_state(PTHREAD thread, int state) {
 	return pthreads_set_state_ex(thread, state, 0L);
 }
-
-int pthreads_unset_state(PTHREAD thread, int state){
+static inline int pthreads_unset_state(PTHREAD thread, int state){
 	int result = -1;
 	int acquire = 0;
 check:
-	switch(state){
+	switch (state) {
 		case PTHREADS_ST_WAITING:
 			if (!PTHREADS_IS_BLOCKING(thread)) {
 #if _WIN32
@@ -185,18 +156,43 @@ check:
 	acquire = pthread_mutex_lock(thread->lock);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		thread->state -= state;
-		if (state == PTHREADS_ST_WAITING) {
-			pthread_cond_signal(thread->sync);
+		switch (state) {
+			case PTHREADS_ST_WAITING:
+				pthread_cond_signal(thread->sync);
+			break;
+			
+			case PTHREADS_ST_RUNNING: PTHREADS_G_DEL(); break;
 		}
 		result = thread->state;
 		pthread_mutex_unlock(thread->lock);
-	} else zend_error(E_ERROR, "The implementation has suffered an internal error and cannot continue: %d", acquire);
+	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
 	return ((result & state) != state);
 }
+#define PTHREADS_SET_JOINED(t) pthreads_set_state(t, PTHREADS_ST_JOINED)
+#define PTHREADS_SET_RUNNING(t)	pthreads_set_state(t, PTHREADS_ST_RUNNING)
+#define PTHREADS_UNSET_RUNNING(t) pthreads_unset_state(t, PTHREADS_ST_RUNNING)
+#define PTHREADS_IS_JOINED(t) ((PTHREADS_ST(t) & PTHREADS_ST_JOINED)==PTHREADS_ST_JOINED)
+#define PTHREADS_IS_STARTED(t) ((PTHREADS_ST(t) & PTHREADS_ST_STARTED)==PTHREADS_ST_STARTED)
+#define PTHREADS_IS_RUNNING(t) ((PTHREADS_ST(t) & PTHREADS_ST_RUNNING)==PTHREADS_ST_RUNNING)
+#define PTHREADS_SET_STARTED(t) pthreads_set_state(t, PTHREADS_ST_STARTED)
+#define PTHREADS_WAIT(t) pthreads_set_state(t, PTHREADS_ST_WAITING)
+#define PTHREADS_WAIT_EX(t, l) pthreads_set_state_ex(t, PTHREADS_ST_WAITING, l)
+#define PTHREADS_NOTIFY(t) pthreads_unset_state(t, PTHREADS_ST_WAITING)
+#define PTHREADS_LOCK(t) pthread_mutex_lock(t->lock)
+#define PTHREADS_UNLOCK(t) pthread_mutex_unlock(t->lock)
+#define PTHREADS_SET_SELF(from) do{\
+	self = PTHREADS_FETCH_FROM(from);\
+	self->self = 1;\
+	self->sig = thread;\
+	thread->sig = self;\
+	pthreads_set_state(self, PTHREADS_ST_STARTED|PTHREADS_ST_RUNNING);\
+}while(0)
 /* }}} */
 
+static zend_function_entry	pthreads_runnable_methods[] = {{NULL, NULL, NULL}};
+
 /* {{{ */
-static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC){
+zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC){
 	
 	zend_object_value attach;
 	zval *temp;
@@ -264,7 +260,7 @@ static zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSR
 /* }}} */
 
 /* {{{ */
-static void pthreads_detach_from_instance(void * arg TSRMLS_DC){
+void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 	/*
 	* We must check for a result even when it's ignored
 	*/
@@ -284,9 +280,9 @@ static void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 					*/
 					if (PTHREADS_IS_BLOCKING(thread)) {
 #ifndef _WIN32
-						zend_error(E_WARNING, "The implementation has avoided a deadlock, thread #%lu was waiting for notification", (ulong) pthread_self());
+						zend_error(E_WARNING, "pthreads has avoided a deadlock, thread #%lu was waiting for notification", (ulong) pthread_self());
 #else	
-						zend_error(E_WARNING, "The implementation has avoided a deadlock, thread #%lu was waiting for notification", (unsigned long) GetCurrentThreadId());
+						zend_error(E_WARNING, "pthreads has avoided a deadlock, thread #%lu was waiting for notification", (unsigned long) GetCurrentThreadId());
 #endif
 						PTHREADS_NOTIFY(thread);
 					}
@@ -660,6 +656,13 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 	* Passing serialized symbols back to thread
 	*/
 	pthread_exit((void*)result);
+	
+#ifdef _WIN32
+	/*
+	* Silence MSVC Compiler
+	*/
+	return NULL;
+#endif
 } 
 /* }}} */
 
