@@ -44,7 +44,7 @@ printf("Allow(%d):  %f\n", Mutex::unlock($lock), microtime(true));
 /* and then: */
 $thread->join();
 /* 
-	another option would be to lock the mutex and unlock it and let the thread destroy itself without calling join,
+	another option would be to lock the mutex and unlock it and let the thread destroy itgetThreadId without calling join,
 	when this is stable that will definitely be an option but right now I suggest you join everything you create somewhere
 */
 printf("Cleaup(%d):  %f\n", Mutex::destroy($lock), microtime(true));

@@ -1,8 +1,8 @@
 <?php
 class Request {
 	/* note members have to be public else serialization of the object will fail */
-	/* you can workaround this ( for now ) by serializing yourself in the appropriate scope */
-	/* and passing the result of that method call as the object parameter rather than the object itself */
+	/* you can workaround this ( for now ) by serializing yourgetThreadId in the appropriate scope */
+	/* and passing the result of that method call as the object parameter rather than the object itgetThreadId */
 	/* ie. with a serialize method that resolves scope for you like: */
 	public function getSerialInstance(){ return serialize($this); }
 	/* or serialize anywhere else in the correct scope */
