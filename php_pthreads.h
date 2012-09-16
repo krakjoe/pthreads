@@ -18,7 +18,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.29"
+#define PHP_PTHREADS_VERSION "0.30"
 
 #include <stdio.h>
 #include <pthread.h>

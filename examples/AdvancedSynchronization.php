@@ -14,6 +14,8 @@ class ScopeTest2 extends Thread {
 	public function run(){
 		printf("%s: %lu running\n", __CLASS__, $this->getThreadId());
 		if (($other = Thread::getThread($this->other))) {
+			printf("%s: %lu discovering if %lu is running: %d\n", __CLASS__, $this->getThreadId(), $this->other, $other->isRunning());
+			printf("%s: %lu discovering if %lu is joined: %d\n", __CLASS__, $this->getThreadId(), $this->other, $other->isJoined());
 			printf("%s: %lu notifying %lu: %d\n", __CLASS__, $this->getThreadId(), $this->other, $other->notify());
 		} else printf("%s: %lu failed to find %lu\n", __CLASS__, $this->getThreadId(), $this->other);
 		printf("%s: %lu notified: %d\n", __CLASS__, $this->getThreadId(), $this->wait());

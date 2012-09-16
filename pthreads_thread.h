@@ -93,6 +93,4 @@ ulong pthreads_self() {
 /* {{{ tell if the referenced thread is an imported reference */
 #define PTHREADS_IS_IMPORT(t) t->import /* }}} */
 
-
-
 #endif /* }}} */ /* HAVE_PTHREADS_THREAD_H */

@@ -311,12 +311,10 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 	
 	zend_object_value attach;
 	zval *temp;
-	 
+	
 	/*
 	* Allocate an initialize thread object for storage
 	*/
-	pthread_mutexattr_t 	mtype;
-	
 	PTHREAD thread = calloc(1, sizeof(*thread));			
 	thread->synchronized = 0;
 	thread->self = 0;
