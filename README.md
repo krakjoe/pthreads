@@ -1,13 +1,21 @@
-# Posix Threading for PHP5+
+# Posix Threading for PHP5+ - Share Nothing, Do Everything :)
 
-This project aims to provide multi-threading that is compatible with PHP based on Posix Threads.
+This project provides multi-threading that is compatible with PHP based on Posix Threads.
 
-## Features
+## Highlights
 
-* Posix Threading
+* An easy to use, quick to learn Threading API for PHP5.3+
+* Execute any and all predefined and user declared methods and functions asynchronously
+* Ready made synchronization included, geared towards the PHP environment
+* Seemless operation in multi-threaded SAPI environments
+* A world of possibilities ...
+
+## Technical Features
+
+* Posix Threads
 * Mutex
-* Condition Variables
-* Synchronization ( wait/notify )
+* Conditions
+* Synchronization
 
 pthreads was written with simplicity, compatibiilty and efficiency in mind, it's performance beggars belief !!
 
@@ -26,6 +34,10 @@ pthreads should compile and work in any version of PHP from 5.3.0 to 5.4.7, many
 ### Windows Support
 
 Yes !! Windows support is offered thanks to the pthread-w32 library. Pre-built binary downloads are available on the github downloads page for Windows users.
+
+### Mac OSX Support
+
+Yes !! It's reported to me that pthreads compiles fine on your machines, I don't have access to a Mac so any reports are very welcome :)
 
 ### Hello World
 
