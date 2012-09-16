@@ -25,6 +25,8 @@
 * 3. providing peak usage and current realtime statistics can help you to design and execute more efficiently
 * 4. these globals are completely safe; they are protected by mutex
 * 5. in some SAPI environments it may not make sense to use pthreads.max ini setting, that is for the server administrator to decide
+* 6. in some SAPI environments it may make sense to disable importing Threads for security reasons, pthreads.importing should be set to 0
+* 7. pthreads.* ini settings are system only for security
 *
 * TODO
 * 1. look into the possibility of providing persistent threads that survive across SAPI requests
