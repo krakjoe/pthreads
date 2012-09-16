@@ -1,4 +1,4 @@
-# Posix Threading for PHP5+ - Share Nothing, Do Everything :)
+# Threading for PHP5+ - Share Nothing, Do Everything :)
 
 This project provides multi-threading that is compatible with PHP based on Posix Threads.
 
