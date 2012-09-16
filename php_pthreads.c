@@ -44,6 +44,13 @@ pthread_mutexattr_t		defmutex;
 #endif
 /* }}} */
 
+/* {{ userland mutex types */
+#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
+#	define PTHREADS_MUTEX_CHECKING	1
+#elifdef PTHREAD_MUTEX_ERRORCHECK
+#	define PTHREADS_MUTEX_CHECKING	2
+#endif /* }}} */
+
 #ifndef HAVE_PTHREADS_COMPAT_H
 #include "pthreads_compat.h"
 #endif
@@ -203,6 +210,12 @@ zend_function_entry	pthreads_import_methods[] = {
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, unlock, Thread_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	/* {{{ Will this work */
+	PHP_ME(Thread, isStarted, Thread_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, isRunning, Thread_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, isBusy, Thread_isBusy, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	/* }}} */
 	{NULL, NULL, NULL}
 }; /* }}} */
 
@@ -251,7 +264,7 @@ PHP_INI_END()
 /* }}} */
 
 #ifndef HAVE_PTHREADS_OBJECT_H
-#include "pthreads_object.h"
+#	include "pthreads_object.h"
 #endif
 
 /* {{{ module initialization */
@@ -273,7 +286,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	te.serialize = zend_class_serialize_deny;
 	te.unserialize = zend_class_unserialize_deny;
 	pthreads_class_entry=zend_register_internal_class(&te TSRMLS_CC);
-	
+
 	INIT_CLASS_ENTRY(ie, "ImportedThread", pthreads_import_methods);
 	ie.create_object = pthreads_attach_to_import;
 	ie.serialize = zend_class_serialize_deny;
@@ -422,7 +435,9 @@ PHP_METHOD(Thread, isStarted)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		if (!PTHREADS_IS_SELF(thread)) {
+		if (PTHREADS_IS_IMPORT(thread)){
+			RETURN_BOOL(PTHREADS_IS_STARTED(thread->sig));
+		} else if (!PTHREADS_IS_SELF(thread)) {
 			RETURN_BOOL(PTHREADS_IS_STARTED(thread));
 		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isStarted from the a Thread");
 	}
@@ -435,7 +450,9 @@ PHP_METHOD(Thread, isRunning)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		if (!PTHREADS_IS_SELF(thread)) {
+		if (PTHREADS_IS_IMPORT(thread)) {
+			RETURN_BOOL(PTHREADS_IS_RUNNING(thread->sig));
+		} else if (!PTHREADS_IS_SELF(thread)) {
 			RETURN_BOOL(PTHREADS_IS_RUNNING(thread));
 		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isRunning from a Thread");
 	}
@@ -448,7 +465,9 @@ PHP_METHOD(Thread, isJoined)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		if (!PTHREADS_IS_SELF(thread)) {
+		if (PTHREADS_IS_IMPORT(thread)) {
+			RETURN_BOOL(PTHREADS_IS_JOINED(thread->sig));
+		} else if (!PTHREADS_IS_SELF(thread)) {
 			RETURN_BOOL(PTHREADS_IS_JOINED(thread));
 		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isJoined from a Thread");
 	}
@@ -461,7 +480,15 @@ PHP_METHOD(Thread, isBusy)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		if (!PTHREADS_IS_SELF(thread)) {
+		if (PTHREADS_IS_IMPORT(thread)) {
+			PTHREADS_LOCK(thread->sig);
+			if (PTHREADS_IN_STATE(thread->sig, PTHREADS_ST_STARTED)) {
+				if (!PTHREADS_IN_STATE(thread->sig, PTHREADS_ST_JOINED)) {
+					ZVAL_BOOL(return_value, PTHREADS_IN_STATE(thread->sig, PTHREADS_ST_RUNNING));
+				} else ZVAL_BOOL(return_value, 0);
+			} else ZVAL_BOOL(return_value, 0);
+			PTHREADS_UNLOCK(thread->sig);
+		} else if (!PTHREADS_IS_SELF(thread)) {
 			PTHREADS_LOCK(thread);
 			if (PTHREADS_IN_STATE(thread, PTHREADS_ST_STARTED)) {
 				if (!PTHREADS_IN_STATE(thread, PTHREADS_ST_JOINED)) {
