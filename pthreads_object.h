@@ -22,12 +22,6 @@
 * NOTES
 *	1. Not happy with inability to detect scope properly in Threads, too many annoyances to be acceptable
 *	2. Private/Protected Members in user declared Threads not working properly as a result of the above
-* 
-* TODO
-*	1. Importer Functionality
-*	2. Attempt to import the definition, perhaps internalize the class in the creating thread so that $this in the threading context can initialize in a more compatible manor, this should fix scoping issues by proxy
-*	3. Test thoroughly synchronization routines, ensure that imported threads will function, ensure bits aren't set when they shouldn't be on state
-*	4. User defined functions should be imported with imports, concurrency poses a problem, it could be left up to the user to use mutex and locking ... keep thinking ...
 */
 
 #ifdef HAVE_CONFIG_H

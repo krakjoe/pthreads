@@ -18,7 +18,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.30"
+#define PHP_PTHREADS_VERSION "0.31"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -54,6 +54,7 @@
 
 PHP_MINIT_FUNCTION(pthreads);
 PHP_MSHUTDOWN_FUNCTION(pthreads);
+PHP_MINFO_FUNCTION(pthreads);
 
 /* {{{ basic */
 PHP_METHOD(Thread, start);
@@ -71,6 +72,7 @@ PHP_METHOD(Thread, unlock);
 PHP_METHOD(Thread, isStarted);
 PHP_METHOD(Thread, isRunning);
 PHP_METHOD(Thread, isJoined);
+PHP_METHOD(Thread, isWaiting);
 PHP_METHOD(Thread, isBusy);
 /* }}} */
 
