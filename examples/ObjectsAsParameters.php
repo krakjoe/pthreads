@@ -14,15 +14,15 @@ class OOWebRequest extends Thread {
 			"%s/Request.inc.php", dirname(__FILE__)
 		));
 		if(class_exists("Request")){
-			printf("Prepared Thread #%lu\n", Thread::getThreadId());
-		} else printf("Cannot Prepare Thread #%lu\n", Thread::getThreadId());
+			printf("Prepared Thread #%lu\n", $this->getThreadId());
+		} else printf("Cannot Prepare Thread #%lu\n", $this->getThreadId());
 		return true;
 	}
 	/*
 	* Manipulate the object and return it as the result so the parent can have it back
 	*/
 	public function run(){
-		printf("Running Thread #%lu\n", Thread::getThreadId());
+		printf("Running Thread #%lu\n", $this->getThreadId());
 		print_r($this);
 		if($this->request){
 			if($this->request->url){
