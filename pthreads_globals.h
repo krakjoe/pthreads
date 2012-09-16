@@ -25,35 +25,90 @@
 * 3. providing peak usage and current realtime statistics can help you to design and execute more efficiently
 * 4. these globals are completely safe; they are protected by mutex
 * 5. in some SAPI environments it may not make sense to use pthreads.max ini setting, that is for the server administrator to decide
+*
+* TODO
+* 1. look into the possibility of providing persistent threads that survive across SAPI requests
+* 2. test read/write lock speed vs mutex
+* 3. make errors more meaningful
 */
 
-/* {{{ externs */
+/* {{{ thread structure and functions */
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include "pthreads_thread.h"
+#endif /* }}} */
+
+/* {{{ default mutex type */
 extern pthread_mutexattr_t defmutex;
 /* }}} */
 
-/* {{{ true globals struct */
+/* {{{ pthreads_globals */
 struct {
-	int init;
-	long count;
-	long peak;
+	/*
+	* Initialized flag
+	* @NOTE the first MINIT of an instance will cause this flag to be set
+	*/
+	zend_bool init;
+	
+	/*
+	* Globals Mutex
+	*/
 	pthread_mutex_t	lock;
-} pthreads_globals;
-/* }}} */
+	
+	/*
+	* Peak Number of Running Threads
+	*/
+	size_t peak;
+	
+	/*
+	* Running Thread List
+	*/
+	zend_llist threads;
+} pthreads_globals; /* }}} */
 
-/* {{{ this macro emulates the zend behaviour */
+/* {{{ PTHREADS_G */
 #define PTHREADS_G(v) pthreads_globals.v
 /* }}} */
 
-/* {{{ global macros and supporting inline functions */
+/* {{{ PTHREADS_LIST_BEGIN_LOOP */
+#define PTHREADS_LIST_BEGIN_LOOP(s) \
+	zend_llist_position position;\
+	PTHREAD *pointer;\
+	if ((pointer = (PTHREAD*) zend_llist_get_first_ex(&PTHREADS_G(threads), &position))!=NULL) {\
+			do {\
+				(s) = (*pointer);
+/* }}} */
+
+/* {{{ PTHREADS_LIST_END_LOOP */
+#define PTHREADS_LIST_END_LOOP(s) \
+	} while((pointer = (PTHREAD*) zend_llist_get_next_ex(&PTHREADS_G(threads), &position))!=NULL);\
+		} else zend_error(E_WARNING, "pthreads has not yet created any threads, nothing to search");
+/* }}} */
+
+/* {{{ PTHREADS_LIST_INSERT */
+#define PTHREADS_LIST_INSERT(t) zend_llist_add_element(&PTHREADS_G(threads), &t)
+/* }}} */
+
+/* {{{ pthreads_equal_func */
+static inline int pthreads_equal_func(void **first, void **second){
+	return pthreads_equal((PTHREAD)*first, (PTHREAD)*second);
+} /* }}} */
+
+/* {{{ PTHREADS_LIST_REMOVE */
+#define PTHREADS_LIST_REMOVE(t) zend_llist_del_element(&PTHREADS_G(threads), &t, (int (*)(void *, void *)) pthreads_equal_func);
+/* }}} */
+
+/* {{{ PTHREADS_G_INIT */
 static inline void pthreads_globals_init(){
 	if (!PTHREADS_G(init)) {
 		PTHREADS_G(init)=1;
-		pthread_mutex_init(
-			&PTHREADS_G(lock), &defmutex
-		);
+		PTHREADS_G(peak)=0;
+		pthread_mutex_init(&PTHREADS_G(lock), &defmutex);
+		zend_llist_init(&PTHREADS_G(threads), sizeof(void**), NULL, 1);
 	}
-}
+} /* }}} */
 #define PTHREADS_G_INIT pthreads_globals_init
+
+/* {{{ PTHREADS_G_LOCK */
 static inline int pthreads_globals_lock(){
 	switch (pthread_mutex_lock(&PTHREADS_G(lock))) {
 		case SUCCESS:
@@ -63,40 +118,51 @@ static inline int pthreads_globals_lock(){
 		
 		default: return 0;
 	}
-}
+} /* }}} */
 #define PTHREADS_G_LOCK pthreads_globals_lock
+
+/* {{{ PTHREADS_G_UNLOCK */
 static inline void pthreads_globals_unlock() {
 	if (!PTHREADS_G(init)) {
 		zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	}
 	pthread_mutex_unlock(&PTHREADS_G(lock));
-}
+} /* }}} */
 #define PTHREADS_G_UNLOCK pthreads_globals_unlock
+
+/* {{{ PTHREADS_G_COUNT */
 static inline long pthreads_globals_count() {
 	long result = 0L;
 	if (PTHREADS_G_LOCK()) {
-		result = PTHREADS_G(count);
+		result = PTHREADS_G(threads).count;
 		PTHREADS_G_UNLOCK();
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	return result;
-}
+} /* }}} */
 #define PTHREADS_G_COUNT pthreads_globals_count
-static inline void pthreads_globals_add() {
+
+/* {{{ PTHREADS_G_ADD */
+static inline void pthreads_globals_add(PTHREAD thread) {
 	if (PTHREADS_G_LOCK()) {
-		PTHREADS_G(count)++;
-		if (PTHREADS_G(peak)<PTHREADS_G(count))
-			PTHREADS_G(peak)=PTHREADS_G(count);
+		PTHREADS_LIST_INSERT(thread);
+		if (PTHREADS_G(peak)<PTHREADS_G(threads).count) {
+			PTHREADS_G(peak)=PTHREADS_G(threads).count;
+		}
 		PTHREADS_G_UNLOCK();
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
-}
-#define PTHREADS_G_ADD pthreads_globals_add
-static inline void pthreads_globals_del() {
+} /* }}} */
+#define PTHREADS_G_ADD(t) pthreads_globals_add(t)
+
+/* {{{ PTHREADS_G_DEL */
+static inline void pthreads_globals_del(PTHREAD thread) {
 	if (PTHREADS_G_LOCK()) {
-		PTHREADS_G(count)--;
+		PTHREADS_LIST_REMOVE(thread);
 		PTHREADS_G_UNLOCK();
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
-}
-#define PTHREADS_G_DEL pthreads_globals_del
+}  /* }}} */
+#define PTHREADS_G_DEL(t) pthreads_globals_del(t)
+
+/* {{{ PTHREADS_G_PEAK */
 static inline long pthreads_globals_peak() {
 	long result = 0L;
 	if (PTHREADS_G_LOCK()) {
@@ -104,6 +170,29 @@ static inline long pthreads_globals_peak() {
 		PTHREADS_G_UNLOCK();
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	return result;
-}
+} /* }}} */
 #define PTHREADS_G_PEAK pthreads_globals_peak
+
+/* {{{ PTHREADS_FIND */
+static inline PTHREAD pthreads_find(unsigned long tid) {
+	PTHREAD search = NULL;
+	zend_bool found = 0;
+	
+	if (PTHREADS_G_LOCK()) {
+		PTHREADS_LIST_BEGIN_LOOP(search)
+		if (search->tid == tid) {
+			found = 1;
+			break;
+		}
+		PTHREADS_LIST_END_LOOP(search)
+		PTHREADS_G_UNLOCK();
+	}
+	
+	if (found) {
+		return search;
+	} else return NULL;
+	
+} /* }}} */
+#define PTHREADS_FIND(tid) pthreads_find(tid)
+
 #endif /* HAVE_PTHREADS_GLOBAL_H */

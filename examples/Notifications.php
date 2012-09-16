@@ -16,9 +16,9 @@ fflush($stdout);
 fflush($stdout);
                         printf("Thread Notifying Process 2: %d\n", $this->notify());
 fflush($stdout);
-			printf("Waiting Thread ...\n");
-			printf("Waiting Thread Result: %d\n", $this->wait());
-			printf("Done waiting thread ...\n");
+					$this->wait();
+					
+					printf("Thread exiting ...");
         }
 }
 
@@ -26,10 +26,13 @@ $t = new ExampleThread();
 
 if ($t->start(true)) {
         printf("Process Working  ... then ...\n");
+		
+		echo "WHAT ...";
+		
         printf("Process Waited: %d\n", $t->wait());
         printf("Now doing some work while thread is waiting ...\n");
-	usleep(1000000);
-	 $t->notify();
-       
+		
+		usleep(1000000);
+		printf("And notify thread: %d\n", $t->notify());
 }
 ?>

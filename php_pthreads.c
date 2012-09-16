@@ -27,9 +27,10 @@
 ZEND_GET_MODULE(pthreads)
 #endif
 
-zend_class_entry *pthreads_class_entry;
-zend_class_entry *pthreads_mutex_class_entry;
-zend_class_entry *pthreads_condition_class_entry;
+zend_class_entry *pthreads_class_entry = NULL;
+zend_class_entry *pthreads_import_entry = NULL;
+zend_class_entry *pthreads_mutex_class_entry = NULL;
+zend_class_entry *pthreads_condition_class_entry = NULL;
 
 /* {{{ defmutex setup 
 		Choose the NP type if it exists as it targets the current system */
@@ -58,24 +59,22 @@ pthread_mutexattr_t		defmutex;
 /* {{{ arginfo */
 
 /* {{{ Thread arginfo */
+
+/* {{{ basic */
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
 	ZEND_ARG_INFO(0, synchronized)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_self, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
+/* }}} */
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_busy, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
+/* {{{ synchronization */
 ZEND_BEGIN_ARG_INFO_EX(Thread_wait, 0, 0, 0)
 	ZEND_ARG_INFO(0, timeout)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_notify, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_join, 0, 0, 0)
@@ -86,7 +85,34 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_unlock, 0, 0, 0)
 ZEND_END_ARG_INFO()
+/* }}} */
 
+/* {{{ importing */
+ZEND_BEGIN_ARG_INFO_EX(Thread_getThread, 0, 0, 1)
+	ZEND_ARG_INFO(0, tid)
+ZEND_END_ARG_INFO()
+/* }}} */
+
+/* {{{ identification */
+ZEND_BEGIN_ARG_INFO_EX(Thread_getThreadId, 0, 0, 0)
+ZEND_END_ARG_INFO()
+/* }}} */
+
+/* {{{ state detection */
+ZEND_BEGIN_ARG_INFO_EX(Thread_isStarted, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_isRunning, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_isJoined, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_isBusy, 0, 0, 0)
+ZEND_END_ARG_INFO() 
+/* }}} */
+
+/* {{{ statics/globals */
 ZEND_BEGIN_ARG_INFO_EX(Thread_getCount, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -95,6 +121,8 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_getPeak, 0, 0, 0)
 ZEND_END_ARG_INFO()
+/* }}} */
+
 /* }}} */
 
 /* {{{ Mutex arginfo */
@@ -150,20 +178,33 @@ ZEND_END_ARG_INFO()
 /* {{{ Thread method entries */
 zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, self, Thread_self, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, busy, Thread_busy, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ABSTRACT_ME(Thread, run, Thread_run)
 	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, unlock, Thread_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ABSTRACT_ME(Thread, run, Thread_run)
+	PHP_ME(Thread, isStarted, Thread_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, isRunning, Thread_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, isBusy, Thread_isBusy, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, getThread, Thread_getThread, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
+	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getCount, Thread_getCount, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getMax, Thread_getMax, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getPeak, Thread_getPeak, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
-};
-/* }}} */
+}; /* }}} */
+
+/* {{{ Import method entries */
+zend_function_entry	pthreads_import_methods[] = {
+	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, unlock, Thread_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	{NULL, NULL, NULL}
+}; /* }}} */
 
 /* {{{ Mutex method entries */
 zend_function_entry pthreads_mutex_methods[] = {
@@ -173,8 +214,7 @@ zend_function_entry pthreads_mutex_methods[] = {
 	PHP_ME(Mutex, unlock, Mutex_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, destroy, Mutex_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
-};
-/* }}} */
+}; /* }}} */
 
 /* {{{ Cond method entries */
 zend_function_entry pthreads_condition_methods[] = {
@@ -184,8 +224,7 @@ zend_function_entry pthreads_condition_methods[] = {
 	PHP_ME(Cond, broadcast, Cond_broadcast, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Cond, destroy, Cond_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
-};
-/* }}} */
+}; /* }}} */
 
 /* }}} */
 
@@ -201,8 +240,7 @@ zend_module_entry pthreads_module_entry = {
   NULL,
   PHP_PTHREADS_VERSION,
   STANDARD_MODULE_PROPERTIES
-};
-/* }}} */
+}; /* }}} */
 
 /* {{{ INI Entries */
 PHP_INI_BEGIN()
@@ -220,6 +258,7 @@ PHP_INI_END()
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry te;
+	zend_class_entry ie;
 	zend_class_entry me;
 	zend_class_entry ce;
 	
@@ -234,6 +273,12 @@ PHP_MINIT_FUNCTION(pthreads)
 	te.serialize = zend_class_serialize_deny;
 	te.unserialize = zend_class_unserialize_deny;
 	pthreads_class_entry=zend_register_internal_class(&te TSRMLS_CC);
+	
+	INIT_CLASS_ENTRY(ie, "ImportedThread", pthreads_import_methods);
+	ie.create_object = pthreads_attach_to_import;
+	ie.serialize = zend_class_serialize_deny;
+	ie.unserialize = zend_class_unserialize_deny;
+	pthreads_import_entry=zend_register_internal_class(&ie TSRMLS_CC);
 	
 	INIT_CLASS_ENTRY(me, "Mutex", pthreads_mutex_methods);
 	me.serialize = zend_class_serialize_deny;
@@ -260,8 +305,7 @@ PHP_MINIT_FUNCTION(pthreads)
 		PTHREADS_G_INIT();
 	
 	return SUCCESS;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ module shutdown */
 PHP_MSHUTDOWN_FUNCTION(pthreads)
@@ -273,8 +317,7 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 	);
 	
 	return SUCCESS;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ Thread methods */
 
@@ -370,43 +413,70 @@ PHP_METHOD(Thread, start)
 	}
 	
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
-/* {{{ proto long Thread::self() 
-		Will return the current thread id from within a thread */
-PHP_METHOD(Thread, self)
-{ 
-#ifndef _WIN32
-	ZVAL_LONG(return_value, (ulong) pthread_self()); 
-#else
-	ZVAL_LONG(return_value, (unsigned long) GetCurrentThreadId());
-#endif
-}
-/* }}} */
-
-/* {{{ proto boolean Thread::busy() 
-		Will return true while your method is executing
-		NOTE: the zend engine has to shut down after your method has executed, so !busy !== finished */
-PHP_METHOD(Thread, busy)
+/* {{{ proto Thread::isStarted() 
+	Will return true if a Thread has been started */
+PHP_METHOD(Thread, isStarted)
 {
 	PTHREAD thread = PTHREADS_FETCH;
+	
 	if (thread) {
-		if( !PTHREADS_IS_SELF(thread)) {
-			if (PTHREADS_IS_STARTED(thread)) {
-				if (PTHREADS_IS_RUNNING(thread)) {
-					RETURN_TRUE;
-				} else RETURN_FALSE;
-			} else zend_error(E_WARNING, "pthreads detected that the requested thread has not yet been started");
-		} else zend_error(E_WARNING, "pthreads detected an attempt to call an external method, do not call Thread::busy in this context");
-	} else zend_error(E_ERROR, "pthreads has expereinced an internal error and cannot continue");
-	RETURN_NULL();
-}
-/* }}} */
+		if (!PTHREADS_IS_SELF(thread)) {
+			RETURN_BOOL(PTHREADS_IS_STARTED(thread));
+		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isStarted from the a Thread");
+	}
+} /* }}} */
 
-/* {{{ proto mixed Thread::wait([long timeout]) 
+/* {{{ proto Thread::isRunning() 
+	Will return true while a thread is executing */
+PHP_METHOD(Thread, isRunning)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		if (!PTHREADS_IS_SELF(thread)) {
+			RETURN_BOOL(PTHREADS_IS_RUNNING(thread));
+		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isRunning from a Thread");
+	}
+} /* }}} */
+
+/* {{{ proto Thread::isJoined()
+	Will return true if a Thread has been joined already */
+PHP_METHOD(Thread, isJoined)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		if (!PTHREADS_IS_SELF(thread)) {
+			RETURN_BOOL(PTHREADS_IS_JOINED(thread));
+		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isJoined from a Thread");
+	}
+} /* }}} */
+
+/* {{{ proto Thread::isBusy()
+	Will return true if a Thread has been started and is running but hasn't yet been joined */
+PHP_METHOD(Thread, isBusy)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		if (!PTHREADS_IS_SELF(thread)) {
+			PTHREADS_LOCK(thread);
+			if (PTHREADS_IN_STATE(thread, PTHREADS_ST_STARTED)) {
+				if (!PTHREADS_IN_STATE(thread, PTHREADS_ST_JOINED)) {
+					ZVAL_BOOL(return_value, PTHREADS_IN_STATE(thread, PTHREADS_ST_RUNNING));
+				} else ZVAL_BOOL(return_value, 0);
+			} else ZVAL_BOOL(return_value, 0);
+			PTHREADS_UNLOCK(thread);
+		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isBusy from a Thread");
+	}
+} /* }}} */
+
+/* {{{ proto boolean Thread::wait([long timeout]) 
 		Will cause the calling process or thread to wait for the referenced thread to notify
-		When a timeout is used and reached will return PTHREADS_FAIL, else the thread state will be returned */
+		When a timeout is used an reached boolean false will return
+		When no timeout is used a boolean indication of success will return */
 PHP_METHOD(Thread, wait)
 {
 	PTHREAD thread = PTHREADS_FETCH;
@@ -418,51 +488,68 @@ PHP_METHOD(Thread, wait)
 	}
 	
 	if (thread) {
-		if (!PTHREADS_IS_SELF(thread)) {
-			RETURN_LONG(PTHREADS_WAIT_EX(thread, timeout));
-		} else RETURN_LONG(PTHREADS_WAIT_EX(thread->sig, timeout));
+		if (!PTHREADS_IS_SELF(thread) && !PTHREADS_IS_IMPORT(thread)) {
+			RETURN_BOOL(PTHREADS_WAIT_EX(thread, timeout)>0);
+		} else RETURN_BOOL(PTHREADS_WAIT_EX(thread->sig, timeout)>0);
 	}
-}
-/* }}} */
+} /* }}} */
 
-/* {{{ proto int Thread::notify()
+/* {{{ proto boolean Thread::notify()
 		Notify anyone waiting that they can continue
 		A call to Thread::notify when no one is waiting will cause the thread or process that called it to block until someone waits
-		The return value is the thread state */
+		Will return a boolean indication of success
+		@TODO make this handle imported threads */
 PHP_METHOD(Thread, notify)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	if (thread) {
-		if (PTHREADS_IS_SELF(thread)) {
-			RETURN_LONG(PTHREADS_NOTIFY(thread->sig));
-		} else RETURN_LONG(PTHREADS_NOTIFY(thread));
+		if (PTHREADS_IS_SELF(thread)||PTHREADS_IS_IMPORT(thread)) {
+			RETURN_BOOL(PTHREADS_NOTIFY(thread->sig)>0);
+		} else RETURN_BOOL(PTHREADS_NOTIFY(thread)>0);
 	}
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto mixed Thread::join() 
 		Will cause the calling thread to block and wait for the output of the referenced thread */
 PHP_METHOD(Thread, join) 
 { 
 	PTHREAD thread = PTHREADS_FETCH;
+	PTHREAD selected = NULL;
 	char *result = NULL;
 	
 	if (thread) {
-		if (!PTHREADS_IS_SELF(thread)) {
-			if (PTHREADS_IS_STARTED(thread)) {
-				if (!PTHREADS_IS_JOINED(thread)) {
+		/*
+		* Select the appropriate way to join the thread with the calling context
+		*/
+		if ((selected=(!PTHREADS_IS_SELF(thread) && !PTHREADS_IS_IMPORT(thread)) ? thread : (PTHREADS_IS_IMPORT(thread) && !PTHREADS_IS_SELF(thread)) ? thread->sig : NULL) != NULL) {
+			
+			/*
+			* Ensure this thread was started
+			*/
+			if (PTHREADS_IS_STARTED(selected)) {
+			
+				/*
+				* Ensure this thread wasn't already joined
+				*/
+				if (!PTHREADS_IS_JOINED(selected)) {
 					/*
 					* We must force threads to wake at this point
 					*/
-					if (PTHREADS_IS_BLOCKING(thread)) {
+					if (PTHREADS_IS_BLOCKING(selected)) {
 						zend_error(E_WARNING, "pthreads has avoided a deadlock, the referenced thread was waiting for notification");
-						PTHREADS_NOTIFY(thread);
+						PTHREADS_NOTIFY(selected);
 					}
 					
-					PTHREADS_SET_JOINED(thread);
+					/*
+					* Ensure nothing attempts to join this thread again
+					*/
+					PTHREADS_SET_JOINED(selected);
 					
-					if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
+					/*
+					* Carry out joining and deserialize result
+					*/
+					if (pthread_join(selected->thread, (void**)&result)==SUCCESS) {
 						if (result) {
 							pthreads_unserialize_into(result, return_value TSRMLS_CC);
 							free(result);
@@ -485,8 +572,7 @@ PHP_METHOD(Thread, join)
 		zend_error(E_ERROR, "pthreads has expereinced an internal error and cannot continue");
 		RETURN_FALSE;
 	}
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Thread::lock()
 		Thread::lock shall acquire the thread lock
@@ -501,13 +587,13 @@ PHP_METHOD(Thread, lock)
 	}
 	
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
-/* {{{ proto boolean Thread::unlock() 
+/* {{{ proto boolean Thread::unlock()
 		Thread::unlock shall release the thread lock
 		Always release a threads lock when you are done with it */
-PHP_METHOD(Thread, unlock){
+PHP_METHOD(Thread, unlock)
+{
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
@@ -515,15 +601,51 @@ PHP_METHOD(Thread, unlock){
 	}
 	
 	RETURN_FALSE;
+} /* }}} */
+
+/* {{{ proto boolean Thread::getThread([long tid])
+		Thread::find shall attempt to import the Thread identified by tid into the current context, for the purposes of synchronization */
+PHP_METHOD(Thread, getThread)
+{
+	PTHREAD found = NULL;
+	unsigned long tid = 0L;
+	
+	if (EG(called_scope) == pthreads_class_entry) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &tid)==SUCCESS) {
+			if (tid && tid >0L) {
+				if ((found=PTHREADS_FIND((unsigned long)tid))!=NULL) {
+					if (!PTHREADS_IS_CREATOR(found)) {
+						if (PTHREADS_IMPORT(found, &return_value TSRMLS_CC)) {
+							return;
+						} else zend_error(E_WARNING, "pthreads has detected that Thread::getThread(%lu) has failed", tid);
+					} else zend_error(E_WARNING, "pthreads has detected that Thread::getThread(%lu) has nothing to import as the requested thread was created in the current", tid);
+					RETURN_FALSE;
+				} else zend_error(E_WARNING, "pthreads has detected that Thread::getThread(%lu) has nothing to import as the requested thread is no longer running", tid);
+			} else zend_error(E_WARNING, "pthreads has detected incorrect use of Thread::getThread, no valid Thread identifier was specified");
+		}
+	} else zend_error(E_WARNING, "pthreads has detected incorrect use of Thread::getThread, this method may only be called statically as Thread::getThread");
+	RETURN_NULL();
 }
+/* }}} */
+
+/* {{{ proto long Thread::getThreadId() 
+	Will return the identifier of the referenced Thread */
+PHP_METHOD(Thread, getThreadId)
+{
+	if (getThis()) {
+		PTHREAD thread = PTHREADS_FETCH;
+		if (thread) {
+			ZVAL_LONG(return_value, thread->tid);
+		} else ZVAL_LONG(return_value, 0);
+	} else ZVAL_LONG(return_value, 0);
+} /* }}} */
 
 /* {{{ proto long Thread::getCount()
 		Will return the number of threads currently running */
 PHP_METHOD(Thread, getCount)
 {
 	RETURN_LONG(PTHREADS_G_COUNT());
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto long Thread::getMax()
 		Will return the maximum number of threads you may create in this environment
@@ -531,16 +653,14 @@ PHP_METHOD(Thread, getCount)
 PHP_METHOD(Thread, getMax)
 {
 	RETURN_LONG(INI_INT("pthreads.max"));
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto long Thread::getPeak() 
 	Will return the peak number of threads executing */
 PHP_METHOD(Thread, getPeak)
 {
 	RETURN_LONG(PTHREADS_G_PEAK());
-}
-/* }}} */
+} /* }}} */
 
 /* }}} */
 
@@ -595,8 +715,7 @@ PHP_METHOD(Mutex, create)
 		}
 	} else zend_error(E_ERROR, "pthreads has failed to allocate memory for mutex and cannot continue");
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Mutex::lock(long mutex) 
 		Locks the mutex referenced so that the calling thread owns the mutex */
@@ -628,8 +747,7 @@ PHP_METHOD(Mutex, lock)
 		}
 	}
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Mutex::trylock(long mutex) 
 		Will attempt to lock the mutex without causing the calling thread to block */
@@ -662,8 +780,7 @@ PHP_METHOD(Mutex, trylock)
 		}
 	}
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Mutex::unlock(long mutex, [bool destroy]) 
 		Will unlock the mutex referenced, and optionally destroy it */
@@ -696,8 +813,7 @@ PHP_METHOD(Mutex, unlock)
 		}
 	}
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Mutex::destroy(long mutex)
 		Will destroy the mutex referenced and free memory associated */
@@ -725,8 +841,7 @@ PHP_METHOD(Mutex, destroy)
 		}
 	}
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* }}} */
 
@@ -760,8 +875,7 @@ PHP_METHOD(Cond, create)
 		}
 	} else zend_error(E_ERROR, "pthreads failed to allocate memory for new condition and cannot continue");
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Cond::signal(long condition) 
 		This will signal a condition */
@@ -782,8 +896,7 @@ PHP_METHOD(Cond, signal)
 		}
 	} 
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Cond::broadcast(long condition) 
 		This will broadcast a condition */
@@ -804,12 +917,12 @@ PHP_METHOD(Cond, broadcast)
 		}
 	} 
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Cond::wait(long condition, long mutex, [long timeout]) 
 		This will wait for a signal or broadcast on condition, you must have mutex locked by the calling thread
-		Timeout should be expressed in microseconds ( millionths ) */
+		Timeout should be expressed in microseconds ( millionths ) 
+		@NOTE timeouts dodgy in windows because of a lack of proper gettimeofday implementation, dispite it being defined, somewhere ... */
 PHP_METHOD(Cond, wait)
 {
 	pthread_cond_t *condition;
@@ -819,7 +932,7 @@ PHP_METHOD(Cond, wait)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &condition, &mutex, &timeout)==SUCCESS && condition && mutex) {
 		if (timeout > 0L) {
 			struct timeval now;
-			if (gettimeofday(&now, NULL)==SUCCESS) {
+			if (pthreads_gettimeofday(&now, NULL)==SUCCESS) {
 				struct timespec until;
 				long	nsec = timeout * 1000;
 				if (nsec > 1000000000L) {
@@ -829,6 +942,7 @@ PHP_METHOD(Cond, wait)
 					until.tv_sec = now.tv_sec;
 					until.tv_nsec = (now.tv_usec * 1000) + timeout;	
 				}
+				
 				switch(pthread_cond_timedwait(condition, mutex, &until)){
 					case SUCCESS: RETURN_TRUE; break;
 					case EINVAL: 
@@ -861,8 +975,7 @@ PHP_METHOD(Cond, wait)
 		}
 	}
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* {{{ proto boolean Cond::destroy()
 		This will destroy a condition and free the memory associated with it */
@@ -890,8 +1003,7 @@ PHP_METHOD(Cond, destroy)
 		}
 	} 
 	RETURN_FALSE;
-}
-/* }}} */
+} /* }}} */
 
 /* }}} */
 #endif

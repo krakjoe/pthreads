@@ -18,11 +18,12 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.28"
+#define PHP_PTHREADS_VERSION "0.29"
 
 #include <stdio.h>
 #include <pthread.h>
 #ifndef _WIN32
+#define _GNU_SOURCE
 #include <unistd.h>
 #include <sys/time.h>
 #else
@@ -54,30 +55,54 @@
 PHP_MINIT_FUNCTION(pthreads);
 PHP_MSHUTDOWN_FUNCTION(pthreads);
 
+/* {{{ basic */
 PHP_METHOD(Thread, start);
-PHP_METHOD(Thread, self);
-PHP_METHOD(Thread, busy);
+/* }}} */
+
+/* {{{ synchronization */
 PHP_METHOD(Thread, wait);
 PHP_METHOD(Thread, notify);
 PHP_METHOD(Thread, join);
 PHP_METHOD(Thread, lock);
 PHP_METHOD(Thread, unlock);
+/* }}} */
 
+/* {{{ state detection */
+PHP_METHOD(Thread, isStarted);
+PHP_METHOD(Thread, isRunning);
+PHP_METHOD(Thread, isJoined);
+PHP_METHOD(Thread, isBusy);
+/* }}} */
+
+/* {{{ importing */
+PHP_METHOD(Thread, getThread);
+/* }}} */
+
+/* {{{ identification */
+PHP_METHOD(Thread, getThreadId);
+/* }}} */
+
+/* {{{ instance globals */
 PHP_METHOD(Thread, getCount);
 PHP_METHOD(Thread, getMax);
 PHP_METHOD(Thread, getPeak);
+/* }}} */
 
+/* {{{ mutex */
 PHP_METHOD(Mutex, create);
 PHP_METHOD(Mutex, lock);
 PHP_METHOD(Mutex, trylock);
 PHP_METHOD(Mutex, unlock);
 PHP_METHOD(Mutex, destroy);
+/* }}} */
 
+/* {{{ conditions */
 PHP_METHOD(Cond, create);
 PHP_METHOD(Cond, signal);
 PHP_METHOD(Cond, broadcast);
 PHP_METHOD(Cond, wait);
 PHP_METHOD(Cond, destroy);
+/* }}} */
 
 extern zend_module_entry pthreads_module_entry;
 
@@ -89,11 +114,5 @@ extern zend_module_entry pthreads_module_entry;
 #define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
 
 #define phpext_pthreads_ptr &pthreads_module_entry
-
-/* {{{ */
-#ifdef _WIN32
-extern int gettimeofday(struct timeval *restrict tp, void *restrict tzp);
-#endif
-/* }}} */
 
 #endif 

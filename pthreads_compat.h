@@ -18,6 +18,28 @@
 #ifndef HAVE_PTHREADS_COMPAT_H
 #define HAVE_PTHREADS_COMPAT_H
 
+/*
+* NOTES
+* 	The only difference between pthreads_method_del_ref and zend_function_dtor in 5.4.6 is we free the run_time_cache if there are no more references to it and the release version free's it regardless
+* 	Unsure of what this affects and how ...
+*
+* TODO
+*	Look into the run_time_cache issue in 5.4
+*	Implement gettimeofday in for pthread-w32 environments, gettimeofday is defined somewhere but is failing to compute correct values in windows
+*	
+*/
+#if _WIN32
+/*
+* NOTES
+*	Anything that windows lacks will be defined here
+*/
+
+/* {{{ gettimeofday is lacking in windows breaking full functionality of condition variables */
+extern int gettimeofday(struct timeval* p, void* tz /* IGNORED */); /* }}} */
+#endif
+
+#define pthreads_gettimeofday gettimeofday
+
 #if PHP_VERSION_ID > 50399
 static void zend_extension_op_array_dtor_handler(zend_extension *extension, zend_op_array *op_array TSRMLS_DC)
 {
@@ -26,11 +48,6 @@ static void zend_extension_op_array_dtor_handler(zend_extension *extension, zend
 	}
 }
 
-/*
-* The only difference between this and the release of zend_function_dtor in 5.4.6
-* is we free the run_time_cache if there are no more references to it and the release version free's it regardless
-* Unsure of what this affects and how ...
-*/
 static void pthreads_method_del_ref(zend_function *function);
 static void pthreads_method_del_ref(zend_function *function){
 	if (function && function->type == ZEND_USER_FUNCTION ) {

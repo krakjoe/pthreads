@@ -13,7 +13,7 @@ class AsyncWebRequest extends Thread {
 			* fsockopen and read using usleep in between reads
 			*/
 			return file_get_contents($this->url);
-		} else printf("Thread #%lu was not provided a URL\n", $this->self());
+		} else printf("Thread #%lu was not provided a URL\n", $this->getThreadId());
 	}
 }
 
@@ -21,7 +21,7 @@ $t = microtime(true);
 $g = new AsyncWebRequest(sprintf("http://www.google.com/?q=%s", rand()*10));
 if($g->start()){
 	printf("Request took %f seconds to start ", microtime(true)-$t);
-	while($g->busy()){
+	while($g->isBusy()){
 		echo ".";
 		usleep(50);
 	}

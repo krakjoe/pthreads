@@ -1,6 +1,6 @@
 <?php
 /* 
-	This isn't built in as it's a pretty simple task to achieve for yourself
+	This isn't built in as it's a pretty simple task to achieve for yourgetThreadId
 	I can't really think of any functions that are labourious enough that you
 	would want to execute them by themselves in a thread of their own. Maybe
 	you have functions within your own code that could be called async without
