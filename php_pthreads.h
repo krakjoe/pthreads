@@ -18,7 +18,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.31"
+#define PHP_PTHREADS_VERSION "0.32"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -64,8 +64,6 @@ PHP_METHOD(Thread, start);
 PHP_METHOD(Thread, wait);
 PHP_METHOD(Thread, notify);
 PHP_METHOD(Thread, join);
-PHP_METHOD(Thread, lock);
-PHP_METHOD(Thread, unlock);
 /* }}} */
 
 /* {{{ state detection */
@@ -74,6 +72,12 @@ PHP_METHOD(Thread, isRunning);
 PHP_METHOD(Thread, isJoined);
 PHP_METHOD(Thread, isWaiting);
 PHP_METHOD(Thread, isBusy);
+/* }}} */
+
+/* {{{ stacking */
+PHP_METHOD(Thread, stack);
+PHP_METHOD(Thread, unstack);
+PHP_METHOD(Thread, getStacked);
 /* }}} */
 
 /* {{{ importing */

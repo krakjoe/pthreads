@@ -16,6 +16,7 @@ This project provides multi-threading that is compatible with PHP based on Posix
 * Mutex
 * Conditions
 * Synchronization
+* Worker Threads
 
 pthreads was written with simplicity, compatibiilty and efficiency in mind, it's performance beggars belief !!
 
