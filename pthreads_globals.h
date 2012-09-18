@@ -71,34 +71,6 @@ struct {
 #define PTHREADS_G(v) pthreads_globals.v
 /* }}} */
 
-/* {{{ PTHREADS_LIST_BEGIN_LOOP */
-#define PTHREADS_LIST_BEGIN_LOOP(s) \
-	zend_llist_position position;\
-	PTHREAD *pointer;\
-	if ((pointer = (PTHREAD*) zend_llist_get_first_ex(&PTHREADS_G(threads), &position))!=NULL) {\
-			do {\
-				(s) = (*pointer);
-/* }}} */
-
-/* {{{ PTHREADS_LIST_END_LOOP */
-#define PTHREADS_LIST_END_LOOP(s) \
-	} while((pointer = (PTHREAD*) zend_llist_get_next_ex(&PTHREADS_G(threads), &position))!=NULL);\
-		} else zend_error(E_WARNING, "pthreads has not yet created any threads, nothing to search");
-/* }}} */
-
-/* {{{ PTHREADS_LIST_INSERT */
-#define PTHREADS_LIST_INSERT(t) zend_llist_add_element(&PTHREADS_G(threads), &t)
-/* }}} */
-
-/* {{{ pthreads_equal_func */
-static inline int pthreads_equal_func(void **first, void **second){
-	return pthreads_equal((PTHREAD)*first, (PTHREAD)*second);
-} /* }}} */
-
-/* {{{ PTHREADS_LIST_REMOVE */
-#define PTHREADS_LIST_REMOVE(t) zend_llist_del_element(&PTHREADS_G(threads), &t, (int (*)(void *, void *)) pthreads_equal_func);
-/* }}} */
-
 /* {{{ PTHREADS_G_INIT */
 static inline void pthreads_globals_init(){
 	if (!PTHREADS_G(init)) {
@@ -146,7 +118,7 @@ static inline long pthreads_globals_count() {
 /* {{{ PTHREADS_G_ADD */
 static inline void pthreads_globals_add(PTHREAD thread) {
 	if (PTHREADS_G_LOCK()) {
-		PTHREADS_LIST_INSERT(thread);
+		PTHREADS_LIST_INSERT(&PTHREADS_G(threads), thread);
 		if (PTHREADS_G(peak)<PTHREADS_G(threads).count) {
 			PTHREADS_G(peak)=PTHREADS_G(threads).count;
 		}
@@ -158,7 +130,7 @@ static inline void pthreads_globals_add(PTHREAD thread) {
 /* {{{ PTHREADS_G_DEL */
 static inline void pthreads_globals_del(PTHREAD thread) {
 	if (PTHREADS_G_LOCK()) {
-		PTHREADS_LIST_REMOVE(thread);
+		PTHREADS_LIST_REMOVE(&PTHREADS_G(threads), thread);
 		PTHREADS_G_UNLOCK();
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 }  /* }}} */
@@ -181,12 +153,12 @@ static inline PTHREAD pthreads_find(unsigned long tid) {
 	zend_bool found = 0;
 	
 	if (PTHREADS_G_LOCK()) {
-		PTHREADS_LIST_BEGIN_LOOP(search)
+		PTHREADS_LIST_BEGIN_LOOP(&PTHREADS_G(threads), search)
 		if (search->tid == tid) {
 			found = 1;
 			break;
 		}
-		PTHREADS_LIST_END_LOOP(search)
+		PTHREADS_LIST_END_LOOP(&PTHREADS_G(threads), search)
 		PTHREADS_G_UNLOCK();
 	}
 	

@@ -57,11 +57,17 @@ void * PHP_PTHREAD_ROUTINE(void *);
 /* {{{ macros */
 
 /* {{{ inline static prototypes support macros */
+static inline int pthreads_is_worker(PTHREAD thread);
+static inline int pthreads_set_worker(PTHREAD thread, zend_bool flag);
 static inline int pthreads_get_state(PTHREAD thread);
 static inline int pthreads_set_state_ex(PTHREAD thread, int state, long timeout);
 static inline int pthreads_set_state(PTHREAD thread, int state);
 static inline int pthreads_unset_state(PTHREAD thread, int state);
 static inline int pthreads_import(PTHREAD thread, zval **return_value TSRMLS_DC);
+static inline int pthreads_pop(PTHREAD thread, zval *this_ptr TSRMLS_DC);
+static inline int pthreads_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC);
+static inline int pthreads_push(PTHREAD thread, PTHREAD work);
+static inline int pthreads_get_stacked(PTHREAD thread);
 /* }}} */
 
 /* {{{ fetches a PTHREAD from a specific object in a specific context */
@@ -75,6 +81,18 @@ static inline int pthreads_import(PTHREAD thread, zval **return_value TSRMLS_DC)
 
 /* {{{ tell if a referenced PTHREAD is threading version of the users object */
 #define PTHREADS_IS_SELF(t)	(t->self) /* }}} */
+
+/* {{{ tell if the current thread created referenced PTHREAD */
+#define PTHREADS_IS_CREATOR(t)	(t->cid == pthreads_self()) /* }}} */
+
+/* {{{ get the import flag on a PTHREAD */
+#define PTHREADS_IS_IMPORT(t) t->import /* }}} */
+
+/* {{{ set the worker flag on a PTHREAD */
+#define PTHREADS_SET_WORKER pthreads_set_worker /* }}} */
+
+/* {{{ get the worker flag for a PTHREAD */
+#define PTHREADS_IS_WORKER pthreads_is_worker /* }}} */
 
 /* {{{ get state from a PTHREAD */
 #define PTHREADS_ST(t) pthreads_get_state(t) /* }}} */
@@ -135,7 +153,45 @@ static inline int pthreads_import(PTHREAD thread, zval **return_value TSRMLS_DC)
 /* {{{ import a thread from another context */
 #define PTHREADS_IMPORT pthreads_import /* }}} */
 
+/* {{{ pop the next item from the work buffer onto the current stack */
+#define PTHREADS_POP pthreads_pop /* }}} */
+
+/* {{{ pop a specific item or all items from the stack and discard */
+#define PTHREADS_POP_EX pthreads_pop_ex /* }}} */
+
+/* {{{ push an item onto the work stack for a thread */
+#define PTHREADS_PUSH pthreads_push /* }}} */
+
+/* {{{ get the number of items on the stack */
+#define PTHREADS_GET_STACKED pthreads_get_stacked /* }}} */
+
 /*{{{ inline statics declarations */
+
+/* {{{ set worker flag on PTHREAD */
+static inline int pthreads_set_worker(PTHREAD thread, zend_bool flag) {
+	int acquire = pthread_mutex_lock(thread->lock);
+	int result = 0;
+	if (acquire == SUCCESS || acquire == EDEADLK) {
+		thread->worker = flag;
+		result = 1;
+		if (acquire != EDEADLK)
+			pthread_mutex_unlock(thread->lock);
+	} else result = 0;
+	return result;
+} /* }}} */
+
+/* {{{ get worker flag on PTHREAD */
+static inline int pthreads_is_worker(PTHREAD thread) {
+	int result;
+	int acquire = pthread_mutex_lock(thread->lock);
+	
+	if (acquire == SUCCESS || acquire == EDEADLK) {
+		result = thread->worker;
+		if (acquire != EDEADLK)
+			pthread_mutex_unlock(thread->lock);
+	} else result = -1;
+	return result;
+} /* }}} */
 
 /* {{{ get thread state mask */
 static inline int pthreads_get_state(PTHREAD thread){
@@ -155,6 +211,7 @@ static inline int pthreads_set_state_ex(PTHREAD thread, int state, long timeout)
 	struct timeval now;
 	struct timespec until;
 	int acquire;
+	int wacquire;
 	int timed = 0;
 	
 	if (timeout>0L) {
@@ -172,7 +229,7 @@ static inline int pthreads_set_state_ex(PTHREAD thread, int state, long timeout)
 	}
 	
 	if (PTHREADS_ST_CHECK(state, PTHREADS_ST_WAITING)) {
-		pthread_mutex_lock(thread->wait);
+		wacquire = pthread_mutex_lock(thread->wait);
 	}
 	
 	acquire = pthread_mutex_lock(thread->lock);
@@ -200,7 +257,8 @@ static inline int pthreads_set_state_ex(PTHREAD thread, int state, long timeout)
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
 	
 	if (PTHREADS_ST_CHECK(state, PTHREADS_ST_WAITING)) {
-		pthread_mutex_unlock(thread->wait);
+		if (acquire != EDEADLK)
+			pthread_mutex_unlock(thread->wait);
 	}
 	
 	return result;
@@ -242,6 +300,123 @@ check:
 			pthread_mutex_unlock(thread->lock);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
 	return ((result & state) != state);
+} /* }}} */
+
+/* {{{ pop for php */
+static inline int pthreads_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC) {
+	int acquire = 0;
+	int remain = 0;
+	
+	acquire = pthread_mutex_lock(thread->lock);
+	if (acquire == SUCCESS || acquire == EDEADLK) {
+		if (work) {
+			zend_llist_del_element(&thread->stack, &work, (int (*)(void *, void *)) pthreads_equal_func);
+		} else zend_llist_destroy(&thread->stack);
+		remain = thread->stack.count;
+		if (acquire != EDEADLK)
+			pthread_mutex_unlock(thread->lock);
+	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
+	return remain;
+} /* }}} */
+
+/* {{{ pop the next item from the work buffer */
+static inline int pthreads_pop(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
+	PTHREAD *work = NULL;
+	PTHREAD current = NULL;
+	int acquire = 0;
+	int remain = -1;
+	int bubble = 0;
+	zend_function *run;
+burst:
+	acquire = pthread_mutex_lock(thread->lock);
+	if (acquire == SUCCESS || acquire == EDEADLK) {
+		bubble = thread->worker;
+		if (thread->stack.count > 0) {
+			work = zend_llist_get_first(&thread->stack);
+			if (work && (current = *work) && current) {
+				bubble = 0;
+				
+				/*
+				* Cleanup List
+				*/
+				zend_llist_del_element(&thread->stack, work, (int (*)(void *, void *)) pthreads_equal_func);
+				/*
+				* Setup the executor again
+				*/
+				if (zend_hash_find(&current->std.ce->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
+#if PHP_VERSION_ID > 50399
+					/*
+					* Versions above 5.4 have run_time_cache to contend with, handled in compat for now
+					*/
+					current->std.ce->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
+#endif
+					/*
+					* Would usually be added when we create the class entry for a thread
+					*/
+					function_add_ref(run);
+					
+					/*
+					* Set next op array
+					*/
+					PTHREADS_EG(thread->ls, active_op_array)=(zend_op_array*)run;
+					
+					/*
+					* Return what is left on stack
+					*/
+					remain = thread->stack.count;
+				}
+			}
+		}
+		
+		if (acquire != EDEADLK)
+			pthread_mutex_unlock(thread->lock);
+	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
+	
+	if (bubble && remain < 0 && !PTHREADS_IS_JOINED(thread)) {
+		if (PTHREADS_WAIT(thread) > 0) {
+			remain = -1;
+			goto burst;
+		}
+	}
+	
+	return remain;
+} /* }}} */
+
+/* {{{ push an item onto the work buffer */
+static inline int pthreads_push(PTHREAD thread, PTHREAD work) {
+	int acquire = 0;
+	int counted = -1;
+	int notify = 0;
+	zend_function *run;
+	
+	acquire = pthread_mutex_lock(thread->lock);
+	if (acquire == SUCCESS || acquire == EDEADLK) {
+		thread->worker = 1;
+		zend_llist_add_element(&thread->stack, &work);
+		counted = thread->stack.count;
+		notify = PTHREADS_IN_STATE(thread, PTHREADS_ST_WAITING);
+		if (acquire != EDEADLK)
+			pthread_mutex_unlock(thread->lock);
+		if (counted && notify) {
+			PTHREADS_NOTIFY(thread);
+		}
+	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
+	
+	return counted;
+} /* }}} */
+
+/* {{{ return the number of items currently stacked */
+static inline int pthreads_get_stacked(PTHREAD thread) {
+	int acquire = 0;
+	int counted = -1;
+	
+	acquire = pthread_mutex_lock(thread->lock);
+	if (acquire == SUCCESS || acquire == EDEADLK) {
+		counted = thread->stack.count;
+		if (acquire != EDEADLK)
+			pthread_mutex_unlock(thread->lock);
+	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
+	return counted;
 } /* }}} */
 
 /* {{{ import a thread created in another context into the current context */
@@ -292,9 +467,9 @@ static inline int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC)
 				PTHREADS_UNLOCK(thread);
 				
 				return 1;
-			} else zend_error(E_WARNING, "pthreads has detected a failure while importing Thread %lu from Thread %lu", thread->tid, thread->cid);
-		} else zend_error(E_WARNING, "pthreads has detected a failure while trying to initialize imported Thread %lu", thread->tid);
-	} else zend_error(E_WARNING, "pthreads has detected an attempt to import a thread that was created in the current context");
+			} else zend_error_noreturn(E_WARNING, "pthreads has detected a failure while importing Thread %lu from Thread %lu", thread->tid, thread->cid);
+		} else zend_error_noreturn(E_WARNING, "pthreads has detected a failure while trying to initialize imported Thread %lu", thread->tid);
+	} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to import a thread that was created in the current context");
 	return 0;
 } /* }}} */
 
@@ -338,7 +513,12 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 		pthread_cond_init(thread->sync, NULL);
 	
 	/*
-	* Standard Entry Initialization
+	* Initialize Work buffer
+	*/
+	zend_llist_init(&thread->stack, sizeof(void**), NULL, 1);
+	
+	/*
+	* Initialize standard entry
 	*/ 
 	zend_object_std_init(&thread->std, entry TSRMLS_CC);
 	
@@ -443,6 +623,7 @@ void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 	
 	if (thread) {
 		if (!PTHREADS_IS_SELF(thread) && !PTHREADS_IS_IMPORT(thread)) {
+			
 			/*
 			* If the thread is running we must attempt to join
 			*/
@@ -521,6 +702,11 @@ void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 				pthread_cond_destroy(thread->sync);
 				free(thread->sync);
 			}
+			
+			/*
+			* Destroy Stack
+			*/
+			zend_llist_destroy(&thread->stack);
 		}
 
 		/*
@@ -774,13 +960,15 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 					/*
 					* Now time to execute Thread::run
 					*/
-					EG(return_value_ptr_ptr)=&return_value;					
+					EG(return_value_ptr_ptr)=&return_value;
 					EG(active_op_array)=(zend_op_array*)run;
-					
 					zend_try {
-						zend_execute(EG(active_op_array) TSRMLS_CC);
+						do {
+							if (EG(active_op_array)) {
+								zend_execute(EG(active_op_array) TSRMLS_CC);
+							}
+						} while(pthreads_pop(thread, getThis() TSRMLS_CC)>-1);
 					} zend_end_try();
-					
 					/*
 					* Serialize return value into thread result pointer and free source zval
 					*/

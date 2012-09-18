@@ -33,10 +33,8 @@ $test2->start();
 
 printf("Process: notifying %lu: %d\n", $test2->getThreadId(), $test2->notify());
 
-if ($test->isWaiting()) {
-	/*
-	* If importing has been disabled then the responsability to notify the waiting thread must fall back to the Process to avoid deadlock
-	*/
-	printf("Process: notifying %lu: %d\n", $test->getThreadId(), $test->notify());
-} else printf("Process: nothing to do ... bye\n");
+/*
+* If importing has been disabled then the responsability to notify the waiting thread must fall back to the Process to avoid deadlock
+*/
+printf("Process: notifying %lu: %d\n", $test->getThreadId(), $test->notify());
 ?>

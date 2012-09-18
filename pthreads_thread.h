@@ -54,16 +54,26 @@ typedef struct _pthread_construct {
 	int state;
 	
 	/*
-	* Flags
+	* Flags, safe but no locking
 	*/
 	zend_bool self;
 	zend_bool synchronized;
 	zend_bool import;
 	
 	/*
+	* Requires a thread lock for access
+	*/
+	zend_bool worker;
+	
+	/*
 	* Serial Buffer
 	*/
 	char *serial;
+	
+	/*
+	* Work Buffer
+	*/
+	zend_llist stack;
 	
 	/* 
 	* Significant Other
@@ -78,6 +88,11 @@ int pthreads_equal(PTHREAD first, PTHREAD second) {
 	return 0;
 } /* }}} */
 
+/* {{{ comparison callback for llists */
+inline int pthreads_equal_func(void **first, void **second){
+	return pthreads_equal((PTHREAD)*first, (PTHREAD)*second);
+} /* }}} */
+
 /* {{{ pthread_self wrapper */
 ulong pthreads_self() {
 #ifdef _WIN32
@@ -87,10 +102,27 @@ ulong pthreads_self() {
 #endif
 } /* }}} */
 
-/* {{{ tell if the current thread created the referenced thread */
-#define PTHREADS_IS_CREATOR(t)	(t->cid == pthreads_self()) /* }}} */
+/* {{{ begin a loop over a list of threads */
+#define PTHREADS_LIST_BEGIN_LOOP(l, s) \
+	zend_llist_position position;\
+	PTHREAD *pointer;\
+	if ((pointer = (PTHREAD*) zend_llist_get_first_ex(l, &position))!=NULL) {\
+			do {\
+				(s) = (*pointer);
+/* }}} */
 
-/* {{{ tell if the referenced thread is an imported reference */
-#define PTHREADS_IS_IMPORT(t) t->import /* }}} */
+/* {{{ end a loop over a list of threads */
+#define PTHREADS_LIST_END_LOOP(l, s) \
+	} while((pointer = (PTHREAD*) zend_llist_get_next_ex(l, &position))!=NULL);\
+		} else zend_error(E_WARNING, "pthreads has not yet created any threads, nothing to search");
+/* }}} */
+
+/* {{{ insert an item into a list of threads */
+#define PTHREADS_LIST_INSERT(l, t) zend_llist_add_element(l, &t)
+/* }}} */
+
+/* {{{ remove an item from a list of threads */
+#define PTHREADS_LIST_REMOVE(l, t) zend_llist_del_element(l, &t, (int (*)(void *, void *)) pthreads_equal_func);
+/* }}} */
 
 #endif /* }}} */ /* HAVE_PTHREADS_THREAD_H */
