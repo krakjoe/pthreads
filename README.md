@@ -84,7 +84,7 @@ You should bear in mind that in a SAPI environment your threads cannot write the
 
 ### Documentation
 
-Some documentation can be found on the Github Wiki pages, and some examples can be found in the "examples" folder in the master repository.
+Documentation can be found on http://pthreads.org, and some examples can be found in the "examples" folder in the master repository.
 
 ### Feedback
 
