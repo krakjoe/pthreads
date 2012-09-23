@@ -44,6 +44,7 @@ typedef struct _pthread_construct {
 	* Thread Safe Local Storage
 	*/
 	void ***ls;
+	void ***pls;
 	
 	/*
 	* State Management

@@ -487,7 +487,8 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 	PTHREAD thread = calloc(1, sizeof(*thread));			
 	thread->synchronized = 0;
 	thread->self = 0;
-	thread->ls	= tsrm_ls;
+	thread->pls = tsrm_ls;
+	thread->ls	= NULL;
 	thread->sig = NULL;
 	thread->tid = 0L;
 	thread->cid = pthreads_self();
@@ -568,6 +569,7 @@ zend_object_value pthreads_attach_to_import(zend_class_entry *entry TSRMLS_DC){
 	import->synchronized = 0;
 	import->self = 0;
 	import->ls	= tsrm_ls;
+	import->pls = NULL;
 	import->sig = NULL;
 	import->tid = 0L;
 	import->cid = pthreads_self();
@@ -806,8 +808,35 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				/*
 				* Activate Zend
 				*/
+#if COMPILE_DL_PTHREADS
+				/*
+				* Same server context as parent
+				*/
+				SG(server_context)=PTHREADS_SG(thread->pls, server_context);
+				
+				/*
+				* Stops PHP from attempting to add headers to null structs
+				*/
+				PG(expose_php) = 0;
+				PG(auto_globals_jit) = 0;
+				
+				/*
+				* Startup the request ...
+				*/
+				php_request_startup(TSRMLS_C);
+				
+				/*
+				* Stop any pointless output from threads
+				*/
+				SG(headers_sent)=1;
+				SG(request_info).no_headers = 1;
+#else
+				/*
+				* Not nearly as much work !!
+				*/
 				zend_activate(TSRMLS_C);							
-				zend_activate_modules(TSRMLS_C);					
+				zend_activate_modules(TSRMLS_C);
+#endif				
 				
 				/*
 				* A new reference to $this for the current context
@@ -1015,8 +1044,12 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				/*
 				* Deactivate Zend
 				*/
+#if COMPILE_DL_PTHREADS
+				php_request_shutdown(TSRMLS_C);
+#else
 				zend_deactivate_modules(TSRMLS_C);
 				zend_deactivate(TSRMLS_C);
+#endif
 			}
 			
 			/*
