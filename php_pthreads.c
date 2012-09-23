@@ -24,7 +24,7 @@
 #endif
 
 #if COMPILE_DL_PTHREADS
-ZEND_GET_MODULE(pthreads)
+	ZEND_GET_MODULE(pthreads)
 #endif
 
 zend_class_entry *pthreads_class_entry = NULL;
@@ -303,7 +303,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	ce.serialize = zend_class_serialize_deny;
 	ce.unserialize = zend_class_unserialize_deny;
 	pthreads_condition_class_entry=zend_register_internal_class(&ce TSRMLS_CC);
-	
+
 	if ( pthread_mutexattr_init(&defmutex)==SUCCESS ) {
 #ifdef DEFAULT_MUTEX_TYPE
 		pthread_mutexattr_settype(
