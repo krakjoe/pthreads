@@ -90,7 +90,7 @@ int pthreads_equal(PTHREAD first, PTHREAD second) {
 } /* }}} */
 
 /* {{{ comparison callback for llists */
-inline int pthreads_equal_func(void **first, void **second){
+static inline int pthreads_equal_func(void **first, void **second){
 	return pthreads_equal((PTHREAD)*first, (PTHREAD)*second);
 } /* }}} */
 
