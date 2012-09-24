@@ -311,6 +311,7 @@ static inline int pthreads_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		if (work) {
 			PTHREADS_LIST_REMOVE(&thread->stack, work);
+			zend_llist_del_element(&thread->stack, &work, (int (*)(void *, void *)) pthreads_equal_func);
 		} else zend_llist_destroy(&thread->stack);
 		remain = thread->stack.count;
 		if (acquire != EDEADLK)
@@ -339,8 +340,7 @@ burst:
 				/*
 				* Cleanup List
 				*/
-				PTHREADS_LIST_REMOVE(&thread->stack, work);
-				
+				zend_llist_del_element(&thread->stack, work, (int (*)(void *, void *)) pthreads_equal_func);
 				/*
 				* Setup the executor again
 				*/
