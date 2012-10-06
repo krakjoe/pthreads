@@ -654,11 +654,7 @@ void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 					* Here we force blocking threads to wake and warn users of the deadlock
 					*/
 					if (PTHREADS_IS_BLOCKING(thread)) {
-#ifndef _WIN32
-						zend_error(E_WARNING, "pthreads has avoided a deadlock, thread #%lu was waiting for notification", (ulong) pthread_self());
-#else	
-						zend_error(E_WARNING, "pthreads has avoided a deadlock, thread #%lu was waiting for notification", (unsigned long) GetCurrentThreadId());
-#endif
+						zend_error(E_WARNING, "pthreads has avoided a deadlock, thread #%lu was waiting for notification", thread->tid);
 						PTHREADS_NOTIFY(thread);
 					}
 					
