@@ -33,6 +33,7 @@
 #include <php_globals.h>
 #include <php_main.h>
 #include <php_ticks.h>
+#include <ext/standard/info.h>
 #include <ext/standard/php_smart_str.h>
 #include <ext/standard/php_smart_str_public.h>
 #include <ext/standard/php_var.h>
@@ -58,6 +59,10 @@ PHP_MINFO_FUNCTION(pthreads);
 
 /* {{{ basic */
 PHP_METHOD(Thread, start);
+/* }}} */
+
+/* {{{ advanced */
+PHP_METHOD(Thread, yield);
 /* }}} */
 
 /* {{{ synchronization */

@@ -69,6 +69,11 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 /* }}} */
 
+/* {{{ advanced */
+ZEND_BEGIN_ARG_INFO_EX(Thread_yield, 0, 0, 0)
+ZEND_END_ARG_INFO()
+/* }}} */
+
 /* {{{ access */
 ZEND_BEGIN_ARG_INFO_EX(Thread_fetch, 0, 0, 0)
 	ZEND_ARG_INFO(0, symbol)
@@ -210,6 +215,7 @@ zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, getCount, Thread_getCount, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getMax, Thread_getMax, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getPeak, Thread_getPeak, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, yield, Thread_yield, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 }; /* }}} */
 
@@ -761,8 +767,7 @@ PHP_METHOD(Thread, join)
 										zend_hash_destroy(selected->std.properties);
 										FREE_HASHTABLE(selected->std.properties);
 									}
-									
-									selected->std.properties->inconsistent=0;
+								
 									selected->std.properties = Z_ARRVAL_P(symbols);
 									FREE_ZVAL(symbols);
 								}
@@ -853,6 +858,15 @@ PHP_METHOD(Thread, getMax)
 PHP_METHOD(Thread, getPeak)
 {
 	RETURN_LONG(PTHREADS_G_PEAK());
+} /* }}} */
+
+/* {{{ proto long Thread::yield() 
+	Will cause the calling thread to yield */
+PHP_METHOD(Thread, yield)
+{
+#ifndef _WIN32
+	pthread_yield();
+#endif
 } /* }}} */
 
 /* }}} */

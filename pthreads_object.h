@@ -281,7 +281,7 @@ check:
 #if _WIN32
 				Sleep(10);
 #else
-				usleep(1000);
+				usleep(100000);
 #endif
 				goto check;
 			}
@@ -486,7 +486,6 @@ static inline int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC)
 zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC){
 	
 	zend_object_value attach;
-	zval *temp;
 	
 	/*
 	* Allocate an initialize thread object for storage
@@ -534,12 +533,14 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 	* Initialize instance properties
 	*/
 #if PHP_VERSION_ID < 50399
-	 zend_hash_copy(															
-		thread->std.properties,
-		&entry->default_properties,
-		ZVAL_COPY_CTOR,
-		&temp, sizeof(zval*)
-	);
+	zval *temp; {
+		zend_hash_copy(															
+			thread->std.properties,
+			&entry->default_properties,
+			ZVAL_COPY_CTOR,
+			&temp, sizeof(zval*)
+		);
+	}
 #else
 	object_properties_init(&(thread->std), entry);
 #endif
@@ -567,7 +568,6 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 zend_object_value pthreads_attach_to_import(zend_class_entry *entry TSRMLS_DC){
 	
 	zend_object_value attach;
-	zval *temp;
 	 
 	/*
 	* Allocate an initialize thread object for storage
@@ -593,12 +593,14 @@ zend_object_value pthreads_attach_to_import(zend_class_entry *entry TSRMLS_DC){
 	* Initialize instance properties
 	*/
 #if PHP_VERSION_ID < 50399
-	 zend_hash_copy(															
-		import->std.properties,
-		&entry->default_properties,
-		ZVAL_COPY_CTOR,
-		&temp, sizeof(zval*)
-	);
+	zval *temp; {
+		zend_hash_copy(															
+			import->std.properties,
+			&entry->default_properties,
+			ZVAL_COPY_CTOR,
+			&temp, sizeof(zval*)
+		);
+	}
 #else
 	object_properties_init(&(import->std), entry);
 #endif
@@ -755,15 +757,20 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 	*/
 	char *rename = NULL;
 	
+	/*
+	* The interpreter context for this thread
+	*/
+	void ***ctx;
+	
 	if (thread) {					
 	
 		/*
 		* Allocate and Initialize an interpreter context for this Thread
 		*/
 		PTHREADS_G_LOCK();
-		void ***ctx = thread->ls = tsrm_new_interpreter_context(); 
+		ctx = thread->ls = tsrm_new_interpreter_context(); 
 		PTHREADS_G_UNLOCK(); 
-		
+
 		{
 	
 			/*
