@@ -84,14 +84,17 @@ typedef struct _pthread_construct {
 
 /* {{{ comparison function */
 int pthreads_equal(PTHREAD first, PTHREAD second) {
-	if (first && second)
-		return pthread_equal(first->thread, second->thread);
+	if (first && second) {
+		return (first == second);
+	}
 	return 0;
 } /* }}} */
 
 /* {{{ comparison callback for llists */
 static inline int pthreads_equal_func(void **first, void **second){
-	return pthreads_equal((PTHREAD)*first, (PTHREAD)*second);
+	if (first && second)
+		return pthreads_equal((PTHREAD)*first, (PTHREAD)*second);
+	return 0;
 } /* }}} */
 
 /* {{{ pthread_self wrapper */
