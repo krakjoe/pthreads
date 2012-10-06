@@ -32,6 +32,9 @@ zend_class_entry *pthreads_import_entry = NULL;
 zend_class_entry *pthreads_mutex_class_entry = NULL;
 zend_class_entry *pthreads_condition_class_entry = NULL;
 
+zend_object_handlers *zsh = NULL;
+zend_object_handlers poh;
+
 /* {{{ defmutex setup 
 		Choose the NP type if it exists as it targets the current system */
 pthread_mutexattr_t		defmutex;
@@ -329,6 +332,18 @@ PHP_MINIT_FUNCTION(pthreads)
 	
 	if (!PTHREADS_G(init)) 
 		PTHREADS_G_INIT();
+	
+	/*
+	* Setup standard and pthreads object handlers
+	*/
+	zsh = zend_get_std_object_handlers();
+	
+	memcpy(&poh, zsh, sizeof(zend_object_handlers));
+	
+	poh.read_property = pthreads_read_property;
+	poh.write_property = pthreads_write_property;
+	poh.has_property = pthreads_has_property;
+	poh.unset_property = pthreads_unset_property;
 	
 	return SUCCESS;
 } /* }}} */

@@ -165,6 +165,11 @@ static inline int pthreads_get_stacked(PTHREAD thread);
 /* {{{ get the number of items on the stack */
 #define PTHREADS_GET_STACKED pthreads_get_stacked /* }}} */
 
+/* {{{ handlers included here for access to macros above */
+#ifndef HAVE_PTHREADS_HANDLERS_H
+#	include "pthreads_handlers.h"
+#endif /* }}} */
+
 /*{{{ inline statics declarations */
 
 /* {{{ set worker flag on PTHREAD */
@@ -484,7 +489,9 @@ static inline int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC)
 
 /* {{{ this constructor is used to build the original PTHREAD in the creating context */
 zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC){
-	
+#if PHP_VERSION_ID < 50399
+	zval *temp; 
+#endif
 	zend_object_value attach;
 	
 	/*
@@ -533,7 +540,7 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 	* Initialize instance properties
 	*/
 #if PHP_VERSION_ID < 50399
-	zval *temp; {
+	{
 		zend_hash_copy(															
 			thread->std.properties,
 			&entry->default_properties,
@@ -558,7 +565,7 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 	/*
 	* For now, standard handlers ...
 	*/
-	attach.handlers = (zend_object_handlers *) zend_get_std_object_handlers();
+	attach.handlers = &poh;
 
 	return attach;																
 }
@@ -566,7 +573,9 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 
 /* {{{ this constructor is used to build a PTHREAD skeleton for use as a base object to represent an imported thread */
 zend_object_value pthreads_attach_to_import(zend_class_entry *entry TSRMLS_DC){
-	
+#if PHP_VERSION_ID < 50399
+	zval *temp;
+#endif
 	zend_object_value attach;
 	 
 	/*
@@ -593,7 +602,7 @@ zend_object_value pthreads_attach_to_import(zend_class_entry *entry TSRMLS_DC){
 	* Initialize instance properties
 	*/
 #if PHP_VERSION_ID < 50399
-	zval *temp; {
+	{
 		zend_hash_copy(															
 			import->std.properties,
 			&entry->default_properties,
@@ -618,7 +627,7 @@ zend_object_value pthreads_attach_to_import(zend_class_entry *entry TSRMLS_DC){
 	/*
 	* For now, standard handlers ...
 	*/
-	attach.handlers = (zend_object_handlers *) zend_get_std_object_handlers();
+	attach.handlers = &poh;
 
 	return attach;																
 }
