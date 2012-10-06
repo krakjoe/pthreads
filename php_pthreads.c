@@ -478,48 +478,49 @@ PHP_METHOD(Thread, start)
 
 /* {{{ proto mixed Thread::fetch(string symbol) 
 	Will attempt to read a basic type from a thread during runtime
-	You cannot read objects or resources at runtime, objects will be available when the thread is joined
-	A thread should be waiting to be read, it is unsafe to read from a thread in any other state */
+	You cannot read objects or resources at runtime, objects will be available when the thread is joined */
 PHP_METHOD(Thread, fetch)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	
+	PTHREAD selected = NULL;
 	zval *symbol = NULL;
 	char *serial = NULL;
 	zval **fetched = NULL;
 	int acquire = 0;
 	
 	if (!PTHREADS_IS_SELF(thread)) {
-		acquire = pthread_mutex_lock(thread->sig->lock);
+		if (PTHREADS_IS_IMPORT(thread)) {
+			selected = thread->sig->sig;
+		} else selected = thread->sig;
+		
+		acquire = pthread_mutex_lock(selected->lock);
 		
 		if (acquire == SUCCESS || acquire == EDEADLK) {
-			if (!PTHREADS_IS_JOINED(thread) && PTHREADS_IS_RUNNING(thread)) {
-				if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &symbol)==SUCCESS) {
-					if (zend_hash_find(thread->sig->std.properties, Z_STRVAL_P(symbol), Z_STRLEN_P(symbol)+1, (void**)&fetched)==SUCCESS) {
-						switch(Z_TYPE_PP(fetched)){
-							case IS_LONG:
-							case IS_BOOL:
-							case IS_STRING:
-							case IS_NULL:
-							case IS_ARRAY:
-								serial = pthreads_serialize(*fetched TSRMLS_CC);
-								if (serial) {
-									pthreads_unserialize_into(serial, return_value TSRMLS_CC);
-								}
-							break;
-							
-							/* it's possible to allow access to an object, however I feel it's unsafe and too heavy */
-							/* objects will become available when the thread is joined and we know for sure the object is no longer being manipulated by another context */
-							case IS_OBJECT:
-							case IS_RESOURCE:
-								zend_error(E_WARNING, "pthreads detected an attempt to fetch an unsupported symbol (%s)", Z_STRVAL_P(symbol));
-							break;
-						}
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &symbol)==SUCCESS) {
+				if (zend_hash_find(selected->std.properties, Z_STRVAL_P(symbol), Z_STRLEN_P(symbol)+1, (void**)&fetched)==SUCCESS) {
+					switch(Z_TYPE_PP(fetched)){
+						case IS_LONG:
+						case IS_BOOL:
+						case IS_STRING:
+						case IS_NULL:
+						case IS_ARRAY:
+							serial = pthreads_serialize(*fetched TSRMLS_CC);
+							if (serial) {
+								pthreads_unserialize_into(serial, return_value TSRMLS_CC);
+							}
+						break;
+						
+						/* it's possible to allow access to an object, however I feel it's unsafe and too heavy */
+						/* objects will become available when the thread is joined and we know for sure the object is no longer being manipulated by another context */
+						case IS_OBJECT:
+						case IS_RESOURCE:
+							zend_error(E_WARNING, "pthreads detected an attempt to fetch an unsupported symbol (%s)", Z_STRVAL_P(symbol));
+						break;
 					}
 				}
-			} else zend_error(E_WARNING, "pthreads has detected the referenced thread is not in a state conducive to sharing");
+			}
 			if (acquire != EDEADLK)
-				pthread_mutex_unlock(thread->sig->lock);
+				pthread_mutex_unlock(selected->lock);
 			if (serial)
 				free(serial);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
@@ -652,7 +653,6 @@ PHP_METHOD(Thread, isBusy)
 			PTHREADS_UNLOCK(thread);
 		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isBusy from a Thread");
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
-	RETURN_NULL();
 } /* }}} */
 
 /* {{{ proto boolean Thread::isWaiting() 
@@ -672,7 +672,6 @@ PHP_METHOD(Thread, isWaiting)
 			PTHREADS_UNLOCK(thread);
 		} else zend_error(E_WARNING, "pthreads has detected an attempt to use Thread::isWaiting from a Thread");
 	} else zend_error(E_ERROR, "pthreads has expereinced an internal error and cannot continue");
-	RETURN_NULL();
 }
 
 /* {{{ proto boolean Thread::wait([long timeout]) 

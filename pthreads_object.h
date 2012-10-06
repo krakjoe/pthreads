@@ -563,7 +563,7 @@ zend_object_value pthreads_attach_to_instance(zend_class_entry *entry TSRMLS_DC)
 	);
 	
 	/*
-	* For now, standard handlers ...
+	* Mutex aware handlers
 	*/
 	attach.handlers = &poh;
 
@@ -627,7 +627,7 @@ zend_object_value pthreads_attach_to_import(zend_class_entry *entry TSRMLS_DC){
 	/*
 	* For now, standard handlers ...
 	*/
-	attach.handlers = &poh;
+	attach.handlers = zsh;
 
 	return attach;																
 }

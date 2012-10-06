@@ -9,7 +9,7 @@ class MyWorkerThread extends Thread {
 	
 	public function run(){
 		if($this->mutex)
-			Mutex::lock($this->mutex);
+			$locked=Mutex::lock($this->mutex);
 		printf("%s#%lu:<-", $locked?"Y":"N", $this->getThreadId());
 		$i=0;
 		while($i++<$this->limit){
