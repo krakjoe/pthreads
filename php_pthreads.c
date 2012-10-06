@@ -69,6 +69,12 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 /* }}} */
 
+/* {{{ access */
+ZEND_BEGIN_ARG_INFO_EX(Thread_fetch, 0, 0, 0)
+	ZEND_ARG_INFO(0, symbol)
+ZEND_END_ARG_INFO()
+/* }}} */
+
 /* {{{ synchronization */
 ZEND_BEGIN_ARG_INFO_EX(Thread_wait, 0, 0, 0)
 	ZEND_ARG_INFO(0, timeout)
@@ -187,6 +193,7 @@ ZEND_END_ARG_INFO()
 zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ABSTRACT_ME(Thread, run, Thread_run)
+	PHP_ME(Thread, fetch, Thread_fetch, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -208,6 +215,7 @@ zend_function_entry pthreads_methods[] = {
 
 /* {{{ Import method entries */
 zend_function_entry	pthreads_import_methods[] = {
+	PHP_ME(Thread, fetch, Thread_fetch, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -447,6 +455,56 @@ PHP_METHOD(Thread, start)
 	RETURN_FALSE;
 } /* }}} */
 
+/* {{{ proto mixed Thread::fetch(string symbol) 
+	Will attempt to read a basic type from a thread during runtime
+	You cannot read objects or resources at runtime, objects will be available when the thread is joined
+	A thread should be waiting to be read, it is unsafe to read from a thread in any other state */
+PHP_METHOD(Thread, fetch)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	zval *symbol = NULL;
+	char *serial = NULL;
+	zval **fetched = NULL;
+	int acquire = 0;
+	
+	if (!PTHREADS_IS_SELF(thread)) {
+		acquire = pthread_mutex_lock(thread->sig->lock);
+		
+		if (acquire == SUCCESS || acquire == EDEADLK) {
+			if (!PTHREADS_IS_JOINED(thread) && PTHREADS_IS_RUNNING(thread)) {
+				if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &symbol)==SUCCESS) {
+					if (zend_hash_find(thread->sig->std.properties, Z_STRVAL_P(symbol), Z_STRLEN_P(symbol)+1, (void**)&fetched)==SUCCESS) {
+						switch(Z_TYPE_PP(fetched)){
+							case IS_LONG:
+							case IS_BOOL:
+							case IS_STRING:
+							case IS_NULL:
+							case IS_ARRAY:
+								serial = pthreads_serialize(*fetched TSRMLS_CC);
+								if (serial) {
+									pthreads_unserialize_into(serial, return_value TSRMLS_CC);
+								}
+							break;
+							
+							/* it's possible to allow access to an object, however I feel it's unsafe and too heavy */
+							/* objects will become available when the thread is joined and we know for sure the object is no longer being manipulated by another context */
+							case IS_OBJECT:
+							case IS_RESOURCE:
+								zend_error(E_WARNING, "pthreads detected an attempt to fetch an unsupported symbol (%s)", Z_STRVAL_P(symbol));
+							break;
+						}
+					}
+				}
+			} else zend_error(E_WARNING, "pthreads has detected the referenced thread is not in a state conducive to sharing");
+			if (acquire != EDEADLK)
+				pthread_mutex_unlock(thread->sig->lock);
+			if (serial)
+				free(serial);
+		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+	} else zend_error(E_WARNING, "pthreads detected an attempt to call an external method, do not attempt to fetch in this context");
+} /* }}} */
+
 /* {{{ proto int Thread::stack(Thread $work)
 	Pushes an item onto the Thread Stack, returns the size of stack */
 PHP_METHOD(Thread, stack)
@@ -633,13 +691,22 @@ PHP_METHOD(Thread, notify)
 	RETURN_FALSE;
 } /* }}} */
 
-/* {{{ proto mixed Thread::join() 
-		Will cause the calling thread to block and wait for the output of the referenced thread */
+/* {{{ proto mixed Thread::join([boolean discard]) 
+		Will cause the calling thread to block and wait for the output of the referenced thread
+		If discard is void or false, properties set in the threading context during runtime will replace the properties of the referenced thread in the current context */
 PHP_METHOD(Thread, join) 
 { 
 	PTHREAD thread = PTHREADS_FETCH;
 	PTHREAD selected = NULL;
+	zval *symbols = NULL;
 	char *result = NULL;
+	zend_bool discard = 0;
+	
+	/*
+	* Check for discard argument
+	*/
+	if (ZEND_NUM_ARGS())
+		zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &discard);
 	
 	if (thread) {
 	
@@ -682,6 +749,30 @@ PHP_METHOD(Thread, join)
 						if (result) {
 							pthreads_unserialize_into(result, return_value TSRMLS_CC);
 							free(result);
+						}
+						
+						/*
+						* Replace symbol tables
+						*/
+						if (selected->serial) {
+							if (!discard) {
+								if ((symbols=pthreads_unserialize(selected->serial TSRMLS_CC))!=NULL){
+									if (selected->std.properties) {
+										zend_hash_destroy(selected->std.properties);
+										FREE_HASHTABLE(selected->std.properties);
+									}
+									
+									selected->std.properties->inconsistent=0;
+									selected->std.properties = Z_ARRVAL_P(symbols);
+									FREE_ZVAL(symbols);
+								}
+							}  else {
+								/*
+								* Discarding in any context affects all contexts and provides an easy way to release resources that aren't going to be used
+								*/
+								free(selected->serial);
+								selected->serial = NULL;
+							}
 						}
 					} else {
 						zend_error(E_WARNING, "pthreads detected failure while joining with the referenced Thread (%lu)", thread->tid);

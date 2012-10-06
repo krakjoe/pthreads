@@ -4,7 +4,7 @@ class OOWebRequest extends Thread {
 	* You could have more parameters but an object can hold everything ...
 	*/
 	public function __construct($request){
-		$this->request = $request;
+		$this->response = $request;
 	}
 	/*
 	* You must include the user declared class here 
@@ -23,15 +23,14 @@ class OOWebRequest extends Thread {
 	*/
 	public function run(){
 		printf("Running Thread #%lu\n", $this->getThreadId());
-		print_r($this);
-		if($this->request){
-			if($this->request->url){
-				$this->request->setStart(microtime(true));
-				$this->request->setData(file_get_contents($this->request->url));
-				$this->request->setFinish(microtime(true));
+		if($this->response){
+			if($this->response->url){
+				$this->response->setStart(microtime(true));
+				$this->response->setData(file_get_contents($this->response->url));
+				$this->response->setFinish(microtime(true));
 			}
 		}
-		return $this->request;
+		return $this->response->getLength();
 	}
 }
 
@@ -45,10 +44,13 @@ $request = new OOWebRequest(new Request("http://www.google.com"));
 /* go */
 if($request->start()){
 	/* do some heavy lifting here perhaps in the current thread */
-	$response = $request->join();
+	while($request->isBusy()) {
+		echo ".";
+		usleep(100);
+	}
 	/* then join to get the result */
-	if($response){
-		printf("Got %d bytes from %s in %f seconds\n", $response->length, $response->url, $response->finish - $response->start);
+	if($request->join()){
+		printf("\nGot %d bytes from %s in %f seconds\n", $request->response->getLength(), $request->response->getUrl(), $request->response->getDuration());
 	}
 }
 ?>

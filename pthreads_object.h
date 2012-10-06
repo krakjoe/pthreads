@@ -337,18 +337,21 @@ burst:
 				bubble = 0;
 				
 				/*
-				* Cleanup List
-				*/
-				zend_llist_del_element(&thread->stack, work, (int (*)(void *, void *)) pthreads_equal_func);
-				/*
 				* Setup the executor again
 				*/
 				if (zend_hash_find(&current->std.ce->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
+				
 #if PHP_VERSION_ID > 50399
 					/*
 					* Versions above 5.4 have run_time_cache to contend with, handled in compat for now
+					* @NOTE 5.4 still leaks executing workers, zend catches it MUST find a soltuion
 					*/
 					current->std.ce->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
+#else
+					/*
+					* Destroying the last op array explicitly here avoids leaks in 5.3
+					*/
+					destroy_op_array(EG(active_op_array) TSRMLS_CC);
 #endif
 					/*
 					* Would usually be added when we create the class entry for a thread
@@ -365,6 +368,11 @@ burst:
 					*/
 					remain = thread->stack.count;
 				}
+				
+				/*
+				* Cleanup List
+				*/
+				zend_llist_del_element(&thread->stack, work, (int (*)(void *, void *)) pthreads_equal_func);
 			}
 		}
 		
@@ -387,7 +395,6 @@ static inline int pthreads_push(PTHREAD thread, PTHREAD work) {
 	int acquire = 0;
 	int counted = -1;
 	int notify = 0;
-	zend_function *run;
 	
 	acquire = pthread_mutex_lock(thread->lock);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
@@ -654,6 +661,12 @@ void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 						free(result);
 				}
 			}
+			
+			/*
+			* Free whatever is found in the serial buffer
+			*/
+			if (thread->serial)
+				free(thread->serial);
 		}
 		
 		/*
@@ -747,7 +760,11 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		/*
 		* Allocate and Initialize an interpreter context for this Thread
 		*/
-		void ***ctx = thread->ls = tsrm_new_interpreter_context(); {
+		PTHREADS_G_LOCK();
+		void ***ctx = thread->ls = tsrm_new_interpreter_context(); 
+		PTHREADS_G_UNLOCK(); 
+		
+		{
 	
 			/*
 			* As always, a pointer to $this
@@ -948,7 +965,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						* Preparation is run out of context and the return value is ignored
 						*/
 						zval *discard;
-						ALLOC_INIT_ZVAL(discard);
 						EG(return_value_ptr_ptr)=&discard;				
 						EG(active_op_array)=(zend_op_array*)prepare;
 						EG(active_op_array)->filename = rename;
@@ -957,9 +973,16 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						} zend_end_try();
 						
 						if (discard && Z_TYPE_P(discard) != IS_NULL) {
-							FREE_ZVAL(discard);
+							zval_ptr_dtor(&discard);
 						}
 					}
+					
+					/*
+					* Setting these here makes deserialization errors sensible
+					*/
+					EG(return_value_ptr_ptr)=&return_value;
+					EG(active_op_array)=(zend_op_array*)run;
+					EG(active_op_array)->filename = rename;
 					
 					/*
 					* Unserialize symbols from parent context
@@ -979,53 +1002,61 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						* Safe to free, no longer required
 						*/
 						free(thread->serial);
+						
+						/*
+						* Avoid double free
+						*/
+						thread->serial = NULL;
 					}
-					
-					/*
-					* Allocate the return value for the next execution
-					*/ 
-					ALLOC_INIT_ZVAL(return_value);
 					
 					/*
 					* Now time to execute Thread::run
 					*/
-					EG(return_value_ptr_ptr)=&return_value;
-					EG(active_op_array)=(zend_op_array*)run;
 					zend_try {
 						do {
 							if (EG(active_op_array)) {
-								zend_execute(EG(active_op_array) TSRMLS_CC);
+								EG(active_op_array)->filename = rename;
+								zend_execute(
+									EG(active_op_array) TSRMLS_CC
+								);
 							}
 						} while(pthreads_pop(thread, getThis() TSRMLS_CC)>-1);
 					} zend_end_try();
+					
 					/*
-					* Serialize return value into thread result pointer and free source zval
+					* Serialize and destroy return value
 					*/
 					if (return_value && Z_TYPE_P(return_value) != IS_NULL) {
 						result = pthreads_serialize(
 							return_value TSRMLS_CC
 						);
-						FREE_ZVAL(return_value);
+						zval_ptr_dtor(&return_value);
 					}
 					
 					/*
-					* Free symbols
+					* Serialize and destroy symbols
 					*/
 					if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
-						FREE_ZVAL(symbols);
+						thread->serial = pthreads_serialize(
+							symbols TSRMLS_CC
+						);
+						zval_ptr_dtor(&symbols);
 					}
+					
+					/*
+					* Free zval allocated for $this
+					*/
+					FREE_ZVAL(this_ptr);
 				} zend_catch {	
-					
-					/*
-					* Freeing symbols and return value in case of error
-					*/
 					if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
-						FREE_ZVAL(symbols);
+						zval_ptr_dtor(&symbols);
 					}
 					
 					if (return_value && Z_TYPE_P(return_value) != IS_NULL){
-						FREE_ZVAL(return_value);
+						zval_ptr_dtor(&return_value);
 					}
+					
+					FREE_ZVAL(this_ptr);
 				} zend_end_try();
 				
 				/*
@@ -1055,7 +1086,9 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			/*
 			* Free Context
 			*/
+			PTHREADS_G_LOCK();
 			tsrm_free_interpreter_context(ctx);	
+			PTHREADS_G_UNLOCK();
 		}
 	}
 

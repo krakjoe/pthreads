@@ -31,7 +31,7 @@ class Request {
 	
 	public function getUrl()		{ return $this->url; }
 	public function getDuration()	{ return $this->finish - $this->start; }
-	public function getLengh()		{ return $this->length; }
+	public function getLength()		{ return $this->length; }
 	public function getData()		{ return $this->data; }
 	public function getStart()		{ return $this->start; }
 	public function getFinish()		{ return $this->finish; }

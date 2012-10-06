@@ -1,6 +1,9 @@
 <?php
 class ScopeTest extends Thread {
 	public function run(){
+		/* set a variable to test fetching from an imported thread */
+		$this->my = "data";
+		
 		printf("%s: %lu running\n", __CLASS__, $this->getThreadId());
 		printf("%s: %lu notified: %d\n", __CLASS__, $this->getThreadId(), $this->wait());
 	}
@@ -14,7 +17,7 @@ class ScopeTest2 extends Thread {
 	public function run(){
 		printf("%s: %lu running\n", __CLASS__, $this->getThreadId());
 		if (($other = Thread::getThread($this->other))) {
-			printf("%s: %lu working ...\n", __CLASS__, $this->getThreadId());
+			printf("%s: %lu working ... %s\n", __CLASS__, $this->getThreadId(), $other->fetch("my"));
 			usleep(1000000); /* simulate some work */
 			if ($other->isWaiting())
 				printf("%s: %lu notifying %lu: %d\n", __CLASS__, $this->getThreadId(), $this->other, $other->notify());
