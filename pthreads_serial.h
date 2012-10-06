@@ -59,7 +59,7 @@ int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){
 		if (!php_var_unserialize(&result, &pointer, pointer+strlen(serial), &vars TSRMLS_CC)) {
 			PHP_VAR_UNSERIALIZE_DESTROY(vars);
 			zval_dtor(result);
-			zend_error(E_WARNING, "The thread attempted to declare properties (%d bytes of %s) that do not support serialization", strlen(serial), serial);
+			zend_error(E_WARNING, "The thread attempted to declare properties (%ld bytes of %s) that do not support serialization", strlen(serial), serial);
 			return FAILURE;
 		} else { 
 			PHP_VAR_UNSERIALIZE_DESTROY(vars);
