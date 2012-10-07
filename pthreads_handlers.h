@@ -68,8 +68,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 					oacquire = pthread_mutex_lock(thread->sig->lock);
 
 					if (oacquire == SUCCESS || oacquire == EDEADLK) {
-						if (!thread->sig->std.properties->inconsistent && /* check for table being destroyed */
-							zend_hash_find(thread->sig->std.properties, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void**)&lookup)==SUCCESS) {
+						if (zend_hash_find(thread->sig->std.properties, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void**)&lookup)==SUCCESS) {
 							switch(Z_TYPE_PP(lookup)){
 								case IS_LONG:
 								case IS_BOOL:
@@ -103,8 +102,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 				
 				if (oacquire == SUCCESS || oacquire == EDEADLK) {
 					if (!PTHREADS_ST_CHECK(thread->state, PTHREADS_ST_JOINED)) {
-						if (!thread->sig->sig->std.properties->inconsistent && /* check for table being destroyed */
-							zend_hash_find(thread->sig->sig->std.properties, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void**)&lookup)==SUCCESS) {
+						if (zend_hash_find(thread->sig->sig->std.properties, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void**)&lookup)==SUCCESS) {
 							switch(Z_TYPE_PP(lookup)){
 								case IS_LONG:
 								case IS_BOOL:
