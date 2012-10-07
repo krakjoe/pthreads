@@ -77,12 +77,6 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_yield, 0, 0, 0)
 ZEND_END_ARG_INFO()
 /* }}} */
 
-/* {{{ access */
-ZEND_BEGIN_ARG_INFO_EX(Thread_fetch, 0, 0, 0)
-	ZEND_ARG_INFO(0, symbol)
-ZEND_END_ARG_INFO()
-/* }}} */
-
 /* {{{ synchronization */
 ZEND_BEGIN_ARG_INFO_EX(Thread_wait, 0, 0, 0)
 	ZEND_ARG_INFO(0, timeout)
@@ -201,7 +195,6 @@ ZEND_END_ARG_INFO()
 zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ABSTRACT_ME(Thread, run, Thread_run)
-	PHP_ME(Thread, fetch, Thread_fetch, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -224,7 +217,6 @@ zend_function_entry pthreads_methods[] = {
 
 /* {{{ Import method entries */
 zend_function_entry	pthreads_import_methods[] = {
-	PHP_ME(Thread, fetch, Thread_fetch, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -344,6 +336,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	poh.write_property = pthreads_write_property;
 	poh.has_property = pthreads_has_property;
 	poh.unset_property = pthreads_unset_property;
+	poh.get_property_ptr_ptr = NULL;
 	
 	return SUCCESS;
 } /* }}} */
@@ -474,57 +467,6 @@ PHP_METHOD(Thread, start)
 	}
 	
 	RETURN_FALSE;
-} /* }}} */
-
-/* {{{ proto mixed Thread::fetch(string symbol) 
-	Will attempt to read a basic type from a thread during runtime
-	You cannot read objects or resources at runtime, objects will be available when the thread is joined */
-PHP_METHOD(Thread, fetch)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	PTHREAD selected = NULL;
-	zval *symbol = NULL;
-	char *serial = NULL;
-	zval **fetched = NULL;
-	int acquire = 0;
-	
-	if (!PTHREADS_IS_SELF(thread)) {
-		if (PTHREADS_IS_IMPORT(thread)) {
-			selected = thread->sig->sig;
-		} else selected = thread->sig;
-		
-		acquire = pthread_mutex_lock(selected->lock);
-		
-		if (acquire == SUCCESS || acquire == EDEADLK) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &symbol)==SUCCESS) {
-				if (zend_hash_find(selected->std.properties, Z_STRVAL_P(symbol), Z_STRLEN_P(symbol)+1, (void**)&fetched)==SUCCESS) {
-					switch(Z_TYPE_PP(fetched)){
-						case IS_LONG:
-						case IS_BOOL:
-						case IS_STRING:
-						case IS_NULL:
-						case IS_ARRAY:
-							serial = pthreads_serialize(*fetched TSRMLS_CC);
-							if (serial) {
-								pthreads_unserialize_into(serial, return_value TSRMLS_CC);
-							}
-						break;
-						
-						/* it's possible to allow access to an object, however I feel it's unsafe and too heavy */
-						/* objects will become available when the thread is joined and we know for sure the object is no longer being manipulated by another context */
-						case IS_OBJECT:
-						case IS_RESOURCE:
-							zend_error(E_WARNING, "pthreads detected an attempt to fetch an unsupported symbol (%s)", Z_STRVAL_P(symbol));
-						break;
-					}
-				}
-			}
-			if (acquire != EDEADLK)
-				pthread_mutex_unlock(selected->lock);
-			if (serial)
-				free(serial);
-		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
-	} else zend_error(E_WARNING, "pthreads detected an attempt to call an external method, do not attempt to fetch in this context");
 } /* }}} */
 
 /* {{{ proto int Thread::stack(Thread $work)
@@ -776,14 +718,27 @@ PHP_METHOD(Thread, join)
 						*/
 						if (selected->serial) {
 							if (!discard) {
-								if ((symbols=pthreads_unserialize(selected->serial TSRMLS_CC))!=NULL){
-									if (selected->std.properties) {
-										zend_hash_destroy(selected->std.properties);
-										FREE_HASHTABLE(selected->std.properties);
+								if (!PTHREADS_IS_IMPORT(thread)) {
+									if ((symbols=pthreads_unserialize(selected->serial TSRMLS_CC))!=NULL){
+										if (selected->std.properties) {
+											zend_hash_destroy(selected->std.properties);
+											FREE_HASHTABLE(selected->std.properties);
+										}
+									
+										selected->std.properties = Z_ARRVAL_P(symbols);
+										FREE_ZVAL(symbols);
 									}
-								
-									selected->std.properties = Z_ARRVAL_P(symbols);
-									FREE_ZVAL(symbols);
+								} else if (!PTHREADS_ST_CHECK(thread->state, PTHREADS_ST_JOINED)) {
+									if ((symbols=pthreads_unserialize(selected->serial TSRMLS_CC))!=NULL){
+										if (thread->std.properties) {
+											zend_hash_destroy(thread->std.properties);
+											FREE_HASHTABLE(thread->std.properties);
+										}
+									
+										thread->std.properties = Z_ARRVAL_P(symbols);
+										FREE_ZVAL(symbols);
+									}
+									thread->state |= PTHREADS_ST_JOINED;
 								}
 							}  else {
 								/*
@@ -1153,7 +1108,7 @@ PHP_METHOD(Cond, wait)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &condition, &mutex, &timeout)==SUCCESS && condition && mutex) {
 		if (timeout > 0L) {
 			struct timeval now;
-			if (pthreads_gettimeofday(&now, NULL)==SUCCESS) {
+			if (gettimeofday(&now, NULL)==SUCCESS) {
 				struct timespec until;
 				long	nsec = timeout * 1000;
 				if (nsec > 1000000000L) {
