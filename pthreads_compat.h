@@ -25,20 +25,10 @@
 *
 * TODO
 *	Look into the run_time_cache issue in 5.4
-*	Implement gettimeofday in for pthread-w32 environments, gettimeofday is defined somewhere but is failing to compute correct values in windows
-*	
 */
-#if _WIN32
-/*
-* NOTES
-*	Anything that windows lacks will be defined here
-*/
+#ifdef _WIN32
 
-/* {{{ gettimeofday is lacking in windows breaking full functionality of condition variables */
-extern int gettimeofday(struct timeval* p, void* tz /* IGNORED */); /* }}} */
 #endif
-
-#define pthreads_gettimeofday gettimeofday
 
 #if PHP_VERSION_ID > 50399
 static void zend_extension_op_array_dtor_handler(zend_extension *extension, zend_op_array *op_array TSRMLS_DC)

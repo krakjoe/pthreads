@@ -1,6 +1,10 @@
 <?php
 /*
 * Sharing symbols 101
+* @NOTE Thread::fetch was never included in a release and was superceeded by object handlers
+* 	pthreads allows read access to thread data from any context
+	pthreads ensures the read and resulting variable is safe, it is still down to the user to use synchronization to tell when a variable is going to be available in another context
+	it is inefficient to keep reading a variable until it exists as you might with normal objects in php, this is because reading and writing object data in pthreads results in locking
 */
 class Fetching extends Thread {
 	public function run(){
@@ -43,7 +47,7 @@ $thread->start(true);
 */
 foreach(array("sym", "arr", "obj", "objs", "res") as $symbol){
 	printf("Thread::fetch(%s): ", $symbol);	
-	$fetched = $thread->fetch($symbol);
+	$fetched = $thread->$symbol;
 	if ($fetched) {
 		switch($symbol){
 			/*

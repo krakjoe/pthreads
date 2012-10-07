@@ -6,6 +6,8 @@ class ScopeTest extends Thread {
 		
 		printf("%s: %lu running\n", __CLASS__, $this->getThreadId());
 		printf("%s: %lu notified: %d\n", __CLASS__, $this->getThreadId(), $this->wait());
+		
+		$this->my = strrev($this->my);
 	}
 }
 
@@ -17,11 +19,12 @@ class ScopeTest2 extends Thread {
 	public function run(){
 		printf("%s: %lu running\n", __CLASS__, $this->getThreadId());
 		if (($other = Thread::getThread($this->other))) {
-			printf("%s: %lu working ... %s\n", __CLASS__, $this->getThreadId(), $other->fetch("my"));
-			printf("%s: %lu testing ... %s\n", __CLASS__, $this->getThreadId(), $other->my);
+			printf("%s: %lu working ... %s\n", __CLASS__, $this->getThreadId(), $other->my);
 			usleep(1000000); /* simulate some work */
 			if ($other->isWaiting())
 				printf("%s: %lu notifying %lu: %d\n", __CLASS__, $this->getThreadId(), $this->other, $other->notify());
+			$other->join();
+			printf("%s: %lu testing again ... %s\n", __CLASS__, $this->getThreadId(), $other->my);
 		} else {
 			printf("%s: %lu failed to find %lu\n", __CLASS__, $this->getThreadId(), $this->other);
 		}

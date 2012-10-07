@@ -220,7 +220,7 @@ static inline int pthreads_set_state_ex(PTHREAD thread, int state, long timeout)
 	int timed = 0;
 	
 	if (timeout>0L) {
-		if (pthreads_gettimeofday(&now, NULL)==SUCCESS) {
+		if (gettimeofday(&now, NULL)==SUCCESS) {
 			long nsec = timeout * 1000;
 			if (nsec > 1000000000L) {
 				until.tv_sec = now.tv_sec + (nsec / 1000000000L);
@@ -331,6 +331,9 @@ static inline int pthreads_pop(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	int acquire = 0;
 	int remain = -1;
 	int bubble = 0;
+	zval *that_ptr;
+	zend_class_entry ce;
+	zend_class_entry *pce;
 	zend_function *run;
 burst:
 	acquire = pthread_mutex_lock(thread->lock);
@@ -342,26 +345,47 @@ burst:
 				bubble = 0;
 				
 				/*
+				* We create another class entry for the work
+				*/
+				INIT_CLASS_ENTRY(
+					ce,
+					current->std.ce->name,
+					pthreads_empty_methods
+				);
+				pce=zend_register_internal_class(&ce TSRMLS_CC);
+				
+				/*
+				* Allocate a $that
+				*/
+				ALLOC_ZVAL(that_ptr);
+				
+				/*
+				* Initialize it with the new entry
+				*/
+				object_init_ex(that_ptr, pce);
+				
+				/*
+				* Copy user declared methods
+				*/
+				zend_hash_copy(
+					&Z_OBJCE_P(that_ptr)->function_table,
+					&current->std.ce->function_table,
+					(copy_ctor_func_t) function_add_ref,
+					&run, sizeof(zend_function)
+				);
+				
+				/*
 				* Setup the executor again
 				*/
-				if (zend_hash_find(&current->std.ce->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
+				if (zend_hash_find(&Z_OBJCE_P(that_ptr)->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
 				
 #if PHP_VERSION_ID > 50399
 					/*
 					* Versions above 5.4 have run_time_cache to contend with, handled in compat for now
 					* @NOTE 5.4 still leaks executing workers, zend catches it MUST find a soltuion
 					*/
-					current->std.ce->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
-#else
-					/*
-					* Destroying the last op array explicitly here avoids leaks in 5.3
-					*/
-					destroy_op_array(EG(active_op_array) TSRMLS_CC);
+					Z_OBJCE_P(that_ptr)->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
 #endif
-					/*
-					* Would usually be added when we create the class entry for a thread
-					*/
-					function_add_ref(run);
 					
 					/*
 					* Set next op array
@@ -625,9 +649,9 @@ zend_object_value pthreads_attach_to_import(zend_class_entry *entry TSRMLS_DC){
 	);
 	
 	/*
-	* For now, standard handlers ...
+	* Attach pthreads handlers
 	*/
-	attach.handlers = zsh;
+	attach.handlers = &poh;
 
 	return attach;																
 }
@@ -640,6 +664,7 @@ void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 	*/
 	char *result;
 	PTHREAD thread = (PTHREAD) arg;
+	int acquire = EDEADLK;
 	
 	if (thread) {
 		if (!PTHREADS_IS_SELF(thread) && !PTHREADS_IS_IMPORT(thread)) {
@@ -677,12 +702,26 @@ void pthreads_detach_from_instance(void * arg TSRMLS_DC){
 		}
 		
 		/*
-		* Destroy object properties
+		* Deal with properties in a safe manner by requiring the lock
 		*/
-		if (thread->std.properties){
-			zend_hash_destroy(thread->std.properties);
-			FREE_HASHTABLE(thread->std.properties);
+		{
+			if (!PTHREADS_IS_IMPORT(thread)) {
+				acquire = pthread_mutex_lock(thread->lock);
+			}
+				
+			/*
+			* Destroy object properties
+			*/
+			if (thread->std.properties) {
+				zend_hash_destroy(thread->std.properties);
+				FREE_HASHTABLE(thread->std.properties);
+			}
+			
+			if (acquire != EDEADLK) {
+				pthread_mutex_unlock(thread->lock);
+			}
 		}
+		
 
 #if PHP_VERSION_ID > 50399
 		

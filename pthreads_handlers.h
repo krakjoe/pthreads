@@ -49,20 +49,96 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D);
 int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D);
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D);
 
-/* {{ read_property 
-	@TODO this could replace Thread::fetch for a more natural feel to reading thread data at runtime */
+/* {{ read_property */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	PTHREAD thread = PTHREADS_FETCH_FROM(object);
 	int acquire = 0;
+	int oacquire = 0;
+	
+	zval **lookup = NULL;
 	zval *property = NULL;
+	char *serial = NULL;
 	
 	if (thread) {
-		acquire = pthread_mutex_lock(thread->lock);
+		acquire = pthread_mutex_lock(PTHREADS_IS_IMPORT(thread) ? thread->sig->lock : thread->lock);
 		
 		if (acquire == SUCCESS || acquire == EDEADLK) {
-			property = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+			if (!PTHREADS_IS_SELF(thread) && !PTHREADS_IS_IMPORT(thread)) {
+				if (!PTHREADS_IS_JOINED(thread->sig)) {
+					oacquire = pthread_mutex_lock(thread->sig->lock);
+
+					if (oacquire == SUCCESS || oacquire == EDEADLK) {
+						if (!thread->sig->std.properties->inconsistent && /* check for table being destroyed */
+							zend_hash_find(thread->sig->std.properties, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void**)&lookup)==SUCCESS) {
+							switch(Z_TYPE_PP(lookup)){
+								case IS_LONG:
+								case IS_BOOL:
+								case IS_STRING:
+								case IS_NULL:
+								case IS_ARRAY:
+									serial = pthreads_serialize(*lookup TSRMLS_CC);
+							
+									if (serial) {
+										if ((property = pthreads_unserialize(serial TSRMLS_CC)) != NULL)
+											Z_SET_REFCOUNT_P(property, 0);
+										free(serial);
+									}
+								break;
+								
+								/* it's possible to allow access to an object, however I feel it's unsafe and too heavy */
+								/* objects will become available when the thread is joined and we know for sure the object is no longer being manipulated by another context */
+								case IS_OBJECT:
+								case IS_RESOURCE:
+									zend_error(E_WARNING, "pthreads detected an attempt to fetch an unsupported symbol (%s)", Z_STRVAL_P(member));
+								break;
+							}
+						}
+						
+						if (oacquire != EDEADLK)
+							pthread_mutex_unlock(thread->sig->lock);
+					} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+				}
+			} else if (PTHREADS_IS_IMPORT(thread)) {
+				oacquire = pthread_mutex_lock(thread->sig->sig->lock);
+				
+				if (oacquire == SUCCESS || oacquire == EDEADLK) {
+					if (!PTHREADS_ST_CHECK(thread->state, PTHREADS_ST_JOINED)) {
+						if (!thread->sig->sig->std.properties->inconsistent && /* check for table being destroyed */
+							zend_hash_find(thread->sig->sig->std.properties, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void**)&lookup)==SUCCESS) {
+							switch(Z_TYPE_PP(lookup)){
+								case IS_LONG:
+								case IS_BOOL:
+								case IS_STRING:
+								case IS_NULL:
+								case IS_ARRAY:
+									serial = pthreads_serialize(*lookup TSRMLS_CC);
+							
+									if (serial) {
+										if ((property = pthreads_unserialize(serial TSRMLS_CC)) != NULL)
+											Z_SET_REFCOUNT_P(property, 0);
+										free(serial);
+									}
+								break;
+								
+								/* it's possible to allow access to an object, however I feel it's unsafe and too heavy */
+								/* objects will become available when the thread is joined and we know for sure the object is no longer being manipulated by another context */
+								case IS_OBJECT:
+								case IS_RESOURCE:
+									zend_error(E_WARNING, "pthreads detected an attempt to fetch an unsupported symbol (%s)", Z_STRVAL_P(member));
+								break;
+							}
+						}
+					}
+					if (oacquire != EDEADLK)
+						pthread_mutex_unlock(thread->sig->sig->lock);
+				}
+			}
+			
+			if (property == NULL)
+				property = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+			
 			if (acquire != EDEADLK)
-				pthread_mutex_unlock(thread->lock);
+				pthread_mutex_unlock(PTHREADS_IS_IMPORT(thread) ? thread->sig->lock : thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
 	}
 	

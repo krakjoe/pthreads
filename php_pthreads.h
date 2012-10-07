@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #else
-#include <time.h>
+#include <win32/time.h>
 #endif
 #include <php.h>
 #include <php_globals.h>
@@ -69,10 +69,6 @@ PHP_METHOD(Thread, yield);
 PHP_METHOD(Thread, wait);
 PHP_METHOD(Thread, notify);
 PHP_METHOD(Thread, join);
-/* }}} */
-
-/* {{{ access */
-PHP_METHOD(Thread, fetch);
 /* }}} */
 
 /* {{{ state detection */
