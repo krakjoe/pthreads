@@ -29,6 +29,7 @@ if($g->start()){
 		usleep(500);
 	}
 	if ($g->join()){
+		printf(" ... joined ... ");
 		printf(" and %f seconds to finish receiving %d bytes\n", microtime(true)-$t, strlen($g->data));
 	} else printf(" and %f seconds to finish, request failed\n", microtime(true)-$t);
 	

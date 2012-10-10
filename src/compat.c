@@ -15,19 +15,11 @@
   | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
+#ifndef HAVE_PTHREADS_COMPAT
+#define HAVE_PTHREADS_COMPAT
+
 #ifndef HAVE_PTHREADS_COMPAT_H
-#define HAVE_PTHREADS_COMPAT_H
-
-/*
-* NOTES
-* 	The only difference between pthreads_method_del_ref and zend_function_dtor in 5.4.6 is we free the run_time_cache if there are no more references to it and the release version free's it regardless
-* 	Unsure of what this affects and how ...
-*
-* TODO
-*	Look into the run_time_cache issue in 5.4
-*/
-#ifdef _WIN32
-
+#	include <ext/pthreads/src/compat.h>
 #endif
 
 #if PHP_VERSION_ID > 50399
@@ -38,8 +30,7 @@ static void zend_extension_op_array_dtor_handler(zend_extension *extension, zend
 	}
 }
 
-static void pthreads_method_del_ref(zend_function *function);
-static void pthreads_method_del_ref(zend_function *function){
+void pthreads_method_del_ref(zend_function *function) {
 	if (function && function->type == ZEND_USER_FUNCTION ) {
 		TSRMLS_FETCH();
 		
@@ -113,6 +104,6 @@ static void pthreads_method_del_ref(zend_function *function){
 		}
 	}
 }
-#endif /* PHP_VERSION_ID > 50399 */
+#endif
 
-#endif /* HAVE_PTHREADS_COMPAT_H */
+#endif

@@ -15,14 +15,17 @@
   | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PTHREADS_SERIAL_H
-#define HAVE_PTHREADS_SERIAL_H
+#ifndef HAVE_PTHREADS_SERIAL
+#define HAVE_PTHREADS_SERIAL
 
-/* {{{ prototypes */
-char * pthreads_serialize(zval *unserial TSRMLS_DC);
-zval * pthreads_unserialize(char *serial TSRMLS_DC);
-int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
-/* }}} */
+/*
+* @TODO
+*	1. write in support for other serialization methods like msgpack
+*/
+
+#ifndef HAVE_PTHREADS_SERIAL_H
+#	include <ext/pthreads/src/serial.h>
+#endif
 
 /* {{{ Will serialize the zval into a newly allocated buffer which must be free'd by the caller */
 char * pthreads_serialize(zval *unserial TSRMLS_DC){					
@@ -80,5 +83,4 @@ zval *	pthreads_unserialize(char *serial TSRMLS_DC){
 	} else return NULL;
 }
 /* }}} */
-
 #endif
