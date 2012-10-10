@@ -2,4 +2,8 @@ ARG_ENABLE("pthreads", "for pthreads support", "no");
 if (PHP_PTHREADS != "no") {
 	CHECK_LIB("pthreadVC2.lib", "pthreads", PHP_PTHREADS);
 	EXTENSION("pthreads", "php_pthreads.c");
+	ADD_SOURCES(
+		"ext/pthreads/src", 
+		"globals.c state.c serial.c handlers.c compat.c object.c", "pthreads"
+	);
 }

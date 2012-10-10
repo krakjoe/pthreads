@@ -18,51 +18,16 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.34"
+#define PHP_PTHREADS_VERSION "0.36"
 
-#include <stdio.h>
-#include <pthread.h>
-#ifndef _WIN32
-#define _GNU_SOURCE
-#include <unistd.h>
-#include <sys/time.h>
-#else
-#include <win32/time.h>
-#endif
-#include <php.h>
-#include <php_globals.h>
-#include <php_main.h>
-#include <php_ticks.h>
-#include <ext/standard/info.h>
-#include <ext/standard/php_smart_str.h>
-#include <ext/standard/php_smart_str_public.h>
-#include <ext/standard/php_var.h>
-#include <Zend/zend.h>
-#include <Zend/zend_compile.h>
-#include <Zend/zend_extensions.h>
-#include <Zend/zend_globals.h>
-#include <Zend/zend_hash.h>
-#include <Zend/zend_interfaces.h>
-#include <Zend/zend_list.h>
-#include <Zend/zend_object_handlers.h>
-#include <Zend/zend_variables.h>
-#include <Zend/zend_vm.h>
-#include <TSRM/TSRM.h>
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
+/* {{{ php internals */
 PHP_MINIT_FUNCTION(pthreads);
 PHP_MSHUTDOWN_FUNCTION(pthreads);
 PHP_MINFO_FUNCTION(pthreads);
-
-/* {{{ basic */
-PHP_METHOD(Thread, start);
 /* }}} */
 
-/* {{{ advanced */
-PHP_METHOD(Thread, yield);
+/* {{{ basic */
+PHP_METHOD(Thread, start); 
 /* }}} */
 
 /* {{{ synchronization */
@@ -93,7 +58,7 @@ PHP_METHOD(Thread, getThread);
 PHP_METHOD(Thread, getThreadId);
 /* }}} */
 
-/* {{{ instance globals */
+/* {{{ globals */
 PHP_METHOD(Thread, getCount);
 PHP_METHOD(Thread, getMax);
 PHP_METHOD(Thread, getPeak);
@@ -116,15 +81,6 @@ PHP_METHOD(Cond, destroy);
 /* }}} */
 
 extern zend_module_entry pthreads_module_entry;
-
-#define PTHREADS_FETCH_ALL(ls, id, type) ((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
-#define PTHREADS_FETCH_CTX(ls, id, type, element) (((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)
-#define PTHREADS_CG(ls, v) PTHREADS_FETCH_CTX(ls, compiler_globals_id, zend_compiler_globals*, v)
-#define PTHREADS_CG_ALL(ls) PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
-#define PTHREADS_EG(ls, v) PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
-#define PTHREADS_SG(ls, v) PTHREADS_FETCH_CTX(ls, sapi_globals_id, sapi_globals_struct*, v)
-#define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
-
 #define phpext_pthreads_ptr &pthreads_module_entry
 
 #endif 

@@ -18,6 +18,14 @@
 #ifndef HAVE_PTHREADS_THREAD_H
 #define HAVE_PTHREADS_THREAD_H
 
+#ifndef HAVE_PTHREADS_H
+#	include <ext/pthreads/src/pthreads.h>
+#endif
+
+#ifndef HAVE_PTHREADS_STATE_H
+#	include <ext/pthreads/src/state.h>
+#endif
+
 /* {{{ thread structure */
 typedef struct _pthread_construct {
 	/*
@@ -31,14 +39,19 @@ typedef struct _pthread_construct {
 	pthread_t thread;
 	
 	/*
+	* The Thread's State
+	*/
+	pthreads_state state;
+	
+	/*
 	* The Thread Identifier
 	*/
-	unsigned long tid;
+	ulong tid;
 	
 	/*
 	* The Thread Identifier of Creator
 	*/
-	unsigned long cid;
+	ulong cid;
 	
 	/*
 	* Thread Safe Local Storage
@@ -47,12 +60,15 @@ typedef struct _pthread_construct {
 	void ***pls;
 	
 	/*
-	* State Management
+	* Thread Safety
 	*/
-	pthread_cond_t	*sync;
 	pthread_mutex_t *lock;
+	
+	/*
+	* Synchronization
+	*/
 	pthread_mutex_t *wait;
-	int state;
+	pthread_cond_t	*sync;
 	
 	/*
 	* Flags, safe but no locking
@@ -83,7 +99,7 @@ typedef struct _pthread_construct {
 } THREAD, *PTHREAD;
 
 /* {{{ comparison function */
-int pthreads_equal(PTHREAD first, PTHREAD second) {
+static inline int pthreads_equal(PTHREAD first, PTHREAD second) {
 	if (first && second) {
 		return (first == second);
 	}
@@ -98,7 +114,7 @@ static inline int pthreads_equal_func(void **first, void **second){
 } /* }}} */
 
 /* {{{ pthread_self wrapper */
-ulong pthreads_self() {
+static inline ulong pthreads_self() {
 #ifdef _WIN32
 	return (ulong) GetCurrentThreadId();
 #else
