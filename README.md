@@ -1,4 +1,4 @@
-# Threading for PHP - Share Nothing, Do Everything :)&nbsp;&nbsp;![pthreads build status](https://secure.travis-ci.org/krakjoe/pthreads.png)
+# Threading for PHP - Share Nothing, Do Everything :)&nbsp;&nbsp;&nbsp;<a href="https://travis-ci.org/#!/krakjoe/pthreads"><img alt="pthreads build status" src="https://secure.travis-ci.org/krakjoe/pthreads.png" border="0px"/></a>
 
 This project provides multi-threading that is compatible with PHP based on Posix Threads.
 
