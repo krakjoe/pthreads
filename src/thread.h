@@ -40,7 +40,7 @@ typedef struct _pthread_construct {
 	/*
 	* Thread Object
 	*/
-	pthread_t *thread;
+	pthread_t thread;
 	
 	/*
 	* Thread Identity and LS

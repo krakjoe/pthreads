@@ -137,6 +137,7 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 	zend_function *call;
 	zend_function *callable;
+	zend_op_array *ops;
 	char *lcname;
 	
 	PTHREAD thread = PTHREADS_FETCH_FROM(*pobject);
@@ -160,9 +161,9 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 					callable->common.pass_rest_by_reference = call->common.pass_rest_by_reference;
 					callable->common.return_reference = call->common.return_reference;
 #endif			
-					zend_op_array *op_array = &call->op_array;
-					if (op_array){
-						(*op_array->refcount)++;
+					ops = &call->op_array;
+					if (ops){
+						(*ops->refcount)++;
 					}
 					return callable;
 				} else free(lcname);
