@@ -58,7 +58,7 @@ int pthreads_is_worker(PTHREAD thread) {
 int pthreads_set_state_ex(PTHREAD thread, int mask, long timeout) {
 	struct timeval now;
 	struct timespec until;
-	int acquire = 0, wacquire = 0, timed = 0, result = -1;
+	int wacquire = 0, timed = 0, result = -1;
 	
 	if (timeout>0L) {
 		if (gettimeofday(&now, NULL)==SUCCESS) {

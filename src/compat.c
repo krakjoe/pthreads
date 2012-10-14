@@ -57,7 +57,8 @@ void pthreads_method_del_ref(zend_function *function) {
 				);
 			}
 			
-			free(op_array->refcount);
+			if (op_array->refcount)
+				free(op_array->refcount);
 
 			if (op_array->vars) {
 				i = op_array->last_var;
