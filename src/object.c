@@ -347,8 +347,8 @@ int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
 					{
 						zend_function *tf;
 						zend_hash_copy(
-							&Z_OBJCE_PP(return_value)->function_table, 
-							&thread->std.ce->function_table,
+							&(Z_OBJCE_PP(return_value)->function_table), 
+							&((thread->std.ce)->function_table),
 							(copy_ctor_func_t) function_add_ref,
 							&tf, sizeof(zend_function)
 						);
@@ -398,6 +398,11 @@ zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
 	*/
 	instance->cid = pthreads_self();
 	instance->cls = tsrm_ls;
+	
+	/*
+	* Allocate Thread
+	*/
+	instance->thread = (pthread_t*) calloc(1, sizeof(pthread_t));
 	
 	/*
 	* State Initialization
@@ -453,12 +458,12 @@ zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
 	/*
 	* Allocate Modifiers
 	*/
-	ALLOC_HASHTABLE(instance->modifiers);
+	instance->modifiers = pthreads_modifiers_alloc();
 	
 	/*
-	* Initialize modifiers
+	* Look for private/protected methods
 	*/
-	zend_hash_init(instance->modifiers, 32, NULL, (dtor_func_t) pthreads_modifiers_destroy, 0);
+	pthreads_modifiers_init(instance->modifiers, entry TSRMLS_CC);
 	
 	/*
 	* Signify this is the real thread object
@@ -579,7 +584,7 @@ void pthreads_detach_from_other(void *arg TSRMLS_DC) {
 		efree(thread->std.properties_table);
 	}
 #endif
-
+	
 	/*
 	* Finally free the thread object
 	*/
@@ -602,7 +607,7 @@ void pthreads_detach_from_context(void * arg TSRMLS_DC){
 				
 				pthreads_state_set(thread->state, PTHREADS_ST_JOINED);
 				
-				pthread_join(thread->thread, (void*) &result);
+				pthread_join((*(*thread).thread), (void*) &result);
 				
 				/*
 				* Free the result for the thread
@@ -617,16 +622,6 @@ void pthreads_detach_from_context(void * arg TSRMLS_DC){
 		*/
 		if (thread->serial)
 			free(thread->serial);
-			
-		/*
-		* Destroy modifier list
-		*/
-		zend_hash_destroy(thread->modifiers);
-		
-		/*
-		* Free modifier list
-		*/
-		FREE_HASHTABLE(thread->modifiers);
 		
 		/*
 		* Destroy Wait Lock
@@ -666,6 +661,16 @@ void pthreads_detach_from_context(void * arg TSRMLS_DC){
 		* Free state object
 		*/
 		pthreads_state_free(thread->state);
+			
+		/*
+		* Free modifiers
+		*/
+		pthreads_modifiers_free(thread->modifiers);
+		
+		/*
+		* Free thread
+		*/
+		free(thread->thread);
 		
 		/*
 		* Run PHP specific detachment routine on thread

@@ -26,6 +26,10 @@
 #	include <src/state.h>
 #endif
 
+#ifndef HAVE_PTHREADS_MODIFIERS_H
+#	include <src/modifiers.h>
+#endif
+
 /* {{{ thread structure */
 typedef struct _pthread_construct {
 	/*
@@ -36,7 +40,7 @@ typedef struct _pthread_construct {
 	/*
 	* Thread Object
 	*/
-	pthread_t thread;
+	pthread_t *thread;
 	
 	/*
 	* Thread Identity and LS
@@ -61,16 +65,16 @@ typedef struct _pthread_construct {
 	pthreads_state state;
 	
 	/*
+	* Method modifiers
+	*/
+	pthreads_modifiers modifiers;
+	
+	/*
 	* Thread Sync
 	*/
 	pthread_mutex_t *wait;
 	pthread_cond_t	*sync;
-	
-	/*
-	* Method modifiers
-	*/
-	HashTable *modifiers;
-	
+
 	/*
 	* Thread Flags
 	*/
@@ -110,6 +114,7 @@ static inline int pthreads_equal_func(void **first, void **second){
 static inline void pthreads_copy(PTHREAD source, PTHREAD destination){
 	if (source && destination) {
 		destination->copy = 1;
+		//destination->thread = source->thread;
 		destination->tid = source->tid;
 		destination->tls = source->tls;
 		destination->cid = source->cid;

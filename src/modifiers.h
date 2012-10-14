@@ -26,19 +26,21 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
-#endif
-
 #define PTHREADS_PROTECTION_ERROR 0x1200
 
+typedef struct {
+	HashTable modified;
+	HashTable protection;
+} *pthreads_modifiers;
+
 /* {{{ access modification management */
-void pthreads_modifiers_init(PTHREAD thread, zval *this_ptr TSRMLS_DC);
-int pthreads_modifiers_set(PTHREAD thread, const char *method, zend_uint modify TSRMLS_DC);
-zend_uint pthreads_modifiers_get(PTHREAD thread, const char *method TSRMLS_DC);
-int pthreads_modifiers_protect(PTHREAD thread);
-int pthreads_modifiers_unprotect(PTHREAD thread);
-void pthreads_modifiers_destroy(void **element);
+pthreads_modifiers pthreads_modifiers_alloc();
+void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *entry TSRMLS_DC);
+int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zend_uint modify TSRMLS_DC);
+zend_uint pthreads_modifiers_get(pthreads_modifiers modifiers, const char *method TSRMLS_DC);
+int pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method TSRMLS_DC);
+int pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method TSRMLS_DC);
+void pthreads_modifiers_free(pthreads_modifiers modifiers);
 /* }}} */
 
 #endif
