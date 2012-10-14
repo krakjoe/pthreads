@@ -32,16 +32,12 @@
 * 1. make errors more meaningful
 */
 #ifndef HAVE_PTHREADS_H
-#	include <ext/pthreads/src/pthreads.h>
+#	include <src/pthreads.h>
 #endif
 
 #ifndef HAVE_PTHREADS_THREAD_H
-#	include <ext/pthreads/src/thread.h>
+#	include <src/thread.h>
 #endif
-
-/* {{{ default mutex type */
-extern pthread_mutexattr_t defmutex;
-/* }}} */
 
 /* {{{ pthreads_globals */
 struct {

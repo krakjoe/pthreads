@@ -24,7 +24,7 @@ $t = microtime(true);
 $g = new AsyncWebRequest(sprintf("http://www.google.com/?q=%s", rand()*10));
 if($g->start()){
 	printf("Request took %f seconds to start ", microtime(true)-$t);
-	while($g->isBusy()){
+	while($g->isRunning()){
 		echo ".";
 		usleep(500);
 	}

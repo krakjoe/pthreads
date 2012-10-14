@@ -24,10 +24,12 @@
 #define HAVE_PTHREADS_STATE
 
 #ifndef HAVE_PTHREADS_STATE_H
-#	include <ext/pthreads/src/state.h>
+#	include <src/state.h>
 #endif
 
-extern pthread_mutexattr_t defmutex;
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include <src/thread.h>
+#endif
 
 pthreads_state pthreads_state_alloc(int mask) {
 	pthreads_state state = calloc(1, sizeof(*state));
@@ -84,11 +86,11 @@ int pthreads_state_set(pthreads_state state, int mask) {
 			state->bits |= mask;
 			return pthreads_state_unlock(state, &acquired);
 		} else {
-			zend_error(E_WARNING, "pthreads_state_set failed to lock state object");
+			zend_error_noreturn(E_WARNING, "pthreads_state_set failed to lock state object");
 			return 0;
 		}
 	} else {
-		zend_error(E_WARNING, "pthreads_state_set failed to read state object");
+		zend_error_noreturn(E_WARNING, "pthreads_state_set failed to read state object");
 		return 0;
 	}
 }

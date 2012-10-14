@@ -4,6 +4,6 @@ if (PHP_PTHREADS != "no") {
 	EXTENSION("pthreads", "php_pthreads.c");
 	ADD_SOURCES(
 		"ext/pthreads/src", 
-		"globals.c state.c serial.c handlers.c compat.c object.c", "pthreads"
+		"globals.c state.c serial.c modifiers.c handlers.c compat.c object.c", "pthreads"
 	);
 }

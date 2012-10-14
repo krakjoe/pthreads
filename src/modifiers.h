@@ -15,32 +15,30 @@
   | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PTHREADS_STATE_H
-#define HAVE_PTHREADS_STATE_H
+#ifndef HAVE_PTHREADS_MODIFIERS_H
+#define HAVE_PTHREADS_MODIFIERS_H
 
-#define PTHREADS_ST_STARTED 1
-#define PTHREADS_ST_RUNNING 2
-#define PTHREADS_ST_WAITING	4
-#define PTHREADS_ST_JOINED	8
-#define PTHREADS_ST_CHECK(st, msk)	((st & msk)==msk)
+#ifdef HAVE_CONFIG_H
+#	include <config.h>
+#endif
 
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
 #endif
 
-typedef struct _pthreads_state 
-{
-	pthread_mutex_t	lock;
-	int				bits;
-} *pthreads_state;
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include <src/thread.h>
+#endif
 
-extern pthread_mutexattr_t defmutex;
+#define PTHREADS_PROTECTION_ERROR 0x1200
 
-pthreads_state pthreads_state_alloc(int mask);
-int pthreads_state_lock(pthreads_state state, int *acquired);
-int pthreads_state_unlock(pthreads_state state, int *acquired);
-void pthreads_state_free(pthreads_state state);
-int pthreads_state_set(pthreads_state state, int mask);
-int pthreads_state_isset(pthreads_state state, int mask);
-int pthreads_state_unset(pthreads_state state, int mask);
+/* {{{ access modification management */
+void pthreads_modifiers_init(PTHREAD thread, zval *this_ptr TSRMLS_DC);
+int pthreads_modifiers_set(PTHREAD thread, const char *method, zend_uint modify TSRMLS_DC);
+zend_uint pthreads_modifiers_get(PTHREAD thread, const char *method TSRMLS_DC);
+int pthreads_modifiers_protect(PTHREAD thread);
+int pthreads_modifiers_unprotect(PTHREAD thread);
+void pthreads_modifiers_destroy(void **element);
+/* }}} */
+
 #endif

@@ -19,11 +19,11 @@
 #define HAVE_PTHREADS_THREAD_H
 
 #ifndef HAVE_PTHREADS_H
-#	include <ext/pthreads/src/pthreads.h>
+#	include <src/pthreads.h>
 #endif
 
 #ifndef HAVE_PTHREADS_STATE_H
-#	include <ext/pthreads/src/state.h>
+#	include <src/state.h>
 #endif
 
 /* {{{ thread structure */
@@ -32,54 +32,50 @@ typedef struct _pthread_construct {
 	* Standard Entry
 	*/
 	zend_object std;
-	
+
 	/*
-	* The Thread
+	* Thread Object
 	*/
 	pthread_t thread;
 	
 	/*
-	* The Thread's State
-	*/
-	pthreads_state state;
-	
-	/*
-	* The Thread Identifier
+	* Thread Identity and LS
 	*/
 	ulong tid;
+	void ***tls;
 	
 	/*
-	* The Thread Identifier of Creator
+	* Creator Identity and LS
 	*/
 	ulong cid;
+	void ***cls;
 	
 	/*
-	* Thread Safe Local Storage
-	*/
-	void ***ls;
-	void ***pls;
-	
-	/*
-	* Thread Safety
+	*  Thread Lock
 	*/
 	pthread_mutex_t *lock;
 	
 	/*
-	* Synchronization
+	* Thread State
+	*/
+	pthreads_state state;
+	
+	/*
+	* Thread Sync
 	*/
 	pthread_mutex_t *wait;
 	pthread_cond_t	*sync;
 	
 	/*
-	* Flags, safe but no locking
+	* Method modifiers
 	*/
-	zend_bool self;
-	zend_bool synchronized;
-	zend_bool import;
+	HashTable modifiers;
 	
 	/*
-	* Requires a thread lock for access
+	* Thread Flags
 	*/
+	zend_bool copy;
+	zend_bool synchronized;
 	zend_bool worker;
 	
 	/*
@@ -88,13 +84,10 @@ typedef struct _pthread_construct {
 	char *serial;
 	
 	/*
-	* Work Buffer
+	* Work List
 	*/
 	zend_llist stack;
 	
-	/* 
-	* Significant Other
-	*/
 	struct _pthread_construct *sig;
 } THREAD, *PTHREAD;
 
@@ -113,6 +106,24 @@ static inline int pthreads_equal_func(void **first, void **second){
 	return 0;
 } /* }}} */
 
+/* {{{ copy an instance to another context */
+static inline void pthreads_copy(PTHREAD source, PTHREAD destination){
+	if (source && destination) {
+		destination->copy = 1;
+		destination->tid = source->tid;
+		destination->tls = source->tls;
+		destination->cid = source->cid;
+		destination->lock = source->lock;
+		destination->state = source->state;
+		destination->wait = source->wait;
+		destination->sync = source->sync;
+		destination->modifiers = source->modifiers;
+		destination->synchronized = source->synchronized;
+		destination->serial = source->serial;
+		destination->stack = source->stack;
+	}
+} /* }}} */
+
 /* {{{ pthread_self wrapper */
 static inline ulong pthreads_self() {
 #ifdef _WIN32
@@ -121,6 +132,12 @@ static inline ulong pthreads_self() {
 	return (ulong) pthread_self();
 #endif
 } /* }}} */
+
+/* {{{ tell if the calling thread created referenced PTHREAD */
+#define PTHREADS_IS_CREATOR(t)	(t->cid == pthreads_self()) /* }}} */
+
+/* {{{ tell if the referenced thread is the threading context */
+#define PTHREADS_IN_THREAD(t)	(t->tls == tsrm_ls) /* }}} */
 
 /* {{{ begin a loop over a list of threads */
 #define PTHREADS_LIST_BEGIN_LOOP(l, s) \
@@ -144,5 +161,8 @@ static inline ulong pthreads_self() {
 /* {{{ remove an item from a list of threads */
 #define PTHREADS_LIST_REMOVE(l, t) zend_llist_del_element(l, &t, (int (*)(void *, void *)) pthreads_equal_func);
 /* }}} */
+
+/* {{{ default mutex attributes */
+pthread_mutexattr_t		defmutex; /* }}} */
 
 #endif /* }}} */ /* HAVE_PTHREADS_THREAD_H */

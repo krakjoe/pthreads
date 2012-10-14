@@ -6,6 +6,7 @@ if test "$PHP_PTHREADS" != "no"; then
 								src/globals.c \
 								src/state.c \
 								src/serial.c \
+								src/modifiers.c\
 								src/handlers.c \
 								src/compat.c \
 								src/object.c, $ext_shared)

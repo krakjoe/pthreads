@@ -24,7 +24,7 @@
 */
 
 #ifndef HAVE_PTHREADS_SERIAL_H
-#	include <ext/pthreads/src/serial.h>
+#	include <src/serial.h>
 #endif
 
 /* {{{ Will serialize the zval into a newly allocated buffer which must be free'd by the caller */

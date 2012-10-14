@@ -19,7 +19,7 @@
 #define HAVE_PTHREADS_COMPAT_H
 
 #ifndef HAVE_PTHREADS_H
-#	include <ext/pthreads/src/pthreads.h>
+#	include <src/pthreads.h>
 #endif
 
 #if PHP_VERSION_ID > 50399
