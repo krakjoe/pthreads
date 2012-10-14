@@ -436,14 +436,9 @@ PHP_METHOD(Thread, start)
 				pthreads_set_state(thread, PTHREADS_ST_RUNNING);
 				
 				/*
-				* Look for private/protected methods
-				*/
-				pthreads_modifiers_init(thread, getThis() TSRMLS_CC);
-				
-				/*
 				* Attempt to start the thread
 				*/
-				if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
+				if ((result = pthread_create(thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
 						
 					/*
 					* Wait for notification to continue
@@ -622,7 +617,6 @@ PHP_METHOD(Thread, notify)
 PHP_METHOD(Thread, join) 
 { 
 	PTHREAD thread = PTHREADS_FETCH;
-	PTHREAD selected = NULL;
 	zval *symbols = NULL;
 	char *result = NULL;
 	zend_bool discard = 0;
@@ -667,7 +661,7 @@ PHP_METHOD(Thread, join)
 					/*
 					* Carry out joining and deserialize result
 					*/
-					if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
+					if (pthread_join((*(*thread).thread), (void**)&result)==SUCCESS) {
 						if (result) {
 							pthreads_unserialize_into(result, return_value TSRMLS_CC);
 							free(result);

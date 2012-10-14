@@ -1,6 +1,6 @@
 <?php
 class SyncTest extends Thread {
-	protected function scopeTestFunc(){
+	public function scopeTestFunc(){
 		return strlen($this->my)*rand();
 	}
 	
