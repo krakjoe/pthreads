@@ -400,11 +400,6 @@ zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
 	instance->cls = tsrm_ls;
 	
 	/*
-	* Allocate Thread
-	*/
-	instance->thread = (pthread_t*) calloc(1, sizeof(pthread_t));
-	
-	/*
 	* State Initialization
 	*/
 	instance->lock = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
@@ -544,76 +539,80 @@ zend_object_value pthreads_attach_to_other(zend_class_entry *entry TSRMLS_DC){
 void pthreads_detach_from_other(void *arg TSRMLS_DC) {
 	PTHREAD thread = (PTHREAD) arg;
 	
-	/*
-	* Cleanup function table
-	*/
-	if (zend_hash_num_elements(&thread->std.ce->function_table)) {
-		HashPosition position;
-		zend_function *function;
-		for (zend_hash_internal_pointer_reset_ex(&thread->std.ce->function_table, &position);
-			zend_hash_get_current_data_ex(&thread->std.ce->function_table, (void**)&function, &position)==SUCCESS;
-			zend_hash_move_forward_ex(&thread->std.ce->function_table, &position)){
-			if (function->type == ZEND_OVERLOADED_FUNCTION) {
-				function->type = ZEND_USER_FUNCTION;
+	if (arg && thread) {
+		/*
+		* Cleanup function table
+		*/
+		if (zend_hash_num_elements(&thread->std.ce->function_table)) {
+			HashPosition position;
+			zend_function *function;
+			for (zend_hash_internal_pointer_reset_ex(&thread->std.ce->function_table, &position);
+				zend_hash_get_current_data_ex(&thread->std.ce->function_table, (void**)&function, &position)==SUCCESS;
+				zend_hash_move_forward_ex(&thread->std.ce->function_table, &position)){
+				if (function->type == ZEND_OVERLOADED_FUNCTION) {
+					function->type = ZEND_USER_FUNCTION;
+				}
 			}
 		}
-	}
-	
-	/*
-	* Destroy object properties
-	*/
-	if (thread->std.properties) 
-	{
-		zend_hash_destroy(thread->std.properties);
-		FREE_HASHTABLE(thread->std.properties);
-		thread->std.properties = NULL;
-	}
-	
+		
+		/*
+		* Destroy object properties
+		*/
+		if (thread->std.properties) 
+		{
+			zend_hash_destroy(thread->std.properties);
+			FREE_HASHTABLE(thread->std.properties);
+			thread->std.properties = NULL;
+		}
+		
 #if PHP_VERSION_ID > 50399
-	
-	/*
-	* 5.4+ requires that you free default properties seperately
-	*/
-	if (thread->std.ce->default_properties_count > 0 && thread->std.properties_table) {
-		int i=0;
-		for (;i<thread->std.ce->default_properties_count;i++){
-			if (thread->std.properties_table[i]) {
-				zval_ptr_dtor(&thread->std.properties_table[i]);
+		
+		/*
+		* 5.4+ requires that you free default properties seperately
+		*/
+		if (thread->std.ce->default_properties_count > 0 && thread->std.properties_table) {
+			int i=0;
+			for (;i<thread->std.ce->default_properties_count;i++){
+				if (thread->std.properties_table[i]) {
+					zval_ptr_dtor(&thread->std.properties_table[i]);
+				}
 			}
+			efree(thread->std.properties_table);
 		}
-		efree(thread->std.properties_table);
-	}
 #endif
-	
-	/*
-	* Finally free the thread object
-	*/
-	free(thread);
+		
+		/*
+		* Finally free the thread object
+		*/
+		free(thread);
+	}
 }
 
 /* {{{ this destructor handles all types of PTHREAD gracefully */
 void pthreads_detach_from_context(void * arg TSRMLS_DC){
 	PTHREAD thread = (PTHREAD) arg;
-	char *result = NULL;
-	
-	if (thread) {
+	char *result;
+	int worker = 0;
+	if (arg && thread) {	
+		worker = pthreads_is_worker(thread);
 		if (pthreads_state_isset(thread->state, PTHREADS_ST_STARTED)) {
 			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
-				if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING)) {
+				if (worker && pthreads_state_isset(thread->state, PTHREADS_ST_WAITING)) {
 					do {
 						PTHREADS_NOTIFY(thread);
 					} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
+					pthreads_state_set(thread->state, PTHREADS_ST_JOINED);
 				}
 				
-				pthreads_state_set(thread->state, PTHREADS_ST_JOINED);
-				
-				pthread_join((*(*thread).thread), (void*) &result);
-				
-				/*
-				* Free the result for the thread
-				*/
-				if (result)
-					free(result);
+				if (!worker)
+					pthreads_state_set(thread->state, PTHREADS_ST_JOINED);
+				if (pthread_join(thread->thread, (void*) &result)==SUCCESS){
+					/*
+					* Free the result for the thread
+					*/
+					if (result != NULL)
+						free(result);
+				}
 			}
 		}
 		
@@ -668,11 +667,6 @@ void pthreads_detach_from_context(void * arg TSRMLS_DC){
 		pthreads_modifiers_free(thread->modifiers);
 		
 		/*
-		* Free thread
-		*/
-		free(thread->thread);
-		
-		/*
 		* Run PHP specific detachment routine on thread
 		*/
 		pthreads_detach_from_other(thread TSRMLS_CC);
@@ -704,373 +698,367 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 	char *rename = NULL;
 	
 	/*
-	* The interpreter context for this thread
+	* As always, a pointer to $this
 	*/
-	void ***ctx;
+	zval *this_ptr;
 	
-	if (thread) {					
-		
+	/*
+	* As always, the return value pointer
+	*/
+	zval *return_value = NULL;
+	
+	/*
+	* Thread safe property store
+	*/
+	zval *symbols = NULL;
+	
+	/*
+	* Reference to original properties
+	*/
+	HashTable *properties = NULL;
+	
+	/*
+	* Class Entry for the Thread in this context
+	*/
+	zend_class_entry ce;
+	
+	/*
+	* Temporary function pointer
+	*/
+	zend_function 			*tf;
+	
+	/*
+	* Will signify if the user has declared __prepare magic
+	*/
+	int preparation = 0;
+	
+	/*
+	* Pointer to __prepare megic implementation
+	*/
+	zend_function *prepare;				
+
+	/*
+	* Pointer to run implementation
+	*/
+	zend_function *run;
+
+	/*
+	* Thread safe storage
+	*/
+	void ***tsrm_ls;
+	
+	if (thread) {
 		/*
 		* Allocate and Initialize an interpreter context for this Thread
 		*/
 		pthreads_globals_lock();
-		ctx = tsrm_new_interpreter_context(); 
+		tsrm_ls = tsrm_new_interpreter_context(); 
 		pthreads_globals_unlock(); 
-
-		{
-	
-			/*
-			* As always, a pointer to $this
-			*/
-			zval *this_ptr;
-			
-			/*
-			* As always, the return value pointer
-			*/
-			zval *return_value = NULL;
-			
-			/*
-			* Thread safe property store
-			*/
-			zval *symbols = NULL;
-			
-			/*
-			* Reference to original properties
-			*/
-			HashTable *properties = NULL;
-			
-			/*
-			* Class Entry for the Thread in this context
-			*/
-			zend_class_entry ce;
-			
-			/*
-			* Temporary function pointer
-			*/
-			zend_function 			*tf;
-			
-			/*
-			* Will signify if the user has declared __prepare magic
-			*/
-			int preparation = 0;
-			
-			/*
-			* Pointer to __prepare megic implementation
-			*/
-			zend_function *prepare;				
-
-			/*
-			* Pointer to run implementation
-			*/
-			zend_function *run;
-			
-			/*
-			* Set Context/TSRMLS
-			*/
-			tsrm_set_interpreter_context(ctx); {
-				TSRMLS_FETCH_FROM_CTX(ctx);
-			
-				/*
-				* Set Thread Identifier
-				*/
-				thread->tid = pthreads_self();
-				
-				/*
-				* Acquire global lock
-				*/
-				pthreads_globals_lock();
-				
-				/*
-				* Activate Zend
-				*/
+		
+		/*
+		* Set Context/TSRMLS
+		*/
+		tsrm_set_interpreter_context(tsrm_ls);
+		
+		/*
+		* Set Thread Identifier
+		*/
+		thread->tid = pthreads_self();
+		
+		/*
+		* Activate Zend
+		*/
 #if COMPILE_DL_PTHREADS
-				/*
-				* Same server context as parent
-				*/
-				SG(server_context)=PTHREADS_SG(thread->cls, server_context);
-				
-				/*
-				* Stops PHP from attempting to add headers to null structs
-				*/
-				PG(expose_php) = 0;
-				PG(auto_globals_jit) = 0;
-				
-				/*
-				* Startup the request ...
-				*/
-				php_request_startup(TSRMLS_C);
-				
-				/*
-				* Stop any pointless output from threads
-				*/
-				SG(headers_sent)=1;
-				SG(request_info).no_headers = 1;
+		/*
+		* Same server context as parent
+		*/
+		SG(server_context)=PTHREADS_SG(thread->cls, server_context);
+		
+		/*
+		* Stops PHP from attempting to add headers to null structs
+		*/
+		PG(expose_php) = 0;
+		PG(auto_globals_jit) = 0;
+		
+		/*
+		* Startup the request ...
+		*/
+		php_request_startup(TSRMLS_C);
+		
+		/*
+		* Stop any pointless output from threads
+		*/
+		SG(headers_sent)=1;
+		SG(request_info).no_headers = 1;
 #else
-				/*
-				* Not nearly as much work !!
-				*/
-				zend_activate(TSRMLS_C);							
-				zend_activate_modules(TSRMLS_C);
+		/*
+		* Not nearly as much work !!
+		*/
+		zend_activate(TSRMLS_C);							
+		zend_activate_modules(TSRMLS_C);
 #endif			
-				
-				/*
-				* Release global lock
-				*/
-				pthreads_globals_unlock();
-				
-				/*
-				* A new reference to $this for the current context
-				*/ 
-				ALLOC_INIT_ZVAL(this_ptr);
-				
-				zend_first_try {				
-				
-					/*
-					* First some basic executor setup, using zend_first_try sets a sensible bailout address incase of error
-					*/
-					EG(in_execution) = 1;							
-					EG(current_execute_data)=NULL;					
-					EG(current_module)=&pthreads_module_entry;
-					CG(compiled_filename)=rename;
-					
-					/*
-					* Get a copy of the name of the users implementation of Thread
-					*/
-					rename = (char*) calloc(1, thread->std.ce->name_length+1);
-					if (rename) {
-						memcpy(
-							rename, 
-							thread->std.ce->name, 
-							thread->std.ce->name_length
-						);
-					}
-					
-					/*
-					* Initialize the thread in the current context
-					*/
-					INIT_CLASS_ENTRY_EX(
-						ce,				
-						rename,
-						thread->std.ce->name_length,
-						pthreads_empty_methods
-					);
-					ce.create_object = pthreads_attach_to_other;
-					ce.serialize = zend_class_serialize_deny;
-					ce.unserialize = zend_class_unserialize_deny;
-					object_init_ex(this_ptr, zend_register_internal_class(
-						&ce TSRMLS_CC
-					));
-					
-					/*
-					* Fetches a reference to thread from the current context
-					*/
-					PTHREADS_SET_SELF(getThis());
-					
-					/*
-					* We can now set the executor and scope to reference a thread safe version of $this
-					*/
-					EG(called_scope) = Z_OBJCE_P(getThis());
-					EG(scope) = Z_OBJCE_P(getThis());
-					EG(This) = getThis();
-					
-					/*
-					* Import the users object definition
-					*/
-					zend_hash_copy(
-						&Z_OBJCE_P(getThis())->function_table, 
-						&thread->std.ce->function_table,
-						(copy_ctor_func_t) function_add_ref,
-						&tf, sizeof(zend_function)
-					);
-					
-					/*
-					* Allow the creating thread to continue where appropriate
-					*/
-					if (!thread->synchronized)
-						PTHREADS_NOTIFY(thread);
-					
-					/*
-					* Find methods for execution
-					*/
-					if(zend_hash_find(								
-						&Z_OBJCE_P(getThis())->function_table, 
-						"__prepare", sizeof("__prepare"), 
-						(void**) &prepare
-					)==SUCCESS) {
-						preparation=1;
-					}
-					
-					zend_hash_find(
-						&Z_OBJCE_P(getThis())->function_table, 
-						"run", sizeof("run"), 
-						(void**) &run
-					);
-					
-#if PHP_VERSION_ID > 50399
-					/*
-					* Versions above 5.4 have run_time_cache to contend with, handled in compat for now
-					*/
-					Z_OBJCE_P(getThis())->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
-#endif
-					
-					/*
-					* Even if the user does not supply symbols, they may create some
-					*/
-					if (!EG(active_symbol_table)) {
-						EG(active_symbol_table)=&EG(symbol_table);	
-					}
-					
-					/*
-					* Test for a preparation method
-					*/
-					if (preparation) {				
-						/*
-						* Preparation is run out of context and the return value is ignored
-						*/
-						zval *discard;
-						EG(return_value_ptr_ptr)=&discard;				
-						EG(active_op_array)=(zend_op_array*)prepare;
-						EG(active_op_array)->filename = rename;
-						zend_try {
-							zend_execute(EG(active_op_array) TSRMLS_CC);
-						} zend_end_try();
-						
-						if (discard && Z_TYPE_P(discard) != IS_NULL) {
-							zval_ptr_dtor(&discard);
-						}
-					}
-					
-					/*
-					* Setup executor for Thread::run
-					*/
-					EG(return_value_ptr_ptr)=&return_value;
-					EG(active_op_array)=(zend_op_array*)run;
-					EG(active_op_array)->filename = rename;
-					EG(in_execution) = 1;
-					
-					/*
-					* Unserialize symbols from parent context
-					*/
-					if (thread->serial)	{											
-						symbols = pthreads_unserialize(thread->serial TSRMLS_CC); 	
-						if (symbols) {			
-							/*
-							* Point the properties of the runnable at the thread safe symbols
-							*/
-							properties = self->std.properties;
-							self->std.properties=Z_ARRVAL_P(
-								symbols
-							);				
-						}
-						/*
-						* Safe to free, no longer required
-						*/
-						free(thread->serial);
-						
-						/*
-						* Avoid double free
-						*/
-						thread->serial = NULL;
-					}
-					
-					/*
-					* Now time to execute Thread::run
-					*/
-					zend_try {
-						do {
-							if (EG(active_op_array)) {
-								EG(active_op_array)->filename = rename;
-								EG(in_execution) = 1;
-								zend_execute(
-									EG(active_op_array) TSRMLS_CC
-								);
-							}
-						} while(pthreads_stack_pop(thread, getThis() TSRMLS_CC)>-1);
-					} zend_end_try();
-					
-					/*
-					* Serialize and destroy return value
-					*/
-					if (return_value && Z_TYPE_P(return_value) != IS_NULL) {
-						result = pthreads_serialize(
-							return_value TSRMLS_CC
-						);
-						zval_ptr_dtor(&return_value);
-					}
-					
-					/*
-					* Serialize and destroy symbols
-					*/
-					if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
-						thread->serial = pthreads_serialize(
-							symbols TSRMLS_CC
-						);
-						zval_ptr_dtor(&symbols);
-					}
-					
-					/*
-					* Free zval allocated for $this
-					*/
-					FREE_ZVAL(this_ptr);
-				} zend_catch {	
-					if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
-						zval_ptr_dtor(&symbols);
-					}
-					
-					if (return_value && Z_TYPE_P(return_value) != IS_NULL){
-						zval_ptr_dtor(&return_value);
-					}
-					
-					FREE_ZVAL(this_ptr);
-				} zend_end_try();
-				
-				/*
-				* Restoring the pointer to original property table ensures they are free'd
-				*/
-				if (self)
-					self->std.properties = properties;
-				
-				/*
-				* Free the name of the thread
-				*/
-				if (rename) {
-					free(rename);
-				}
-				
-				/*
-				* Acquire global lock
-				*/
-				pthreads_globals_lock();
-				
-				/*
-				* Deactivate Zend
-				*/
-#if COMPILE_DL_PTHREADS
-				php_request_shutdown(TSRMLS_C);
-#else
-				zend_deactivate_modules(TSRMLS_C);
-				zend_deactivate(TSRMLS_C);
-#endif
-
-				/*
-				* Release global lock
-				*/
-				pthreads_globals_unlock();
+		
+		/*
+		* Release global lock
+		*/
+		pthreads_globals_unlock();
+		
+		zend_first_try {	
+			/*
+			* A new reference to $this for the current context
+			*/ 
+			MAKE_STD_ZVAL(this_ptr);
+		
+			/*
+			* First some basic executor setup, using zend_first_try sets a sensible bailout address incase of error
+			*/
+			EG(in_execution) = 1;							
+			EG(current_execute_data)=NULL;					
+			EG(current_module)=&pthreads_module_entry;
+			CG(compiled_filename)=rename;
+			
+			/*
+			* Get a copy of the name of the users implementation of Thread
+			*/
+			rename = (char*) calloc(1, thread->std.ce->name_length+1);
+			if (rename) {
+				memcpy(
+					rename, 
+					thread->std.ce->name, 
+					thread->std.ce->name_length
+				);
 			}
 			
 			/*
-			* Free Context
+			* Initialize the thread in the current context
 			*/
-			pthreads_globals_lock();
-			tsrm_free_interpreter_context(ctx);	
-			pthreads_globals_unlock();
+			INIT_CLASS_ENTRY_EX(
+				ce,				
+				rename,
+				thread->std.ce->name_length,
+				pthreads_empty_methods
+			);
+			ce.create_object = pthreads_attach_to_other;
+			ce.serialize = zend_class_serialize_deny;
+			ce.unserialize = zend_class_unserialize_deny;
+			object_init_ex(this_ptr, zend_register_internal_class(
+				&ce TSRMLS_CC
+			));
+			
+			/*
+			* Fetches a reference to thread from the current context
+			*/
+			PTHREADS_SET_SELF(getThis());
+			
+			/*
+			* We can now set the executor and scope to reference a thread safe version of $this
+			*/
+			EG(called_scope) = Z_OBJCE_P(getThis());
+			EG(scope) = Z_OBJCE_P(getThis());
+			EG(This) = getThis();
+			
+			/*
+			* Import the users object definition
+			*/
+			zend_hash_copy(
+				&Z_OBJCE_P(getThis())->function_table, 
+				&thread->std.ce->function_table,
+				(copy_ctor_func_t) function_add_ref,
+				&tf, sizeof(zend_function)
+			);
+			
+			/*
+			* Allow the creating thread to continue where appropriate
+			*/
+			if (!thread->synchronized)
+				PTHREADS_NOTIFY(thread);
+			
+			/*
+			* Find methods for execution
+			*/
+			if(zend_hash_find(								
+				&Z_OBJCE_P(getThis())->function_table, 
+				"__prepare", sizeof("__prepare"), 
+				(void**) &prepare
+			)==SUCCESS) {
+				preparation=1;
+			}
+			
+			zend_hash_find(
+				&Z_OBJCE_P(getThis())->function_table, 
+				"run", sizeof("run"), 
+				(void**) &run
+			);
+			
+#if PHP_VERSION_ID > 50399
+			/*
+			* Versions above 5.4 have run_time_cache to contend with, handled in compat for now
+			*/
+			Z_OBJCE_P(getThis())->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
+#endif
+			
+			/*
+			* Even if the user does not supply symbols, they may create some
+			*/
+			if (!EG(active_symbol_table)) {
+				EG(active_symbol_table)=&EG(symbol_table);	
+			}
+			
+			/*
+			* Test for a preparation method
+			*/
+			if (preparation) {				
+				/*
+				* Preparation is run out of context and the return value is ignored
+				*/
+				zval *discard;
+				EG(return_value_ptr_ptr)=&discard;				
+				EG(active_op_array)=(zend_op_array*)prepare;
+				EG(active_op_array)->filename = rename;
+				zend_try {
+					zend_execute(EG(active_op_array) TSRMLS_CC);
+				} zend_end_try();
+				
+				if (discard && Z_TYPE_P(discard) != IS_NULL) {
+					zval_ptr_dtor(&discard);
+				}
+			}
+			
+			/*
+			* Setup executor for Thread::run
+			*/
+			EG(return_value_ptr_ptr)=&return_value;
+			EG(active_op_array)=(zend_op_array*)run;
+			EG(active_op_array)->filename = rename;
+			EG(in_execution) = 1;
+			
+			/*
+			* Unserialize symbols from parent context
+			*/
+			if (thread->serial)	{											
+				symbols = pthreads_unserialize(thread->serial TSRMLS_CC); 	
+				if (symbols) {			
+					/*
+					* Point the properties of the runnable at the thread safe symbols
+					*/
+					properties = self->std.properties;
+					self->std.properties=Z_ARRVAL_P(
+						symbols
+					);				
+				}
+				/*
+				* Safe to free, no longer required
+				*/
+				free(thread->serial);
+				
+				/*
+				* Avoid double free
+				*/
+				thread->serial = NULL;
+			}
+			
+			/*
+			* Now time to execute Thread::run
+			*/
+			zend_try {
+				do {
+					if (EG(active_op_array)) {
+						EG(active_op_array)->filename = rename;
+						EG(in_execution) = 1;
+						zend_execute(
+							EG(active_op_array) TSRMLS_CC
+						);
+					}
+				} while(pthreads_stack_pop(thread, getThis() TSRMLS_CC)>-1);
+			} zend_end_try();
+			
+			/*
+			* Serialize and destroy return value
+			*/
+			if (return_value && Z_TYPE_P(return_value) != IS_NULL) {
+				result = pthreads_serialize(
+					return_value TSRMLS_CC
+				);
+				zval_ptr_dtor(&return_value);
+			}
+			
+			/*
+			* Serialize and destroy symbols
+			*/
+			if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
+				thread->serial = pthreads_serialize(
+					symbols TSRMLS_CC
+				);
+				zval_ptr_dtor(&symbols);
+			}
+			
+			/*
+			* Free zval allocated for $this
+			*/
+			FREE_ZVAL(this_ptr);
+		} zend_catch {	
+			if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
+				zval_ptr_dtor(&symbols);
+			}
+			
+			if (return_value && Z_TYPE_P(return_value) != IS_NULL){
+				zval_ptr_dtor(&return_value);
+			}
+			
+			/*
+			* Free zval allocated for $this
+			*/
+			FREE_ZVAL(this_ptr);
+		} zend_end_try();
+		
+		/*
+		* Restoring the pointer to original property table ensures they are free'd
+		*/
+		if (self)
+			self->std.properties = properties;
+		
+		/*
+		* Free the name of the thread
+		*/
+		if (rename) {
+			free(rename);
 		}
+		
+		/*
+		* Acquire global lock
+		*/
+		pthreads_globals_lock();
+		
+		/*
+		* Prepare for shutdown
+		*/
+		preparation = PTHREADS_LOCK(thread);
+
+		/*
+		* Deactivate Zend
+		*/
+#if COMPILE_DL_PTHREADS
+		php_request_shutdown(TSRMLS_C);
+#else
+		zend_deactivate_modules(TSRMLS_C);
+		zend_deactivate(TSRMLS_C);
+#endif
+		if (preparation != EDEADLK)
+			PTHREADS_UNLOCK(thread);
+		
+		tsrm_free_interpreter_context(tsrm_ls);	
+		
+		/*
+		* Release global lock
+		*/
+		pthreads_globals_unlock();
 	}
 
 	/*
 	* Remove from global list and set flags
 	*/
 	pthreads_unset_state(thread, PTHREADS_ST_RUNNING);
+
 
 	/*
 	* Passing serialized symbols back to thread

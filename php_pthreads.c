@@ -438,7 +438,7 @@ PHP_METHOD(Thread, start)
 				/*
 				* Attempt to start the thread
 				*/
-				if ((result = pthread_create(thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
+				if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
 						
 					/*
 					* Wait for notification to continue
@@ -661,7 +661,7 @@ PHP_METHOD(Thread, join)
 					/*
 					* Carry out joining and deserialize result
 					*/
-					if (pthread_join((*(*thread).thread), (void**)&result)==SUCCESS) {
+					if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
 						if (result) {
 							pthreads_unserialize_into(result, return_value TSRMLS_CC);
 							free(result);
