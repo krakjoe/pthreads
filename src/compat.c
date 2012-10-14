@@ -19,7 +19,7 @@
 #define HAVE_PTHREADS_COMPAT
 
 #ifndef HAVE_PTHREADS_COMPAT_H
-#	include <ext/pthreads/src/compat.h>
+#	include <src/compat.h>
 #endif
 
 #if PHP_VERSION_ID > 50399
@@ -31,7 +31,8 @@ static void zend_extension_op_array_dtor_handler(zend_extension *extension, zend
 }
 
 void pthreads_method_del_ref(zend_function *function) {
-	if (function && function->type == ZEND_USER_FUNCTION ) {
+	if (function && 
+		(function->type == ZEND_USER_FUNCTION)) {
 		TSRMLS_FETCH();
 		
 		zend_op_array *op_array = (zend_op_array*) function;

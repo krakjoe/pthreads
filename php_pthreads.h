@@ -41,7 +41,6 @@ PHP_METHOD(Thread, isStarted);
 PHP_METHOD(Thread, isRunning);
 PHP_METHOD(Thread, isJoined);
 PHP_METHOD(Thread, isWaiting);
-PHP_METHOD(Thread, isBusy);
 /* }}} */
 
 /* {{{ stacking */

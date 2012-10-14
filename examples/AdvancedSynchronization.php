@@ -1,71 +1,54 @@
 <?php
-class ScopeTest extends Thread {
-	public function scopeTestFunc(){
+class SyncTest extends Thread {
+	protected function scopeTestFunc(){
 		return strlen($this->my)*rand();
+	}
+	
+	public function __construct(){
+		$this->start();
 	}
 	
 	public function run(){
 		/* set a variable to test fetching from an imported thread */
 		$this->my = "data";
-		
 		printf("%s: %lu running\n", __CLASS__, $this->getThreadId());
+		printf("%s: %lu waiting\n", __CLASS__, $this->getThreadId());
 		printf("%s: %lu notified: %d\n", __CLASS__, $this->getThreadId(), $this->wait());
-		
+		printf("%s: %lu leaving\n", __CLASS__, $this->getThreadId());
 		$this->my = strrev($this->my);
 	}
 }
 
-class ScopeTest2 extends Thread {
-	public function __construct($other, $next){
-		$this->other = $other;
-		$this->next = $next;
+class Tester extends Thread {
+	public function __construct($tests){
+		$this->tests = $tests;
 	}
 	
 	public function run(){
 		printf("%s: %lu running\n", __CLASS__, $this->getThreadId());
-		if (($other = Thread::getThread($this->other))) {
-			printf("%s: %lu working ... %s/%d\n", __CLASS__, $this->getThreadId(), $other->my, $other->scopeTestFunc());
-			//usleep(1000); /* simulate some work */
-			if ($other->isWaiting())
-				printf("%s: %lu notifying %lu: %d\n", __CLASS__, $this->getThreadId(), $this->other, $other->notify());
-			$other->join();
-			printf("%s: %lu testing again ... %s/%d\n", __CLASS__, $this->getThreadId(), $other->my, $other->scopeTestFunc());
-			if (($next = Thread::getThread($this->next))) {
-				printf("%s: %lu working ... %s/%d\n", __CLASS__, $this->getThreadId(), $next->my, $next->scopeTestFunc());
-				//usleep(1000); /* simulate some work */
-				if ($next->isWaiting())
-					printf("%s: %lu notifying %lu: %d\n", __CLASS__, $this->getThreadId(), $this->next, $next->notify());
-				$next->join();
-				printf("%s: %lu testing again ... %s/%d\n", __CLASS__, $this->getThreadId(), $next->my, $next->scopeTestFunc());
-			}
-		} else {
-			printf("%s: %lu failed to find %lu\n", __CLASS__, $this->getThreadId(), $this->other);
+		print_R($this);
+		foreach($this->tests as $tid) {
+			if (($test = Thread::getThread($tid))) {
+				printf("%s: %lu working %lu ... %s/%d\n", __CLASS__, $this->getThreadId(), $tid, $test->my, $test->scopeTestFunc());
+				if ($test->isWaiting())
+					printf("%s: %lu notifying %lu: %d\n", __CLASS__, $this->getThreadId(), $tid, $test->notify());
+			} else printf("%s: %lu failed to find %s\n", __CLASS__, $this->getThreadId(), $tid);
 		}
-		printf("%s: %lu notified: %d\n", __CLASS__, $this->getThreadId(), $this->wait());
+		printf("%s: %lu notifying process: %d\n", __CLASS__, $this->getThreadId(), $this->notify());
 	}
 }
 
 printf("Process: running\n");
-$test = new ScopeTest();
-$test3 = new ScopeTest();
-$test->start();
-$test3->start();
-$test2 = new ScopeTest2($test->getThreadId(), $test3->getThreadId());
-$test2->start();
-
-printf("Process: notifying %lu: %d\n", $test2->getThreadId(), $test2->notify());
-
-if ($test->isWaiting()) {
-	/*
-	* If importing has been disabled then the responsability to notify the waiting thread must fall back to the Process to avoid deadlock
-	*/
-	printf("Process: notifying %lu: %d\n", $test->getThreadId(), $test->notify());
+$tests = array(new SyncTest(), new SyncTest());
+$tester = new Tester(array($tests[0]->getThreadId(), $tests[1]->getThreadId()));
+$tester->start();
+$tester->wait();
+printf("Process: notified\n");
+foreach($tests as $test){
+	if(!$test->isJoined() && $test->isWaiting()) {
+		printf("Process: notifying %lu\n", $test->getThreadId());
+		printf("Process: notified %lu: %d\n", $test->getThreadId(), $test->notify());
+	} else printf("Process: done with %lu\n", $test->getThreadId());
 }
-
-if ($test3->isWaiting()) {
-	/*
-	* If importing has been disabled then the responsability to notify the waiting thread must fall back to the Process to avoid deadlock
-	*/
-	printf("Process: notifying %lu: %d\n", $test3->getThreadId(), $test3->notify());
-}
+printf("Process: notifying %lu\n", $tester->getThreadId());
 ?>

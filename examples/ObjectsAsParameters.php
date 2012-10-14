@@ -44,7 +44,7 @@ $request = new OOWebRequest(new Request("http://www.google.com"));
 /* go */
 if($request->start()){
 	/* do some heavy lifting here perhaps in the current thread */
-	while($request->isBusy()) {
+	while($request->isRunning()) {
 		echo ".";
 		usleep(100);
 	}

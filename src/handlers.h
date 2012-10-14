@@ -29,11 +29,11 @@
 #define HAVE_PTHREADS_HANDLERS_H
 
 #ifndef HAVE_PTHREADS_H
-#	include <ext/pthreads/src/pthreads.h>
+#	include <src/pthreads.h>
 #endif
 
 #ifndef HAVE_PTHREADS_SERIAL_H
-#	include <ext/pthreads/src/serial.h>
+#	include <src/serial.h>
 #endif
 
 extern zend_object_handlers * zsh;
@@ -48,6 +48,10 @@ extern zend_object_handlers * zsh;
 #	define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists, key TSRMLS_CC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member, const struct _zend_literal *key TSRMLS_DC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member, key TSRMLS_CC
+#	define PTHREADS_GET_METHOD_PASSTHRU_D zval **pobject, char *method, int methodl, const struct _zend_literal *key TSRMLS_DC
+#	define PTHREADS_GET_METHOD_PASSTHRU_C pobject, method, methodl, key TSRMLS_CC
+#	define PTHREADS_CALL_METHOD_PASSTHRU_D const char *method, INTERNAL_FUNCTION_PARAMETERS
+#	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
 #else
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type TSRMLS_CC
@@ -57,32 +61,11 @@ extern zend_object_handlers * zsh;
 #	define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists TSRMLS_CC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member TSRMLS_DC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member TSRMLS_CC
+#	define PTHREADS_GET_METHOD_PASSTHRU_D zval **pobject, char *method, int methodl TSRMLS_DC
+#	define PTHREADS_GET_METHOD_PASSTHRU_C pobject, method, methodl TSRMLS_CC
+#	define PTHREADS_CALL_METHOD_PASSTHRU_D char *method, INTERNAL_FUNCTION_PARAMETERS
+#	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
 #endif /* }}} */
-
-/* {{{ will import a property from a threading context */
-#define PTHREADS_IMPORT_PROPERTY(t, m, l, p) \
-	if (t->std.properties != NULL && zend_hash_find(t->std.properties, Z_STRVAL_P(m), Z_STRLEN_P(m)+1, (void**)&l)==SUCCESS) {\
-		switch(Z_TYPE_PP(l)){\
-			case IS_LONG:\
-			case IS_BOOL:\
-			case IS_STRING:\
-			case IS_NULL:\
-			case IS_ARRAY:\
-				serial = pthreads_serialize(*l TSRMLS_CC);\
-				if (serial) {\
-					if ((p = pthreads_unserialize(serial TSRMLS_CC)) != NULL)\
-						Z_SET_REFCOUNT_P(p, 0);\
-					free(serial);\
-				}\
-			break;\
-			\
-			case IS_OBJECT:\
-			case IS_RESOURCE:\
-				zend_error(E_WARNING, "pthreads detected an attempt to fetch an unsupported symbol (%s)", Z_STRVAL_P(m));\
-			break;\
-		}\
-	}\
-/* }}} */
 
 /* {{{ pthreads_read_property will attempt to reference the threading context from whichever context it was called (creator/import) */
 zval * pthreads_read_property(PTHREADS_READ_PROPERTY_PASSTHRU_D); /* }}} */
@@ -96,4 +79,9 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D); /* }}} */
 /* {{{ pthreads_unset_property will not attempt to reference any other context, but does require the therad lock to ensure safe concurrent reads */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D); /* }}} */
 
+/* {{{ pthreads_get_method will read modifiers from the correct context and apply them in the current context */
+zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D); /* }}} */
+
+/* {{{ pthreads_call_method will syncrhonize access to protected methods, such that only one context can call protected methods at a time */
+int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D); /* }}} */
 #endif

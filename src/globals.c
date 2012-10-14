@@ -19,7 +19,7 @@
 #define HAVE_PTHREADS_GLOBALS
 
 #ifndef HAVE_PTHREADS_GLOBALS_H
-#	include <ext/pthreads/src/globals.h>
+#	include <src/globals.h>
 #endif
 
 /* {{{ pthreads_globals_init */
