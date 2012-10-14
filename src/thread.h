@@ -69,7 +69,7 @@ typedef struct _pthread_construct {
 	/*
 	* Method modifiers
 	*/
-	HashTable modifiers;
+	HashTable *modifiers;
 	
 	/*
 	* Thread Flags
@@ -86,7 +86,7 @@ typedef struct _pthread_construct {
 	/*
 	* Work List
 	*/
-	zend_llist stack;
+	zend_llist *stack;
 	
 	struct _pthread_construct *sig;
 } THREAD, *PTHREAD;
