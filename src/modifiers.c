@@ -30,6 +30,7 @@
 void pthreads_modifiers_init(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	HashPosition position;
 	zend_function *method;
+	
 	for (zend_hash_internal_pointer_reset_ex(&Z_OBJCE_P(getThis())->function_table, &position);
 		 zend_hash_get_current_data_ex(&Z_OBJCE_P(getThis())->function_table, (void**)&method, &position) == SUCCESS;
 		 zend_hash_move_forward_ex(&Z_OBJCE_P(getThis())->function_table, &position)) {
@@ -73,7 +74,7 @@ int pthreads_modifiers_set(PTHREAD thread, const char *method, zend_uint modify 
 		{
 			*modified = modify;
 			if (zend_hash_add(
-				&thread->modifiers, 
+				thread->modifiers, 
 				method, sizeof(method), 
 				(void**) &modified, sizeof(zend_uint*), 
 				NULL
@@ -89,7 +90,7 @@ int pthreads_modifiers_set(PTHREAD thread, const char *method, zend_uint modify 
 zend_uint pthreads_modifiers_get(PTHREAD thread, const char *method TSRMLS_DC) {
 	zend_uint **modifiers;
 	if (zend_hash_find(
-			&thread->modifiers,
+			thread->modifiers,
 			method, sizeof(method), 
 			(void**) &modifiers
 		)==SUCCESS) {

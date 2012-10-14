@@ -140,9 +140,9 @@ int pthreads_stack_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 	acquire = PTHREADS_LOCK(thread);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		if (work) {
-			zend_llist_del_element(&thread->stack, &work, (int (*)(void *, void *)) pthreads_equal_func);
-		} else zend_llist_destroy(&thread->stack);
-		remain = thread->stack.count;
+			zend_llist_del_element(thread->stack, &work, (int (*)(void *, void *)) pthreads_equal_func);
+		} else zend_llist_destroy(thread->stack);
+		remain = thread->stack->count;
 		if (acquire != EDEADLK)
 			PTHREADS_UNLOCK(thread);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
@@ -163,8 +163,8 @@ burst:
 	acquire = PTHREADS_LOCK(thread);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		bubble = thread->worker;
-		if (thread->stack.count > 0) {
-			work = zend_llist_get_first(&thread->stack);
+		if (thread->stack->count > 0) {
+			work = zend_llist_get_first(thread->stack);
 			if (work && (current = *work) && current) {
 				bubble = 0;
 				
@@ -235,13 +235,13 @@ burst:
 					/*
 					* Return what is left on stack
 					*/
-					remain = thread->stack.count;
+					remain = thread->stack->count;
 				}
 				
 				/*
 				* Cleanup List
 				*/
-				zend_llist_del_element(&thread->stack, work, (int (*)(void *, void *)) pthreads_equal_func);
+				zend_llist_del_element(thread->stack, work, (int (*)(void *, void *)) pthreads_equal_func);
 			}
 		}
 		
@@ -267,8 +267,8 @@ int pthreads_stack_push(PTHREAD thread, PTHREAD work) {
 	acquire = PTHREADS_LOCK(thread);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		thread->worker = 1;
-		zend_llist_add_element(&thread->stack, &work);
-		counted = thread->stack.count;
+		zend_llist_add_element(thread->stack, &work);
+		counted = thread->stack->count;
 		if (acquire != EDEADLK)
 			PTHREADS_UNLOCK(thread);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
@@ -289,7 +289,7 @@ int pthreads_stack_length(PTHREAD thread) {
 	
 	acquire = PTHREADS_LOCK(thread);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
-		counted = thread->stack.count;
+		counted = thread->stack->count;
 		if (acquire != EDEADLK)
 			PTHREADS_UNLOCK(thread);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
@@ -420,9 +420,14 @@ zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
 		pthread_cond_init(instance->sync, NULL);
 	
 	/*
+	* Allocate Work Buffer
+	*/
+	instance->stack = (zend_llist*) calloc(1, sizeof(zend_llist));
+	
+	/*
 	* Initialize Work buffer
 	*/
-	zend_llist_init(&instance->stack, sizeof(void**), NULL, 1);
+	zend_llist_init(instance->stack, sizeof(void**), NULL, 1);
 	
 	/*
 	* Initialize standard entry
@@ -446,9 +451,19 @@ zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
 #endif		
 
 	/*
+	* Allocate Modifiers
+	*/
+	ALLOC_HASHTABLE(instance->modifiers);
+	
+	/*
 	* Initialize modifiers
 	*/
-	zend_hash_init(&instance->modifiers, 32, NULL, (dtor_func_t) pthreads_modifiers_destroy, 0);
+	zend_hash_init(instance->modifiers, 32, NULL, (dtor_func_t) pthreads_modifiers_destroy, 0);
+	
+	/*
+	* Signify this is the real thread object
+	*/
+	instance->copy = 0;
 	
 	/*
 	* Store the object
@@ -606,7 +621,12 @@ void pthreads_detach_from_context(void * arg TSRMLS_DC){
 		/*
 		* Destroy modifier list
 		*/
-		zend_hash_destroy(&thread->modifiers);
+		zend_hash_destroy(thread->modifiers);
+		
+		/*
+		* Free modifier list
+		*/
+		FREE_HASHTABLE(thread->modifiers);
 		
 		/*
 		* Destroy Wait Lock
@@ -635,7 +655,12 @@ void pthreads_detach_from_context(void * arg TSRMLS_DC){
 		/*
 		* Destroy Stack
 		*/
-		zend_llist_destroy(&thread->stack);
+		zend_llist_destroy(thread->stack);
+		
+		/*
+		* Free stack list
+		*/
+		free(thread->stack);
 		
 		/*
 		* Free state object
