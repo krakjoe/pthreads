@@ -60,7 +60,7 @@
 /* {{ read_property */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	PTHREAD thread = PTHREADS_FETCH_FROM(object);
-	int acquire = 0, oacquire = 0;
+	int acquire = 0;
 	zval **lookup = NULL, *prop = NULL;
 	char *serial = NULL;
 	
@@ -137,24 +137,17 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 	zend_function *call;
 	zend_function *callable;
-	HashPosition position;
+	char *lcname;
 	
 	PTHREAD thread = PTHREADS_FETCH_FROM(*pobject);
 	if (thread) {
 		switch(pthreads_modifiers_get(thread->modifiers, method TSRMLS_CC)){
 			case ZEND_ACC_PRIVATE:
 			case ZEND_ACC_PROTECTED: {
-				if (zend_hash_find(&Z_OBJCE_PP(pobject)->function_table, method, methodl+1, (void**)&call)!=SUCCESS) {
-					for(zend_hash_internal_pointer_reset_ex(&thread->std.ce->function_table, &position);
-						zend_hash_get_current_data_ex(&thread->std.ce->function_table, (void**) &call, &position) ==SUCCESS;
-						zend_hash_move_forward_ex(&thread->std.ce->function_table, &position)){
-						if (strcmp(call->common.function_name, method)==SUCCESS){
-							break;
-						}
-					}
-				}
-				
-				if (call) {
+				lcname =  (char*) calloc(1, methodl+1);
+				zend_str_tolower_copy(lcname, method, methodl);
+				if (zend_hash_find(&Z_OBJCE_PP(pobject)->function_table, lcname, methodl+1, (void**)&call)==SUCCESS) {
+					free(lcname);
 					callable = (zend_function*) emalloc(sizeof(zend_function));
 					callable->type = ZEND_OVERLOADED_FUNCTION;
 					callable->common.function_name = call->common.function_name;
@@ -167,8 +160,12 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 					callable->common.pass_rest_by_reference = call->common.pass_rest_by_reference;
 					callable->common.return_reference = call->common.return_reference;
 #endif			
+					zend_op_array *op_array = &call->op_array;
+					if (op_array){
+						(*op_array->refcount)++;
+					}
 					return callable;
-				}
+				} else free(lcname);
 			} break;
 			
 			default: 
@@ -184,8 +181,8 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 	zend_function 			*call = NULL;
 	zend_fcall_info 		info;
 	zend_fcall_info_cache	cache;
-	int 					called = -1, acquire = 0, argc = ZEND_NUM_ARGS(), access = ZEND_ACC_PUBLIC;
-	HashPosition 			position;
+	int 					called = -1, acquire = 0, argc = ZEND_NUM_ARGS(), access = ZEND_ACC_PUBLIC, mlength = 0;
+	char					*lcname;
 	
 	if (getThis()) {
 		PTHREAD thread = PTHREADS_FETCH;
@@ -203,59 +200,68 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 						return FAILURE;
 					}
 					
-					if (zend_hash_find(&Z_OBJCE_P(getThis())->function_table, method, strlen(method)+1, (void**)&call)!=SUCCESS) {
-						for(zend_hash_internal_pointer_reset_ex(&thread->std.ce->function_table, &position);
-							zend_hash_get_current_data_ex(&thread->std.ce->function_table, (void**) &call, &position) ==SUCCESS;
-							zend_hash_move_forward_ex(&thread->std.ce->function_table, &position)){
-							if (strcmp(call->common.function_name, method)==SUCCESS){
-								if (call->type == ZEND_OVERLOADED_FUNCTION) {
-									break;
-								} 
-							}
-						}
-					}
+					mlength = strlen(method);
+					lcname =  calloc(1, mlength+1);
+					zend_str_tolower_copy(lcname, method, mlength);
 					
-					if (call) {
-						/*
-						* Get arguments from stack
-						*/
-						if (ZEND_NUM_ARGS()) 
-						{
-							argv = safe_emalloc(sizeof(zval **), argc, 0);
-							if (argv) {
-								zend_get_parameters_array_ex(argc, argv);
+					if (zend_hash_find(&Z_OBJCE_P(getThis())->function_table, lcname, mlength+1, (void**)&call)==SUCCESS) {
+						if (call) {
+							/*
+							* Get arguments from stack
+							*/
+							if (ZEND_NUM_ARGS()) 
+							{
+								argv = safe_emalloc(sizeof(zval **), argc, 0);
+								if (argv) {
+									zend_get_parameters_array_ex(argc, argv);
+								}
 							}
-						}
-						
-						/*
-						* Make protected method call
-						*/
-						{
-							if (access == ZEND_ACC_PROTECTED) {
-								acquire = pthreads_modifiers_protect(thread->modifiers, method TSRMLS_CC);
-							} else acquire = EDEADLK;
 							
-							if (acquire == SUCCESS || acquire == EDEADLK) {
-							
-								ZVAL_STRINGL(&zmethod, method, strlen(method), 0);
+							/*
+							* Make protected method call
+							*/
+							{
+								if (access == ZEND_ACC_PROTECTED) {
+									acquire = pthreads_modifiers_protect(thread->modifiers, method TSRMLS_CC);
+								} else acquire = EDEADLK;
 								
-								info.size = sizeof(info);
-								info.object_ptr = getThis();
-								info.function_name = &zmethod;
-								info.retval_ptr_ptr = return_value_ptr;
-								info.no_separation = 1;
-								info.symbol_table = NULL;
-								info.param_count = argc;
-								info.params = argv;
+								if (acquire == SUCCESS || acquire == EDEADLK) {
 								
-								cache.initialized = 1;
-								cache.function_handler = call;
-								cache.calling_scope = Z_OBJCE_P(getThis());
-								cache.called_scope = Z_OBJCE_P(getThis());
-								cache.object_ptr = getThis();
-								
-								call->type = ZEND_USER_FUNCTION;
-								if ((called=zend_call_function(&info, &cache TSRMLS_CC))!=SUCCESS) {
+									ZVAL_STRINGL(&zmethod, method, strlen(method), 0);
+									
+									info.size = sizeof(info);
+									info.object_ptr = getThis();
+									info.function_name = &zmethod;
+									info.retval_ptr_ptr = return_value_ptr;
+									info.no_separation = 1;
+									info.symbol_table = NULL;
+									info.param_count = argc;
+									info.params = argv;
+									
+									cache.initialized = 1;
+									cache.function_handler = call;
+									cache.calling_scope = Z_OBJCE_P(getThis());
+									cache.called_scope = Z_OBJCE_P(getThis());
+									cache.object_ptr = getThis();
+									
+									call->type = ZEND_USER_FUNCTION;
+									if ((called=zend_call_function(&info, &cache TSRMLS_CC))!=SUCCESS) {
+										zend_error_noreturn(
+											E_ERROR, 
+											"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
+											(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
+											Z_OBJCE_P(getThis())->name,
+											method
+										);
+									}
+									call->type = ZEND_OVERLOADED_FUNCTION;
+									
+									if (access == ZEND_ACC_PROTECTED) {
+										if (acquire != EDEADLK) {
+											pthreads_modifiers_unprotect(thread->modifiers, method TSRMLS_CC);
+										}
+									}
+								} else {
 									zend_error_noreturn(
 										E_ERROR, 
 										"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
@@ -263,45 +269,30 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 										Z_OBJCE_P(getThis())->name,
 										method
 									);
+									called = FAILURE;
 								}
-								call->type = ZEND_OVERLOADED_FUNCTION;
-								
-								if (access == ZEND_ACC_PROTECTED) {
-									if (acquire != EDEADLK) {
-										pthreads_modifiers_unprotect(thread->modifiers, method TSRMLS_CC);
-									}
+							}
+							
+							/*
+							* Free unstacked arguments
+							*/
+							{
+								if (argc) {
+									efree(argv);
 								}
-							} else {
-								zend_error_noreturn(
-									E_ERROR, 
-									"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
-									(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
-									Z_OBJCE_P(getThis())->name,
-									method
-								);
-								called = FAILURE;
 							}
+						} else {
+							zend_error_noreturn(
+								E_ERROR, 
+								"pthreads has experienced an internal error while finding %s method %s::%s and cannot continue", 
+								(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
+								Z_OBJCE_P(getThis())->name,
+								method
+							);
+							called = FAILURE;
 						}
-						
-						/*
-						* Free unstacked arguments
-						*/
-						{
-							if (argc) {
-								efree(argv);
-							}
-						}
-					} else {
-						zend_error_noreturn(
-							E_ERROR, 
-							"pthreads has experienced an internal error while finding %s method %s::%s and cannot continue", 
-							(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
-							Z_OBJCE_P(getThis())->name,
-							method
-						);
-						called = FAILURE;
 					}
-					
+					free(lcname);
 					return called;
 				} break;
 			}
