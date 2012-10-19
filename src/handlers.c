@@ -208,7 +208,6 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 							method
 						);
 						if (argc) {
-							printf("freeing %d args\n", argc);
 							efree(argv);
 						}
 						return FAILURE;
