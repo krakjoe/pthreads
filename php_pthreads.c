@@ -424,42 +424,57 @@ PHP_METHOD(Thread, start)
 		* Check validity before continuing
 		*/
 		if (valid) {
-		
-			/*
-			* Don't allow restarting this object
-			*/ 
-			pthreads_set_state(thread, PTHREADS_ST_STARTED);
+			acquire = pthread_mutex_lock(thread->lock);
 			
-			/*
-			* Set running flag and store thread in globals
-			*/
-			pthreads_set_state(thread, PTHREADS_ST_RUNNING);
-			
-			/*
-			* Attempt to start the thread
-			*/
-			if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
+			if (acquire == SUCCESS || acquire == EDEADLK) {
 				/*
-				* Wait for notification to continue
-				*/
-				pthreads_set_state(thread, PTHREADS_ST_WAITING);
-			} else {
-				/*
-				* Do not attempt to join failed threads at dtor time
-				*/
-				pthreads_unset_state(thread, PTHREADS_ST_RUNNING);
+				* Don't allow restarting this object
+				*/ 
+				pthreads_set_state(thread, PTHREADS_ST_STARTED);
 				
 				/*
-				* Report the error, there's no chance of recovery ...
+				* Set running flag and store thread in globals
 				*/
-				switch(result) {
-					case EAGAIN:
-						zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", Z_OBJCE_P(getThis())->name);
-					break;
+				pthreads_set_state(thread, PTHREADS_ST_RUNNING);
+				
+				/*
+				* Attempt to start the thread
+				*/
+				if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
+					/*
+					* Release thread lock
+					*/
+					if (acquire != EDEADLK) 
+						pthread_mutex_unlock(thread->lock);
+						
+					/*
+					* Wait for notification to continue
+					*/
+					pthreads_set_state(thread, PTHREADS_ST_WAITING);
+				} else {
+					/*
+					* Do not attempt to join failed threads at dtor time
+					*/
+					pthreads_unset_state(thread, PTHREADS_ST_RUNNING);
 					
-					default: zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error", Z_OBJCE_P(getThis())->name);
+					/*
+					* Release thread lock
+					*/
+					if (acquire != EDEADLK)
+						pthread_mutex_unlock(thread->lock);
+					
+					/*
+					* Report the error, there's no chance of recovery ...
+					*/
+					switch(result) {
+						case EAGAIN:
+							zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", Z_OBJCE_P(getThis())->name);
+						break;
+						
+						default: zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error", Z_OBJCE_P(getThis())->name);
+					}
 				}
-			}
+			} else zend_error_noreturn(E_WARNING, "pthreads has experienced an internal error while starting %s", Z_OBJCE_P(getThis())->name);
 		} else { result = FAILURE; }
 	} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to start %s (%lu) that has already been started", Z_OBJCE_P(getThis())->name, thread->tid);	
 	
@@ -485,7 +500,7 @@ PHP_METHOD(Thread, stack)
 					size = pthreads_stack_push(thread, PTHREADS_FETCH_FROM(work));
 					if (size) {
 						RETURN_LONG(size);
-					} else zend_error(E_WARNING, "pthreads has experienced your mum");
+					}
 				}
 			} else zend_error(E_ERROR, "pthreads has detected an attempt to stack onto %s (%lu) which has already been joined", Z_OBJCE_P(getThis())->name, thread->tid);
 		} else zend_error(E_WARNING, "pthreads has detected an attempt to call an external method on %s %lu, you cannot stack in this context", Z_OBJCE_P(getThis())->name, thread->tid);
@@ -583,7 +598,6 @@ PHP_METHOD(Thread, wait)
 	}
 	
 	if (thread) {
-		printf("WAIT: RUNNING %d\n", pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING));
 		ZVAL_BOOL(return_value, pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, timeout)>0);
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to wait for a %s and cannot continue", Z_OBJCE_P(getThis())->name);
 } /* }}} */

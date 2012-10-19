@@ -41,7 +41,7 @@ pthreads_synchro pthreads_synchro_alloc() {
 }
 
 int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout) {
-	int acquire = FAILURE, result = FAILURE, timed = 0;
+	int result = FAILURE, notified = 0;
 	struct timeval now;
 	struct timespec until;
 	
@@ -55,23 +55,27 @@ int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout) {
 				until.tv_sec = now.tv_sec;
 				until.tv_nsec = (now.tv_usec * 1000) + timeout;	
 			}
-			timed=1;
-		}
+		} else timeout = 0L;
 	}
 	
 	if (sync) {
-		acquire = pthread_mutex_lock(&sync->wait);
-		if (acquire == SUCCESS || acquire == EDEADLK) {
-			sync->waiting = 1;
-			do {
-				if (!timed) {
-					result = pthread_cond_wait(&sync->cond, &sync->wait);
-				} else { result = pthread_cond_timedwait(&sync->cond, &sync->wait, &until); }
-			} while(sync->waiting);
-			if (acquire != EDEADLK)
-				pthread_mutex_unlock(&sync->wait);
-		}
-	}
+		if (pthread_mutex_lock(&sync->notify) == SUCCESS) {
+			notified = sync->notified;
+			pthread_mutex_unlock(&sync->notify);
+
+			if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
+				if (!notified) {
+					sync->waiting = 1;
+					do {
+						if (timeout > 0L) {
+							result = pthread_cond_timedwait(&sync->cond, &sync->wait, &until);
+						} else { result = pthread_cond_wait(&sync->cond, &sync->wait); }
+					} while(sync->waiting);
+				} else result = SUCCESS;
+				pthread_mutex_unlock(&sync->wait);	
+			} else { /* report fatality */ }
+		} else { /* report fatality */ }
+	} else { /* report unknown error */ }
 	
 	return (result == SUCCESS) ? 1 : 0;
 }
@@ -81,22 +85,25 @@ int pthreads_synchro_wait(pthreads_synchro sync) {
 }
 
 int pthreads_synchro_notify(pthreads_synchro sync) {
-	int result = 0, acquire = FAILURE;
+	int result = FAILURE, notify = 0;
 	
 	if (sync) {
-		acquire = pthread_mutex_lock(&sync->wait);
-		if (acquire == SUCCESS || acquire == EDEADLK) {
-			sync->waiting = 0;
+		if (pthread_mutex_lock(&sync->notify) == SUCCESS) {
+			if (sync->waiting) {
+				notify = !(sync->notified = sync->waiting = 0);
+			} else {notify = !(sync->notified = 1);}
+			pthread_mutex_unlock(&sync->notify);
 			
-			{
-				result = pthread_cond_broadcast(&sync->cond);
-			}
-			
-			if (acquire != EDEADLK) {
-				pthread_mutex_unlock(&sync->wait);
-			}
-		}
-	}
+			if (notify) {
+				if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
+					if ((result = pthread_cond_broadcast(&sync->cond))!=SUCCESS) {
+						/* report error */
+					}
+					pthread_mutex_unlock(&sync->wait);
+				} else { /* report error */ }
+			} else result = SUCCESS;
+		} else { /* report fatality */ }
+	} else { /* report unknown error */ }
 	return (result == SUCCESS) ? 1 : 0;
 }
 

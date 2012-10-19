@@ -24,6 +24,7 @@
 
 typedef struct _pthreads_synchro {
 	zend_uint waiting;
+	zend_uint notified;
 	pthread_mutex_t wait;
 	pthread_mutex_t notify;
 	pthread_cond_t cond;
