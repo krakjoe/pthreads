@@ -55,6 +55,7 @@ PHP_METHOD(Thread, getThread);
 
 /* {{{ identification */
 PHP_METHOD(Thread, getThreadId);
+PHP_METHOD(Thread, getCreatorId);
 /* }}} */
 
 /* {{{ globals */

@@ -119,6 +119,8 @@ ZEND_END_ARG_INFO()
 /* {{{ identification */
 ZEND_BEGIN_ARG_INFO_EX(Thread_getThreadId, 0, 0, 0)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(Thread_getCreatorId, 0, 0, 0)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ state detection */
@@ -219,6 +221,7 @@ zend_function_entry pthreads_methods[] = {
 	PHP_ME(Thread, getStacked, Thread_getStacked, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getThread, Thread_getThread, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
 	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, getCreatorId, Thread_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getCount, Thread_getCount, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getMax, Thread_getMax, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getPeak, Thread_getPeak, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -384,7 +387,7 @@ PHP_METHOD(Thread, start)
 	* See if there are any limits in this environment
 	*/
 	if (PTHREADS_G(max) && !(pthreads_globals_count()<PTHREADS_G(max))) {
-		zend_error(E_WARNING, "pthreads has reached the maximum numbers of threads allowed (%lu) by your server administrator", PTHREADS_G(max));
+		zend_error(E_WARNING, "pthreads has reached the maximum numbers of threads allowed (%lu) by your server administrator, and cannot start the %s", PTHREADS_G(max), Z_OBJCE_P(getThis())->name);
 		RETURN_FALSE;
 	}
 	
@@ -416,7 +419,7 @@ PHP_METHOD(Thread, start)
 					if (acquire != EDEADLK)
 						PTHREADS_UNLOCK(thread);
 					valid = 0;
-					zend_error_noreturn(E_WARNING, "pthreads detected failure while preparing members for threading context, only public members can be used");
+					zend_error_noreturn(E_WARNING, "pthreads detected failure while preparing the %s members, only public members can be used", Z_OBJCE_P(getThis())->name);
 				}
 			}
 			
@@ -439,12 +442,10 @@ PHP_METHOD(Thread, start)
 				* Attempt to start the thread
 				*/
 				if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
-						
 					/*
 					* Wait for notification to continue
 					*/
-					PTHREADS_WAIT(thread);
-					
+					pthreads_set_state(thread, PTHREADS_ST_WAITING);
 				} else {
 					/*
 					* Do not attempt to join failed threads at dtor time
@@ -456,15 +457,15 @@ PHP_METHOD(Thread, start)
 					*/
 					switch(result) {
 						case EAGAIN:
-							zend_error_noreturn(E_WARNING, "pthreads has detected that the thread could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded");
+							zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", Z_OBJCE_P(getThis())->name);
 						break;
 						
-						default: zend_error_noreturn(E_WARNING, "pthreads has detected that the thread could not be started because of an unspecified system error");
+						default: zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error", Z_OBJCE_P(getThis())->name);
 					}
 				}
 			} else { result = FAILURE; }
-		} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to start a thread that has already been started");	
-	} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+		} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to start %s (%lu) that has already been started", Z_OBJCE_P(getThis())->name, thread->tid);	
+	} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while starting %s and cannot continue", Z_OBJCE_P(getThis())->name);
 	
 	if (acquire != EDEADLK)
 		PTHREADS_UNLOCK(thread);
@@ -486,16 +487,16 @@ PHP_METHOD(Thread, stack)
 	
 	if (thread) {
 		if (!thread->copy) {
-			if (!PTHREADS_IS_JOINED(thread)) {
+			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
 				if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, thread->std.ce)==SUCCESS) {
 					size = pthreads_stack_push(thread, PTHREADS_FETCH_FROM(work));
 					if (size) {
 						RETURN_LONG(size);
 					} else zend_error(E_WARNING, "pthreads has experienced your mum");
 				}
-			} else zend_error(E_ERROR, "pthreads has detected an attempt to stack onto a joined Thread (%lu)", thread->tid);
-		} else zend_error(E_WARNING, "pthreads has detected an attempt to call and external method on %lu, you cannot stack in this context", thread->tid);
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+			} else zend_error(E_ERROR, "pthreads has detected an attempt to stack onto %s (%lu) which has already been joined", Z_OBJCE_P(getThis())->name, thread->tid);
+		} else zend_error(E_WARNING, "pthreads has detected an attempt to call an external method on %s %lu, you cannot stack in this context", Z_OBJCE_P(getThis())->name, thread->tid);
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while stacking onto %s (%lu) and cannot continue", Z_OBJCE_P(getThis())->name, thread->tid);
 	RETURN_FALSE;
 } /* }}} */
 
@@ -513,8 +514,8 @@ PHP_METHOD(Thread, unstack)
 					RETURN_LONG(pthreads_stack_pop_ex(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC));
 				}
 			} else RETURN_LONG(pthreads_stack_pop_ex(thread, NULL TSRMLS_CC));
-		} else zend_error(E_WARNING, "pthreads has detected an attempt to call an external method, you cannot unstack in this context");
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+		} else zend_error(E_WARNING, "pthreads has detected an attempt to call an external method on %s (%lu), you cannot unstack in this context", Z_OBJCE_P(getThis())->name, thread->tid);
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while unstacking from %s (%lu) and cannot continue", Z_OBJCE_P(getThis())->name, thread->tid);
 	RETURN_FALSE;
 }
 
@@ -526,7 +527,7 @@ PHP_METHOD(Thread, getStacked)
 	
 	if (thread) {
 		RETURN_LONG(pthreads_stack_length(thread));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while getting the stack length of a %s and cannot continue", Z_OBJCE_P(getThis())->name);
 	RETURN_FALSE;
 }
 
@@ -538,7 +539,7 @@ PHP_METHOD(Thread, isStarted)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_STARTED));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", Z_OBJCE_P(getThis())->name);
 } /* }}} */
 
 /* {{{ proto Thread::isRunning() 
@@ -549,7 +550,7 @@ PHP_METHOD(Thread, isRunning)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", Z_OBJCE_P(getThis())->name);
 } /* }}} */
 
 /* {{{ proto Thread::isJoined()
@@ -560,7 +561,7 @@ PHP_METHOD(Thread, isJoined)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", Z_OBJCE_P(getThis())->name);
 } /* }}} */
 
 /* {{{ proto boolean Thread::isWaiting() 
@@ -571,7 +572,7 @@ PHP_METHOD(Thread, isWaiting)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
-	} else zend_error(E_ERROR, "pthreads has expereinced an internal error and cannot continue");
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", Z_OBJCE_P(getThis())->name);
 }
 
 /* {{{ proto boolean Thread::wait([long timeout]) 
@@ -589,10 +590,9 @@ PHP_METHOD(Thread, wait)
 	}
 	
 	if (thread) {
-		if (pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING)) {
-			ZVAL_BOOL(return_value, PTHREADS_WAIT_EX(thread, timeout)>0);
-		} else RETURN_FALSE;
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+		printf("WAIT: RUNNING %d\n", pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING));
+		ZVAL_BOOL(return_value, pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, timeout)>0);
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to wait for a %s and cannot continue", Z_OBJCE_P(getThis())->name);
 } /* }}} */
 
 /* {{{ proto boolean Thread::notify()
@@ -604,10 +604,8 @@ PHP_METHOD(Thread, notify)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	if (thread) {
-		if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING)) {
-			RETURN_BOOL(PTHREADS_NOTIFY(thread)>0);
-		} else RETURN_TRUE;
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+		RETURN_BOOL(pthreads_unset_state(thread, PTHREADS_ST_WAITING));
+	}else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to notify a %s and cannot continue", Z_OBJCE_P(getThis())->name);
 	RETURN_FALSE;
 } /* }}} */
 
@@ -624,90 +622,89 @@ PHP_METHOD(Thread, join)
 	/*
 	* Check for discard argument
 	*/
-	if (ZEND_NUM_ARGS())
+	if (ZEND_NUM_ARGS()) {
 		zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &discard);
-	
-	if (thread) {
-	
-		if (!PTHREADS_IN_THREAD(thread)) {
+	}
+		
+	/*
+	* Check that we are in the correct context
+	*/
+	if (!PTHREADS_IN_THREAD(thread) && PTHREADS_IS_CREATOR(thread)) {
+		
+		/*
+		* Ensure this thread was started
+		*/
+		if (pthreads_state_isset(thread->state, PTHREADS_ST_STARTED)) {
+		
 			/*
-			* Ensure this thread was started
+			* Ensure this thread wasn't already joined
 			*/
-			if (PTHREADS_IS_STARTED(thread)) {
+			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
 			
 				/*
-				* Ensure this thread wasn't already joined
+				* Ensure nothing attempts to join this thread again
 				*/
-				if (!PTHREADS_IS_JOINED(thread)) {
+				pthreads_set_state(thread, PTHREADS_ST_JOINED);
 				
-					/*
-					* Ensure nothing attempts to join this thread again
-					*/
-					pthreads_set_state(thread, PTHREADS_ST_JOINED);
-					
-					/*
-					* We must force threads to workers to close at this point
-					*/
-					{
-						if (pthreads_is_worker(thread)) {
-							if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING)) {
-								do {
-									PTHREADS_NOTIFY(thread);
-								} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
-							}
+				/*
+				* We must force workers to close at this point
+				*/
+				{
+					if (pthreads_is_worker(thread)) {
+						if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING)) {
+							do {
+								pthreads_unset_state(thread, PTHREADS_ST_WAITING);
+							} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
 						}
 					}
+				}
+				
+				/*
+				* Carry out joining and deserialize result
+				*/
+				if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
+					if (result) {
+						pthreads_unserialize_into(result, return_value TSRMLS_CC);
+						free(result);
+					}
+					
 					
 					/*
-					* Carry out joining and deserialize result
+					* Replace symbol tables
 					*/
-					if (pthread_join(thread->thread, (void**)&result)==SUCCESS) {
-						if (result) {
-							pthreads_unserialize_into(result, return_value TSRMLS_CC);
-							free(result);
-						}
-						
-						
-						/*
-						* Replace symbol tables
-						*/
-						if (thread->serial) {
-							if (!discard) {
-								if ((symbols=pthreads_unserialize(thread->serial TSRMLS_CC))!=NULL){
-									if (thread->std.properties) {
-										zend_hash_destroy(thread->std.properties);
-										FREE_HASHTABLE(thread->std.properties);
-									}
-								
-									thread->std.properties = Z_ARRVAL_P(symbols);
-									FREE_ZVAL(symbols);
+					if (thread->serial) {
+						if (!discard) {
+							if ((symbols=pthreads_unserialize(thread->serial TSRMLS_CC))!=NULL){
+								if (thread->std.properties) {
+									zend_hash_destroy(thread->std.properties);
+									FREE_HASHTABLE(thread->std.properties);
 								}
-							}  else {
-								/*
-								* Discarding in any context affects all contexts and provides an easy way to release resources that aren't going to be used
-								*/
-								free(thread->serial);
-								thread->serial = NULL;
+							
+								thread->std.properties = Z_ARRVAL_P(symbols);
+								FREE_ZVAL(symbols);
 							}
+						}  else {
+							/*
+							* Discarding in any context affects all contexts and provides an easy way to release resources that aren't going to be used
+							*/
+							free(thread->serial);
+							thread->serial = NULL;
 						}
-					} else {
-						zend_error(E_WARNING, "pthreads detected failure while joining with the referenced Thread (%lu)", thread->tid);
-						RETURN_FALSE;
 					}
 				} else {
-					zend_error(E_WARNING, "pthreads has detected that the referenced Thread (%lu) has already been joined", thread->tid);
-					RETURN_FALSE; 
+					zend_error(E_WARNING, "pthreads detected failure while joining with %s (%lu)", Z_OBJCE_P(getThis())->name, thread->tid);
+					RETURN_FALSE;
 				}
 			} else {
-				zend_error(E_WARNING, "pthreads has detected an attempt to join a thread that is not yet started");
-				RETURN_FALSE;
+				zend_error(E_WARNING, "pthreads has detected that %s (%lu) has already been joined", Z_OBJCE_P(getThis())->name, thread->tid);
+				RETURN_FALSE; 
 			}
 		} else {
-			zend_error(E_WARNING, "pthreads has detected an attempt to join in an incorrect context");
+			zend_error(E_WARNING, "pthreads has detected an attempt to join with an unstarted %s", Z_OBJCE_P(getThis())->name);
 			RETURN_FALSE;
 		}
 	} else {
-		zend_error(E_ERROR, "pthreads has expereinced an internal error and cannot continue");
+		zend_error(E_WARNING, "pthreads has detected an attempt to join from an incorrect context, only the creating context may join with %s (%lu)", Z_OBJCE_P(getThis())->name, thread->tid);
 		RETURN_FALSE;
 	}
 } /* }}} */
@@ -747,8 +744,20 @@ PHP_METHOD(Thread, getThreadId)
 		PTHREAD thread = PTHREADS_FETCH;
 		if (thread) {
 			ZVAL_LONG(return_value, thread->tid);
-		}
+		} else ZVAL_LONG(return_value, 0L);
 	} else ZVAL_LONG(return_value, pthreads_self());
+} /* }}} */
+
+/* {{{ proto long Thread::getCreatorId() 
+	Will return the identifier of the thread ( or process ) that created the referenced Thread */
+PHP_METHOD(Thread, getCreatorId)
+{
+	if (getThis()) {
+		PTHREAD thread = PTHREADS_FETCH;
+		if (thread) {
+			ZVAL_LONG(return_value, thread->cid);
+		} else ZVAL_LONG(return_value, 0L);
+	} else ZVAL_LONG(return_value, 0L);
 } /* }}} */
 
 /* {{{ proto long Thread::getCount()

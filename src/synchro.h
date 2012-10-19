@@ -15,26 +15,24 @@
   | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PTHREADS_SERIAL_H
-#define HAVE_PTHREADS_SERIAL_H
-
-#ifdef HAVE_CONFIG_H
-#	include <config.h>
-#endif
+#ifndef HAVE_PTHREADS_SYNCHRO_H
+#define HAVE_PTHREADS_SYNCHRO_H
 
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
 #endif
 
-/* 
-* @TODO
-*	look into msgpack support as it uses less memory than default serial data
-*/
+typedef struct _pthreads_synchro {
+	zend_uint waiting;
+	pthread_mutex_t wait;
+	pthread_mutex_t notify;
+	pthread_cond_t cond;
+} *pthreads_synchro;
 
-/* {{{ prototypes */
-char * pthreads_serialize(zval *unserial TSRMLS_DC);
-zval * pthreads_unserialize(char *serial TSRMLS_DC);
-int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
-/* }}} */
+pthreads_synchro pthreads_synchro_alloc();
+int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout);
+int pthreads_synchro_wait(pthreads_synchro sync);
+int pthreads_synchro_notify(pthreads_synchro sync);
+void pthreads_synchro_free(pthreads_synchro sync);
 
 #endif

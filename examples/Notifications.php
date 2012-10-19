@@ -5,20 +5,13 @@
 */
 class ExampleThread extends Thread {
         public function run(){
-                        $stdout = fopen("php://stdout", "w");
-                        printf("I'm in the thread and you're waiting for me ...\n");
-fflush($stdout);
-                        printf("Allowing process to continue ...\n");
-fflush($stdout);
-                        printf("Thread Notifying Process 1: %d\n", $this->notify());
-fflush($stdout);
-                        printf("Process Waiting ...\n");
-fflush($stdout);
-                        printf("Thread Notifying Process 2: %d\n", $this->notify());
-fflush($stdout);
-					$this->wait();
-					
-					printf("Thread exiting ...");
+			printf("I'm in the thread and you're waiting for me ...\n");
+			printf("Allowing process to continue ...\n");
+			printf("Thread Notifying Process 1: %d\n", $this->notify());
+			printf("Process Waiting ...\n");
+			printf("Thread Notifying Process 2: %d\n", $this->notify());
+			$this->wait();		
+			printf("Thread exiting ...");
         }
 }
 
@@ -26,12 +19,8 @@ $t = new ExampleThread();
 
 if ($t->start(true)) {
         printf("Process Working  ... then ...\n");
-		
-		echo "WHAT ...";
-		
         printf("Process Waited: %d\n", $t->wait());
         printf("Now doing some work while thread is waiting ...\n");
-		
 		usleep(1000000);
 		printf("And notify thread: %d\n", $t->notify());
 }

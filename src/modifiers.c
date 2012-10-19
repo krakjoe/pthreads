@@ -80,7 +80,9 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 					ZEND_ACC_PRIVATE TSRMLS_CC
 				);
 				function_add_ref(method);
-				method->type = ZEND_OVERLOADED_FUNCTION;
+				destroy_zend_function(method TSRMLS_CC);
+				// function_add_ref(method);
+				// method->type = ZEND_OVERLOADED_FUNCTION;
 			}
 			
 			/*
@@ -93,7 +95,9 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 					ZEND_ACC_PROTECTED TSRMLS_CC
 				);
 				function_add_ref(method);
-				method->type = ZEND_OVERLOADED_FUNCTION;
+				destroy_zend_function(method TSRMLS_CC);
+				// function_add_ref(method);
+				// method->type = ZEND_OVERLOADED_FUNCTION;
 			}
 		}
 	}

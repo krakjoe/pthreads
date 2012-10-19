@@ -28,13 +28,14 @@
 #	include <src/pthreads.h>
 #endif
 
-typedef struct _pthreads_state 
-{
+#ifndef HAVE_PTHREADS_SYNCHRO_H
+#	include <src/synchro.h>
+#endif
+
+typedef struct _pthreads_state {
 	pthread_mutex_t	lock;
 	int				bits;
 } *pthreads_state;
-
-extern pthread_mutexattr_t defmutex;
 
 pthreads_state pthreads_state_alloc(int mask);
 int pthreads_state_lock(pthreads_state state, int *acquired);

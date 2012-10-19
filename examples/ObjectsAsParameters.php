@@ -43,11 +43,6 @@ include(sprintf(
 $request = new OOWebRequest(new Request("http://www.google.com"));
 /* go */
 if($request->start()){
-	/* do some heavy lifting here perhaps in the current thread */
-	while($request->isRunning()) {
-		echo ".";
-		usleep(100);
-	}
 	/* then join to get the result */
 	if($request->join()){
 		printf("\nGot %d bytes from %s in %f seconds\n", $request->response->getLength(), $request->response->getUrl(), $request->response->getDuration());
