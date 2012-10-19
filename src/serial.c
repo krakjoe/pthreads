@@ -53,7 +53,7 @@ char * pthreads_serialize(zval *unserial TSRMLS_DC){
 /* }}} */
 
 /* {{{ Will unserialize data into the allocated zval passed */
-int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){	
+int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){
 	if (serial) {
 		const unsigned char *pointer = (const unsigned char *)serial;
 		php_unserialize_data_t vars;
@@ -76,7 +76,7 @@ int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){
 /* {{{ Will unserialze data into a newly allocated buffer which must be free'd by the caller */
 zval *	pthreads_unserialize(char *serial TSRMLS_DC){					
 	zval *result;
-	ALLOC_ZVAL(result);
+	ALLOC_INIT_ZVAL(result);
 	
 	if (pthreads_unserialize_into(serial, result TSRMLS_CC)==SUCCESS) {
 			return result;												

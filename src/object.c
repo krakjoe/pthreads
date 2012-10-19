@@ -197,7 +197,7 @@ burst:
 				/*
 				* Allocate a $that
 				*/
-				ALLOC_ZVAL(that_ptr);
+				MAKE_STD_ZVAL(that_ptr);
 				
 				/*
 				* Initialize it with the new entry

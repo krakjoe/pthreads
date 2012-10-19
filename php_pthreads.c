@@ -403,7 +403,7 @@ PHP_METHOD(Thread, start)
 		* Serializing here keeps the heap happy, so here is where we'll do it ...
 		*/
 		{
-			ALLOC_INIT_ZVAL(props);
+			MAKE_STD_ZVAL(props);
 			Z_TYPE_P(props)=IS_ARRAY;
 			Z_ARRVAL_P(props)=thread->std.properties;
 			thread->serial = pthreads_serialize(props TSRMLS_CC);
@@ -441,16 +441,18 @@ PHP_METHOD(Thread, start)
 				* Attempt to start the thread
 				*/
 				if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
+	
+					/*
+					* Wait for notification to continue
+					*/
+					pthreads_set_state(thread, PTHREADS_ST_WAITING);
+					
 					/*
 					* Release thread lock
 					*/
 					if (acquire != EDEADLK) 
 						pthread_mutex_unlock(thread->lock);
-						
-					/*
-					* Wait for notification to continue
-					*/
-					pthreads_set_state(thread, PTHREADS_ST_WAITING);
+					
 				} else {
 					/*
 					* Do not attempt to join failed threads at dtor time
@@ -637,7 +639,7 @@ PHP_METHOD(Thread, join)
 	* Check that we are in the correct context
 	*/
 	if (!PTHREADS_IN_THREAD(thread) && PTHREADS_IS_CREATOR(thread)) {
-		
+
 		/*
 		* Ensure this thread was started
 		*/
