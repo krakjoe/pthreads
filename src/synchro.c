@@ -61,11 +61,11 @@ int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout) {
 	if (sync) {
 		if (pthread_mutex_lock(&sync->notify) == SUCCESS) {
 			notified = sync->notified;
+			sync->waiting = !notified;
 			pthread_mutex_unlock(&sync->notify);
 
 			if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
 				if (!notified) {
-					sync->waiting = 1;
 					do {
 						if (timeout > 0L) {
 							result = pthread_cond_timedwait(&sync->cond, &sync->wait, &until);
@@ -89,13 +89,13 @@ int pthreads_synchro_notify(pthreads_synchro sync) {
 	
 	if (sync) {
 		if (pthread_mutex_lock(&sync->notify) == SUCCESS) {
-			if (sync->waiting) {
-				notify = !(sync->notified = sync->waiting = 0);
-			} else {notify = !(sync->notified = 1);}
+			notify = sync->waiting;
+			sync->notified = !notify;
 			pthread_mutex_unlock(&sync->notify);
 			
 			if (notify) {
 				if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
+					sync->waiting = 0;
 					if ((result = pthread_cond_broadcast(&sync->cond))!=SUCCESS) {
 						/* report error */
 					}

@@ -33,21 +33,24 @@ class Fetching extends Thread {
 		* tell the waiting process we have created symbols and fetch will succeed
 		*/
 		$this->notify();
-		
-		/*
-		* wait for waiting process to fetch symbols
-		*/
-		$this->wait();
 	}
 }
 $thread = new Fetching();
-$thread->start(true);
+/*
+* You cannot start synchronized, because the run method will attempt to acquire the thread lock in order to manipulate members
+*/
+$thread->start();
 printf("STARTED\n");
+
+/*
+* Wait for the thread to tell us the members are ready
+*/
+$thread->wait();
 /*
 * we just got notified that there are symbols waiting
 */
 foreach(array("sym", "arr", "obj", "objs", "res") as $symbol){
-	printf("Thread::fetch(%s): ", $symbol);	
+	printf("\$thread->%s: ", $symbol);	
 	$fetched = $thread->$symbol;
 	if ($fetched) {
 		switch($symbol){
@@ -62,10 +65,6 @@ foreach(array("sym", "arr", "obj", "objs", "res") as $symbol){
 		}
 	}
 }
-/*
-* Tell the thread it can continue
-*/
-$thread->notify();
 
 /*
 * Join the thread ( and it's symbols )

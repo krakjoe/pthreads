@@ -44,8 +44,10 @@
 			case IS_ARRAY:\
 				serial = pthreads_serialize(*l TSRMLS_CC);\
 				if (serial) {\
-					if ((p = pthreads_unserialize(serial TSRMLS_CC)) != NULL)\
+					if ((p = pthreads_unserialize(serial TSRMLS_CC)) != NULL){\
 						Z_SET_REFCOUNT_P(p, 0);\
+						Z_UNSET_ISREF_P(p);\
+					}\
 					free(serial);\
 				}\
 			break;\
@@ -60,7 +62,7 @@
 /* {{ read_property */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	PTHREAD thread = PTHREADS_FETCH_FROM(object);
-	int acquire = 0;
+	int acquire = 0, sacquire = 0;
 	zval **lookup = NULL, *prop = NULL;
 	char *serial = NULL;
 	
@@ -71,15 +73,14 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 			if (!PTHREADS_IN_THREAD(thread)) {
 				if (pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING)) {
 					PTHREADS_IMPORT_PROPERTY(thread->sig, member, lookup, prop);
-				}
-			}
-			
-			if (prop == NULL)
-				prop = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+					if (prop == NULL)
+						prop = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+				} else prop = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+			} else prop = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
 			
 			if (acquire != EDEADLK)
 				pthread_mutex_unlock(thread->lock);
-		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+		} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error and cannot continue");
 	}
 	
 	return prop;
