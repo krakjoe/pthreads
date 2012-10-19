@@ -397,78 +397,71 @@ PHP_METHOD(Thread, start)
 	if (ZEND_NUM_ARGS()){
 		zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &thread->synchronized);
 	} else thread->synchronized = 0;
-		
-	acquire = PTHREADS_LOCK(thread);
 	
-	if (acquire == SUCCESS || acquire == EDEADLK) {
-		if (!pthreads_state_isset(thread->state, PTHREADS_ST_STARTED)) {
+	if (!pthreads_state_isset(thread->state, PTHREADS_ST_STARTED)) {
+		/*
+		* Serializing here keeps the heap happy, so here is where we'll do it ...
+		*/
+		{
+			ALLOC_INIT_ZVAL(props);
+			Z_TYPE_P(props)=IS_ARRAY;
+			Z_ARRVAL_P(props)=thread->std.properties;
+			thread->serial = pthreads_serialize(props TSRMLS_CC);
+			FREE_ZVAL(props);
+			
+			/* if the serial does not end in } then serialization has failed on account of private/protected members */
+			if (thread->serial[strlen(thread->serial)-1] != '}') {
+				free(thread->serial);
+				thread->serial = NULL;
+				if (acquire != EDEADLK)
+					pthread_mutex_unlock(thread->lock);
+				valid = 0;
+				zend_error_noreturn(E_WARNING, "pthreads detected failure while preparing the %s members, only public members can be used", Z_OBJCE_P(getThis())->name);
+			}
+		}
+		
+		/*
+		* Check validity before continuing
+		*/
+		if (valid) {
+		
 			/*
-			* Serializing here keeps the heap happy, so here is where we'll do it ...
+			* Don't allow restarting this object
+			*/ 
+			pthreads_set_state(thread, PTHREADS_ST_STARTED);
+			
+			/*
+			* Set running flag and store thread in globals
 			*/
-			{
-				ALLOC_INIT_ZVAL(props);
-				Z_TYPE_P(props)=IS_ARRAY;
-				Z_ARRVAL_P(props)=thread->std.properties;
-				thread->serial = pthreads_serialize(props TSRMLS_CC);
-				FREE_ZVAL(props);
+			pthreads_set_state(thread, PTHREADS_ST_RUNNING);
+			
+			/*
+			* Attempt to start the thread
+			*/
+			if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
+				/*
+				* Wait for notification to continue
+				*/
+				pthreads_set_state(thread, PTHREADS_ST_WAITING);
+			} else {
+				/*
+				* Do not attempt to join failed threads at dtor time
+				*/
+				pthreads_unset_state(thread, PTHREADS_ST_RUNNING);
 				
-				/* if the serial does not end in } then serialization has failed on account of private/protected members */
-				if (thread->serial[strlen(thread->serial)-1] != '}') {
-					free(thread->serial);
-					thread->serial = NULL;
-					if (acquire != EDEADLK)
-						PTHREADS_UNLOCK(thread);
-					valid = 0;
-					zend_error_noreturn(E_WARNING, "pthreads detected failure while preparing the %s members, only public members can be used", Z_OBJCE_P(getThis())->name);
+				/*
+				* Report the error, there's no chance of recovery ...
+				*/
+				switch(result) {
+					case EAGAIN:
+						zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", Z_OBJCE_P(getThis())->name);
+					break;
+					
+					default: zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error", Z_OBJCE_P(getThis())->name);
 				}
 			}
-			
-			/*
-			* Check validity before continuing
-			*/
-			if (valid) {
-			
-				/*
-				* Don't allow restarting this object
-				*/ 
-				pthreads_set_state(thread, PTHREADS_ST_STARTED);
-				
-				/*
-				* Set running flag and store thread in globals
-				*/
-				pthreads_set_state(thread, PTHREADS_ST_RUNNING);
-				
-				/*
-				* Attempt to start the thread
-				*/
-				if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
-					/*
-					* Wait for notification to continue
-					*/
-					pthreads_set_state(thread, PTHREADS_ST_WAITING);
-				} else {
-					/*
-					* Do not attempt to join failed threads at dtor time
-					*/
-					pthreads_unset_state(thread, PTHREADS_ST_RUNNING);
-					
-					/*
-					* Report the error, there's no chance of recovery ...
-					*/
-					switch(result) {
-						case EAGAIN:
-							zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", Z_OBJCE_P(getThis())->name);
-						break;
-						
-						default: zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error", Z_OBJCE_P(getThis())->name);
-					}
-				}
-			} else { result = FAILURE; }
-		} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to start %s (%lu) that has already been started", Z_OBJCE_P(getThis())->name, thread->tid);	
-	} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while starting %s and cannot continue", Z_OBJCE_P(getThis())->name);
-	
-	if (acquire != EDEADLK)
-		PTHREADS_UNLOCK(thread);
+		} else { result = FAILURE; }
+	} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to start %s (%lu) that has already been started", Z_OBJCE_P(getThis())->name, thread->tid);	
 	
 	if (result==SUCCESS) {
 		RETURN_TRUE;
