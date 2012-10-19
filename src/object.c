@@ -1,3 +1,20 @@
+/*
+  +----------------------------------------------------------------------+
+  | pthreads                                                             |
+  +----------------------------------------------------------------------+
+  | Copyright (c) Joe Watkins 2012                                		 |
+  +----------------------------------------------------------------------+
+  | This source file is subject to version 3.01 of the PHP license,      |
+  | that is bundled with this package in the file LICENSE, and is        |
+  | available through the world-wide-web at the following url:           |
+  | http://www.php.net/license/3_01.txt                                  |
+  | If you did not receive a copy of the PHP license and are unable to   |
+  | obtain it through the world-wide-web, please send a note to          |
+  | license@php.net so we can mail you a copy immediately.               |
+  +----------------------------------------------------------------------+
+  | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
+  +----------------------------------------------------------------------+
+ */
 #ifndef HAVE_PTHREADS_OBJECT
 #define HAVE_PTHREADS_OBJECT
 
@@ -17,6 +34,15 @@
 #	include <src/modifiers.h>
 #endif
 
+/* {{{ setup reference to self using from as the threading version of $this */
+#define PTHREADS_SET_SELF(from) do{\
+	self = PTHREADS_FETCH_FROM(from);\
+	pthreads_copy(thread, self);\
+	thread->sig = self;\
+	self->sig = thread;\
+	self->tls = tsrm_ls;\
+}while(0) /* }}} */
+
 /* {{{ pthreads object handlers */
 extern zend_object_handlers poh; /* }}} */
 
@@ -30,13 +56,13 @@ zend_function_entry	pthreads_empty_methods[] = {
 
 /* {{{ set worker flag on PTHREAD */
 int pthreads_set_worker(PTHREAD thread, zend_bool flag) {
-	int acquire = PTHREADS_LOCK(thread);
+	int acquire = pthread_mutex_lock(thread->lock);
 	int result = 0;
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		thread->worker = flag;
 		result = 1;
 		if (acquire != EDEADLK)
-			PTHREADS_UNLOCK(thread);
+			pthread_mutex_unlock(thread->lock);
 	} else result = 0;
 	return result;
 } /* }}} */
@@ -44,55 +70,25 @@ int pthreads_set_worker(PTHREAD thread, zend_bool flag) {
 /* {{{ get worker flag on PTHREAD */
 int pthreads_is_worker(PTHREAD thread) {
 	int result;
-	int acquire = PTHREADS_LOCK(thread);
+	int acquire = pthread_mutex_lock(thread->lock);
 	
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		result = thread->worker;
 		if (acquire != EDEADLK)
-			PTHREADS_UNLOCK(thread);
+			pthread_mutex_unlock(thread->lock);
 	} else result = -1;
 	return result;
 } /* }}} */
 
 /* {{{ set state bits on a thread, timeout where appropriate/required */
 int pthreads_set_state_ex(PTHREAD thread, int mask, long timeout) {
-	struct timeval now;
-	struct timespec until;
-	int wacquire = 0, timed = 0, result = -1;
-	
-	if (timeout>0L) {
-		if (gettimeofday(&now, NULL)==SUCCESS) {
-			long nsec = timeout * 1000;
-			if (nsec > 1000000000L) {
-				until.tv_sec = now.tv_sec + (nsec / 1000000000L);
-				until.tv_nsec = (now.tv_usec * 1000) + (nsec % 1000000000L);
-			} else {
-				until.tv_sec = now.tv_sec;
-				until.tv_nsec = (now.tv_usec * 1000) + timeout;	
-			}
-			timed=1;
-		}
-	}
+	int result = SUCCESS;
 	
 	pthreads_state_set(thread->state, mask);
 	
 	switch(mask){
-		case PTHREADS_ST_WAITING: {
-			wacquire = PTHREADS_WLOCK(thread);
-			if (wacquire == SUCCESS || wacquire == EDEADLK) {
-				do {
-					if (timed) {
-							result=!pthread_cond_timedwait(thread->sync, thread->wait, &until);
-					} else result=!pthread_cond_wait(thread->sync, thread->wait);
-				} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
-				if (wacquire != EDEADLK)
-					PTHREADS_WUNLOCK(thread);
-			} else zend_error(E_WARNING, "pthreads may have expereinced an internal error, I mean, really, who knows ?");
-		} break;
-		
-		case PTHREADS_ST_RUNNING: 	
-			pthreads_globals_add(thread); 
-		break;
+		case PTHREADS_ST_WAITING: result = pthreads_synchro_wait_ex(thread->synchro, timeout); break;
+		case PTHREADS_ST_RUNNING: pthreads_globals_add(thread); break;
 	}
 	
 	return result;
@@ -105,31 +101,16 @@ int pthreads_set_state(PTHREAD thread, int mask) {
 
 /* {{{ unset state bits on a thread */
 int pthreads_unset_state(PTHREAD thread, int mask){
-	int wacquire = 0;
+	int result = SUCCESS;
 	
 	pthreads_state_unset(thread->state, mask);
 	
 	switch(mask) {
-		case PTHREADS_ST_WAITING: {
-			wacquire = PTHREADS_WLOCK(thread);
-			
-			if (wacquire == SUCCESS || wacquire == EDEADLK) {
-				if (pthread_cond_signal(thread->sync)!=SUCCESS) {
-					zend_error(E_WARNING, "pthreads failed to notify %lu", thread->tid);
-				}
-					
-				if (wacquire != EDEADLK) {
-					PTHREADS_WUNLOCK(thread);
-				}
-			} else zend_error(E_WARNING, "pthreads failed to acquire wait lock");
-		} break;
-		
-		case PTHREADS_ST_RUNNING: 
-			pthreads_globals_del(thread); 
-		break;
+		case PTHREADS_ST_WAITING: result = pthreads_synchro_notify(thread->synchro); break;
+		case PTHREADS_ST_RUNNING: pthreads_globals_del(thread); break;
 	}
-
-	return SUCCESS;
+	
+	return result;
 } /* }}} */
 
 /* {{{ pop for php */
@@ -137,14 +118,14 @@ int pthreads_stack_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 	int acquire = 0;
 	int remain = 0;
 	
-	acquire = PTHREADS_LOCK(thread);
+	acquire = pthread_mutex_lock(thread->lock);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		if (work) {
 			zend_llist_del_element(thread->stack, &work, (int (*)(void *, void *)) pthreads_equal_func);
 		} else zend_llist_destroy(thread->stack);
 		remain = thread->stack->count;
 		if (acquire != EDEADLK)
-			PTHREADS_UNLOCK(thread);
+			pthread_mutex_unlock(thread->lock);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
 	return remain;
 } /* }}} */
@@ -160,7 +141,7 @@ int pthreads_stack_pop(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	zend_class_entry *pce;
 	zend_function *run;
 burst:
-	acquire = PTHREADS_LOCK(thread);
+	acquire = pthread_mutex_lock(thread->lock);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		bubble = thread->worker;
 		if (thread->stack->count > 0) {
@@ -246,11 +227,11 @@ burst:
 		}
 		
 		if (acquire != EDEADLK)
-			PTHREADS_UNLOCK(thread);
+			pthread_mutex_unlock(thread->lock);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
 	
-	if (bubble && remain < 0 && !PTHREADS_IS_JOINED(thread)) {
-		if (PTHREADS_WAIT(thread)) {
+	if (bubble && remain < 0 && !pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
+		if (pthreads_set_state(thread, PTHREADS_ST_WAITING)) {
 			remain = -1;
 			goto burst;
 		}
@@ -264,18 +245,18 @@ int pthreads_stack_push(PTHREAD thread, PTHREAD work) {
 	int acquire = 0;
 	int counted = -1;
 	
-	acquire = PTHREADS_LOCK(thread);
+	acquire = pthread_mutex_lock(thread->lock);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		thread->worker = 1;
 		zend_llist_add_element(thread->stack, &work);
 		counted = thread->stack->count;
 		if (acquire != EDEADLK)
-			PTHREADS_UNLOCK(thread);
+			pthread_mutex_unlock(thread->lock);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
 	
 	if (counted > 0) {
 		if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING)) {
-			PTHREADS_NOTIFY(thread);
+			pthreads_unset_state(thread, PTHREADS_ST_WAITING);
 		}
 	}
 	
@@ -287,11 +268,11 @@ int pthreads_stack_length(PTHREAD thread) {
 	int acquire = 0;
 	int counted = -1;
 	
-	acquire = PTHREADS_LOCK(thread);
+	acquire = pthread_mutex_lock(thread->lock);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
 		counted = thread->stack->count;
 		if (acquire != EDEADLK)
-			PTHREADS_UNLOCK(thread);
+			pthread_mutex_unlock(thread->lock);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	return counted;
 } /* }}} */
@@ -303,7 +284,7 @@ int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
 	zend_class_entry *pce;
 	
 	if (!PTHREADS_IS_CREATOR(thread)) {
-		acquire = PTHREADS_LOCK(thread);
+		acquire = pthread_mutex_lock(thread->lock);
 		
 		if (acquire == SUCCESS || acquire == EDEADLK) {
 			/*
@@ -373,7 +354,7 @@ int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
 			} else zend_error_noreturn(E_WARNING, "pthreads has detected a failure while trying to initialize imported Thread %lu", thread->tid);
 			
 			if (acquire != EDEADLK) 
-				PTHREADS_UNLOCK(thread);
+				pthread_mutex_unlock(thread->lock);
 		}
 	} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to import a thread that was created in the current context");
 	return imported != NULL ? 1 : 0;
@@ -400,24 +381,32 @@ zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
 	instance->cls = tsrm_ls;
 	
 	/*
-	* State Initialization
+	* Lock Initialization
 	*/
 	instance->lock = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
 	if (instance->lock) {
 		pthread_mutex_init(instance->lock, &defmutex);
-		instance->state = pthreads_state_alloc(0);
-		instance->wait = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
-		if (instance->wait) {
-			pthread_mutex_init(instance->wait, &defmutex);
-		}
 	}
 	
 	/*
-	* Sync Initialization
+	* State Initialization
 	*/
-	instance->sync = (pthread_cond_t*) calloc(1, sizeof(pthread_cond_t));
-	if (instance->sync)
-		pthread_cond_init(instance->sync, NULL);
+	instance->state = pthreads_state_alloc(0);
+	
+	/*
+	* Synchro Initialization
+	*/
+	instance->synchro = pthreads_synchro_alloc();
+	
+	/*
+	* Allocate Modifiers
+	*/
+	instance->modifiers = pthreads_modifiers_alloc();
+	
+	/*
+	* Look for private/protected methods
+	*/
+	pthreads_modifiers_init(instance->modifiers, entry TSRMLS_CC);
 	
 	/*
 	* Allocate Work Buffer
@@ -428,6 +417,11 @@ zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
 	* Initialize Work buffer
 	*/
 	zend_llist_init(instance->stack, sizeof(void**), NULL, 1);
+	
+	/*
+	* This is not a copy
+	*/
+	instance->copy = 0;
 	
 	/*
 	* Initialize standard entry
@@ -449,21 +443,6 @@ zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
 #else
 	object_properties_init(&(instance->std), entry);
 #endif		
-
-	/*
-	* Allocate Modifiers
-	*/
-	instance->modifiers = pthreads_modifiers_alloc();
-	
-	/*
-	* Look for private/protected methods
-	*/
-	pthreads_modifiers_init(instance->modifiers, entry TSRMLS_CC);
-	
-	/*
-	* Signify this is the real thread object
-	*/
-	instance->copy = 0;
 	
 	/*
 	* Store the object
@@ -592,20 +571,17 @@ void pthreads_detach_from_other(void *arg TSRMLS_DC) {
 void pthreads_detach_from_context(void * arg TSRMLS_DC){
 	PTHREAD thread = (PTHREAD) arg;
 	char *result;
-	int worker = 0;
-	if (arg && thread) {	
-		worker = pthreads_is_worker(thread);
+	if (arg && thread) {
 		if (pthreads_state_isset(thread->state, PTHREADS_ST_STARTED)) {
 			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
-				if (worker && pthreads_state_isset(thread->state, PTHREADS_ST_WAITING)) {
+				pthreads_state_set(thread->state, PTHREADS_ST_JOINED);
+				
+				if (pthreads_is_worker(thread)) {
 					do {
-						PTHREADS_NOTIFY(thread);
+						pthreads_unset_state(thread, PTHREADS_ST_WAITING);
 					} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
-					pthreads_state_set(thread->state, PTHREADS_ST_JOINED);
 				}
 				
-				if (!worker)
-					pthreads_state_set(thread->state, PTHREADS_ST_JOINED);
 				if (pthread_join(thread->thread, (void*) &result)==SUCCESS){
 					/*
 					* Free the result for the thread
@@ -623,27 +599,11 @@ void pthreads_detach_from_context(void * arg TSRMLS_DC){
 			free(thread->serial);
 		
 		/*
-		* Destroy Wait Lock
-		*/
-		if (thread->wait) {
-			pthread_mutex_destroy(thread->wait);
-			free(thread->wait);
-		}
-		
-		/*
-		* Destroy State Lock
+		* Destroy Thread Lock
 		*/
 		if (thread->lock) {
 			pthread_mutex_destroy(thread->lock);
 			free(thread->lock);
-		}
-		
-		/*
-		* Destroy Sync
-		*/
-		if (thread->sync) {
-			pthread_cond_destroy(thread->sync);
-			free(thread->sync);
 		}
 		
 		/*
@@ -665,6 +625,11 @@ void pthreads_detach_from_context(void * arg TSRMLS_DC){
 		* Free modifiers
 		*/
 		pthreads_modifiers_free(thread->modifiers);
+		
+		/*
+		* Free synchro
+		*/
+		pthreads_synchro_free(thread->synchro);
 		
 		/*
 		* Run PHP specific detachment routine on thread
@@ -871,7 +836,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			* Allow the creating thread to continue where appropriate
 			*/
 			if (!thread->synchronized)
-				PTHREADS_NOTIFY(thread);
+				pthreads_unset_state(thread, PTHREADS_ST_WAITING);
 			
 			/*
 			* Find methods for execution
@@ -992,10 +957,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				zval_ptr_dtor(&symbols);
 			}
 			
-			/*
-			* Free zval allocated for $this
-			*/
-			FREE_ZVAL(this_ptr);
 		} zend_catch {	
 			if (symbols && Z_TYPE_P(symbols) != IS_NULL) {
 				zval_ptr_dtor(&symbols);
@@ -1004,17 +965,12 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			if (return_value && Z_TYPE_P(return_value) != IS_NULL){
 				zval_ptr_dtor(&return_value);
 			}
-			
-			/*
-			* Free zval allocated for $this
-			*/
-			FREE_ZVAL(this_ptr);
 		} zend_end_try();
 		
 		/*
 		* Restoring the pointer to original property table ensures they are free'd
 		*/
-		if (self)
+		if (self)	
 			self->std.properties = properties;
 		
 		/*
@@ -1032,7 +988,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		/*
 		* Prepare for shutdown
 		*/
-		preparation = PTHREADS_LOCK(thread);
+		preparation = pthread_mutex_lock(thread->lock);
 
 		/*
 		* Deactivate Zend
@@ -1043,10 +999,10 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		zend_deactivate_modules(TSRMLS_C);
 		zend_deactivate(TSRMLS_C);
 #endif
-		if (preparation != EDEADLK)
-			PTHREADS_UNLOCK(thread);
-		
 		tsrm_free_interpreter_context(tsrm_ls);	
+		
+		if (preparation != EDEADLK)
+			pthread_mutex_unlock(thread->lock);
 		
 		/*
 		* Release global lock
@@ -1058,7 +1014,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 	* Remove from global list and set flags
 	*/
 	pthreads_unset_state(thread, PTHREADS_ST_RUNNING);
-
 
 	/*
 	* Passing serialized symbols back to thread

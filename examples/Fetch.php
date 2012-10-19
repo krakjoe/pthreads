@@ -42,6 +42,7 @@ class Fetching extends Thread {
 }
 $thread = new Fetching();
 $thread->start(true);
+printf("STARTED\n");
 /*
 * we just got notified that there are symbols waiting
 */

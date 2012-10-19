@@ -31,6 +31,8 @@
 #	include <src/thread.h>
 #endif
 
+extern pthread_mutexattr_t defmutex;
+
 pthreads_state pthreads_state_alloc(int mask) {
 	pthreads_state state = calloc(1, sizeof(*state));
 	if (state != NULL) {

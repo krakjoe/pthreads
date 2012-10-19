@@ -65,15 +65,14 @@ typedef struct _pthread_construct {
 	pthreads_state state;
 	
 	/*
+	* Thread Sync
+	*/
+	pthreads_synchro synchro;
+	
+	/*
 	* Method modifiers
 	*/
 	pthreads_modifiers modifiers;
-	
-	/*
-	* Thread Sync
-	*/
-	pthread_mutex_t *wait;
-	pthread_cond_t	*sync;
 
 	/*
 	* Thread Flags
@@ -93,7 +92,7 @@ typedef struct _pthread_construct {
 	zend_llist *stack;
 	
 	struct _pthread_construct *sig;
-} THREAD, *PTHREAD;
+} *PTHREAD;
 
 /* {{{ comparison function */
 static inline int pthreads_equal(PTHREAD first, PTHREAD second) {
@@ -112,16 +111,18 @@ static inline int pthreads_equal_func(void **first, void **second){
 
 /* {{{ copy an instance to another context */
 static inline void pthreads_copy(PTHREAD source, PTHREAD destination){
+	/*
+	* The observent among you can see that no actual copying goes on, for VERY good reason !
+	*/
 	if (source && destination) {
 		destination->copy = 1;
-		//destination->thread = source->thread;
+		destination->thread = source->thread;
 		destination->tid = source->tid;
 		destination->tls = source->tls;
 		destination->cid = source->cid;
 		destination->lock = source->lock;
 		destination->state = source->state;
-		destination->wait = source->wait;
-		destination->sync = source->sync;
+		destination->synchro = source->synchro;
 		destination->modifiers = source->modifiers;
 		destination->synchronized = source->synchronized;
 		destination->serial = source->serial;

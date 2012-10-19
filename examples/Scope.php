@@ -27,7 +27,7 @@ class ExampleThread extends Thread {
 	public function run(){
 		printf("%s: %s\n", __METHOD__, $this->data);
 		printf("%s: %s\n", __METHOD__, $this->synchronized(strrev($this->data)));
-		//printf("%s: %s\n", __METHOD__, $this->noaccess());
+		printf("%s: %s\n", __METHOD__, $this->noaccess());
 		printf("%s: %s\n", __METHOD__, $this->data);
 	}
 }
@@ -37,5 +37,5 @@ class ExampleThread extends Thread {
 */
 $thread = new ExampleThread(rand()*10);
 $thread->start();
-
+$thread->noaccess();
 ?>

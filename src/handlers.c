@@ -91,11 +91,11 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	int acquire = 0;
 	
 	if (thread) {
-		acquire = PTHREADS_LOCK(thread);
+		acquire = pthread_mutex_lock(thread->lock);
 		if (acquire == SUCCESS || acquire == EDEADLK) {
 			zsh->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
 			if (acquire != EDEADLK)
-				PTHREADS_UNLOCK(thread);
+				pthread_mutex_unlock(thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
 	}
 } /* }}} */
@@ -107,11 +107,11 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	int result = 0;
 	
 	if (thread) {
-		acquire = PTHREADS_LOCK(thread);
+		acquire = pthread_mutex_lock(thread->lock);
 		if (acquire == SUCCESS || acquire == EDEADLK) {
 			result = zsh->has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_C);
 			if (acquire != EDEADLK)
-				PTHREADS_UNLOCK(thread);
+				pthread_mutex_unlock(thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
 	}
 	
@@ -124,11 +124,11 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	int acquire = 0;
 	
 	if (thread) {
-		acquire = PTHREADS_LOCK(thread);
+		acquire = pthread_mutex_lock(thread->lock);
 		if (acquire == SUCCESS || acquire == EDEADLK) {
 			zsh->unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_C);
 			if (acquire != EDEADLK)
-				PTHREADS_UNLOCK(thread);
+				pthread_mutex_unlock(thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
 	}
 } /* }}} */
@@ -144,11 +144,10 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 	if (thread) {
 		switch(pthreads_modifiers_get(thread->modifiers, method TSRMLS_CC)){
 			case ZEND_ACC_PRIVATE:
-			case ZEND_ACC_PROTECTED: {
+			case ZEND_ACC_PROTECTED:
 				lcname =  (char*) calloc(1, methodl+1);
 				zend_str_tolower_copy(lcname, method, methodl);
 				if (zend_hash_find(&Z_OBJCE_PP(pobject)->function_table, lcname, methodl+1, (void**)&call)==SUCCESS) {
-					free(lcname);
 					callable = (zend_function*) emalloc(sizeof(zend_function));
 					callable->type = ZEND_OVERLOADED_FUNCTION;
 					callable->common.function_name = call->common.function_name;
@@ -160,19 +159,18 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 #if PHP_VERSION_ID < 50400
 					callable->common.pass_rest_by_reference = call->common.pass_rest_by_reference;
 					callable->common.return_reference = call->common.return_reference;
-#endif			
-					ops = &call->op_array;
-					if (ops){
-						(*ops->refcount)++;
-					}
-					return callable;
-				} else free(lcname);
-			} break;
+#endif					
+					destroy_zend_function(call TSRMLS_CC);
+					function_add_ref(call);
+				}
+				free(lcname);
+			return callable;
 			
-			default: 
-				call = zsh->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
+			default: call = zsh->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
 		}
+		
 	} else call = zsh->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
+	
 	return call;
 } /* }}} */
 
@@ -191,6 +189,17 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 			switch((access=pthreads_modifiers_get(thread->modifiers, method TSRMLS_CC))){
 				case ZEND_ACC_PRIVATE:
 				case ZEND_ACC_PROTECTED: {
+					/*
+					* Get arguments from stack
+					*/
+					if (ZEND_NUM_ARGS()) 
+					{
+						argv = safe_emalloc(sizeof(zval **), argc, 0);
+						if (argv) {
+							zend_get_parameters_array_ex(argc, argv);
+						}
+					}
+							
 					if (access == ZEND_ACC_PRIVATE && !PTHREADS_IN_THREAD(thread)) {
 						zend_error_noreturn(
 							E_WARNING, 
@@ -198,6 +207,10 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 							Z_OBJCE_P(getThis())->name,
 							method
 						);
+						if (argc) {
+							printf("freeing %d args\n", argc);
+							efree(argv);
+						}
 						return FAILURE;
 					}
 					
@@ -207,17 +220,6 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 					
 					if (zend_hash_find(&Z_OBJCE_P(getThis())->function_table, lcname, mlength+1, (void**)&call)==SUCCESS) {
 						if (call) {
-							/*
-							* Get arguments from stack
-							*/
-							if (ZEND_NUM_ARGS()) 
-							{
-								argv = safe_emalloc(sizeof(zval **), argc, 0);
-								if (argv) {
-									zend_get_parameters_array_ex(argc, argv);
-								}
-							}
-							
 							/*
 							* Make protected method call
 							*/
@@ -273,15 +275,6 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 									called = FAILURE;
 								}
 							}
-							
-							/*
-							* Free unstacked arguments
-							*/
-							{
-								if (argc) {
-									efree(argv);
-								}
-							}
 						} else {
 							zend_error_noreturn(
 								E_ERROR, 
@@ -292,6 +285,12 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 							);
 							called = FAILURE;
 						}
+					}
+					/*
+					* Free unstacked arguments
+					*/
+					if (argc) {
+						efree(argv);
 					}
 					free(lcname);
 					return called;

@@ -84,51 +84,6 @@ int pthreads_stack_length(PTHREAD thread);
 /* {{{ fetches the current PTHREAD from $this */
 #define PTHREADS_FETCH (PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC) /* }}} */
 
-/* {{{ set the joined state on the referenced PTHREAD */
-#define PTHREADS_IS_JOINED(t) pthreads_state_isset(t->state, PTHREADS_ST_JOINED) /* }}} */
-
-/* {{{ set the started state on the referenced PTHREAD */
-#define PTHREADS_IS_STARTED(t) pthreads_state_isset(t->state, PTHREADS_ST_STARTED) /* }}} */
-
-/* {{{ tell if the referenced PTHREAD is in the running state */
-#define PTHREADS_IS_RUNNING(t) pthreads_state_isset(t->state, PTHREADS_ST_RUNNING) /* }}} */
-
-/* {{{ wait on the referenced PTHREAD monitor to be notified */
-#define PTHREADS_WAIT(t) pthreads_set_state(t, PTHREADS_ST_WAITING) /* }}} */
-
-/* {{{ wait on the referenced PTHREAD monitor for a specific amount of time */
-#define PTHREADS_WAIT_EX(t, l) pthreads_set_state_ex(t, PTHREADS_ST_WAITING, l) /* }}} */
-
-/* {{{ notify the referenced PTHREAD monitor */
-#define PTHREADS_NOTIFY(t) pthreads_unset_state(t, PTHREADS_ST_WAITING) /* }}} */
-
-/* {{{ lock a threads state */
-#define PTHREADS_LOCK(t) pthread_mutex_lock(t->lock) /* }}} */
-
-/* {{{ try to lock a threads state */
-#define PTHREADS_TRYLOCK(t) pthread_mutex_trylock(t->lock)  /* }}} */
-
-/* {{{ acquire wait lock */
-#define PTHREADS_WLOCK(t) pthread_mutex_lock(t->wait) /* }}} */
-
-/* {{{ try to acquire wait lock */
-#define PTHREADS_TRYWLOCK(t) pthread_mutex_trylock(t->wait) /* }}} */
-
-/* {{{ unlock a threads state */
-#define PTHREADS_UNLOCK(t) pthread_mutex_unlock(t->lock) /* }}} */
-
-/* {{{ release wait lock */
-#define PTHREADS_WUNLOCK(t) pthread_mutex_unlock(t->wait) /* }}} */
-
-/* {{{ setup reference to self using from as the threading version of $this */
-#define PTHREADS_SET_SELF(from) do{\
-	self = PTHREADS_FETCH_FROM(from);\
-	pthreads_copy(thread, self);\
-	thread->sig = self;\
-	self->sig = thread;\
-	self->tls = tsrm_ls;\
-}while(0) /* }}} */
-
 /* {{{ handlers included here for access to macros above */
 #ifndef HAVE_PTHREADS_HANDLERS_H
 #	include <src/handlers.h>
