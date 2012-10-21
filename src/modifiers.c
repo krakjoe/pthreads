@@ -79,8 +79,6 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 					method->common.function_name,
 					ZEND_ACC_PRIVATE TSRMLS_CC
 				);
-				function_add_ref(method);
-				destroy_zend_function(method TSRMLS_CC);
 			}
 			
 			/*
@@ -92,8 +90,6 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 					method->common.function_name,
 					ZEND_ACC_PROTECTED TSRMLS_CC
 				);
-				function_add_ref(method);
-				destroy_zend_function(method TSRMLS_CC);
 			}
 		}
 	}

@@ -93,11 +93,6 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 /* }}} */
 
-/* {{{ advanced */
-ZEND_BEGIN_ARG_INFO_EX(Thread_yield, 0, 0, 0)
-ZEND_END_ARG_INFO()
-/* }}} */
-
 /* {{{ synchronization */
 ZEND_BEGIN_ARG_INFO_EX(Thread_wait, 0, 0, 0)
 	ZEND_ARG_INFO(0, timeout)
@@ -588,21 +583,12 @@ PHP_METHOD(Thread, notify)
 	RETURN_FALSE;
 } /* }}} */
 
-/* {{{ proto mixed Thread::join([boolean discard]) 
-		Will cause the calling thread to block and wait for the output of the referenced thread
-		If discard is void or false, properties set in the threading context during runtime will replace the properties of the referenced thread in the current context */
+/* {{{ proto mixed Thread::join() 
+		Will cause the calling thread to block and wait for the exit status of the referenced thread */
 PHP_METHOD(Thread, join) 
 { 
 	PTHREAD thread = PTHREADS_FETCH;
-	zend_bool discard = 0;
 	
-	/*
-	* Check for discard argument
-	*/
-	if (ZEND_NUM_ARGS()) {
-		zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &discard);
-	}
-		
 	/*
 	* Check that we are in the correct context
 	*/

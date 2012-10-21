@@ -753,11 +753,14 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		*/
 		{
 			/*
-			* Allocate and Initialize an interpreter context for this Thread
+			* Acquire Global Lock
 			*/
 			pthreads_globals_lock();
+			
+			/*
+			* Allocate Context
+			*/
 			tsrm_ls = tsrm_new_interpreter_context(); 
-			pthreads_globals_unlock(); 
 			
 			/*
 			* Set Context/TSRMLS
@@ -817,17 +820,17 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			zval *this_ptr = NULL, *return_value = NULL;
 			
 			/*
+			* A new reference to $this for the current context
+			*/ 
+			MAKE_STD_ZVAL(this_ptr);
+				
+			/*
 			* Set bailout address
 			*/
 			zend_first_try {
 			
 				/*
-				* A new reference to $this for the current context
-				*/ 
-				MAKE_STD_ZVAL(this_ptr);
-			
-				/*
-				* First some basic executor setup, using zend_first_try sets a sensible bailout address incase of error
+				* First some basic executor setup
 				*/
 				EG(in_execution) = 1;							
 				EG(current_execute_data)=NULL;					
@@ -928,33 +931,36 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 						
 					} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", thread->std.ce->name);
 				}
-				
-				/*
-				* Remove from global list and set flags
-				*/
-				pthreads_unset_state(thread, PTHREADS_ST_RUNNING TSRMLS_CC);
-				
-				/*
-				* Store and destroy return value from Thread::run
-				*/
-				if (return_value) {
-					switch(Z_TYPE_P(return_value)){
-						case IS_NULL: (*thread->status) = 0L; break;
-						case IS_LONG: (*thread->status) = Z_LVAL_P(return_value); break;
-						case IS_DOUBLE: (*thread->status) = (long) Z_LVAL_P(return_value); break;
-						case IS_BOOL: (*thread->status) = (long) Z_BVAL_P(return_value); break;
-						
-						default:
-							zend_error_noreturn(E_WARNING, "pthreads has detected that %s::run (%lu) attempted to return an unsupported symbol", Z_OBJCE_P(getThis())->name, thread->tid);
-							FREE_ZVAL(return_value);
-							(*thread->status) = 0L;
-					}
-				} else (*thread->status) = 0L;
 			} zend_catch {	
-				if (return_value && Z_TYPE_P(return_value) > IS_BOOL){
-					zval_ptr_dtor(&return_value);
-				}
+				/* do something, it's all gone wrong */
 			} zend_end_try();
+			
+			/*
+			* Unset running flag
+			*/
+			pthreads_unset_state(thread, PTHREADS_ST_RUNNING TSRMLS_CC);
+			
+			/*
+			* Store and destroy return value from Thread::run
+			*/
+			if (return_value) {
+				switch(Z_TYPE_P(return_value)){
+					case IS_NULL: (*thread->status) = 0L; break;
+					case IS_LONG: (*thread->status) = Z_LVAL_P(return_value); break;
+					case IS_DOUBLE: (*thread->status) = (long) Z_LVAL_P(return_value); break;
+					case IS_BOOL: (*thread->status) = (long) Z_BVAL_P(return_value); break;
+					
+					default:
+						zend_error_noreturn(E_WARNING, "pthreads has detected that %s::run (%lu) attempted to return an unsupported symbol", Z_OBJCE_P(getThis())->name, thread->tid);
+						FREE_ZVAL(return_value);
+						(*thread->status) = 0L;
+				}
+			} else (*thread->status) = 0L;
+			
+			/*
+			* Free pointer to this
+			*/
+			FREE_ZVAL(this_ptr);
 		}
 		
 		
@@ -963,18 +969,11 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 		* Shutdown Block
 		*/
 		{
-			int acquire = 0;
-			
 			/*
 			* Acquire global lock
 			*/
 			pthreads_globals_lock();
 		
-			/*
-			* Prepare for shutdown
-			*/
-			acquire = pthread_mutex_lock(thread->lock);
-
 			/*
 			* Deactivate Zend
 			*/
@@ -989,9 +988,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			* Free Context
 			*/
 			tsrm_free_interpreter_context(tsrm_ls);	
-			
-			if (acquire != EDEADLK)
-				pthread_mutex_unlock(thread->lock);
 				
 			/*
 			* Release global lock
