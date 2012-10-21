@@ -5,7 +5,6 @@
 class ExampleThread extends Thread {
 	/*
 	* This private method can only be called within the threading context
-	* @NOTE there is a leak when a private method is called from outside the threading context
 	*/
 	private function noaccess(){
 		printf("%lu: ran %s\n", $this->getThreadId(), __METHOD__);
