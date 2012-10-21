@@ -22,16 +22,22 @@
 #	include <src/synchro.h>
 #endif
 
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include <src/thread.h>
+#endif
+
 extern pthread_mutexattr_t defmutex;
 
-pthreads_synchro pthreads_synchro_alloc() {
+pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 	pthreads_synchro sync = (pthreads_synchro) calloc(1, sizeof(*sync));
 	
 	if (sync) {
 		sync->waiting = 0;
-		if (pthread_mutex_init(&sync->wait, &defmutex)==SUCCESS &&
-			pthread_mutex_init(&sync->notify, &defmutex)==SUCCESS) {
-			if (pthread_cond_init(&sync->cond, NULL)==SUCCESS) {
+		sync->hanging = 0;
+		
+		if (pthread_mutex_init(&sync->wait, &defmutex)==SUCCESS) {
+			if (pthread_cond_init(&sync->notify, NULL)==SUCCESS &&
+				pthread_cond_init(&sync->hang, NULL)==SUCCESS) {
 				return sync;
 			} else free(sync);
 		} else free(sync);
@@ -40,8 +46,8 @@ pthreads_synchro pthreads_synchro_alloc() {
 	return NULL;
 }
 
-int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout) {
-	int result = FAILURE, notified = 0;
+int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
+	int result = FAILURE;
 	struct timeval now;
 	struct timespec until;
 	
@@ -59,58 +65,61 @@ int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout) {
 	}
 	
 	if (sync) {
-		if (pthread_mutex_lock(&sync->notify) == SUCCESS) {
-			notified = sync->notified;
-			sync->waiting = !notified;
-			pthread_mutex_unlock(&sync->notify);
-
-			if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
-				if (!notified) {
-					do {
-						if (timeout > 0L) {
-							result = pthread_cond_timedwait(&sync->cond, &sync->wait, &until);
-						} else { result = pthread_cond_wait(&sync->cond, &sync->wait); }
-					} while(sync->waiting);
-				} else result = SUCCESS;
-				pthread_mutex_unlock(&sync->wait);	
-			} else { /* report fatality */ }
+		if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
+			if (sync->hanging) {
+				sync->hanging = 0;
+				if (pthread_cond_broadcast(&sync->hang)!=SUCCESS) {
+					/* report error */
+				}
+			}
+			
+			sync->waiting = 1;
+			do {
+				if (timeout > 0L) {
+					result = pthread_cond_timedwait(&sync->notify, &sync->wait, &until);
+				} else { result = pthread_cond_wait(&sync->notify, &sync->wait); }
+			} while(sync->waiting);
+			
+			pthread_mutex_unlock(&sync->wait);	
 		} else { /* report fatality */ }
 	} else { /* report unknown error */ }
 	
 	return (result == SUCCESS) ? 1 : 0;
 }
 
-int pthreads_synchro_wait(pthreads_synchro sync) {
-	return pthreads_synchro_wait_ex(sync, 0L);
+int pthreads_synchro_wait(pthreads_synchro sync TSRMLS_DC) {
+	return pthreads_synchro_wait_ex(sync, 0L TSRMLS_CC);
 }
 
-int pthreads_synchro_notify(pthreads_synchro sync) {
-	int result = FAILURE, notify = 0;
+int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
+	int result = FAILURE;
 	
 	if (sync) {
-		if (pthread_mutex_lock(&sync->notify) == SUCCESS) {
-			notify = sync->waiting;
-			sync->notified = !notify;
-			pthread_mutex_unlock(&sync->notify);
-			
-			if (notify) {
-				if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
-					sync->waiting = 0;
-					if ((result = pthread_cond_broadcast(&sync->cond))!=SUCCESS) {
+		if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
+			if (!sync->waiting) {
+				sync->hanging = 1;
+				do {
+					if(pthread_cond_wait(&sync->hang, &sync->wait)!=SUCCESS){
 						/* report error */
+						break;
 					}
-					pthread_mutex_unlock(&sync->wait);
-				} else { /* report error */ }
-			} else result = SUCCESS;
-		} else { /* report fatality */ }
+				} while(sync->hanging);
+			}
+			
+			sync->waiting = 0;
+			if ((result = pthread_cond_broadcast(&sync->notify))!=SUCCESS) {
+				/* report error */
+			}
+			
+			pthread_mutex_unlock(&sync->wait);
+		} else { /* report error */ }
 	} else { /* report unknown error */ }
 	return (result == SUCCESS) ? 1 : 0;
 }
 
-void pthreads_synchro_free(pthreads_synchro sync) {
-	pthread_cond_destroy(&sync->cond);
+void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC) {
+	pthread_cond_destroy(&sync->notify);
 	pthread_mutex_destroy(&sync->wait);
-	pthread_mutex_destroy(&sync->notify);
 	free(sync);
 }
 

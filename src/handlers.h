@@ -67,21 +67,21 @@ extern zend_object_handlers * zsh;
 #	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
 #endif /* }}} */
 
-/* {{{ pthreads_read_property will attempt to reference the threading context from whichever context it was called (creator/import) */
+/* {{{ read a property from the referenced thread */
 zval * pthreads_read_property(PTHREADS_READ_PROPERTY_PASSTHRU_D); /* }}} */
 
-/* {{{ pthreads_write_property will not attempt to reference the threading context, but does require the thread lock to ensure safe concurrent reads */
+/* {{{ write a property to the referenced thread */
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D); /* }}} */
 
-/* {{{ pthreads_has_property should attempt to reference the threading context to save allocs and have isset work as expected */
+/* {{{ check if the referenced thread has a specific property */
 int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D); /* }}} */
 
-/* {{{ pthreads_unset_property will not attempt to reference any other context, but does require the therad lock to ensure safe concurrent reads */
+/* {{{ unset a property in the referenced thread */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D); /* }}} */
 
-/* {{{ pthreads_get_method will read modifiers from the correct context and apply them in the current context */
+/* {{{ fetch a pthreads friendly method */
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D); /* }}} */
 
-/* {{{ pthreads_call_method will syncrhonize access to protected methods, such that only one context can call protected methods at a time */
+/* {{{ make a pthreads method call */
 int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D); /* }}} */
 #endif

@@ -92,5 +92,7 @@ $pool->shutdown();
 /*
 * Look inside ...
 */
-print_r($pool);
+foreach($pool->workers as $worker) {
+	printf("Thread %lu made %d attempts ...\n", $worker->getThreadId(), $worker->attempt);
+}
 ?>

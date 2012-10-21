@@ -33,7 +33,7 @@
 
 extern pthread_mutexattr_t defmutex;
 
-pthreads_state pthreads_state_alloc(int mask) {
+pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 	pthreads_state state = calloc(1, sizeof(*state));
 	if (state != NULL) {
 		state->bits = mask;
@@ -44,26 +44,22 @@ pthreads_state pthreads_state_alloc(int mask) {
 	return NULL;
 }
 
-int pthreads_state_lock(pthreads_state state, int *acquired) {
+int pthreads_state_lock(pthreads_state state, int *acquired TSRMLS_DC) {
 	switch(pthread_mutex_lock(&state->lock)){
 		case SUCCESS: 
-			return ((*acquired)=1); 
-		break;
+			return ((*acquired)=1);
 		
 		case EDEADLK:
-			(*acquired)=0;
-			return 1;
-		break;
+			return ((*acquired)=0);
 		
 		default: {
 			zend_error(E_WARNING, "pthreads has experienced an internal error and is likely to fail");
-			(*acquired)=0;
-			return 0;
+			return ((*acquired)=0);
 		}
 	}
 }
 
-int pthreads_state_unlock(pthreads_state state, int *acquired) {
+int pthreads_state_unlock(pthreads_state state, int *acquired TSRMLS_DC) {
 	if ((*acquired)) {
 		if (pthread_mutex_unlock(&state->lock)==SUCCESS) {
 			return 1;
@@ -71,7 +67,7 @@ int pthreads_state_unlock(pthreads_state state, int *acquired) {
 	} else return 1;
 }
 
-void pthreads_state_free(pthreads_state state) {
+void pthreads_state_free(pthreads_state state TSRMLS_DC) {
 	if (state) {
 		if (pthread_mutex_destroy(&state->lock)==SUCCESS) {
 			free(state);
@@ -80,13 +76,13 @@ void pthreads_state_free(pthreads_state state) {
 	} else zend_error(E_WARNING, "pthreads_state_free failed to read state object");
 }
 
-int pthreads_state_set(pthreads_state state, int mask) {
+int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC) {
 	int acquired;
 	
 	if (state) {
-		if (pthreads_state_lock(state, &acquired)) {
+		if (pthreads_state_lock(state, &acquired TSRMLS_CC)) {
 			state->bits |= mask;
-			return pthreads_state_unlock(state, &acquired);
+			return pthreads_state_unlock(state, &acquired TSRMLS_CC);
 		} else {
 			zend_error_noreturn(E_WARNING, "pthreads_state_set failed to lock state object");
 			return 0;
@@ -97,16 +93,16 @@ int pthreads_state_set(pthreads_state state, int mask) {
 	}
 }
 
-int pthreads_state_isset(pthreads_state state, int mask) {
+int pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC) {
 	int acquired;
 	
 	if (state) {
-		if (pthreads_state_lock(state, &acquired)){
-			if (PTHREADS_ST_CHECK(state->bits, mask)) {
-				pthreads_state_unlock(state, &acquired);
+		if (pthreads_state_lock(state, &acquired TSRMLS_CC)){
+			if (state->bits & mask) {
+				pthreads_state_unlock(state, &acquired TSRMLS_CC);
 				return 1;
 			} else {
-				pthreads_state_unlock(state, &acquired);
+				pthreads_state_unlock(state, &acquired TSRMLS_CC);
 				return 0;
 			}
 		} else {
@@ -119,13 +115,13 @@ int pthreads_state_isset(pthreads_state state, int mask) {
 	}
 }
 
-int pthreads_state_unset(pthreads_state state, int mask) {
+int pthreads_state_unset(pthreads_state state, int mask TSRMLS_DC) {
 	int acquired;
 	
 	if (state) {
-		if (pthreads_state_lock(state, &acquired)) {
+		if (pthreads_state_lock(state, &acquired TSRMLS_CC)) {
 			state->bits &= ~mask;
-			return pthreads_state_unlock(state, &acquired);
+			return pthreads_state_unlock(state, &acquired TSRMLS_CC);
 		} else {
 			zend_error(E_WARNING, "pthreads_state_unset failed to lock state object");
 			return 0;

@@ -23,17 +23,17 @@
 #endif
 
 typedef struct _pthreads_synchro {
-	zend_uint waiting;
-	zend_uint notified;
 	pthread_mutex_t wait;
-	pthread_mutex_t notify;
-	pthread_cond_t cond;
+	pthread_cond_t notify;
+	pthread_cond_t hang;
+	zend_bool waiting;
+	zend_bool hanging;
 } *pthreads_synchro;
 
-pthreads_synchro pthreads_synchro_alloc();
-int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout);
-int pthreads_synchro_wait(pthreads_synchro sync);
-int pthreads_synchro_notify(pthreads_synchro sync);
-void pthreads_synchro_free(pthreads_synchro sync);
+pthreads_synchro pthreads_synchro_alloc(TSRMLS_D);
+int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC);
+int pthreads_synchro_wait(pthreads_synchro sync TSRMLS_DC);
+int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC);
+void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC);
 
 #endif

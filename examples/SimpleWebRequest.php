@@ -5,7 +5,6 @@ class AsyncWebRequest extends Thread {
 
 	public function __construct($url){
 		$this->url = $url;
-		$this->data = null;
 	}
 	
 	public function run(){
@@ -26,10 +25,9 @@ if($g->start()){
 	printf("Request took %f seconds to start ", microtime(true)-$t);
 	while($g->isRunning()){
 		echo ".";
-		usleep(500);
+		usleep(100);
 	}
 	if ($g->join()){
-		printf(" ... joined ... ");
 		printf(" and %f seconds to finish receiving %d bytes\n", microtime(true)-$t, strlen($g->data));
 	} else printf(" and %f seconds to finish, request failed\n", microtime(true)-$t);
 	

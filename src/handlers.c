@@ -26,6 +26,10 @@
 #	include <src/thread.h>
 #endif
 
+#ifndef HAVE_PTHREADS_SERIAL_H
+#	include <src/serial.h>
+#endif
+
 #ifndef HAVE_PTHREADS_OBJECT_H
 #	include <src/object.h>
 #endif
@@ -34,48 +38,20 @@
 #	include <src/modifiers.h>
 #endif
 
-#define PTHREADS_IMPORT_PROPERTY(t, m, l, p) \
-	if (t->std.properties != NULL && zend_hash_find(t->std.properties, Z_STRVAL_P(m), Z_STRLEN_P(m)+1, (void**)&l)==SUCCESS) {\
-		switch(Z_TYPE_PP(l)){\
-			case IS_LONG:\
-			case IS_BOOL:\
-			case IS_STRING:\
-			case IS_NULL:\
-			case IS_ARRAY:\
-				serial = pthreads_serialize(*l TSRMLS_CC);\
-				if (serial) {\
-					if ((p = pthreads_unserialize(serial TSRMLS_CC)) != NULL){\
-						Z_SET_REFCOUNT_P(p, 0);\
-						Z_UNSET_ISREF_P(p);\
-					}\
-					free(serial);\
-				}\
-			break;\
-			\
-			case IS_OBJECT:\
-			case IS_RESOURCE:\
-				zend_error(E_WARNING, "pthreads detected an attempt to fetch an unsupported symbol (%s)", Z_STRVAL_P(m));\
-			break;\
-		}\
-	}\
-
-/* {{ read_property */
+/* {{ reads a property from a thread, wherever it is available */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
+	int acquire = 0;
+	zval *prop = NULL;
 	PTHREAD thread = PTHREADS_FETCH_FROM(object);
-	int acquire = 0, sacquire = 0;
-	zval **lookup = NULL, *prop = NULL;
-	char *serial = NULL;
 	
 	if (thread) {
 		acquire = pthread_mutex_lock(thread->lock);
-		
+
 		if (acquire == SUCCESS || acquire == EDEADLK) {
-			if (!PTHREADS_IN_THREAD(thread)) {
-				if (pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING)) {
-					PTHREADS_IMPORT_PROPERTY(thread->sig, member, lookup, prop);
-					if (prop == NULL)
-						prop = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
-				} else prop = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+			if(pthreads_serial_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)) {
+				if (pthreads_serial_read(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &prop TSRMLS_CC)!=SUCCESS) {
+					zend_error_noreturn(E_WARNING, "pthreads has experienced an internal error while reading %s::$%s (%lu)", Z_OBJCE_P(object)->name, Z_STRVAL_P(member), thread->tid);
+				} else zend_hash_update(Z_OBJPROP_P(object), Z_STRVAL_P(member), Z_STRLEN_P(member)+1, &prop, sizeof(zval *), NULL);
 			} else prop = zsh->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
 			
 			if (acquire != EDEADLK)
@@ -86,31 +62,63 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	return prop;
 } /* }}} */
 
-/* {{{ write_property will never attempt to write any other object other than itself */
+/* {{{ writes a property to a thread in the appropriate way */
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
-	PTHREAD thread = PTHREADS_FETCH_FROM(object);
 	int acquire = 0;
+	PTHREAD thread = PTHREADS_FETCH_FROM(object);
 	
 	if (thread) {
 		acquire = pthread_mutex_lock(thread->lock);
 		if (acquire == SUCCESS || acquire == EDEADLK) {
-			zsh->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
+			switch(Z_TYPE_P(value)){
+				case IS_STRING:
+				case IS_LONG:
+				case IS_ARRAY:
+				case IS_OBJECT:
+				case IS_NULL:
+				case IS_DOUBLE:
+				case IS_BOOL: {
+					if (pthreads_serial_write(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS){
+						zend_error_noreturn(E_WARNING, "pthreads failed to write member %s::$%s (%lu)", Z_OBJCE_P(object)->name, Z_STRVAL_P(member), thread->tid);
+					}
+				} break;
+				
+				default: zsh->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
+			}
 			if (acquire != EDEADLK)
 				pthread_mutex_unlock(thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
 	}
 } /* }}} */
 
-/* {{{ has_property */
+/* {{{ check if a thread has a property set, wherever it is available */
 int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	PTHREAD thread = PTHREADS_FETCH_FROM(object);
-	int acquire = 0;
-	int result = 0;
+	int acquire = 0, result = -1;
 	
 	if (thread) {
 		acquire = pthread_mutex_lock(thread->lock);
 		if (acquire == SUCCESS || acquire == EDEADLK) {
-			result = zsh->has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_C);
+			if (pthreads_serial_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)) {
+
+				zval *serial; 
+				if (pthreads_serial_read(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &serial TSRMLS_CC)==SUCCESS) {
+					switch (has_set_exists) {
+						case 0: result = (Z_TYPE_P(serial) != IS_NULL); break;
+						case 1: 
+							result = 
+								(Z_TYPE_P(serial) == IS_STRING && Z_STRLEN_P(serial) > 0) ||
+								(Z_TYPE_P(serial) == IS_LONG && Z_LVAL_P(serial) > 0L) ||
+								(Z_TYPE_P(serial) == IS_DOUBLE && Z_DVAL_P(serial) > 0.00) ||
+								(Z_TYPE_P(serial) == IS_ARRAY && zend_hash_num_elements(Z_ARRVAL_P(serial)) > 0)
+							; 
+							break;
+						case 2: result = 1; break;
+					}
+					FREE_ZVAL(serial);
+				}
+			} else result = zsh->has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_C);
+			
 			if (acquire != EDEADLK)
 				pthread_mutex_unlock(thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
@@ -119,7 +127,7 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	return result;
 } /* }}} */
 
-/* {{{ unset_property will never attempt to write any object other than itself */
+/* {{{ unset an object property */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	PTHREAD thread = PTHREADS_FETCH_FROM(object);
 	int acquire = 0;
@@ -127,7 +135,15 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	if (thread) {
 		acquire = pthread_mutex_lock(thread->lock);
 		if (acquire == SUCCESS || acquire == EDEADLK) {
+		
+			if (pthreads_serial_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)) {
+				if (pthreads_serial_delete(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
+					zend_error_noreturn(E_WARNING, "pthreads has experienced an internal error while deleting %s from %s (%lu)", Z_STRVAL_P(member), Z_OBJCE_P(object)->name, thread->tid);
+				}
+			}
+			
 			zsh->unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_C);
+			
 			if (acquire != EDEADLK)
 				pthread_mutex_unlock(thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
@@ -138,7 +154,6 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 	zend_function *call;
 	zend_function *callable;
-	zend_op_array *ops;
 	char *lcname;
 	
 	PTHREAD thread = PTHREADS_FETCH_FROM(*pobject);
@@ -175,7 +190,7 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 	return call;
 } /* }}} */
 
-/* {{{ pthreads_call_method */
+/* {{{ pthreads_call_method, leaks */
 int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 	zval 					***argv, zmethod;
 	zend_function 			*call = NULL;
@@ -191,6 +206,19 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 				case ZEND_ACC_PRIVATE:
 				case ZEND_ACC_PROTECTED: {
 					/*
+					* Stop invalid private method calls
+					*/
+					if (access == ZEND_ACC_PRIVATE && !PTHREADS_IN_THREAD(thread)) {
+						zend_error_noreturn(
+							E_ERROR, 
+							"pthreads detected an attempt to call private method %s::%s from outside the threading context", 
+							Z_OBJCE_P(getThis())->name,
+							method
+						);
+						return FAILURE;
+					}
+					
+					/*
 					* Get arguments from stack
 					*/
 					if (ZEND_NUM_ARGS()) 
@@ -201,19 +229,6 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 						}
 					}
 							
-					if (access == ZEND_ACC_PRIVATE && !PTHREADS_IN_THREAD(thread)) {
-						zend_error_noreturn(
-							E_WARNING, 
-							"pthreads detected an attempt to call private method %s::%s from outside the threading context", 
-							Z_OBJCE_P(getThis())->name,
-							method
-						);
-						if (argc) {
-							efree(argv);
-						}
-						return FAILURE;
-					}
-					
 					mlength = strlen(method);
 					lcname =  calloc(1, mlength+1);
 					zend_str_tolower_copy(lcname, method, mlength);

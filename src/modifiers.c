@@ -44,7 +44,7 @@ static void pthreads_modifiers_protection_dtor(void **element) {
 } /* }}} */
 
 /* {{{ allocate modifiers */
-pthreads_modifiers pthreads_modifiers_alloc() {
+pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D) {
 	pthreads_modifiers modifiers = calloc(1, sizeof(*modifiers));
 	
 	if (modifiers) {
@@ -81,8 +81,6 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 				);
 				function_add_ref(method);
 				destroy_zend_function(method TSRMLS_CC);
-				// function_add_ref(method);
-				// method->type = ZEND_OVERLOADED_FUNCTION;
 			}
 			
 			/*
@@ -96,8 +94,6 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 				);
 				function_add_ref(method);
 				destroy_zend_function(method TSRMLS_CC);
-				// function_add_ref(method);
-				// method->type = ZEND_OVERLOADED_FUNCTION;
 			}
 		}
 	}
@@ -159,7 +155,7 @@ int pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *metho
 } /* }}} */
 
 /* {{{ free modifiers */
-void pthreads_modifiers_free(pthreads_modifiers modifiers) {
+void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC) {
 	zend_hash_destroy(&modifiers->modified);
 	zend_hash_destroy(&modifiers->protection);
 	free(modifiers);
