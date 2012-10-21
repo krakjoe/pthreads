@@ -53,16 +53,16 @@ void * PHP_PTHREAD_ROUTINE(void *);
 */
 
 /* {{{ state and stack management */
-int pthreads_is_worker(PTHREAD thread);
-int pthreads_set_worker(PTHREAD thread, zend_bool flag);
-int pthreads_set_state_ex(PTHREAD thread, int state, long timeout);
-int pthreads_set_state(PTHREAD thread, int state);
-int pthreads_unset_state(PTHREAD thread, int state);
+int pthreads_is_worker(PTHREAD thread TSRMLS_DC);
+int pthreads_set_worker(PTHREAD thread, zend_bool flag TSRMLS_DC);
+int pthreads_set_state_ex(PTHREAD thread, int state, long timeout TSRMLS_DC);
+int pthreads_set_state(PTHREAD thread, int state TSRMLS_DC);
+int pthreads_unset_state(PTHREAD thread, int state TSRMLS_DC);
 int pthreads_import(PTHREAD thread, zval **return_value TSRMLS_DC);
 int pthreads_stack_pop(PTHREAD thread, zval *this_ptr TSRMLS_DC);
 int pthreads_stack_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC);
-int pthreads_stack_push(PTHREAD thread, PTHREAD work);
-int pthreads_stack_length(PTHREAD thread);
+int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC);
+int pthreads_stack_length(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
 /* {{{ TSRM manipulation */

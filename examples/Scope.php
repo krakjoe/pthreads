@@ -3,13 +3,16 @@
 * pthreads overrides the functionality of the protected and private access modifiers ( for methods )
 */
 class ExampleThread extends Thread {
-	
+	/*
+	* This private method can only be called within the threading context
+	* @NOTE there is a leak when a private method is called from outside the threading context
+	*/
 	private function noaccess(){
-		return __METHOD__;
+		printf("%lu: ran %s\n", $this->getThreadId(), __METHOD__);
 	}
 	
 	/*
-	* 
+	* This protected method can only be called by one context at a time
 	*/
 	protected function synchronized($arg = null){
 		if ($arg)
@@ -27,8 +30,9 @@ class ExampleThread extends Thread {
 	public function run(){
 		printf("%s: %s\n", __METHOD__, $this->data);
 		printf("%s: %s\n", __METHOD__, $this->synchronized(strrev($this->data)));
-		printf("%s: %s\n", __METHOD__, $this->noaccess());
+		$this->noaccess();
 		printf("%s: %s\n", __METHOD__, $this->data);
+		return $this->data;
 	}
 }
 
@@ -37,5 +41,6 @@ class ExampleThread extends Thread {
 */
 $thread = new ExampleThread(rand()*10);
 $thread->start();
-$thread->noaccess();
+if ($argv[1])
+	$thread->noaccess();
 ?>

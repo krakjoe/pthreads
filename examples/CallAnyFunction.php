@@ -1,6 +1,6 @@
 <?php
 /* 
-	This isn't built in as it's a pretty simple task to achieve for yourgetThreadId
+	This isn't built in as it's a pretty simple task to achieve for your self
 	I can't really think of any functions that are labourious enough that you
 	would want to execute them by themselves in a thread of their own. Maybe
 	you have functions within your own code that could be called async without
@@ -18,12 +18,19 @@ class Async extends Thread {
 	public function __construct($method, $params){
 		$this->method = $method;
 		$this->params = $params;
+		$this->result = null;
+		$this->joined = false;
 	}
+	
 	/**
 	* The smallest thread in the world
-	* @NOTE: the function you're calling had better had serializable results
 	**/
-	public function run(){ return call_user_func_array($this->method, $this->params); }
+	public function run(){
+		if (($this->result=call_user_func_array($this->method, $this->params))) {
+			return true;
+		} else return false;
+	}
+	
 	/**
 	* Static method to create your threads from functions ...
 	**/
@@ -33,13 +40,17 @@ class Async extends Thread {
 			return $thread;
 		} /** else throw Nastyness **/
 	}
+	
 	/**
-	* You could join the result, or if you know the response is a string then do the following:
+	* Do whatever, result stored in $this->result, don't try to join twice
 	**/
 	public function __toString(){ 
-		if(!$this->result)
-			$this->result = $this->join();
-		return (string) $this->result;
+		if(!$this->joined) {
+			$this->joined = true;
+			$this->join();
+		}
+		
+		return $this->result;
 	}
 }
 
@@ -50,7 +61,7 @@ printf("Got %d bytes from php.net\n", strlen($future));
 /* you can reference again as a string because you cached the result, YOU CANNOT JOIN TWICE */
 printf("First 16 chars: %s\n", substr($future, 0, 16));
 /* if you have no __toString(): */
-/* $response = $future->join(); */
+/* $response = $future->result; */
 /* you could also not use a reference to the thread, 
 	if the threads job was to say, log stats and you do not need to know when or how it returns, 
 	then you could just Async::call at the beginning of the request and by the end it would be finished */

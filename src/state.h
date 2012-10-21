@@ -22,7 +22,6 @@
 #define PTHREADS_ST_RUNNING 2
 #define PTHREADS_ST_WAITING	4
 #define PTHREADS_ST_JOINED	8
-#define PTHREADS_ST_CHECK(st, msk)	((st & msk)==msk)
 
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
@@ -37,11 +36,11 @@ typedef struct _pthreads_state {
 	int				bits;
 } *pthreads_state;
 
-pthreads_state pthreads_state_alloc(int mask);
-int pthreads_state_lock(pthreads_state state, int *acquired);
-int pthreads_state_unlock(pthreads_state state, int *acquired);
-void pthreads_state_free(pthreads_state state);
-int pthreads_state_set(pthreads_state state, int mask);
-int pthreads_state_isset(pthreads_state state, int mask);
-int pthreads_state_unset(pthreads_state state, int mask);
+pthreads_state pthreads_state_alloc(int mask TSRMLS_DC);
+int pthreads_state_lock(pthreads_state state, int *acquired TSRMLS_DC);
+int pthreads_state_unlock(pthreads_state state, int *acquired TSRMLS_DC);
+void pthreads_state_free(pthreads_state state TSRMLS_DC);
+int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC);
+int pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC);
+int pthreads_state_unset(pthreads_state state, int mask TSRMLS_DC);
 #endif

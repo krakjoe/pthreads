@@ -76,14 +76,28 @@ struct {
 #define PTHREADS_G(v) pthreads_globals.v
 /* }}} */
 
-/* {{{ pthreads_globals_init */
-void pthreads_globals_init();
-int pthreads_globals_lock();
-void pthreads_globals_unlock();
-long pthreads_globals_count();
-void pthreads_globals_add(PTHREAD thread);
-void pthreads_globals_del(PTHREAD thread);
-long pthreads_globals_peak();
-PTHREAD pthreads_globals_find(ulong tid);
+/* {{{ initialize (true) globals */
+void pthreads_globals_init(); /* }}} */
+
+/* {{{ acquire global lock */
+int pthreads_globals_lock(); /* }}} */
+
+/* {{{ release global lock */
+void pthreads_globals_unlock(); /* }}} */
+
+/* {{{ get current number of executing contexts */
+long pthreads_globals_count(); /* }}} */
+
+/* {{{ push a thread into global list */
+void pthreads_globals_add(PTHREAD thread); /* }}} */
+
+/* {{{ pop a thread from global list */
+void pthreads_globals_del(PTHREAD thread); /* }}} */
+
+/* {{{ get peak number of executing contexts */
+long pthreads_globals_peak(); /* }}} */
+
+/* {{{ find a thread by id in global list */
+PTHREAD pthreads_globals_find(ulong tid); /* }}} */
 
 #endif /* HAVE_PTHREADS_GLOBAL_H */

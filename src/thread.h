@@ -30,6 +30,10 @@
 #	include <src/modifiers.h>
 #endif
 
+#ifndef HAVE_PTHREADS_SERIAL_H
+#	include <src/serial.h>
+#endif
+
 /* {{{ thread structure */
 typedef struct _pthread_construct {
 	/*
@@ -73,6 +77,11 @@ typedef struct _pthread_construct {
 	* Method modifiers
 	*/
 	pthreads_modifiers modifiers;
+	
+	/*
+	* Serial Buffers
+	*/
+	pthreads_serial store;
 
 	/*
 	* Thread Flags
@@ -82,15 +91,18 @@ typedef struct _pthread_construct {
 	zend_bool worker;
 	
 	/*
-	* Serial Buffer
-	*/
-	char *serial;
-	
-	/*
 	* Work List
 	*/
 	zend_llist *stack;
 	
+	/*
+	* Exit Status
+	*/
+	long *status;
+	
+	/*
+	* Significant Other
+	*/
 	struct _pthread_construct *sig;
 } *PTHREAD;
 
@@ -116,17 +128,20 @@ static inline void pthreads_copy(PTHREAD source, PTHREAD destination){
 	*/
 	if (source && destination) {
 		destination->copy = 1;
+		
 		destination->thread = source->thread;
 		destination->tid = source->tid;
 		destination->tls = source->tls;
 		destination->cid = source->cid;
+		destination->synchronized = source->synchronized;
+		
 		destination->lock = source->lock;
 		destination->state = source->state;
 		destination->synchro = source->synchro;
 		destination->modifiers = source->modifiers;
-		destination->synchronized = source->synchronized;
-		destination->serial = source->serial;
+		destination->store = source->store;
 		destination->stack = source->stack;
+		destination->status = source->status;
 	}
 } /* }}} */
 

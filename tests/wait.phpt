@@ -15,4 +15,4 @@ if($thread->start(true)) {
 }
 ?>
 --EXPECT--
-bool(true)
+int(1)
