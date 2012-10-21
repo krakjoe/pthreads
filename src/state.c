@@ -33,6 +33,7 @@
 
 extern pthread_mutexattr_t defmutex;
 
+/* {{{ allocate state object */
 pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 	pthreads_state state = calloc(1, sizeof(*state));
 	if (state != NULL) {
@@ -42,8 +43,9 @@ pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 		} else free(state);
 	}
 	return NULL;
-}
+} /* }}} */
 
+/* {{{ acquire lock for state object */
 int pthreads_state_lock(pthreads_state state, int *acquired TSRMLS_DC) {
 	switch(pthread_mutex_lock(&state->lock)){
 		case SUCCESS: 
@@ -57,16 +59,18 @@ int pthreads_state_lock(pthreads_state state, int *acquired TSRMLS_DC) {
 			return ((*acquired)=0);
 		}
 	}
-}
+} /* }}} */
 
+/* {{{ release lock for state object */
 int pthreads_state_unlock(pthreads_state state, int *acquired TSRMLS_DC) {
 	if ((*acquired)) {
 		if (pthread_mutex_unlock(&state->lock)==SUCCESS) {
 			return 1;
 		} else return 0;
 	} else return 1;
-}
+} /* }}} */
 
+/* {{{ free state object */
 void pthreads_state_free(pthreads_state state TSRMLS_DC) {
 	if (state) {
 		if (pthread_mutex_destroy(&state->lock)==SUCCESS) {
@@ -74,8 +78,9 @@ void pthreads_state_free(pthreads_state state TSRMLS_DC) {
 			state=NULL;
 		} else zend_error(E_WARNING, "pthreads_state_free failed to destroy state lock");
 	} else zend_error(E_WARNING, "pthreads_state_free failed to read state object");
-}
+} /* }}} */
 
+/* {{{ set state on state object */
 int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC) {
 	int acquired;
 	
@@ -91,8 +96,9 @@ int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC) {
 		zend_error_noreturn(E_WARNING, "pthreads_state_set failed to read state object");
 		return 0;
 	}
-}
+} /* }}} */
 
+/* {{{ check for state on state object */
 int pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC) {
 	int acquired;
 	
@@ -113,8 +119,9 @@ int pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC) {
 		zend_error(E_WARNING, "pthreads_state_isset failed to read state object");
 		return 0;
 	}
-}
+} /* }}} */
 
+/* {{{ unset state on state object */
 int pthreads_state_unset(pthreads_state state, int mask TSRMLS_DC) {
 	int acquired;
 	
@@ -130,6 +137,6 @@ int pthreads_state_unset(pthreads_state state, int mask TSRMLS_DC) {
 		zend_error(E_WARNING, "pthreads_state_unset failed to read state object");
 		return 0;
 	}
-}
+} /* }}} */
 
 #endif

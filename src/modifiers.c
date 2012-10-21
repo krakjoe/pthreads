@@ -26,22 +26,9 @@
 #	include <src/object.h>
 #endif
 
-/* {{{ destructor callback for modifiers (definition) hash table */
-static void pthreads_modifiers_modifiers_dtor(void **element) {
-	zend_uint *modified = (zend_uint *) *element;
-	if (modified && *modified) {
-		free(modified);
-	}
-} /* }}} */
-
-/* {{{ destructor callback for modifiers (protection) hash table */
-static void pthreads_modifiers_protection_dtor(void **element) {
-	pthread_mutex_t *protection = (pthread_mutex_t *) *element;
-	if (protection) {
-		pthread_mutex_destroy(protection);
-		free(protection);
-	}
-} /* }}} */
+/* {{{ statics */
+static void pthreads_modifiers_modifiers_dtor(void **element);
+static void pthreads_modifiers_protection_dtor(void **element); /* }}} */
 
 /* {{{ allocate modifiers */
 pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D) {
@@ -58,7 +45,7 @@ pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D) {
 	return modifiers;
 } /* }}} */
 
-/* {{{ initialize pthreads modifiers for the references thread */
+/* {{{ initialize pthreads modifiers using the referenced class entry */
 void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *entry TSRMLS_DC) {
 	HashPosition position;
 	zend_function *method;
@@ -66,13 +53,8 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 	for (zend_hash_internal_pointer_reset_ex(&entry->function_table, &position);
 		 zend_hash_get_current_data_ex(&entry->function_table, (void**)&method, &position) == SUCCESS;
 		 zend_hash_move_forward_ex(&entry->function_table, &position)) {
-		 /*
-		 * Check if element is user declared method
-		 */
 		if (method && (method->type != ZEND_INTERNAL_FUNCTION)) {
-			/*
-			* Check if method is private
-			*/
+			
 			if (method->common.fn_flags & ZEND_ACC_PRIVATE){
 				pthreads_modifiers_set(
 					modifiers,
@@ -81,9 +63,6 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 				);
 			}
 			
-			/*
-			* Check if method is protected
-			*/
 			if (method->common.fn_flags & ZEND_ACC_PROTECTED) {
 				pthreads_modifiers_set(
 					modifiers,
@@ -95,7 +74,7 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 	}
 } /* }}} */
 
-/* {{{ sets access modifiers for a method by name */
+/* {{{ set access modifier for method */
 int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zend_uint modify TSRMLS_DC) {
 	zend_uint *modified = calloc(1, sizeof(*modified));
 	{
@@ -121,7 +100,7 @@ int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zen
 	return FAILURE;
 } /* }}} */
 
-/* {{{ retrieve access modifiers for a method by name */
+/* {{{ get access modifier for method */
 zend_uint pthreads_modifiers_get(pthreads_modifiers modifiers, const char *method TSRMLS_DC) {
 	zend_uint **modified;
 	if (zend_hash_find(
@@ -134,7 +113,7 @@ zend_uint pthreads_modifiers_get(pthreads_modifiers modifiers, const char *metho
 	return 0;
 } /* }}} */
 
-/* {{{ lockdown !! */
+/* {{{ protect a method call */
 int pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method TSRMLS_DC) {
 	pthread_mutex_t **protection;
 	if (zend_hash_find(&modifiers->protection, method, sizeof(method), (void**)&protection)==SUCCESS) {
@@ -142,7 +121,7 @@ int pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method 
 	} else return FAILURE;
 } /* }}} */
 
-/* {{{ release */
+/* {{{ unprotect a method call */
 int pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method TSRMLS_DC) {
 	pthread_mutex_t **protection;
 	if (zend_hash_find(&modifiers->protection, method, sizeof(method), (void**)&protection)==SUCCESS) {
@@ -155,5 +134,22 @@ void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC) {
 	zend_hash_destroy(&modifiers->modified);
 	zend_hash_destroy(&modifiers->protection);
 	free(modifiers);
+} /* }}} */
+
+/* {{{ destructor callback for modifiers (definition) hash table */
+static void pthreads_modifiers_modifiers_dtor(void **element) {
+	zend_uint *modified = (zend_uint *) *element;
+	if (modified && *modified) {
+		free(modified);
+	}
+} /* }}} */
+
+/* {{{ destructor callback for modifiers (protection) hash table */
+static void pthreads_modifiers_protection_dtor(void **element) {
+	pthread_mutex_t *protection = (pthread_mutex_t *) *element;
+	if (protection) {
+		pthread_mutex_destroy(protection);
+		free(protection);
+	}
 } /* }}} */
 #endif
