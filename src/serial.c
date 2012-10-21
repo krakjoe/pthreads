@@ -29,17 +29,19 @@
 
 extern pthread_mutexattr_t defmutex;
 
+/* {{{ serial buffer element structure */
+typedef struct _pthreads_storage {
+	char * serial;
+	size_t length;
+	size_t unused;
+	zend_uchar type;
+} *pthreads_storage; /* }}} */
 
-/* {{{ element dtor */
-static void pthreads_serial_store_dtor (void **element){
-	if (*element) {
-		char * buffer = (char*) *element;
-		
-		if (buffer) {
-			free(buffer);
-		}
-	}
-} /* }}} */
+/* {{{ statics */
+static pthreads_storage pthreads_serialize(zval *pzval TSRMLS_DC);
+static int pthreads_unserialize(pthreads_storage storage, zval *pzval TSRMLS_DC);
+static void pthreads_serial_store_dtor (void **element);
+/* }}} */
 
 /* {{{ allocate serial storage for a thread */
 pthreads_serial pthreads_serial_alloc(TSRMLS_D) {
@@ -106,7 +108,7 @@ int pthreads_serial_delete(pthreads_serial serial, char *key, int keyl TSRMLS_DC
 
 /* {{{ read a value from serial input */
 int pthreads_serial_read(pthreads_serial serial, char *key, int keyl, zval **read TSRMLS_DC) {
-	char **store = NULL;
+	pthreads_storage *store = NULL;
 	int result = FAILURE, locked = 0;
 	
 	if (serial) {
@@ -114,7 +116,7 @@ int pthreads_serial_read(pthreads_serial serial, char *key, int keyl, zval **rea
 			if (zend_ts_hash_exists(&serial->store, key, keyl)) {
 				if (zend_ts_hash_find(&serial->store, key, keyl, (void**)&store)==SUCCESS) {
 					MAKE_STD_ZVAL(*read);
-					if (pthreads_unserialize_into(*store, *read TSRMLS_CC)==SUCCESS) {
+					if (pthreads_unserialize(*store, *read TSRMLS_CC)==SUCCESS) {
 						result = SUCCESS;
 					} else FREE_ZVAL(*read);
 				}
@@ -127,14 +129,14 @@ int pthreads_serial_read(pthreads_serial serial, char *key, int keyl, zval **rea
 
 /* {{{ write a value to serial output */
 int pthreads_serial_write(pthreads_serial serial, char *key, int keyl, zval **write TSRMLS_DC) {
-	char *store = NULL;
+	pthreads_storage store = NULL;
 	int result = FAILURE, locked = 0;
 	
 	if (serial) {
 		store = pthreads_serialize(*write TSRMLS_CC);
 		if (store) {
 			if (pthreads_serial_lock(serial, &locked TSRMLS_CC)) {
-				if (zend_ts_hash_update(&serial->store, key, keyl, (void**) &store, sizeof(char *), NULL)==SUCCESS) {
+				if (zend_ts_hash_update(&serial->store, key, keyl, (void**) &store, sizeof(pthreads_storage), NULL)==SUCCESS) {
 					result = SUCCESS;
 				} else free(store);
 				pthreads_serial_unlock(serial, &locked TSRMLS_CC);
@@ -166,62 +168,109 @@ void pthreads_serial_free(pthreads_serial serial TSRMLS_DC){
 	}
 } /* }}} */
 
-
-
 /* {{{ Will serialize the zval into a newly allocated buffer which must be free'd by the caller */
-char * pthreads_serialize(zval *unserial TSRMLS_DC){					
-	char *result = NULL;
+static pthreads_storage pthreads_serialize(zval *unserial TSRMLS_DC){					
+	pthreads_storage storage = NULL;
 	
 	if (unserial) {
-		smart_str *output;
-		php_serialize_data_t vars;
-		
-		PHP_VAR_SERIALIZE_INIT(vars);				
-		output = (smart_str*) calloc(1, sizeof(smart_str));
-		php_var_serialize(							
-			output, 
-			&unserial, 
-			&vars TSRMLS_CC
-		);
-		PHP_VAR_SERIALIZE_DESTROY(vars);			
-		result = (char*) calloc(1, output->len+1);	
-		memcpy(result, output->c, output->len);
-		smart_str_free(output);						
-		free(output);	
-	}							
-	return result;														
+	
+		smart_str *output = (smart_str*) calloc(1, sizeof(smart_str));	
+		if (output) {
+			/*
+			* Populare PHP storage
+			*/
+			{
+				/*
+				* This might seem like the long way round
+				* pthreads_storage can be cast to a smart_str pointer but zend doesn't like it
+				*/
+				php_serialize_data_t vars;
+				PHP_VAR_SERIALIZE_INIT(vars);	
+				php_var_serialize(							
+					output, 
+					&unserial, 
+					&vars TSRMLS_CC
+				);
+				PHP_VAR_SERIALIZE_DESTROY(vars);
+			}
+			
+			/*
+			* Populate pthreads storage
+			*/
+			if (output) {
+			
+				/*
+				* Make an exact copy of the serial data for internal storage
+				*/
+				storage = (pthreads_storage) calloc(1, sizeof(*storage));
+				if (storage) {
+					storage->serial = (char*) calloc(1, output->len);
+					if (storage->serial) {
+						storage->length = output->len;
+						storage->type = Z_TYPE_P(unserial);
+						
+						/*
+						* not memcpy or strndup or anything that cares about null termination
+						*/
+						memmove(
+							storage->serial, (const void*) output->c, output->len
+						);
+					} else free(storage);
+				}
+				
+				/*
+				* Free PHP storage
+				*/
+				{
+					smart_str_free(output);	
+					free(output);
+				}
+			}
+		}
+	}
+	
+	return storage;														
 }
 /* }}} */
 
 /* {{{ Will unserialize data into the allocated zval passed */
-int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC){
-	if (serial) {
-		const unsigned char *pointer = (const unsigned char *)serial;
-		php_unserialize_data_t vars;
+static int pthreads_unserialize(pthreads_storage storage, zval *pzval TSRMLS_DC){
+	int result = SUCCESS;
+	
+	if (storage) {
+	
+		const unsigned char* pointer = (const unsigned char*) storage->serial;
 		
-		PHP_VAR_UNSERIALIZE_INIT(vars);
-		if (!php_var_unserialize(&result, &pointer, pointer+strlen(serial), &vars TSRMLS_CC)) {
-			PHP_VAR_UNSERIALIZE_DESTROY(vars);
-			zval_dtor(result);
-			zend_error(E_WARNING, "The thread attempted to declare properties (%ld bytes of %s) that do not support serialization", strlen(serial), serial);
-			return FAILURE;
-		} else { 
-			PHP_VAR_UNSERIALIZE_DESTROY(vars);
+		if (pointer) {
+			/*
+			* Populate PHP storage from pthreads_storage
+			*/
+			{
+				php_unserialize_data_t vars;
+				PHP_VAR_UNSERIALIZE_INIT(vars);
+				if (!php_var_unserialize(&pzval, &pointer, pointer+storage->length, &vars TSRMLS_CC)) {
+					result = FAILURE;
+					zval_dtor(pzval);
+				}							
+				PHP_VAR_UNSERIALIZE_DESTROY(vars);
+			}
 		}
-		
-		return SUCCESS;														
-	} else return SUCCESS;
+	}
+	return result;
 }
 /* }}} */
 
-/* {{{ Will unserialze data into a newly allocated buffer which must be free'd by the caller */
-zval *	pthreads_unserialize(char *serial TSRMLS_DC){					
-	zval *result;
-	ALLOC_INIT_ZVAL(result);
-	
-	if (pthreads_unserialize_into(serial, result TSRMLS_CC)==SUCCESS) {
-			return result;												
-	} else return NULL;
-}
-/* }}} */
+/* {{{ Will free serial element */
+static void pthreads_serial_store_dtor (void **element){
+	if (*element) {
+		pthreads_storage storage = (pthreads_storage) *element;
+		
+		if (storage->serial) {
+			free(storage->serial);
+		}
+		
+		free(storage);
+	}
+} /* }}} */
+
 #endif

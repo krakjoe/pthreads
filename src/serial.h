@@ -60,15 +60,4 @@ int pthreads_serial_unlock(pthreads_serial serial, int *acquired TSRMLS_DC); /* 
 /* {{{ free serial buffers */
 void pthreads_serial_free(pthreads_serial serial TSRMLS_DC); /* }}} */
 
-/* 
-* @TODO
-*	look into msgpack support as it uses less memory than default serial data
-*/
-
-/* {{{ prototypes */
-char * pthreads_serialize(zval *unserial TSRMLS_DC);
-zval * pthreads_unserialize(char *serial TSRMLS_DC);
-int pthreads_unserialize_into(char *serial, zval *result TSRMLS_DC);
-/* }}} */
-
 #endif

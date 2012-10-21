@@ -31,14 +31,25 @@ typedef struct {
 	HashTable protection;
 } *pthreads_modifiers;
 
-/* {{{ access modification management */
-pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D);
-void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *entry TSRMLS_DC);
-int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zend_uint modify TSRMLS_DC);
-zend_uint pthreads_modifiers_get(pthreads_modifiers modifiers, const char *method TSRMLS_DC);
-int pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method TSRMLS_DC);
-int pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method TSRMLS_DC);
-void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC);
-/* }}} */
+/* {{{ allocate modifiers object */
+pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D); /* }}} */
+
+/* {{{ initialize modifiers using the referenced class entry */
+void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *entry TSRMLS_DC); /* }}} */
+
+/* {{{ set modifiers for a method */
+int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zend_uint modify TSRMLS_DC); /* }}} */
+
+/* {{{ get modifiers for a method */
+zend_uint pthreads_modifiers_get(pthreads_modifiers modifiers, const char *method TSRMLS_DC); /* }}} */
+
+/* {{{ protect a method call */
+int pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method TSRMLS_DC); /* }}} */
+
+/* {{{ unprotect a method call */
+int pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method TSRMLS_DC); /* }}} */
+
+/* {{{ free modifiers object */
+void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC); /* }}} */
 
 #endif

@@ -47,9 +47,10 @@ class Request extends Thread {
 	}
 	
 	/*
-	* Manipulate the object and return it as the result so the parent can have it back
+	* Populate the response object for creating context
 	*/
 	public function run(){
+		
 		/*
 		* Read/Write objects as little as possible
 		*/
@@ -58,7 +59,7 @@ class Request extends Thread {
 		if($response){
 			if($response->url){
 				$response->setStart(microtime(true));
-				$response->setData(file_get_contents($this->response->url));
+				$response->setData(file_get_contents($response->url));
 				$response->setFinish(microtime(true));
 			}
 		}

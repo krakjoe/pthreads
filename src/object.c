@@ -963,8 +963,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			FREE_ZVAL(this_ptr);
 		}
 		
-		
-		
 		/*
 		* Shutdown Block
 		*/

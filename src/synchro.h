@@ -30,10 +30,19 @@ typedef struct _pthreads_synchro {
 	zend_bool hanging;
 } *pthreads_synchro;
 
-pthreads_synchro pthreads_synchro_alloc(TSRMLS_D);
-int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC);
-int pthreads_synchro_wait(pthreads_synchro sync TSRMLS_DC);
-int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC);
-void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC);
+/* {{{ allocate synchronization object */
+pthreads_synchro pthreads_synchro_alloc(TSRMLS_D); /* }}} */
+
+/* {{{ wait for notification */
+int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC); /* }}} */
+
+/* {{{ wait for notification */
+int pthreads_synchro_wait(pthreads_synchro sync TSRMLS_DC); /* }}} */
+
+/* {{{ send notification */
+int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC); /* }}} */
+
+/* {{{ free synchronization object */
+void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC); /* }}} */
 
 #endif

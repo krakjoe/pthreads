@@ -28,6 +28,7 @@
 
 extern pthread_mutexattr_t defmutex;
 
+/* {{{ allocate (and initialize) a synchronization object */
 pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 	pthreads_synchro sync = (pthreads_synchro) calloc(1, sizeof(*sync));
 	
@@ -44,8 +45,9 @@ pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 	}
 	
 	return NULL;
-}
+} /* }}} */
 
+/* {{{ wait for notification on synchronization object */
 int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
 	int result = FAILURE;
 	struct timeval now;
@@ -85,12 +87,14 @@ int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
 	} else { /* report unknown error */ }
 	
 	return (result == SUCCESS) ? 1 : 0;
-}
+} /* }}} */
 
+/* {{{ wait for notification on synchronization object */
 int pthreads_synchro_wait(pthreads_synchro sync TSRMLS_DC) {
 	return pthreads_synchro_wait_ex(sync, 0L TSRMLS_CC);
-}
+} /* }}} */
 
+/* {{{ send notification to synchronization object */
 int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
 	int result = FAILURE;
 	
@@ -115,12 +119,13 @@ int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
 		} else { /* report error */ }
 	} else { /* report unknown error */ }
 	return (result == SUCCESS) ? 1 : 0;
-}
+} /* }}} */
 
+/* {{{ free synchronization object */
 void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC) {
 	pthread_cond_destroy(&sync->notify);
 	pthread_mutex_destroy(&sync->wait);
 	free(sync);
-}
+} /* }}} */
 
 #endif
