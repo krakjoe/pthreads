@@ -17,11 +17,6 @@
  */
 
 /*
-* @TODO
-*	has_property should reference the threading context as it saves allocation and will cause isset to work as expected
-*/
-
-/*
 * These handlers are mutex aware for safer operation in multi-threaded applications
 * They also have the ability to reference the threading context and import variables into the current context
 */
@@ -35,8 +30,6 @@
 #ifndef HAVE_PTHREADS_SERIAL_H
 #	include <src/serial.h>
 #endif
-
-extern zend_object_handlers * zsh;
 
 /* {{{ these resolve differences in 5.3 and 5.4 object handling API */
 #if PHP_VERSION_ID > 50399

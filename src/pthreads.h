@@ -52,4 +52,13 @@
 #include <Zend/zend_vm.h>
 #include <TSRM/TSRM.h>
 
+zend_class_entry *pthreads_thread_entry;
+zend_class_entry *pthreads_worker_entry;
+zend_class_entry *pthreads_stackable_entry;
+zend_class_entry *pthreads_mutex_entry;
+zend_class_entry *pthreads_condition_entry;
+
+zend_object_handlers pthreads_handlers;
+zend_object_handlers *zend_handlers;
+
 #endif

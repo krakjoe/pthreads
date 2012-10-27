@@ -31,8 +31,6 @@
 #	include <src/thread.h>
 #endif
 
-extern pthread_mutexattr_t defmutex;
-
 /* {{{ allocate state object */
 pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 	pthreads_state state = calloc(1, sizeof(*state));
@@ -49,14 +47,14 @@ pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 int pthreads_state_lock(pthreads_state state, int *acquired TSRMLS_DC) {
 	switch(pthread_mutex_lock(&state->lock)){
 		case SUCCESS: 
-			return ((*acquired)=1);
+			return (((*acquired)=1)==1);
 		
 		case EDEADLK:
-			return ((*acquired)=0);
+			return (((*acquired)=0)==0);
 		
 		default: {
 			zend_error(E_WARNING, "pthreads has experienced an internal error and is likely to fail");
-			return ((*acquired)=0);
+			return (((*acquired)=0)==1);
 		}
 	}
 } /* }}} */
@@ -104,7 +102,7 @@ int pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC) {
 	
 	if (state) {
 		if (pthreads_state_lock(state, &acquired TSRMLS_CC)){
-			if (state->bits & mask) {
+			if (((state->bits & mask)==mask)) {
 				pthreads_state_unlock(state, &acquired TSRMLS_CC);
 				return 1;
 			} else {
