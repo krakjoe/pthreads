@@ -35,60 +35,68 @@ void pthreads_globals_init(){
 } /* }}} */
 
 /* {{{ pthreads_globals_lock */
-int pthreads_globals_lock(){
+int pthreads_globals_lock(int *acquired){
 	switch (pthread_mutex_lock(&PTHREADS_G(lock))) {
 		case SUCCESS:
-		case EDEADLK:
-			return 1;
-		break;
+			return (((*acquired)=1)==1);	
 		
-		default: return 0;
+		case EDEADLK:
+			return (((*acquired)=0)==0);
+		
+		default: return (((*acquired)=0)==1);
 	}
 } /* }}} */
 
 /* {{{ pthreads_globals_unlock */
-void pthreads_globals_unlock() {
-	if (!PTHREADS_G(init)) {
-		zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
+void pthreads_globals_unlock(int *acquired) {
+	if ((*acquired)==1) {
+		pthread_mutex_unlock(&PTHREADS_G(lock));
 	}
-	pthread_mutex_unlock(&PTHREADS_G(lock));
 } /* }}} */
 
 /* {{{ pthreads_globals_count */
 long pthreads_globals_count() {
 	long result = 0L;
-	if (pthreads_globals_lock()) {
+	int locked;
+	
+	if (pthreads_globals_lock(&locked)) {
 		result = PTHREADS_G(threads).count;
-		pthreads_globals_unlock();
+		pthreads_globals_unlock(&locked);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	return result;
 } /* }}} */
 
 /* {{{ pthreads_globals_add */
 void pthreads_globals_add(PTHREAD thread) {
-	if (pthreads_globals_lock()) {
+	int locked;
+	
+	if (pthreads_globals_lock(&locked)) {
 		PTHREADS_LIST_INSERT(&PTHREADS_G(threads), thread);
 		if (PTHREADS_G(peak)<PTHREADS_G(threads).count) {
 			PTHREADS_G(peak)=PTHREADS_G(threads).count;
 		}
-		pthreads_globals_unlock();
+		pthreads_globals_unlock(&locked);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 } /* }}} */
 
 /* {{{ pthreads_globals_del */
 void pthreads_globals_del(PTHREAD thread) {
-	if (pthreads_globals_lock()) {
+	int locked;
+	
+	if (pthreads_globals_lock(&locked)) {
 		PTHREADS_LIST_REMOVE(&PTHREADS_G(threads), thread);
-		pthreads_globals_unlock();
+		pthreads_globals_unlock(&locked);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 }  /* }}} */
 
 /* {{{ pthreads_globals_peak */
 long pthreads_globals_peak() {
 	long result = 0L;
-	if (pthreads_globals_lock()) {
+	int locked;
+	
+	if (pthreads_globals_lock(&locked)) {
 		result = PTHREADS_G(peak);
-		pthreads_globals_unlock();
+		pthreads_globals_unlock(&locked);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	return result;
 } /* }}} */
@@ -97,15 +105,16 @@ long pthreads_globals_peak() {
 PTHREAD pthreads_globals_find(ulong tid) {
 	PTHREAD search = NULL;
 	zend_bool found = 0;
+	int locked = 0;
 	
-	if (pthreads_globals_lock()) {
+	if (pthreads_globals_lock(&locked)) {
 		PTHREADS_LIST_BEGIN_LOOP(&PTHREADS_G(threads), search)
 		if (search->tid == tid) {
 			found = 1;
 			break;
 		}
 		PTHREADS_LIST_END_LOOP(&PTHREADS_G(threads), search)
-		pthreads_globals_unlock();
+		pthreads_globals_unlock(&locked);
 	}
 	
 	if (found) {

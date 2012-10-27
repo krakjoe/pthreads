@@ -20,8 +20,6 @@
 
 /*
 * @TODO
-*	static members
-*	class constants
 *	implement verbose debugging mode in threads
 *	try and find a way a thread can throw an exception in cid so that ThreadingException can be implemented and not just cause deadlocks
 */
@@ -39,10 +37,14 @@
 #endif
 
 /* {{{ object creation and destruction */
-zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC);
-zend_object_value pthreads_attach_to_other(zend_class_entry *entry TSRMLS_DC);
-void pthreads_detach_from_context(void * child TSRMLS_DC);
-void pthreads_detach_from_other(void * child TSRMLS_DC);
+zend_object_value pthreads_connection_stackable_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_object_stackable_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_connection_worker_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_object_worker_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_connection_thread_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_object_thread_ctor(zend_class_entry *entry TSRMLS_DC);
+void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC);
+void pthreads_base_dtor(void *arg TSRMLS_DC);
 void * PHP_PTHREAD_ROUTINE(void *);
 /* }}} */
 
@@ -53,15 +55,13 @@ void * PHP_PTHREAD_ROUTINE(void *);
 */
 
 /* {{{ state and stack management */
-int pthreads_is_worker(PTHREAD thread TSRMLS_DC);
-int pthreads_set_worker(PTHREAD thread, zend_bool flag TSRMLS_DC);
 int pthreads_set_state_ex(PTHREAD thread, int state, long timeout TSRMLS_DC);
 int pthreads_set_state(PTHREAD thread, int state TSRMLS_DC);
 int pthreads_unset_state(PTHREAD thread, int state TSRMLS_DC);
-int pthreads_import(PTHREAD thread, zval **return_value TSRMLS_DC);
-int pthreads_stack_pop(PTHREAD thread, zval *this_ptr TSRMLS_DC);
-int pthreads_stack_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC);
+int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC);
+int pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC);
 int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC);
+int pthreads_stack_next(PTHREAD thread TSRMLS_DC);
 int pthreads_stack_length(PTHREAD thread TSRMLS_DC);
 /* }}} */
 

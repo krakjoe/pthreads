@@ -47,6 +47,11 @@ typedef struct _pthread_construct {
 	pthread_t thread;
 	
 	/*
+	* Thread Scope
+	*/
+	int scope;
+	
+	/*
 	* Thread Identity and LS
 	*/
 	ulong tid;
@@ -86,14 +91,19 @@ typedef struct _pthread_construct {
 	/*
 	* Thread Flags
 	*/
-	zend_bool copy;
 	zend_bool synchronized;
-	zend_bool worker;
 	
 	/*
 	* Work List
 	*/
 	zend_llist *stack;
+	
+	/*
+	* Preparation
+	*/
+	struct {
+		zend_llist classes;
+	} preparation;
 	
 	/*
 	* Exit Status
@@ -121,28 +131,46 @@ static inline int pthreads_equal_func(void **first, void **second){
 	return 0;
 } /* }}} */
 
-/* {{{ copy an instance to another context */
-static inline void pthreads_copy(PTHREAD source, PTHREAD destination){
-	/*
-	* The observent among you can see that no actual copying goes on, for VERY good reason !
-	*/
-	if (source && destination) {
-		destination->copy = 1;
-		
-		destination->thread = source->thread;
-		destination->tid = source->tid;
-		destination->tls = source->tls;
-		destination->cid = source->cid;
-		destination->synchronized = source->synchronized;
-		
-		destination->lock = source->lock;
-		destination->state = source->state;
-		destination->synchro = source->synchro;
-		destination->modifiers = source->modifiers;
-		destination->store = source->store;
-		destination->stack = source->stack;
-		destination->status = source->status;
+/* {{{ scope constants */
+#define PTHREADS_SCOPE_UNKNOWN 0
+#define PTHREADS_SCOPE_THREAD 1
+#define PTHREADS_SCOPE_WORKER 2
+#define PTHREADS_SCOPE_STACKABLE 4
+#define PTHREADS_SCOPE_CONNECTION 8 
+/* }}} */
+
+/* {{{ scope macros */
+#define PTHREADS_IS_KNOWN_ENTRY(t) (((t)->scope & PTHREADS_SCOPE_UNKNOWN)!=PTHREADS_SCOPE_UNKNOWN)
+#define PTHREADS_IS_CONNECTION(t) (((t)->scope & PTHREADS_SCOPE_CONNECTION)==PTHREADS_SCOPE_CONNECTION)
+#define PTHREADS_IS_NOT_CONNECTION(t) (((t)->scope & PTHREADS_SCOPE_CONNECTION)!=PTHREADS_SCOPE_CONNECTION)
+#define PTHREADS_IS_THREAD(t) (((t)->scope & PTHREADS_SCOPE_THREAD)==PTHREADS_SCOPE_THREAD)
+#define PTHREADS_IS_NOT_THREAD(t) (((t)->scope & PTHREADS_SCOPE_THREAD)!=PTHREADS_SCOPE_THREAD)
+#define PTHREADS_IS_WORKER(t) (((t)->scope & PTHREADS_SCOPE_WORKER)==PTHREADS_SCOPE_WORKER)
+#define PTHREADS_IS_NOT_WORKER(t) (((t)->scope & PTHREADS_SCOPE_WORKER)!=PTHREADS_SCOPE_WORKER)
+#define PTHREADS_IS_STACKABLE(t) (((t)->scope & PTHREADS_SCOPE_STACKABLE)==PTHREADS_SCOPE_STACKABLE)
+#define PTHREADS_IS_NOT_STACKABLE(t) (((t)->scope & PTHREADS_SCOPE_STACKABLE)!=PTHREADS_SCOPE_STACKABLE)
+/* }}} */
+
+/* {{{ detect the scope of candidate with respect to thread */
+static inline int pthreads_scope_detect(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC) {
+	int detection = 0;
+	zend_class_entry *scope = candidate;
+	
+	do {
+		if (scope == pthreads_thread_entry) {
+			detection |= PTHREADS_SCOPE_THREAD;
+		} else if (scope == pthreads_worker_entry) {
+			detection |= PTHREADS_SCOPE_WORKER;
+		} else if (scope == pthreads_stackable_entry) {
+			detection |= PTHREADS_SCOPE_STACKABLE;
+		}
+	} while((scope=scope->parent)!=NULL);
+	
+	if ((thread != NULL) && (thread->std.ce == candidate)) {
+		detection |= PTHREADS_SCOPE_CONNECTION;
 	}
+	
+	return detection;
 } /* }}} */
 
 /* {{{ pthread_self wrapper */

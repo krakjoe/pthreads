@@ -3,8 +3,7 @@ if (PHP_PTHREADS != "no") {
 	CHECK_LIB("pthreadVC2.lib", "pthreads", PHP_PTHREADS);
 	EXTENSION("pthreads", "php_pthreads.c", true, "/I" + configure_module_dirname);
 	ADD_SOURCES(
-		"ext/pthreads/src", 
-		"globals.c state.c serial.c modifiers.c handlers.c compat.c object.c", "pthreads"
+		"ext/pthreads/src",
+		"globals.c prepare.c synchro.c state.c serial.c modifiers.c handlers.c object.c", "pthreads"
 	);
-	
 }

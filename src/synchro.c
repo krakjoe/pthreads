@@ -26,8 +26,6 @@
 #	include <src/thread.h>
 #endif
 
-extern pthread_mutexattr_t defmutex;
-
 /* {{{ allocate (and initialize) a synchronization object */
 pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 	pthreads_synchro sync = (pthreads_synchro) calloc(1, sizeof(*sync));

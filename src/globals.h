@@ -80,10 +80,10 @@ struct {
 void pthreads_globals_init(); /* }}} */
 
 /* {{{ acquire global lock */
-int pthreads_globals_lock(); /* }}} */
+int pthreads_globals_lock(int *acquired); /* }}} */
 
 /* {{{ release global lock */
-void pthreads_globals_unlock(); /* }}} */
+void pthreads_globals_unlock(int *acquired); /* }}} */
 
 /* {{{ get current number of executing contexts */
 long pthreads_globals_count(); /* }}} */

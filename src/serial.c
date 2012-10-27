@@ -27,14 +27,17 @@
 #	include <src/serial.h>
 #endif
 
-extern pthread_mutexattr_t defmutex;
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include <src/thread.h>
+#endif
 
 /* {{{ serial buffer element structure */
 typedef struct _pthreads_storage {
-	char * serial;
-	size_t length;
-	size_t unused;
-	zend_uchar type;
+	char		*serial;	/* serial data */
+	size_t 		length;		/* serial length */
+	size_t 		strlen;		/* length of original string */
+	zend_uchar 	type;		/* type of data */
+	zend_bool 	exists;		/* preset exists to aid in quicker isset() */
 } *pthreads_storage; /* }}} */
 
 /* {{{ statics */
@@ -48,6 +51,7 @@ pthreads_serial pthreads_serial_alloc(TSRMLS_D) {
 	pthreads_serial serial = calloc(1, sizeof(*serial));
 	
 	if (serial) {
+		serial->line = NULL;
 		if (zend_ts_hash_init(&serial->store, 32, NULL, (dtor_func_t) pthreads_serial_store_dtor, 1)==SUCCESS){
 			if (pthread_mutex_init(&serial->lock, &defmutex)==SUCCESS) {
 				return serial;
@@ -58,35 +62,61 @@ pthreads_serial pthreads_serial_alloc(TSRMLS_D) {
 } /* }}} */
 
 /* {{{ lock serial buffer */
-int pthreads_serial_lock(pthreads_serial serial, int *acquired TSRMLS_DC) { 
+int pthreads_serial_lock(pthreads_serial serial, int *acquired TSRMLS_DC) {
 	if (serial) {
 		switch (pthread_mutex_lock(&serial->lock)) {
 			case SUCCESS:
-				(*acquired) = 1;
-				return 1;
+				return (((*acquired)=1)==1);
+				
 			case EDEADLK:
-				(*acquired) = 0;
-				return 1;
+				return (((*acquired)=0)==0);
+				
 			default:
-				/* report possible fatality */
-				(*acquired) = 0;
-				return 0;
+				return (((*acquired)=0)==1);
 		}
 	} else return 0;
 } /* }}} */
 
+/* {{{ extend serial line */
+int pthreads_serial_extend(pthreads_serial serial, pthreads_serial line TSRMLS_DC) {
+	int result = SUCCESS;
+	if (serial && line) {
+		if (serial != line) {
+			int locked[2] = {0, 0};
+			if (pthreads_serial_lock(serial, &locked[0] TSRMLS_CC)) {
+				if (pthreads_serial_lock(line, &locked[1] TSRMLS_CC)) {
+					serial->line = &line;
+					pthreads_serial_unlock(line, &locked[1] TSRMLS_CC);
+				} else result = FAILURE;
+				pthreads_serial_unlock(serial, &locked[0] TSRMLS_CC);
+			} else result = FAILURE;
+		} else result = FAILURE;
+	} else result = FAILURE;
+	return result;
+} /* }}} */
+
 /* {{{ tell if the serial buffer contains a specific value */
-int pthreads_serial_contains(pthreads_serial serial, char *key, int keyl TSRMLS_DC) {
+int pthreads_serial_contains(pthreads_serial serial, char *key, int keyl, pthreads_serial *line TSRMLS_DC) {
 	int contains = 0, locked = 0;
 	
 	if (serial) {
-		if (pthreads_serial_lock(serial, &locked TSRMLS_CC)) {
-			contains = zend_ts_hash_exists(
-				&serial->store, key, keyl
-			);
-			pthreads_serial_unlock(serial, &locked TSRMLS_CC);
+		pthreads_serial *pointer = &serial;
+		
+		do {
+			if (pthreads_serial_lock((*pointer), &locked TSRMLS_CC)) {
+				if (zend_ts_hash_exists(&((*pointer)->store), key, keyl)) {
+					contains = 1;
+				}
+				pthreads_serial_unlock((*pointer), &locked TSRMLS_CC);
+			} else break;
+			
+		} while(!contains && (pointer=((*pointer)->line))!=NULL);
+
+		if (contains) {
+			*line = *pointer;
 		}
 	}
+	
 	return contains;
 } /* }}} */
 
@@ -95,45 +125,73 @@ int pthreads_serial_delete(pthreads_serial serial, char *key, int keyl TSRMLS_DC
 	int result = FAILURE, locked = 0;
 	
 	if (serial) {
-		if (pthreads_serial_lock(serial, &locked TSRMLS_CC)) {
-			result = zend_ts_hash_del(
-				&serial->store, key, keyl
-			);
-			pthreads_serial_unlock(serial, &locked TSRMLS_CC);
-		}
+		pthreads_serial *pointer = &serial;
+		do {
+			if (pthreads_serial_lock((*pointer), &locked TSRMLS_CC)) {
+				if (zend_ts_hash_exists(&((*pointer)->store), key, keyl)) {
+					if (zend_ts_hash_del(&((*pointer)->store), key, keyl)!=SUCCESS) {
+						result = FAILURE;
+					} else result = SUCCESS;
+				} else result = SUCCESS;
+				pthreads_serial_unlock((*pointer), &locked TSRMLS_CC);
+			} else break;
+		} while(result != FAILURE && (pointer=((*pointer)->line))!=NULL);
 	}
 	return result;
 }
 /* }}} */
 
+/* {{{ isset proxy for handlers to avoid unserializing members when isset() is used */
+int pthreads_serial_isset(pthreads_serial serial, char *key, int keyl, int has_set_exists TSRMLS_DC) {
+	int locked = 0, result = 0;
+	
+	if (serial) {
+		pthreads_serial line;
+		if (pthreads_serial_contains(serial, key, keyl, &line TSRMLS_CC)) {
+			if (pthreads_serial_lock(line, &locked TSRMLS_CC)) {
+				pthreads_storage *store;
+				if (zend_ts_hash_find(&line->store, key, keyl, (void**)&store)==SUCCESS) {
+					result=((*store)->exists);
+				}
+				pthreads_serial_unlock(line, &locked TSRMLS_CC);
+			}
+		}
+	}
+	
+	return result;
+} /* }}} */
+
 /* {{{ read a value from serial input */
 int pthreads_serial_read(pthreads_serial serial, char *key, int keyl, zval **read TSRMLS_DC) {
-	pthreads_storage *store = NULL;
 	int result = FAILURE, locked = 0;
 	
 	if (serial) {
-		if (pthreads_serial_lock(serial, &locked TSRMLS_CC)) {
-			if (zend_ts_hash_exists(&serial->store, key, keyl)) {
-				if (zend_ts_hash_find(&serial->store, key, keyl, (void**)&store)==SUCCESS) {
-					MAKE_STD_ZVAL(*read);
-					if (pthreads_unserialize(*store, *read TSRMLS_CC)==SUCCESS) {
-						result = SUCCESS;
-					} else FREE_ZVAL(*read);
+		pthreads_serial line;
+		if (pthreads_serial_contains(serial, key, keyl, &line TSRMLS_CC)) {
+			if (pthreads_serial_lock(line, &locked TSRMLS_CC)) {
+				pthreads_storage *store;
+
+				if (zend_ts_hash_find(&line->store, key, keyl, (void**)&store)==SUCCESS) {
+					ALLOC_ZVAL(*read);
+					if ((result = pthreads_unserialize(*store, *read TSRMLS_CC))!=SUCCESS) {
+						FREE_ZVAL(*read);
+					} else Z_SET_REFCOUNT_PP(read, 0);
 				}
+				
+				pthreads_serial_unlock(line, &locked TSRMLS_CC);
 			}
-			pthreads_serial_unlock(serial, &locked TSRMLS_CC);
-		} else { /* report error */ }
+		}
 	} else { /* report error */ }
+
 	return result;
 } /* }}} */
 
 /* {{{ write a value to serial output */
 int pthreads_serial_write(pthreads_serial serial, char *key, int keyl, zval **write TSRMLS_DC) {
-	pthreads_storage store = NULL;
 	int result = FAILURE, locked = 0;
 	
 	if (serial) {
-		store = pthreads_serialize(*write TSRMLS_CC);
+		pthreads_storage store = pthreads_serialize(*write TSRMLS_CC);
 		if (store) {
 			if (pthreads_serial_lock(serial, &locked TSRMLS_CC)) {
 				if (zend_ts_hash_update(&serial->store, key, keyl, (void**) &store, sizeof(pthreads_storage), NULL)==SUCCESS) {
@@ -158,7 +216,8 @@ int pthreads_serial_unlock(pthreads_serial serial, int *acquired TSRMLS_DC) {
 /* {{{ free serial storage for a thread */
 void pthreads_serial_free(pthreads_serial serial TSRMLS_DC){
 	if (serial) {
-		int locked = 0;
+		int locked;
+		
 		if (pthreads_serial_lock(serial, &locked TSRMLS_CC)) {
 			zend_ts_hash_destroy(&serial->store);
 			pthreads_serial_unlock(serial, &locked TSRMLS_CC);
@@ -170,14 +229,14 @@ void pthreads_serial_free(pthreads_serial serial TSRMLS_DC){
 
 /* {{{ Will serialize the zval into a newly allocated buffer which must be free'd by the caller */
 static pthreads_storage pthreads_serialize(zval *unserial TSRMLS_DC){					
-	pthreads_storage storage = NULL;
+	pthreads_storage storage;
 	
 	if (unserial) {
 	
 		smart_str *output = (smart_str*) calloc(1, sizeof(smart_str));	
 		if (output) {
 			/*
-			* Populare PHP storage
+			* Populate PHP storage
 			*/
 			{
 				/*
@@ -204,10 +263,29 @@ static pthreads_storage pthreads_serialize(zval *unserial TSRMLS_DC){
 				*/
 				storage = (pthreads_storage) calloc(1, sizeof(*storage));
 				if (storage) {
+					storage->strlen = 0;
 					storage->serial = (char*) calloc(1, output->len);
 					if (storage->serial) {
+						/*
+						* Set serialized storage length
+						*/
 						storage->length = output->len;
-						storage->type = Z_TYPE_P(unserial);
+						
+						/*
+						* Set some storage flags
+						*/
+						switch((storage->type = Z_TYPE_P(unserial))){
+							case IS_STRING:
+								storage->strlen = Z_STRLEN_P(unserial);
+								storage->exists = (storage->strlen > 0);
+							break;
+							
+							case IS_LONG: storage->exists = (Z_LVAL_P(unserial) > 0L); break;
+							case IS_DOUBLE: storage->exists = (Z_DVAL_P(unserial) > 0.0); break;
+							case IS_ARRAY: storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unserial)); break;
+							
+							default: storage->exists = 0;
+						}
 						
 						/*
 						* not memcpy or strndup or anything that cares about null termination

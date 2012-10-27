@@ -26,59 +26,19 @@
 #	include <src/globals.h>
 #endif
 
-#ifndef HAVE_PTHREADS_COMPAT_H
-#	include <src/compat.h>
+#ifndef HAVE_PTHREADS_PREPARE_H
+#	include <src/prepare.h>
 #endif
 
 #ifndef HAVE_PTHREADS_MODIFIERS_H
 #	include <src/modifiers.h>
 #endif
 
-/* {{{ setup reference to self using from as the threading version of $this */
-#define PTHREADS_SET_SELF(from) do{\
-	self = PTHREADS_FETCH_FROM(from);\
-	pthreads_copy(thread, self);\
-	thread->sig = self;\
-	self->sig = thread;\
-	self->tls = tsrm_ls;\
-}while(0) /* }}} */
-
-/* {{{ pthreads object handlers */
-extern zend_object_handlers poh; /* }}} */
-
 /* {{{ pthreads module entry */
 extern zend_module_entry pthreads_module_entry; /* }}} */
 
-/* {{{ Empty method entries */
-zend_function_entry	pthreads_empty_methods[] = {
-	{NULL, NULL, NULL}
-}; /* }}} */
-
-/* {{{ set worker flag on PTHREAD */
-int pthreads_set_worker(PTHREAD thread, zend_bool flag TSRMLS_DC) {
-	int acquire = pthread_mutex_lock(thread->lock);
-	int result = 0;
-	if (acquire == SUCCESS || acquire == EDEADLK) {
-		thread->worker = flag;
-		result = 1;
-		if (acquire != EDEADLK)
-			pthread_mutex_unlock(thread->lock);
-	} else result = 0;
-	return result;
-} /* }}} */
-
-/* {{{ get worker flag on PTHREAD */
-int pthreads_is_worker(PTHREAD thread TSRMLS_DC) {
-	int result;
-	int acquire = pthread_mutex_lock(thread->lock);
-	
-	if (acquire == SUCCESS || acquire == EDEADLK) {
-		result = thread->worker;
-		if (acquire != EDEADLK)
-			pthread_mutex_unlock(thread->lock);
-	} else result = -1;
-	return result;
-} /* }}} */
+/* {{{ connect objects */
+static void pthreads_connect(PTHREAD source, PTHREAD destination); /* }}} */
 
 /* {{{ set state bits on a thread, timeout where appropriate/required */
 int pthreads_set_state_ex(PTHREAD thread, int mask, long timeout TSRMLS_DC) {
@@ -86,11 +46,10 @@ int pthreads_set_state_ex(PTHREAD thread, int mask, long timeout TSRMLS_DC) {
 	
 	switch(mask){
 		case PTHREADS_ST_WAITING: {
-			if (pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING TSRMLS_CC) && 
-				!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
-				if (pthreads_state_set(thread->state, PTHREADS_ST_WAITING TSRMLS_CC)) {
-					result = pthreads_synchro_wait_ex(thread->synchro, timeout TSRMLS_CC);
-				}
+			if (pthreads_state_set(thread->state, PTHREADS_ST_WAITING TSRMLS_CC)) {
+				result = pthreads_synchro_wait_ex(
+					thread->synchro, timeout TSRMLS_CC
+				);
 			}
 		} break;
 		
@@ -123,7 +82,7 @@ int pthreads_unset_state(PTHREAD thread, int mask TSRMLS_DC){
 } /* }}} */
 
 /* {{{ pop for php */
-int pthreads_stack_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC) {
+int pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 	int acquire = 0;
 	int remain = 0;
 	
@@ -135,117 +94,7 @@ int pthreads_stack_pop_ex(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 		remain = thread->stack->count;
 		if (acquire != EDEADLK)
 			pthread_mutex_unlock(thread->lock);
-	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
-	return remain;
-} /* }}} */
-
-/* {{{ pop the next item from the work buffer */
-int pthreads_stack_pop(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
-	PTHREAD *work = NULL;
-	PTHREAD current = NULL;
-	int acquire = 0;
-	int remain = -1;
-	int bubble = 0;
-	zval *that_ptr;
-	zend_class_entry *pce;
-	zend_function *run;
-burst:
-	acquire = pthread_mutex_lock(thread->lock);
-	if (acquire == SUCCESS || acquire == EDEADLK) {
-		bubble = thread->worker;
-		if (thread->stack->count > 0) {
-			work = zend_llist_get_first(thread->stack);
-			if (work && (current = *work) && current) {
-				bubble = 0;
-				
-				/*
-				* We create a class entry if we must
-				*/
-				{
-					char *lcname = malloc(thread->std.ce->name_length+1);
-					
-					if (lcname != NULL) {
-						zend_str_tolower_copy(lcname, thread->std.ce->name, thread->std.ce->name_length);
-						if (!zend_hash_exists(CG(class_table), lcname, thread->std.ce->name_length+1)) {
-							zend_class_entry ce;  {
-								INIT_CLASS_ENTRY_EX(
-									ce, 
-									thread->std.ce->name, 
-									thread->std.ce->name_length,
-									pthreads_empty_methods
-								);
-								pce = zend_register_internal_class(&ce TSRMLS_CC);
-								
-								/*
-								* Copy user declared methods
-								*/
-								zend_hash_copy(
-									&pce->function_table,
-									&current->std.ce->function_table,
-									(copy_ctor_func_t) function_add_ref,
-									&run, sizeof(zend_function)
-								);
-								
-#if PHP_VERSION_ID > 50399
-								/*
-								* Versions above 5.4 have run_time_cache to contend with, handled in compat for now
-								*/
-								pce->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
-#endif
-							}
-						} else {
-							zend_class_entry **ppce;
-							if (zend_hash_find(CG(class_table), lcname, thread->std.ce->name_length+1, (void**)&ppce)==SUCCESS){
-								pce = *ppce;
-							}
-						}
-						free(lcname);
-					} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
-				}
-				
-				/*
-				* Allocate a $that
-				*/
-				MAKE_STD_ZVAL(that_ptr);
-				
-				/*
-				* Initialize it with the new entry
-				*/
-				object_init_ex(that_ptr, pce);
-				
-				/*
-				* Setup the executor again
-				*/
-				if (zend_hash_find(&Z_OBJCE_P(that_ptr)->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
-					/*
-					* Set next op array
-					*/
-					EG(active_op_array)=(zend_op_array*)run;
-					
-					/*
-					* Return what is left on stack
-					*/
-					remain = thread->stack->count;
-				}
-				
-				/*
-				* Cleanup List
-				*/
-				zend_llist_del_element(thread->stack, work, (int (*)(void *, void *)) pthreads_equal_func);
-			}
-		}
-		
-		if (acquire != EDEADLK)
-			pthread_mutex_unlock(thread->lock);
-	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
-	
-	if (bubble && remain < 0 && !pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
-		if (pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC)) {
-			remain = -1;
-			goto burst;
-		}
-	}
-	
+	} else remain = -1;
 	return remain;
 } /* }}} */
 
@@ -256,7 +105,6 @@ int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 	
 	acquire = pthread_mutex_lock(thread->lock);
 	if (acquire == SUCCESS || acquire == EDEADLK) {
-		thread->worker = 1;
 		zend_llist_add_element(thread->stack, &work);
 		counted = thread->stack->count;
 		if (acquire != EDEADLK)
@@ -272,6 +120,95 @@ int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 	return counted;
 } /* }}} */
 
+/* {{{ pop the next item from the work buffer */
+int pthreads_stack_next(PTHREAD thread TSRMLS_DC) {
+	PTHREAD *work = NULL;
+	PTHREAD current = NULL;
+	int acquire = 0;
+	int bubble = 0;
+	zval *that_ptr;
+	zend_class_entry *scope;
+	zend_function *run;
+burst:
+	acquire = pthread_mutex_lock(thread->lock);
+	if (acquire == SUCCESS || acquire == EDEADLK) {
+		if ((bubble=thread->stack->count) > 0) {
+			work = zend_llist_get_first(thread->stack);
+			if (work && (current = *work) && current) {
+				
+				/*
+				* Find the class entry for work item
+				*/
+				{
+					if ((scope=pthreads_prepared_entry(thread, current->std.ce TSRMLS_CC))==NULL) {
+						if (acquire != EDEADLK) {
+							pthread_mutex_unlock(thread->lock);
+						}
+						return 0;
+					}
+				}
+				
+				/*
+				* Allocate a $that
+				*/
+				MAKE_STD_ZVAL(that_ptr);
+				
+				/*
+				* Initialize it with the new entry
+				*/
+				object_and_properties_init(that_ptr, scope, current->std.properties);
+				
+				/*
+				* Switch scope to the next stackable
+				*/
+				if (zend_hash_find(&Z_OBJCE_P(that_ptr)->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
+
+					/*
+					* Setup Executor
+					*/
+					EG(This)=that_ptr;
+					EG(scope)=Z_OBJCE_P(that_ptr);
+					EG(called_scope)=Z_OBJCE_P(that_ptr);
+					
+					/*
+					* Setup stackable for runtime
+					*/
+					{
+						PTHREAD stackable = PTHREADS_FETCH_FROM(that_ptr);
+						
+						if (stackable) {
+							current->tid = thread->tid;
+							current->tls = thread->tls;
+							pthreads_connect(current, stackable);
+							pthreads_state_set(
+								current->state, PTHREADS_ST_RUNNING TSRMLS_CC
+							);
+						}
+					}
+					
+					/*
+					* Cleanup List
+					*/
+					zend_llist_del_element(thread->stack, work, (int (*)(void *, void *)) pthreads_equal_func);
+				}
+			}
+		}
+		
+		if (acquire != EDEADLK)
+			pthread_mutex_unlock(thread->lock);
+	}
+	
+	if (!bubble) {
+		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
+			if (pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC)) {
+				goto burst;
+			}
+		} else return 0;
+	} 
+	
+	return bubble;
+} /* }}} */
+
 /* {{{ return the number of items currently stacked */
 int pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
 	int acquire = 0;
@@ -282,7 +219,7 @@ int pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
 		counted = thread->stack->count;
 		if (acquire != EDEADLK)
 			pthread_mutex_unlock(thread->lock);
-	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
+	} else counted = -1;
 	return counted;
 } /* }}} */
 
@@ -297,456 +234,295 @@ int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
 		
 		if (acquire == SUCCESS || acquire == EDEADLK) {
 			/*
-			* Initialize the thread in the current context, once
+			* Find the class entry for the selected thread in the current context
 			*/
 			{
-				char *lcname = malloc(thread->std.ce->name_length+1);
-				
-				if (lcname != NULL) {
-					zend_str_tolower_copy(lcname, thread->std.ce->name, thread->std.ce->name_length);
-					if (!zend_hash_exists(CG(class_table), lcname, thread->std.ce->name_length+1)) {
-						zend_class_entry ce;  {
-							INIT_CLASS_ENTRY_EX(
-								ce, 
-								thread->std.ce->name, 
-								thread->std.ce->name_length,
-								pthreads_empty_methods
-							);
-							ce.create_object = pthreads_attach_to_other;
-							ce.serialize = zend_class_serialize_deny;
-							ce.unserialize = zend_class_unserialize_deny;
-							pce = zend_register_internal_class(&ce TSRMLS_CC);
-							
-							/*
-							* Import user declared methods
-							*/
-							{
-								zend_function *tf;
-								zend_hash_copy(
-									&pce->function_table, 
-									&((thread->std.ce)->function_table),
-									(copy_ctor_func_t) function_add_ref,
-									&tf, sizeof(zend_function)
-								);
-							}
-							
-#if PHP_VERSION_ID > 50399
-							/*
-							* Versions above 5.4 have run_time_cache to contend with, handled in compat for now
-							*/
-							pce->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
-#endif
-						}
-					} else {
-						zend_class_entry **ppce;
-						
-						if (zend_hash_find(CG(class_table), lcname, thread->std.ce->name_length+1, (void**)&ppce)==SUCCESS){
-							pce = *ppce;
-						}
-					}
-					free(lcname);
-				} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
+				if ((pce=pthreads_prepared_entry(thread, thread->std.ce TSRMLS_CC))==NULL) {
+					if (acquire != EDEADLK) 
+						pthread_mutex_unlock(thread->lock);
+					imported = NULL;
+				}
 			}
-			
-			/*
-			* Ensure correct handling of the imported object
-			*/
-			pce->create_object = pthreads_attach_to_other;
 			
 			/*
 			* Initialize the object in this context
 			*/
-			if (object_init_ex(*return_value, pce)==SUCCESS) {
-				imported = PTHREADS_FETCH_FROM(*return_value);
-				if (imported) {
+			if (pce && object_and_properties_init(*return_value, pce, thread->std.properties)==SUCCESS) {
+				if ((imported = PTHREADS_FETCH_FROM(*return_value))!=NULL) {
 					/*
-					* Point thread data in the correct places
+					* Connect to the imported thread
 					*/
-					pthreads_copy(thread, imported);
+					pthreads_connect(thread, imported);
 					
 					/*
 					* Set the imports significant other
 					*/
 					imported->sig = thread->sig;
-				} else zend_error_noreturn(E_WARNING, "pthreads has detected a failure while importing Thread %lu from Thread %lu", thread->tid, thread->cid);
-			} else zend_error_noreturn(E_WARNING, "pthreads has detected a failure while trying to initialize imported Thread %lu", thread->tid);
+				}
+			}
 			
-			if (acquire != EDEADLK) 
+			if (acquire != EDEADLK)
 				pthread_mutex_unlock(thread->lock);
 		}
-	} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to import a thread that was created in the current context");
+	}
 	return imported != NULL ? 1 : 0;
 } /* }}} */
 
-/* }}} */
-
-/* {{{ this constructor is used to build the original PTHREAD in the creating context and the significant other in the threading context */
-zend_object_value pthreads_attach_to_context(zend_class_entry *entry TSRMLS_DC){
-#if PHP_VERSION_ID < 50399
-	zval *temp; 
-#endif
+/* {{{ thread object constructor */
+zend_object_value pthreads_object_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	
-	/*
-	* Allocate an initialize thread object for storage
-	*/
-	PTHREAD instance = calloc(1, sizeof(*instance));			
-	
-	/*
-	* Set creator information
-	*/
-	instance->cid = pthreads_self();
-	instance->cls = tsrm_ls;
-	
-	/*
-	* Lock Initialization
-	*/
-	instance->lock = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t));
-	if (instance->lock) {
-		pthread_mutex_init(instance->lock, &defmutex);
-	}
-	
-	/*
-	* State Initialization
-	*/
-	instance->state = pthreads_state_alloc(0 TSRMLS_CC);
-	
-	/*
-	* Synchro Initialization
-	*/
-	instance->synchro = pthreads_synchro_alloc(TSRMLS_C);
-	
-	/*
-	* Allocate Modifiers
-	*/
-	instance->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
-	
-	/*
-	* Allocate Serial Buffers
-	*/
-	instance->store = pthreads_serial_alloc(TSRMLS_C);
-	
-	/*
-	* Look for private/protected methods
-	*/
-	pthreads_modifiers_init(instance->modifiers, entry TSRMLS_CC);
-	
-	/*
-	* Allocate Work Buffer
-	*/
-	instance->stack = (zend_llist*) calloc(1, sizeof(zend_llist));
-	
-	/*
-	* Initialize Work buffer
-	*/
-	zend_llist_init(instance->stack, sizeof(void**), NULL, 1);
-	
-	/*
-	* This is not a copy
-	*/
-	instance->copy = 0;
-	
-	/*
-	* Set upon return from Thread::run
-	*/
-	instance->status = (long*) calloc(1, sizeof(long));
-	
-	/*
-	* Set initial status makes for easier debugging
-	*/
-	(*instance->status) = 0L;
-	
-	/*
-	* Add thread to global list
-	*/
-	pthreads_globals_add(instance);
-	
-	/*
-	* Initialize standard entry
-	*/ 
-	zend_object_std_init(&instance->std, entry TSRMLS_CC);
-	
-	/*
-	* Initialize instance properties
-	*/
-#if PHP_VERSION_ID < 50399
-	{
-		zend_hash_copy(															
-			instance->std.properties,
-			&entry->default_properties,
-			ZVAL_COPY_CTOR,
-			&temp, sizeof(zval*)
+	PTHREAD thread = calloc(1, sizeof(*thread));
+	if (thread) {
+		thread->scope |= PTHREADS_SCOPE_THREAD;
+		pthreads_base_ctor(thread, entry TSRMLS_CC);
+		attach.handle = zend_objects_store_put(
+			thread,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
+			pthreads_base_dtor, 
+			NULL TSRMLS_CC
 		);
+		attach.handlers = &pthreads_handlers;
 	}
-#else
-	object_properties_init(&(instance->std), entry);
-#endif		
-	
-	/*
-	* Store the object
-	*/
-	attach.handle = zend_objects_store_put(
-		instance,
-		(zend_objects_store_dtor_t) zend_objects_destroy_object, 
-		pthreads_detach_from_context, 
-		NULL TSRMLS_CC
-	);
-	
-	/*
-	* Attach pthreads object handlers
-	*/
-	attach.handlers = &poh;
+	return attach;
+} /* }}} */
 
-	return attach;																
-}
-/* }}} */
-
-/* {{{ this constructor is used to build a PTHREAD skeleton for use as a base object to represent an imported thread */
-zend_object_value pthreads_attach_to_other(zend_class_entry *entry TSRMLS_DC){
-#if PHP_VERSION_ID < 50399
-	zval *temp;
-#endif
+/* {{{ thread connection object constructor */
+zend_object_value pthreads_connection_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	
-	/*
-	* Allocate an initialize thread object for storage
-	*/
-	PTHREAD other = calloc(1, sizeof(*other));	
-	
-	/*
-	* Standard Entry Initialization
-	*/ 
-	zend_object_std_init(&other->std, entry TSRMLS_CC);
-	
-	/*
-	* Initialize instance properties
-	*/
-#if PHP_VERSION_ID < 50399
-	{
-		zend_hash_copy(															
-			other->std.properties,
-			&entry->default_properties,
-			ZVAL_COPY_CTOR,
-			&temp, sizeof(zval*)
+	PTHREAD thread = calloc(1, sizeof(*thread));
+	if (thread) {
+		thread->scope |= PTHREADS_SCOPE_THREAD|PTHREADS_SCOPE_CONNECTION;
+		pthreads_base_ctor(thread, entry TSRMLS_CC);
+		attach.handle = zend_objects_store_put(
+			thread,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
+			pthreads_base_dtor, 
+			NULL TSRMLS_CC
 		);
+		attach.handlers = &pthreads_handlers;
 	}
-#else
-	object_properties_init(&(other->std), entry);
-#endif
+	return attach;
+} /* }}} */
 
-	/*
-	* Store the object
-	*/
-	attach.handle = zend_objects_store_put(
-		other,  
-		(zend_objects_store_dtor_t) zend_objects_destroy_object, 
-		pthreads_detach_from_other,
-		NULL TSRMLS_CC
-	);
-	
-	/*
-	* Attach pthreads object handlers
-	*/
-	attach.handlers = &poh;
+/* {{{ worker object constructor */
+zend_object_value pthreads_object_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
+	zend_object_value attach;
+	PTHREAD worker = calloc(1, sizeof(*worker));
+	if (worker) {
+		worker->scope |= PTHREADS_SCOPE_WORKER;
+		pthreads_base_ctor(worker, entry TSRMLS_CC);
+		attach.handle = zend_objects_store_put(
+			worker,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
+			pthreads_base_dtor, 
+			NULL TSRMLS_CC
+		);
+		attach.handlers = &pthreads_handlers;
+	}
+	return attach;
+} /* }}} */
 
-	return attach;																
-}
-/* }}} */
+/* {{{ worker connection object constructor */
+zend_object_value pthreads_connection_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
+	zend_object_value attach;
+	PTHREAD worker = calloc(1, sizeof(*worker));
+	if (worker) {
+		worker->scope |= PTHREADS_SCOPE_WORKER|PTHREADS_SCOPE_CONNECTION;
+		pthreads_base_ctor(worker, entry TSRMLS_CC);
+		attach.handle = zend_objects_store_put(
+			worker,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
+			pthreads_base_dtor, 
+			NULL TSRMLS_CC
+		);
+		attach.handlers = &pthreads_handlers;
+	}
+	return attach;
+} /* }}} */
 
-void pthreads_detach_from_other(void *arg TSRMLS_DC) {
-	PTHREAD thread = (PTHREAD) arg;
-	
-	if (arg && thread) {
-		/*
-		* Cleanup function table
-		*/
-		if (zend_hash_num_elements(&thread->std.ce->function_table)) {
-			HashPosition position;
-			zend_function *function;
-			for (zend_hash_internal_pointer_reset_ex(&thread->std.ce->function_table, &position);
-				zend_hash_get_current_data_ex(&thread->std.ce->function_table, (void**)&function, &position)==SUCCESS;
-				zend_hash_move_forward_ex(&thread->std.ce->function_table, &position)){
-				if (function->type == ZEND_OVERLOADED_FUNCTION) {
-					function->type = ZEND_USER_FUNCTION;
-				}
-			}
-		}
+/* {{{ stackable object constructor */
+zend_object_value pthreads_object_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
+	zend_object_value attach;
+	PTHREAD stackable = calloc(1, sizeof(*stackable));
+	if (stackable) {
+		stackable->scope |= PTHREADS_SCOPE_STACKABLE;
+		pthreads_base_ctor(stackable, entry TSRMLS_CC);
+		attach.handle = zend_objects_store_put(
+			stackable,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
+			pthreads_base_dtor, 
+			NULL TSRMLS_CC
+		);
+		attach.handlers = &pthreads_handlers;
+	}
+	return attach;
+} /* }}} */
+
+/* {{{ stackable connection object constructor */
+zend_object_value pthreads_connection_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
+	zend_object_value attach;
+	PTHREAD stackable = calloc(1, sizeof(*stackable));
+	if (stackable) {
+		stackable->scope |= PTHREADS_SCOPE_STACKABLE|PTHREADS_SCOPE_CONNECTION;
+		pthreads_base_ctor(stackable, entry TSRMLS_CC);
+		attach.handle = zend_objects_store_put(
+			stackable,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
+			pthreads_base_dtor, 
+			NULL TSRMLS_CC
+		);
+		attach.handlers = &pthreads_handlers;
+	}
+	return attach;
+} /* }}} */
+
+/* {{{ connect pthread objects */
+static void pthreads_connect(PTHREAD source, PTHREAD destination) {
+	if (source && destination) {
+		destination->thread = source->thread;
+		destination->tid = source->tid;
+		destination->tls = source->tls;
+		destination->cid = source->cid;
+		destination->synchronized = source->synchronized;
 		
-		/*
-		* Destroy object properties
-		*/
-		if (thread->std.properties) 
+		destination->lock = source->lock;
+		destination->state = source->state;
+		destination->synchro = source->synchro;
+		destination->modifiers = source->modifiers;
+		destination->store = source->store;
+		destination->stack = source->stack;
+		destination->status = source->status;
+	}
+} /* }}} */
+
+/* {{{ pthreads base constructor */
+void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {
+
+	if (base) {
+		zend_object_std_init(&base->std, entry TSRMLS_CC);
+#if PHP_VERSION_ID < 50399
 		{
-			zend_hash_destroy(thread->std.properties);
-			FREE_HASHTABLE(thread->std.properties);
-			thread->std.properties = NULL;
+			zval *temp;
+		
+			zend_hash_copy(															
+				base->std.properties,
+				&entry->default_properties,
+				ZVAL_COPY_CTOR,
+				&temp, sizeof(zval*)
+			);
 		}
-		
-#if PHP_VERSION_ID > 50399
-		
-		/*
-		* 5.4+ requires that you free default properties seperately
-		*/
-		if (thread->std.ce->default_properties_count > 0 && thread->std.properties_table) {
-			int i=0;
-			for (;i<thread->std.ce->default_properties_count;i++){
-				if (thread->std.properties_table[i]) {
-					zval_ptr_dtor(&thread->std.properties_table[i]);
+#else
+		object_properties_init(&(base->std), entry);
+#endif		
+
+		if (PTHREADS_IS_CONNECTION(base)) {
+			base->tid = pthreads_self();
+			base->tls = tsrm_ls;
+			pthreads_prepare_classes_init(base TSRMLS_CC);
+		} else {
+			base->cid = pthreads_self();
+			base->cls = tsrm_ls;
+			if ((base->lock = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t)))!=NULL) {
+				pthread_mutex_init(base->lock, &defmutex);
+			}
+			base->state = pthreads_state_alloc(0 TSRMLS_CC);
+			base->synchro = pthreads_synchro_alloc(TSRMLS_C);
+			base->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
+			base->store = pthreads_serial_alloc(TSRMLS_C);
+			base->status = (long*) calloc(1, sizeof(long));
+			(*base->status) = 0L;
+			
+			pthreads_prepare_classes_init(base TSRMLS_CC);
+			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
+			if (PTHREADS_IS_WORKER(base)) {
+				base->stack = (zend_llist*) calloc(1, sizeof(zend_llist));
+				zend_llist_init(base->stack, sizeof(void**), NULL, 1);
+			}
+			
+			if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
+				pthreads_globals_add(base);
+			}
+		}
+	}
+} /* }}} */
+
+/* {{{ pthreads base destructor */
+void pthreads_base_dtor(void *arg TSRMLS_DC) {
+	PTHREAD base = (PTHREAD) arg;
+	if (PTHREADS_IS_NOT_CONNECTION(base)) {
+		if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
+			if (pthreads_state_isset(base->state, PTHREADS_ST_STARTED TSRMLS_CC)) {
+				if (!pthreads_state_isset(base->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
+					pthreads_state_set(base->state, PTHREADS_ST_JOINED TSRMLS_CC);
+					if (pthread_join(base->thread, NULL)!=SUCCESS) {
+						/* do something */
+					}
 				}
 			}
-			efree(thread->std.properties_table);
+			pthreads_globals_del(base);
 		}
-#endif
-		/*
-		* Finally free the thread object
-		*/
-		free(thread);
-	}
-}
 
-/* {{{ this destructor handles all types of PTHREAD gracefully */
-void pthreads_detach_from_context(void * arg TSRMLS_DC){
-	PTHREAD thread = (PTHREAD) arg;
-	
-	if (arg && thread) {
-		/*
-		* Remove from global list
-		*/
-		pthreads_globals_del(thread);
-		
-		/*
-		* Attempt to join unjoined threads
-		*/
-		if (pthreads_state_isset(thread->state, PTHREADS_ST_STARTED TSRMLS_CC)) {
-			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
-				pthreads_state_set(thread->state, PTHREADS_ST_JOINED TSRMLS_CC);
-				pthread_join(
-					thread->thread, NULL
-				);
-			}
+		free(base->status);
+		if (base->lock) {
+			pthread_mutex_destroy(base->lock);
+			free(base->lock);
 		}
-		
-		/*
-		* Free thread status
-		*/
-		free(thread->status);
-		
-		/*
-		* Destroy Thread Lock
-		*/
-		if (thread->lock) {
-			pthread_mutex_destroy(thread->lock);
-			free(thread->lock);
+		pthreads_state_free(base->state  TSRMLS_CC);
+		pthreads_modifiers_free(base->modifiers TSRMLS_CC);
+		pthreads_serial_free(base->store TSRMLS_CC);
+		pthreads_synchro_free(base->synchro TSRMLS_CC);
+		if (PTHREADS_IS_WORKER(base)) {
+			zend_llist_destroy(base->stack);
+			free(base->stack);
 		}
-		
-		/*
-		* Destroy Stack
-		*/
-		zend_llist_destroy(thread->stack);
-		
-		/*
-		* Free stack list
-		*/
-		free(thread->stack);
-		
-		/*
-		* Free state object
-		*/
-		pthreads_state_free(thread->state  TSRMLS_CC);
-		
-		/*
-		* Free modifiers
-		*/
-		pthreads_modifiers_free(thread->modifiers TSRMLS_CC);
-		
-		/*
-		* Free serial storage
-		*/
-		pthreads_serial_free(thread->store TSRMLS_CC);
-		
-		/*
-		* Free synchro
-		*/
-		pthreads_synchro_free(thread->synchro TSRMLS_CC);
-		
-		/*
-		* Run PHP specific detachment routine on thread
-		*/
-		pthreads_detach_from_other(thread TSRMLS_CC);
 	}
-}
-/* }}} */
-
-/* {{{ prepares the current context to execute the referenced thread */
-static inline void pthreads_prepare(PTHREAD thread TSRMLS_DC){
-	HashPosition position;
-	zend_class_entry **entry;
-	HashTable *source = PTHREADS_CG(thread->cls, class_table);
-	HashTable *destination = CG(class_table);
 	
-	for(zend_hash_internal_pointer_reset_ex(source, &position);
-		zend_hash_get_current_data_ex(source, (void**) &entry, &position)==SUCCESS;
-		zend_hash_move_forward_ex(source, &position)) {
-		char *lcname;
-		uint lcnamel;
-		ulong idx;
-		
-		if (zend_hash_get_current_key_ex(source, &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
-			if (!zend_hash_exists(destination, lcname, lcnamel)){
-				zend_class_entry ce;
-				zend_class_entry *pce;
-		
-				INIT_CLASS_ENTRY_EX(
-					ce, 
-					(*entry)->name, 
-					(*entry)->name_length,
-					pthreads_empty_methods
-				);
-				ce.create_object = (*entry)->create_object;
-				ce.clone = (*entry)->clone;
-				ce.serialize = (*entry)->serialize;
-				ce.unserialize = (*entry)->unserialize;
-				
-				pce=zend_register_internal_class(&ce TSRMLS_CC);
-				
-				{
-					zend_function *tf;
-					zend_hash_copy(
-						&pce->function_table, 
-						&((*entry)->function_table),
-						(copy_ctor_func_t) function_add_ref,
-						&tf, sizeof(zend_function)
-					);
-				}
-				
+	zend_llist_destroy(&(base->preparation.classes));
+	
+	if (base->std.properties) {
+		zend_hash_destroy(base->std.properties);
+		FREE_HASHTABLE(base->std.properties);
+		base->std.properties = NULL;
+	}
+	
 #if PHP_VERSION_ID > 50399
-				pce->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
-#endif
-
+	if (base->std.ce->default_properties_count > 0 && base->std.properties_table) {
+		int i=0;
+		for (;i<base->std.ce->default_properties_count;i++){
+			if (base->std.properties_table[i]) {
+				zval_ptr_dtor(&base->std.properties_table[i]);
 			}
 		}
+		efree(base->std.properties_table);
 	}
+#endif
+	free(base);
 } /* }}} */
 
 /* {{{ this is aptly named ... */
 void * PHP_PTHREAD_ROUTINE(void *arg){
 
 	/*
-	* The thread in the context where it was created
+	* The thread object
 	*/
 	PTHREAD thread = (PTHREAD) arg;
 
 	if (thread) {
 	
 		/*
-		* The thread in this context
+		* The connection to the thread object
 		*/
-		PTHREAD	self = NULL;
+		PTHREAD	connection = NULL;
 		
 		/*
 		* Thread safe storage
 		*/
 		void ***tsrm_ls;
+		
+		/*
+		* Global lock acquisition indicator
+		*/
+		int glocked;
 		
 		/*
 		* Startup Block
@@ -755,7 +531,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			/*
 			* Acquire Global Lock
 			*/
-			pthreads_globals_lock();
+			pthreads_globals_lock(&glocked);
 			
 			/*
 			* Allocate Context
@@ -807,7 +583,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			/*
 			* Release global lock
 			*/
-			pthreads_globals_unlock();
+			pthreads_globals_unlock(&glocked);
 		}
 		
 		/*
@@ -817,7 +593,8 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			/*
 			* Pointers to the usual
 			*/
-			zval *this_ptr = NULL, *return_value = NULL;
+			zval *this_ptr = NULL;
+			zend_class_entry *scope = NULL;
 			
 			/*
 			* A new reference to $this for the current context
@@ -837,55 +614,52 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				EG(current_module)=&pthreads_module_entry;
 				
 				/*
-				* Initialize the thread in the current context
-				*/
-				{
-					zend_class_entry ce;
-					
-					INIT_CLASS_ENTRY_EX(
-						ce,				
-						thread->std.ce->name,
-						thread->std.ce->name_length,
-						pthreads_empty_methods
-					);
-					ce.create_object = pthreads_attach_to_other;
-					ce.serialize = zend_class_serialize_deny;
-					ce.unserialize = zend_class_unserialize_deny;
-					object_init_ex(this_ptr, zend_register_internal_class(
-						&ce TSRMLS_CC
-					));
-				}
-				
-				/*
-				* Import the users methods to the current context
-				*/
-				{
-					zend_function *tf;
-					
-					zend_hash_copy(
-						&Z_OBJCE_P(getThis())->function_table, 
-						&thread->std.ce->function_table,
-						(copy_ctor_func_t) function_add_ref,
-						&tf, sizeof(zend_function)
-					);
-				}
-				
-				/*
-				* Fetches a reference to thread from the current context
-				*/
-				PTHREADS_SET_SELF(getThis());
-				
-				/*
-				* We can now set the executor and scope to reference a thread safe version of $this
-				*/
-				EG(called_scope) = Z_OBJCE_P(getThis());
-				EG(scope) = Z_OBJCE_P(getThis());
-				EG(This) = getThis();
-				
-				/*
 				* Prepare for execution
 				*/
 				pthreads_prepare(thread TSRMLS_CC);
+				
+				/*
+				* Initialize thread and connection
+				*/
+				{
+					/*
+					* Fetch prepared entry for connection
+					*/
+					scope = pthreads_prepared_entry
+					(
+						thread, 
+						thread->std.ce TSRMLS_CC
+					);
+					
+					/*
+					* Initialize $this
+					*/
+					object_and_properties_init
+					(
+						getThis(), 
+						scope, 
+						thread->std.properties
+					);
+					
+					/*
+					* Fetch connection from object storage in this context
+					*/
+					connection = PTHREADS_FETCH_FROM(getThis());
+					
+					/*
+					* Make connection
+					*/
+					pthreads_connect(thread, connection);
+					
+					/*
+					* Set significant other and local storage pointers
+					*/
+					{
+						thread->sig = connection;
+						connection->sig = thread;
+						connection->tls = tsrm_ls;
+					}
+				}
 				
 				/*
 				* Allow the creating thread to continue where appropriate
@@ -893,45 +667,65 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 				if (!thread->synchronized)
 					pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
 				
-#if PHP_VERSION_ID > 50399
-				/*
-				* Versions above 5.4 have run_time_cache to contend with, handled in compat for now
-				*/
-				EG(scope)->function_table.pDestructor = (dtor_func_t) pthreads_method_del_ref;
-#endif
-				
 				/*
 				* Runtime ...
 				*/
 				{
-					zend_function *run;
-					
-					if (zend_hash_find(&EG(scope)->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
-					
-						/*
-						* Setup executor for Thread::run
-						*/
-						EG(return_value_ptr_ptr)=&return_value;
-						EG(active_op_array)=(zend_op_array*)run;
-						EG(in_execution) = 1;
-						
-						/*
-						* Now time to execute Thread::run
-						*/
-						zend_try {
-							do {
-								if (EG(active_op_array)) {
-									EG(in_execution) = 1;
-									zend_execute(
-										EG(active_op_array) TSRMLS_CC
-									);
+					/*
+					* Now time to execute ::run
+					*/
+					zend_try {
+						EG(called_scope) = scope;
+						EG(scope) = scope;
+						EG(This) = getThis();
+				
+						do {	
+							zend_function *run;
+							zval *return_value;
+							
+							if (zend_hash_find(&EG(scope)->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
+								/* Distinct *return and ::run */
+								EG(in_execution) = 1;
+								EG(active_op_array)=(zend_op_array*)run;
+								EG(return_value_ptr_ptr)=&return_value;
+								/* Do the dance ... */
+								zend_execute
+								(
+									EG(active_op_array) TSRMLS_CC
+								);
+#if PHP_VERSION_ID > 50399
+								/* Deal with cache ... */
+								{
+									zend_op_array *ran = &run->op_array;
+									
+									if (ran->run_time_cache) {
+										efree(ran->run_time_cache);
+										ran->run_time_cache = NULL;
+									}
 								}
-							} while(pthreads_stack_pop(thread, getThis() TSRMLS_CC)>-1);
-						} zend_end_try();
+#endif	
+								/* Handle *return from ::run */
+								if (return_value) {
+									switch(Z_TYPE_P(return_value)){
+										case IS_NULL: (*connection->status) = 0L; break;
+										case IS_LONG: (*connection->status) = Z_LVAL_P(return_value); break;
+										case IS_DOUBLE: (*connection->status) = (long) Z_LVAL_P(return_value); break;
+										case IS_BOOL: (*connection->status) = (long) Z_BVAL_P(return_value); break;
+										
+										default:
+											zend_error_noreturn(E_WARNING, "pthreads has detected that %s::run (%lu) attempted to return an unsupported type", EG(scope)->name, connection->tid);
+											(*connection->status) = 0L;
+									}
+									
+									FREE_ZVAL(return_value);
+								} else (*connection->status) = 0L;
+							} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
+						} while(PTHREADS_IS_WORKER(thread) && pthreads_stack_next(thread TSRMLS_CC));
+					} zend_catch {
 						
-					} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", thread->std.ce->name);
+					} zend_end_try();
 				}
-			} zend_catch {	
+			} zend_catch {
 				/* do something, it's all gone wrong */
 			} zend_end_try();
 			
@@ -939,28 +733,6 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			* Unset running flag
 			*/
 			pthreads_unset_state(thread, PTHREADS_ST_RUNNING TSRMLS_CC);
-			
-			/*
-			* Store and destroy return value from Thread::run
-			*/
-			if (return_value) {
-				switch(Z_TYPE_P(return_value)){
-					case IS_NULL: (*thread->status) = 0L; break;
-					case IS_LONG: (*thread->status) = Z_LVAL_P(return_value); break;
-					case IS_DOUBLE: (*thread->status) = (long) Z_LVAL_P(return_value); break;
-					case IS_BOOL: (*thread->status) = (long) Z_BVAL_P(return_value); break;
-					
-					default:
-						zend_error_noreturn(E_WARNING, "pthreads has detected that %s::run (%lu) attempted to return an unsupported symbol", Z_OBJCE_P(getThis())->name, thread->tid);
-						FREE_ZVAL(return_value);
-						(*thread->status) = 0L;
-				}
-			} else (*thread->status) = 0L;
-			
-			/*
-			* Free pointer to this
-			*/
-			FREE_ZVAL(this_ptr);
 		}
 		
 		/*
@@ -970,7 +742,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			/*
 			* Acquire global lock
 			*/
-			pthreads_globals_lock();
+			pthreads_globals_lock(&glocked);
 		
 			/*
 			* Deactivate Zend
@@ -990,7 +762,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 			/*
 			* Release global lock
 			*/
-			pthreads_globals_unlock();
+			pthreads_globals_unlock(&glocked);
 		}
 	}
 	

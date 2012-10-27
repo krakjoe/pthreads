@@ -49,12 +49,11 @@ pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D) {
 void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *entry TSRMLS_DC) {
 	HashPosition position;
 	zend_function *method;
-	
+
 	for (zend_hash_internal_pointer_reset_ex(&entry->function_table, &position);
 		 zend_hash_get_current_data_ex(&entry->function_table, (void**)&method, &position) == SUCCESS;
 		 zend_hash_move_forward_ex(&entry->function_table, &position)) {
 		if (method && (method->type != ZEND_INTERNAL_FUNCTION)) {
-			
 			if (method->common.fn_flags & ZEND_ACC_PRIVATE){
 				pthreads_modifiers_set(
 					modifiers,
@@ -152,4 +151,5 @@ static void pthreads_modifiers_protection_dtor(void **element) {
 		free(protection);
 	}
 } /* }}} */
+
 #endif

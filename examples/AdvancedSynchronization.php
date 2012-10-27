@@ -39,8 +39,7 @@ class Tester extends Thread {
 				$test->reading = ((rand()*10)*microtime(true))/10;
 				if ($test->isWaiting()) {
 					printf("%s: %lu notifying %lu: %d\n", __CLASS__, $this->getThreadId(), $tid, $test->notify());
-				} 
-					
+				}	
 			} else printf("%s: %lu failed to find %s\n", __CLASS__, $this->getThreadId(), $tid);
 		}
 		printf("%s: %lu notifying process: %d\n", __CLASS__, $this->getThreadId(), $this->notify());

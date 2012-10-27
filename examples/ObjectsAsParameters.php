@@ -1,18 +1,11 @@
 <?php
 class Response {
-	/* note members have to be public else serialization of the object will fail */
-	/* you can workaround this ( for now ) by serializing in the appropriate scope */
-	/* and passing the result of that method call as the object parameter rather than the object itgetThreadId */
-	/* ie. with a serialize method that resolves scope for you like: */
-	public function getSerialInstance(){ return serialize($this); }
-	/* or serialize anywhere else in the correct scope */
-	/* ther should be a workaround for this in the future */
-	
 	public $url;
 	public $start;
 	public $finish;
 	public $data;
 	public $length;
+	public $remain = "my remaining string";
 	
 	public function __construct($url){
 		$this->url = $url;
