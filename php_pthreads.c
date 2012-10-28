@@ -119,6 +119,9 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_isWaiting, 0, 0, 0)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Worker_isWorking, 0, 0, 0)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ stacking */
@@ -219,7 +222,7 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Thread, stack, Thread_stack, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, unstack, Thread_unstack, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, isWaiting, Thread_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getStacked, Thread_getStacked, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 }; /* }}} */
@@ -589,7 +592,18 @@ PHP_METHOD(Thread, isWaiting)
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-}
+} /* }}} */
+
+/* {{{ proto boolean Worker::isWorking() 
+	Will return false if the worker is waiting for work */
+PHP_METHOD(Worker, isWorking)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+} /* }}} */
 
 /* {{{ proto boolean Thread::wait([long timeout]) 
 		Will cause the calling process or thread to wait for the referenced thread to notify
