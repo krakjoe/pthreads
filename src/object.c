@@ -121,7 +121,7 @@ int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ pop the next item from the work buffer */
-int pthreads_stack_next(PTHREAD thread TSRMLS_DC) {
+int pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	PTHREAD *work = NULL;
 	PTHREAD current = NULL;
 	int acquire = 0;
@@ -162,7 +162,6 @@ burst:
 				* Switch scope to the next stackable
 				*/
 				if (zend_hash_find(&Z_OBJCE_P(that_ptr)->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
-
 					/*
 					* Setup Executor
 					*/
@@ -180,9 +179,13 @@ burst:
 							current->tid = thread->tid;
 							current->tls = thread->tls;
 							pthreads_connect(current, stackable);
-							pthreads_state_set(
-								current->state, PTHREADS_ST_RUNNING TSRMLS_CC
-							);
+							if (zend_hash_update(
+								Z_OBJPROP_P(that_ptr), "worker", sizeof("worker"), 
+								(void**) &getThis(), sizeof(zval*), NULL
+								)==SUCCESS) {
+								Z_ADDREF_P(getThis());
+							}
+							pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 						}
 					}
 					
@@ -720,7 +723,7 @@ void * PHP_PTHREAD_ROUTINE(void *arg){
 									FREE_ZVAL(return_value);
 								} else (*connection->status) = 0L;
 							} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
-						} while(PTHREADS_IS_WORKER(thread) && pthreads_stack_next(thread TSRMLS_CC));
+						} while(PTHREADS_IS_WORKER(thread) && pthreads_stack_next(thread, getThis() TSRMLS_CC));
 					} zend_catch {
 						
 					} zend_end_try();

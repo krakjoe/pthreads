@@ -61,7 +61,7 @@ int pthreads_unset_state(PTHREAD thread, int state TSRMLS_DC);
 int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC);
 int pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC);
 int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC);
-int pthreads_stack_next(PTHREAD thread TSRMLS_DC);
+int pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC);
 int pthreads_stack_length(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
