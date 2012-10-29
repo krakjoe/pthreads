@@ -23,11 +23,8 @@
 #endif
 
 typedef struct _pthreads_synchro {
-	pthread_mutex_t wait;
-	pthread_cond_t notify;
-	pthread_cond_t hang;
-	zend_bool waiting;
-	zend_bool hanging;
+	pthread_mutex_t lock;
+	pthread_cond_t 	notify;
 } *pthreads_synchro;
 
 /* {{{ allocate synchronization object */
