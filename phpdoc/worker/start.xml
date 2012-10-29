@@ -11,25 +11,16 @@
   &reftitle.description;
   <methodsynopsis>
    <modifier>final</modifier> <modifier>public</modifier> <type>boolean</type><methodname>Worker::start</methodname>
-   <methodparam choice="opt"><type>boolean</type><parameter>synchronized</parameter></methodparam>
+   <void />
   </methodsynopsis>
   <para>
-  Will start a new Thread, first executing Worker::run and then waiting for an executing Stackables
+  Will start a new Thread, executing Worker::run and then waiting for Stackables
   </para>
  </refsect1>
 
  <refsect1 role="parameters">
   &reftitle.parameters;
-  <variablelist>
-   <varlistentry>
-    <term><parameter>synchronized</parameter></term>
-    <listitem>
-     <para>
-  When true will cause the calling context to wait for notification from the Worker before returning from the call to Worker::start
-     </para>
-    </listitem>
-   </varlistentry>
-  </variablelist>
+  &no.function.parameters;
  </refsect1>
 
  <refsect1 role="returnvalues">

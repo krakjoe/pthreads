@@ -27,6 +27,11 @@
   &reftitle.returnvalues;
   <para>
   A boolean indication of state
+  <note>
+    <para>
+     A Thread is considered running while executing the run method
+    </para>
+   </note>
   </para>
  </refsect1>
 
