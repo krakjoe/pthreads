@@ -37,10 +37,13 @@ typedef struct _pthreads_state {
 } *pthreads_state;
 
 pthreads_state pthreads_state_alloc(int mask TSRMLS_DC);
-int pthreads_state_lock(pthreads_state state, int *acquired TSRMLS_DC);
-int pthreads_state_unlock(pthreads_state state, int *acquired TSRMLS_DC);
-void pthreads_state_free(pthreads_state state TSRMLS_DC);
+int pthreads_state_lock(pthreads_state state TSRMLS_DC);
+int pthreads_state_check(pthreads_state, int mask TSRMLS_DC);
+int pthreads_state_unlock(pthreads_state state TSRMLS_DC);
 int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC);
+int pthreads_state_set_locked(pthreads_state state, int mask TSRMLS_DC);
+int pthreads_state_unset_locked(pthreads_state state, int mask TSRMLS_DC);
 int pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC);
 int pthreads_state_unset(pthreads_state state, int mask TSRMLS_DC);
+void pthreads_state_free(pthreads_state state TSRMLS_DC);
 #endif

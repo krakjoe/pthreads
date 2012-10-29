@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+
+<section xml:id="pthreads.configuration" xmlns="http://docbook.org/ns/docbook">
+ &reftitle.runtime;
+ &extension.runtime;
+ <para>
+  <table>
+   <title>pthreads &ConfigureOptions;</title>
+   <tgroup cols="4">
+    <thead>
+     <row>
+      <entry>&Name;</entry>
+      <entry>&Default;</entry>
+      <entry>&Changeable;</entry>
+      <entry>&Changelog;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry><link linkend="ini.pthreads.max">pthreads.max</link></entry>
+      <entry>0</entry>
+      <entry>PHP_INI_SYSTEM</entry>
+      <entry><!-- leave empty, this will be filled by an automatic script --></entry>
+     </row>
+     <row>
+      <entry><link linkend="ini.pthreads.importing">pthreads.importing</link></entry>
+      <entry>1</entry>
+      <entry>PHP_INI_SYSTEM</entry>
+      <entry><!-- leave empty, this will be filled by an automatic script --></entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+ </para>
+
+ &ini.descriptions.title;
+
+ <para>
+  <variablelist>
+   <varlistentry xml:id="ini.pthreads.max">
+     <term>
+      <parameter>pthreads.max</parameter>
+      <type>integer</type>
+     </term>
+     <listitem>
+      <para>
+       Provides system administrators a way to limit the amount of Threads an instance of PHP can create.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.pthreads.importing">
+     <term>
+      <parameter>pthreads.importing</parameter>
+      <type>integer</type>
+     </term>
+     <listitem>
+      <para>
+       Provides system administrators a way to disable importing threads into other context for the purposes of security.
+      </para>
+     </listitem>
+    </varlistentry>
+
+  </variablelist>
+ </para>
+</section>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->

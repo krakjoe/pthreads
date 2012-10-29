@@ -66,19 +66,9 @@ int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
 	
 	if (sync) {
 		if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
-			if (sync->hanging) {
-				sync->hanging = 0;
-				if (pthread_cond_broadcast(&sync->hang)!=SUCCESS) {
-					/* report error */
-				}
-			}
-			
-			sync->waiting = 1;
-			do {
-				if (timeout > 0L) {
-					result = pthread_cond_timedwait(&sync->notify, &sync->wait, &until);
-				} else { result = pthread_cond_wait(&sync->notify, &sync->wait); }
-			} while(sync->waiting);
+			if (timeout > 0L) {
+				result = pthread_cond_timedwait(&sync->notify, &sync->wait, &until);
+			} else { result = pthread_cond_wait(&sync->notify, &sync->wait); }
 			
 			pthread_mutex_unlock(&sync->wait);	
 		} else { /* report fatality */ }
@@ -98,19 +88,10 @@ int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
 	
 	if (sync) {
 		if (pthread_mutex_lock(&sync->wait) == SUCCESS) {
-			if (!sync->waiting) {
-				sync->hanging = 1;
-				do {
-					if(pthread_cond_wait(&sync->hang, &sync->wait)!=SUCCESS){
-						/* report error */
-						break;
-					}
-				} while(sync->hanging);
-			}
-			
 			sync->waiting = 0;
 			if ((result = pthread_cond_broadcast(&sync->notify))!=SUCCESS) {
 				/* report error */
+				printf("failed to notify: %d\n", result);
 			}
 			
 			pthread_mutex_unlock(&sync->wait);

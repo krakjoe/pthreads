@@ -18,7 +18,7 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.36"
+#define PHP_PTHREADS_VERSION "0.37-rc"
 
 /* {{{ php internals */
 PHP_MINIT_FUNCTION(pthreads);
@@ -41,6 +41,7 @@ PHP_METHOD(Thread, isStarted);
 PHP_METHOD(Thread, isRunning);
 PHP_METHOD(Thread, isJoined);
 PHP_METHOD(Thread, isWaiting);
+PHP_METHOD(Thread, isWorking);
 /* }}} */
 
 /* {{{ stacking */

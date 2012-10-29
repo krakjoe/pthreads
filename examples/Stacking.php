@@ -15,15 +15,14 @@ class Work extends Stackable {
 		/*
 		* We import the worker here to execute it's methods
 		*/
-		if (($worker = Thread::getThread($this->getThreadId()))) {
-			printf("Running %s in %s\n", __CLASS__, $worker->getName());
-			$worker->addAttempt();
-			$this->setWorkerData($worker);
+		if ($this->worker) {
+			printf("Running %s in %s\n", __CLASS__, $this->worker->getName());
+			$this->worker->addAttempt();
+			$this->worker->addData($this->getData());
 		} else printf("failed to get worker something is wrong ...\n");
 		print_r($this);
 	}
 	
-	public function setWorkerData($worker) 	{ $worker->addData($this->local); }
 	protected function getData() 				{ return $this->local; }
 }
 

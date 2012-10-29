@@ -104,16 +104,6 @@ typedef struct _pthread_construct {
 	struct {
 		zend_llist classes;
 	} preparation;
-	
-	/*
-	* Exit Status
-	*/
-	long *status;
-	
-	/*
-	* Significant Other
-	*/
-	struct _pthread_construct *sig;
 } *PTHREAD;
 
 /* {{{ comparison function */

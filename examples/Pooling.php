@@ -18,23 +18,15 @@
 
 /* a stackable piece of work */
 class ExampleWork extends Stackable {
-	public function __construct(){
-		$this->worker = 0;
-	}
-	
-	protected function setWorker($wid){ $this->worker = $wid; }
-	protected function getWorker() { return $this->worker; }
-	
 	/* do anything simple */
 	public function run(){
-		$this->wait();
-		if (($worker = Thread::getThread($this->getThreadId()))) {
-			$worker->addAttempt();
+		if ($this->worker) {
+			$this->worker->addAttempt();
 			printf(
 				"%s executing in %s on attempt %d\n",
-				__CLASS__, $worker->getName(), $worker->getAttempts()
+				__CLASS__, $this->worker->getName(), $this->worker->getAttempts()
 			);
-		} else printf("Failed to find the Thread #%lu in the current context ...\n", $this->worker);
+		}
 	}
 }
 
@@ -55,7 +47,7 @@ class ExampleWorker extends Worker {
 	}
 	/* get name of the worker */
 	public function getName() { return $this->name; }
-	public function addAttempt(){ $this->attempts = ($this->attempts+1); }
+	public function addAttempt(){ $this->attempts++; }
 	public function getAttempts() { return $this->attempts; }
 }
 
@@ -77,18 +69,13 @@ class Pool {
 			$this->workers[] = $worker = new ExampleWorker(sprintf("Worker [%d]", count($this->workers)-1));
 			$worker->start();
 			if ($worker->stack($stackable)) {
-				$stackable->setWorker($worker->getThreadId());
-				if($stackable->notify())
-					return $stackable;
+				return $stackable;
 			} else trigger_error(sprintf("failed to push Stackable onto %s", $worker->getName()), E_USER_WARNING);
 		}
 		
 		if (($select = $this->workers[array_rand($this->workers)])) {
 			if ($select->stack($stackable)) {
-				$stackable->setWorker($select->getThreadId());
-					if ($stackable->notify())
-						return $stackable;
-					trigger_error(sprintf("failed to notify stackable in %s", $worker->getName()), E_USER_WARNING);
+				return $stackable;
 			} else trigger_error(sprintf("failed to stack onto selected worker %s", $worker->getName()), E_USER_WARNING);
 		} else trigger_error(sprintf("failled to select a worker for Stackable"), E_USER_WARNING);
 		
