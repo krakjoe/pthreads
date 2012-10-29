@@ -44,6 +44,13 @@ static void pthreads_preparation_function_dtor(zend_function *pfe); /* }}} */
 /* {{{ prepared property info dtor */
 static void pthreads_preparation_property_info_dtor(zend_property_info *pi); /* }}} */
 
+#if PHP_VERSION_ID < 50400
+/* {{{ default property ctor for 5.3 */
+static void pthreads_preparation_default_properties_ctor(zval **property); /* }}} */
+/* {{{ default property dtor for 5.3 */
+static void pthreads_preparation_default_properties_dtor(zval *property); /* }}} */
+#endif
+
 /* {{{ empty method entries */
 zend_function_entry	pthreads_empty_methods[] = {
 	{NULL, NULL, NULL}
@@ -152,9 +159,10 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 						(
 							&prepared->default_properties,
 							&candidate->default_properties,
-							(copy_ctor_func_t) zval_add_ref,
+							(copy_ctor_func_t) pthreads_preparation_default_properties_ctor,
 							&tp, sizeof(zval*)
 						);
+						prepared->default_properties.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
 					}
 #endif
 					
@@ -297,6 +305,25 @@ static void pthreads_preparation_property_info_ctor(zend_property_info *pi) {} /
 	@TODO possibly undo/free for adjustments made above */
 static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /* }}} */
 
+#if PHP_VERSION_ID < 50400
+/* {{{ default property dtor for 5.3 */
+static void pthreads_preparation_default_properties_ctor(zval **property) {
+	zval *defprop = *property;
+	zval *newprop;
+	
+	if (defprop) {
+		MAKE_STD_ZVAL(newprop);
+		*newprop = *defprop;
+		zval_copy_ctor(newprop);
+		property = &newprop;
+	}
+} /* }}} */
+/* {{{ default property dtor for 5.3 */
+static void pthreads_preparation_default_properties_dtor(zval *property) {
+	
+} /* }}} */
+#endif
+
 /* {{{ construct prepared function 
 	@TODO statics */
 static void pthreads_preparation_function_ctor(zend_function *pfe) {
@@ -310,6 +337,7 @@ static void pthreads_preparation_function_ctor(zend_function *pfe) {
 				if (ops->run_time_cache) {
 					ops->run_time_cache = NULL;
 				}
+				(*ops->refcount)++;
 			}
 #endif
 		}
@@ -319,7 +347,25 @@ static void pthreads_preparation_function_ctor(zend_function *pfe) {
 /* {{{ destroy prepared function
 	@TODO statics */
 static void pthreads_preparation_function_dtor(zend_function *pfe) {
+	zend_function *function = (zend_function*) pfe;
 	
+	if (function) {
+		if (function->type == ZEND_USER_FUNCTION) {
+#if PHP_VERSION_ID > 50399
+			zend_op_array *ops = &function->op_array;		
+			if (ops) {
+				if (--(*ops->refcount)>0) {
+					return;
+				}
+				
+				if (ops->run_time_cache) {
+					efree(ops->run_time_cache);
+					ops->run_time_cache = NULL;
+				}
+			}
+#endif
+		}
+	}
 } /* }}} */
 
 /* {{{ destroy prepared classes */
@@ -328,7 +374,9 @@ static void pthreads_preparation_classes_dtor(void **ppce) {
 	if(pce) {
 		if (--pce->refcount == 1) {
 #if PHP_VERSION_ID > 50399
-			
+			if (pce->default_properties_count) {
+				
+			}
 #else
 			zend_hash_destroy(&pce->default_properties);
 #endif

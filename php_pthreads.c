@@ -119,6 +119,9 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_isWaiting, 0, 0, 0)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_isWorking, 0, 0, 0)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ stacking */
@@ -219,7 +222,7 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Thread, stack, Thread_stack, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, unstack, Thread_unstack, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, isWaiting, Thread_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, isWorking, Thread_isWorking, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getStacked, Thread_getStacked, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 }; /* }}} */
@@ -408,83 +411,46 @@ PHP_MINFO_FUNCTION(pthreads)
 
 /* {{{ proto boolean Thread::start([boolean sync])
 		Starts executing your implemented run method in a thread, will return a boolean indication of success
-		If sync is true, your new thread runs synchronized with the current thread ( causing the current thread to block ) until you call notify from within the new thread or the thread ends
-		If sync is false or void, the new thread will run asynchronously to the current thread and this call will return as quickly as possible */
+		If sync is true the current thread will wait for notification from the created thread before continuing
+		If sync is false the current thread will continue as quickly as possible */
 PHP_METHOD(Thread, start)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	int result = FAILURE;
+	zend_bool synchronized;
 	
 	/*
 	* See if there are any limits in this environment
 	*/
-	if (PTHREADS_G(max) && !(pthreads_globals_count()<PTHREADS_G(max))) {
-		zend_error(E_WARNING, "pthreads has reached the maximum numbers of threads allowed (%lu) by your server administrator, and cannot start %s", PTHREADS_G(max), PTHREADS_NAME);
-		RETURN_FALSE;
-	}
-	
-	/*
-	* Find out if the calling thread will wait for notification before continuing
-	*/
-	if (ZEND_NUM_ARGS()){
-		zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &thread->synchronized);
-	} else thread->synchronized = 0;
-	
-	if (!pthreads_state_isset(thread->state, PTHREADS_ST_STARTED TSRMLS_CC)) {
-		int acquire = pthread_mutex_lock(thread->lock);
-			
-		if (acquire == SUCCESS || acquire == EDEADLK) {
+	if (PTHREADS_IS_NOT_CONNECTION(thread)) {
+		if (PTHREADS_G(max) && !(pthreads_globals_count()<PTHREADS_G(max))) {
+			zend_error(E_WARNING, "pthreads has reached the maximum numbers of threads allowed (%lu) by your server administrator, and cannot start %s", PTHREADS_G(max), PTHREADS_NAME);
+			RETURN_FALSE;
+		}
+		
+		/* get the synchronized flag from parameters */
+		if (PTHREADS_IS_NOT_WORKER(thread) && ZEND_NUM_ARGS()){
+			zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &synchronized);
+		} else synchronized = 0;
+		
+		/* attempt to create the thread */
+		if ((result = pthreads_start(thread, synchronized TSRMLS_CC)) != SUCCESS) {
 			/*
-			* Don't allow restarting this object
-			*/ 
-			pthreads_set_state(thread, PTHREADS_ST_STARTED TSRMLS_CC);
-			
-			/*
-			* Set running flag and store thread in globals
+			* Report the error, there's no chance of recovery ...
 			*/
-			pthreads_set_state(thread, PTHREADS_ST_RUNNING TSRMLS_CC);
-			
-			/*
-			* Attempt to start the thread
-			*/
-			if ((result = pthread_create(&thread->thread, NULL, PHP_PTHREAD_ROUTINE, (void*)thread)) == SUCCESS) {
-
-				/*
-				* Wait for notification to continue
-				*/
-				pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
+			switch(result) {
+				case PTHREADS_ST_STARTED:
+					zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to start %s (%lu), which has been previously started", PTHREADS_FRIENDLY_NAME);
+				break;
 				
-				/*
-				* Release thread lock
-				*/
-				if (acquire != EDEADLK) 
-					pthread_mutex_unlock(thread->lock);
+				case EAGAIN:
+					zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", PTHREADS_NAME);
+				break;
 				
-			} else {
-				/*
-				* Do not attempt to join failed threads at dtor time
-				*/
-				pthreads_unset_state(thread, PTHREADS_ST_RUNNING TSRMLS_CC);
-				
-				/*
-				* Release thread lock
-				*/
-				if (acquire != EDEADLK)
-					pthread_mutex_unlock(thread->lock);
-				
-				/*
-				* Report the error, there's no chance of recovery ...
-				*/
-				switch(result) {
-					case EAGAIN:
-						zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", PTHREADS_NAME);
-					break;
-					
-					default: zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error", PTHREADS_NAME);
-				}
+				default: zend_error_noreturn(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error (%d)", PTHREADS_NAME, result);
 			}
-		} else zend_error_noreturn(E_WARNING, "pthreads has experienced an internal error while starting %s", PTHREADS_NAME);
-	} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to start %s (%lu) that has already been started", PTHREADS_FRIENDLY_NAME);	
+		}
+	} else zend_error_noreturn(E_WARNING, "pthreads has detected an attempt to start %s from an invalid context, the creating context must start %s", PTHREADS_NAME, PTHREADS_NAME);
 	
 	if (result==SUCCESS) {
 		RETURN_TRUE;
@@ -589,7 +555,18 @@ PHP_METHOD(Thread, isWaiting)
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-}
+} /* }}} */
+
+/* {{{ proto boolean Thread::isWorking() 
+	Will return false if the worker is waiting for work */
+PHP_METHOD(Thread, isWorking)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+} /* }}} */
 
 /* {{{ proto boolean Thread::wait([long timeout]) 
 		Will cause the calling process or thread to wait for the referenced thread to notify
@@ -623,8 +600,8 @@ PHP_METHOD(Thread, notify)
 	RETURN_FALSE;
 } /* }}} */
 
-/* {{{ proto mixed Thread::join() 
-		Will cause the calling thread to block and wait for the exit status of the referenced thread */
+/* {{{ proto boolean Thread::join() 
+		Will return a boolean indication of success */
 PHP_METHOD(Thread, join) 
 { 
 	PTHREAD thread = PTHREADS_FETCH;
@@ -633,52 +610,10 @@ PHP_METHOD(Thread, join)
 	* Check that we are in the correct context
 	*/
 	if (!PTHREADS_IN_THREAD(thread) && PTHREADS_IS_CREATOR(thread)) {
-
 		/*
 		* Ensure this thread was started
 		*/
-		if (pthreads_state_isset(thread->state, PTHREADS_ST_STARTED TSRMLS_CC)) {
-		
-			/*
-			* Ensure this thread wasn't already joined
-			*/
-			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
-			
-				/*
-				* Ensure nothing attempts to join this thread again
-				*/
-				pthreads_set_state(thread, PTHREADS_ST_JOINED TSRMLS_CC);
-				
-				/*
-				* We must force workers to close at this point
-				*/
-				{
-					if (PTHREADS_IS_WORKER(thread)) {
-						if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC)) {
-							do {
-								pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
-							} while (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
-						}
-					}
-				}
-				
-				/*
-				* Carry out joining
-				*/
-				if (pthread_join(thread->thread, NULL)==SUCCESS) {
-					RETURN_LONG(*thread->status);
-				} else {
-					zend_error(E_WARNING, "pthreads detected failure while joining with %s (%lu)", PTHREADS_FRIENDLY_NAME);
-					RETURN_FALSE;
-				}
-			} else {
-				zend_error(E_WARNING, "pthreads has detected that %s (%lu) has already been joined", PTHREADS_FRIENDLY_NAME);
-				RETURN_FALSE; 
-			}
-		} else {
-			zend_error(E_WARNING, "pthreads has detected an attempt to join with an unstarted %s", PTHREADS_NAME);
-			RETURN_FALSE;
-		}
+		RETURN_BOOL((pthreads_join(thread TSRMLS_CC)==SUCCESS));
 	} else {
 		zend_error(E_WARNING, "pthreads has detected an attempt to join from an incorrect context, only the creating context may join with %s (%lu)", PTHREADS_FRIENDLY_NAME);
 		RETURN_FALSE;

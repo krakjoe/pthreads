@@ -43,9 +43,6 @@ zend_object_value pthreads_connection_worker_ctor(zend_class_entry *entry TSRMLS
 zend_object_value pthreads_object_worker_ctor(zend_class_entry *entry TSRMLS_DC);
 zend_object_value pthreads_connection_thread_ctor(zend_class_entry *entry TSRMLS_DC);
 zend_object_value pthreads_object_thread_ctor(zend_class_entry *entry TSRMLS_DC);
-void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC);
-void pthreads_base_dtor(void *arg TSRMLS_DC);
-void * PHP_PTHREAD_ROUTINE(void *);
 /* }}} */
 
 /*
@@ -61,8 +58,13 @@ int pthreads_unset_state(PTHREAD thread, int state TSRMLS_DC);
 int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC);
 int pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC);
 int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC);
-int pthreads_stack_next(PTHREAD thread TSRMLS_DC);
+int pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC);
 int pthreads_stack_length(PTHREAD thread TSRMLS_DC);
+/* }}} */
+
+/* {{{ start/join */
+int pthreads_start(PTHREAD thread, zend_bool synchronized TSRMLS_DC);
+int pthreads_join(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
 /* {{{ TSRM manipulation */

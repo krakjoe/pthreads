@@ -43,6 +43,10 @@ class Request extends Thread {
 	* Populate the response object for creating context
 	*/
 	public function run(){
+		/*
+		* Tell anyone waiting we have started executing ...
+		*/
+		$this->notify();
 		
 		/*
 		* Read/Write objects as little as possible
@@ -82,14 +86,18 @@ $request = new Request(
 * Tell you all about it ...
 */
 printf("Fetching: %s ", $request->response->getUrl());
-if($request->start()){
+/* start synchronized */
+if($request->start(true)){
+	/* do something during runtime */
 	while($request->isRunning()) {
 		echo ".";
 		usleep(100);
 	}
-	
-	if($request->join()){
-		printf(" got %d bytes in %f seconds\n", $request->response->getLength(), $request->response->getDuration());
-	}
+	/* 
+		you do not need to join:
+			when a thread returns false for isRunning then your code is no longer being executed
+			pthreads will cleanup the variable when it goes out of scope like any other variable in php
+	*/
+	printf(" got %d bytes in %f seconds\n", $request->response->getLength(), $request->response->getDuration());
 }
 ?>
