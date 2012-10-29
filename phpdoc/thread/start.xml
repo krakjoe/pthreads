@@ -14,7 +14,7 @@
    <methodparam choice="opt"><type>boolean</type><parameter>synchronized</parameter></methodparam>
   </methodsynopsis>
   <para>
-  Will start executing this implementations run method in a seperate Thread
+  Will start a new Thread to execute the implemented run method
   </para>
  </refsect1>
 
