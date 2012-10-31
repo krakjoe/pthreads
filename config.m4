@@ -12,6 +12,7 @@ if test "$PHP_PTHREADS" != "no"; then
 								src/handlers.c \
 								src/object.c, $ext_shared)
 	PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
+	PHP_ADD_INCLUDE($ext_builddir)
 	PHP_SUBST(PTHREADS_SHARED_LIBADD)
 	PHP_ADD_MAKEFILE_FRAGMENT
 fi
