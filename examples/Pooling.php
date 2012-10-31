@@ -87,7 +87,7 @@ class Pool {
 	*/
 	public function shutdown() {
 		foreach($this->workers as $worker) {
-			$this->status[$worker->getThreadId()]=$worker->join();
+			$this->status[$worker->getThreadId()]=$worker->shutdown();
 		}
 	}
 }
