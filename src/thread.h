@@ -87,11 +87,6 @@ typedef struct _pthread_construct {
 	* Serial Buffers
 	*/
 	pthreads_serial store;
-
-	/*
-	* Thread Flags
-	*/
-	zend_bool synchronized;
 	
 	/*
 	* Work List
@@ -141,28 +136,6 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_IS_NOT_STACKABLE(t) (((t)->scope & PTHREADS_SCOPE_STACKABLE)!=PTHREADS_SCOPE_STACKABLE)
 /* }}} */
 
-/* {{{ detect the scope of candidate with respect to thread */
-static inline int pthreads_scope_detect(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC) {
-	int detection = 0;
-	zend_class_entry *scope = candidate;
-	
-	do {
-		if (scope == pthreads_thread_entry) {
-			detection |= PTHREADS_SCOPE_THREAD;
-		} else if (scope == pthreads_worker_entry) {
-			detection |= PTHREADS_SCOPE_WORKER;
-		} else if (scope == pthreads_stackable_entry) {
-			detection |= PTHREADS_SCOPE_STACKABLE;
-		}
-	} while((scope=scope->parent)!=NULL);
-	
-	if ((thread != NULL) && (thread->std.ce == candidate)) {
-		detection |= PTHREADS_SCOPE_CONNECTION;
-	}
-	
-	return detection;
-} /* }}} */
-
 /* {{{ pthread_self wrapper */
 static inline ulong pthreads_self() {
 #ifdef _WIN32
@@ -173,7 +146,7 @@ static inline ulong pthreads_self() {
 } /* }}} */
 
 /* {{{ tell if the calling thread created referenced PTHREAD */
-#define PTHREADS_IS_CREATOR(t)	(t->cid == pthreads_self()) /* }}} */
+#define PTHREADS_IN_CREATOR(t)	(t->cls == tsrm_ls) /* }}} */
 
 /* {{{ tell if the referenced thread is the threading context */
 #define PTHREADS_IN_THREAD(t)	(t->tls == tsrm_ls) /* }}} */
@@ -199,6 +172,16 @@ static inline ulong pthreads_self() {
 
 /* {{{ remove an item from a list of threads */
 #define PTHREADS_LIST_REMOVE(l, t) zend_llist_del_element(l, &t, (int (*)(void *, void *)) pthreads_equal_func);
+/* }}} */
+
+/* {{{ defmutex setup  */
+#ifndef _WIN32
+#	ifdef PTHREAD_MUTEX_ERRORCHECK_NP
+#		define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK_NP
+#	elifdef PTHREAD_MUTEX_ERRORCHECK
+#		define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK
+#	endif
+#endif
 /* }}} */
 
 /* {{{ default mutex attributes */

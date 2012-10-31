@@ -32,8 +32,10 @@
 #endif
 
 typedef struct _pthreads_state {
-	pthread_mutex_t	lock;
-	int				bits;
+	pthread_mutex_t		lock;
+	int					bits;
+	pthreads_synchro 	synchro;
+	int					was;
 } *pthreads_state;
 
 pthreads_state pthreads_state_alloc(int mask TSRMLS_DC);
@@ -41,6 +43,7 @@ int pthreads_state_lock(pthreads_state state TSRMLS_DC);
 int pthreads_state_check(pthreads_state, int mask TSRMLS_DC);
 int pthreads_state_unlock(pthreads_state state TSRMLS_DC);
 int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC);
+int pthreads_state_wait(pthreads_state state, int mask TSRMLS_DC);
 int pthreads_state_set_locked(pthreads_state state, int mask TSRMLS_DC);
 int pthreads_state_unset_locked(pthreads_state state, int mask TSRMLS_DC);
 int pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC);

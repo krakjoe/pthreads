@@ -71,4 +71,9 @@ int pthreads_serial_unlock(pthreads_serial serial, int *acquired TSRMLS_DC); /* 
 /* {{{ free serial buffers */
 void pthreads_serial_free(pthreads_serial serial TSRMLS_DC); /* }}} */
 
+/* {{{ serialize instantce of a Thread, Worker or Stackable */
+int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *buf_len, zend_serialize_data *data TSRMLS_DC); /* }}} */
+
+/* {{{ unserialize an instance of a Thread, Worker or Stackable */
+int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buf, zend_uint buf_len, zend_unserialize_data *data TSRMLS_DC); /* }}} */
 #endif

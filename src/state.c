@@ -37,6 +37,7 @@ pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 	if (state != NULL) {
 		state->bits |= mask;
 		if (pthread_mutex_init(&state->lock, &defmutex)==SUCCESS) {
+			state->synchro = pthreads_synchro_alloc(TSRMLS_C);
 			return state;
 		} else free(state);
 	}
@@ -47,6 +48,7 @@ pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 void pthreads_state_free(pthreads_state state TSRMLS_DC) {
 	if (state) {
 		if (pthread_mutex_destroy(&state->lock)==SUCCESS) {
+			pthreads_synchro_free(state->synchro TSRMLS_CC);
 			free(state);
 			state=NULL;
 		} else zend_error(E_WARNING, "pthreads_state_free failed to destroy state lock");
@@ -70,6 +72,10 @@ int pthreads_state_check(pthreads_state state, int mask TSRMLS_DC) {
 
 /* {{{ set state (assumes appropriate locking in place */
 int pthreads_state_set_locked(pthreads_state state, int mask TSRMLS_DC) {
+	state->was |= mask;
+	pthreads_synchro_notify(
+		state->synchro TSRMLS_CC
+	);
 	return (state->bits |= mask);
 } /* }}} */
 
@@ -82,11 +88,17 @@ int pthreads_state_unset_locked(pthreads_state state, int mask TSRMLS_DC) {
 int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC) {
 	int acquired;
 	int result = 1;
+	
 	if (state) {
 		acquired = pthread_mutex_lock(&state->lock);
 		if (acquired == SUCCESS ||acquired == EDEADLK) {
+			state->was |= mask;
+			pthreads_synchro_notify(
+				state->synchro TSRMLS_CC
+			);
 			state->bits |= mask;
-			pthread_mutex_unlock(&state->lock);
+			if (acquired != EDEADLK)
+				pthread_mutex_unlock(&state->lock);
 		} else {
 			result = 0;
 			zend_error_noreturn(E_WARNING, "pthreads_state_set failed to lock state object");
@@ -95,6 +107,26 @@ int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC) {
 		result = 0;
 		zend_error_noreturn(E_WARNING, "pthreads_state_set failed to read state object");
 	}
+	return result;
+} /* }}} */
+
+/* {{{ wait until a state has been set */
+int pthreads_state_wait(pthreads_state state, int mask TSRMLS_DC) {
+	int acquired;
+	int result = 1;
+	int wasset = 0;
+	
+	if (state) {
+		acquired = pthread_mutex_lock(&state->lock);
+		if (acquired == SUCCESS||acquired == EDEADLK) {
+			wasset = ((state->was & mask)==mask);
+			if (acquired != EDEADLK)
+				pthread_mutex_unlock(&state->lock);
+			if (!wasset) do {
+				pthreads_synchro_wait(state->synchro TSRMLS_CC);
+			} while(!((state->was & mask)==mask));
+		} else result = 0;
+	} else result = 0;
 	return result;
 } /* }}} */
 

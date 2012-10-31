@@ -85,7 +85,7 @@ int pthreads_globals_lock(int *acquired); /* }}} */
 /* {{{ release global lock */
 void pthreads_globals_unlock(int *acquired); /* }}} */
 
-/* {{{ get current number of executing contexts */
+/* {{{ get current number of accessible thread objects */
 long pthreads_globals_count(); /* }}} */
 
 /* {{{ push a thread into global list */

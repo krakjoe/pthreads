@@ -26,9 +26,6 @@
 #	include <src/object.h>
 #endif
 
-/* {{{ attach appropriate handlers to candidate for origin in thread */
-static void pthreads_preparation_handlers(PTHREAD thread, zend_class_entry *candidate, zend_class_entry *attach TSRMLS_DC); /* }}} */
-
 /* {{{ prepared function ctor */
 static void pthreads_preparation_function_ctor(zend_function *pfe); /* }}} */
 
@@ -59,6 +56,11 @@ zend_function_entry	pthreads_empty_methods[] = {
 /* {{{ initialize prepared class entry storage */
 void pthreads_prepare_classes_init(PTHREAD thread TSRMLS_DC) {
 	zend_llist_init(&(thread->preparation.classes), sizeof(zend_class_entry*), (llist_dtor_func_t) pthreads_preparation_classes_dtor, 1);
+} /* }}} */
+
+/* {{{ free prepared class storage */
+void pthreads_prepare_classes_free(PTHREAD thread TSRMLS_DC) {
+	zend_llist_destroy(&(thread->preparation.classes));
 } /* }}} */
 
 /* {{{ fetch prepared class entry */
@@ -93,7 +95,14 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				/*
 				* Attach appropriate handlers
 				*/
-				pthreads_preparation_handlers(thread, candidate, &ce TSRMLS_CC);
+				if (candidate->create_object)
+					ce.create_object = candidate->create_object;
+				if (candidate->serialize)
+					ce.serialize = candidate->serialize;
+				if (candidate->unserialize)
+					ce.unserialize = candidate->unserialize;
+				if (candidate->clone)
+					ce.clone = candidate->clone;
 				
 				/*
 				* Registration
@@ -261,39 +270,6 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 				}
 			}
 		}
-	}
-} /* }}} */
-
-/* {{{ attach appropriate object handlers for candidate with respect to scope of thread */
-static void pthreads_preparation_handlers(PTHREAD thread, zend_class_entry *candidate, zend_class_entry *attach TSRMLS_DC) {
-	int scope = pthreads_scope_detect(thread, candidate TSRMLS_CC);
-	zend_bool connect = PTHREADS_IS_NOT_CONNECTION(thread);
-	
-	if (scope) {
-		if (((scope & PTHREADS_SCOPE_THREAD)==PTHREADS_SCOPE_THREAD)) {
-			if (connect) {
-				attach->create_object = pthreads_connection_thread_ctor;
-			} else attach->create_object = pthreads_object_thread_ctor;
-		} else if (((scope & PTHREADS_SCOPE_WORKER)==PTHREADS_SCOPE_WORKER)) {
-			if (connect) {
-				attach->create_object = pthreads_connection_worker_ctor;
-			} else attach->create_object = pthreads_object_worker_ctor;
-		} else if (((scope & PTHREADS_SCOPE_STACKABLE)==PTHREADS_SCOPE_STACKABLE)) {
-			if (connect) {
-				attach->create_object = pthreads_connection_stackable_ctor;
-			} else attach->create_object = pthreads_object_stackable_ctor;
-		}
-		
-		if (attach->create_object) {
-			attach->serialize = zend_class_serialize_deny;
-			attach->unserialize = zend_class_unserialize_deny;
-			attach->clone = NULL;
-		}
-	} else if (candidate->create_object) {
-		attach->create_object = candidate->create_object;
-		attach->clone = candidate->clone;
-		attach->serialize = candidate->serialize;
-		attach->unserialize = candidate->unserialize;
 	}
 } /* }}} */
 

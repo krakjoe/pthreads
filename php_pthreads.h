@@ -20,66 +20,29 @@
 #define PHP_PTHREADS_EXTNAME "pthreads"
 #define PHP_PTHREADS_VERSION "0.37-rc"
 
-/* {{{ php internals */
 PHP_MINIT_FUNCTION(pthreads);
 PHP_MSHUTDOWN_FUNCTION(pthreads);
 PHP_MINFO_FUNCTION(pthreads);
-/* }}} */
 
-/* {{{ basic */
-PHP_METHOD(Thread, start); 
-/* }}} */
+#ifndef HAVE_PTHREADS_CLASS_THREAD_H
+#	include <classes/thread.h>
+#endif
 
-/* {{{ synchronization */
-PHP_METHOD(Thread, wait);
-PHP_METHOD(Thread, notify);
-PHP_METHOD(Thread, join);
-/* }}} */
+#ifndef HAVE_PTHREADS_CLASS_WORKER_H
+#	include <classes/worker.h>
+#endif
 
-/* {{{ state detection */
-PHP_METHOD(Thread, isStarted);
-PHP_METHOD(Thread, isRunning);
-PHP_METHOD(Thread, isJoined);
-PHP_METHOD(Thread, isWaiting);
-PHP_METHOD(Thread, isWorking);
-/* }}} */
+#ifndef HAVE_PTHREADS_CLASS_STACKABLE_H
+#	include <classes/stackable.h>
+#endif
 
-/* {{{ stacking */
-PHP_METHOD(Thread, stack);
-PHP_METHOD(Thread, unstack);
-PHP_METHOD(Thread, getStacked);
-/* }}} */
+#ifndef HAVE_PTHREADS_CLASS_MUTEX_H
+#	include <classes/mutex.h>
+#endif
 
-/* {{{ importing */
-PHP_METHOD(Thread, getThread);
-/* }}} */
-
-/* {{{ identification */
-PHP_METHOD(Thread, getThreadId);
-PHP_METHOD(Thread, getCreatorId);
-/* }}} */
-
-/* {{{ globals */
-PHP_METHOD(Thread, getCount);
-PHP_METHOD(Thread, getMax);
-PHP_METHOD(Thread, getPeak);
-/* }}} */
-
-/* {{{ mutex */
-PHP_METHOD(Mutex, create);
-PHP_METHOD(Mutex, lock);
-PHP_METHOD(Mutex, trylock);
-PHP_METHOD(Mutex, unlock);
-PHP_METHOD(Mutex, destroy);
-/* }}} */
-
-/* {{{ conditions */
-PHP_METHOD(Cond, create);
-PHP_METHOD(Cond, signal);
-PHP_METHOD(Cond, broadcast);
-PHP_METHOD(Cond, wait);
-PHP_METHOD(Cond, destroy);
-/* }}} */
+#ifndef HAVE_PTHREADS_CLASS_COND_H
+#	include <classes/cond.h>
+#endif
 
 extern zend_module_entry pthreads_module_entry;
 #define phpext_pthreads_ptr &pthreads_module_entry

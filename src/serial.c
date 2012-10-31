@@ -31,6 +31,14 @@
 #	include <src/thread.h>
 #endif
 
+#ifndef HAVE_PTHREADS_OBJECT_H
+#	include <src/object.h>
+#endif
+
+#ifndef HAVE_PTHREADS_GLOBALS_H
+#	include <src/globals.h>
+#endif
+
 /* {{{ serial buffer element structure */
 typedef struct _pthreads_storage {
 	char		*serial;	/* serial data */
@@ -310,6 +318,16 @@ static pthreads_storage pthreads_serialize(zval *unserial TSRMLS_DC){
 	return storage;														
 }
 /* }}} */
+
+/* {{{ serialize instantce of a Thread, Worker or Stackable */
+int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *buf_len, zend_serialize_data *data TSRMLS_DC) {
+	return FAILURE;
+} /* }}} */
+
+/* {{{ unserialize an instance of a Thread, Worker or Stackable */
+int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buf, zend_uint buf_len, zend_unserialize_data *data TSRMLS_DC) {
+	return FAILURE;
+} /* }}} */
 
 /* {{{ Will unserialize data into the allocated zval passed */
 static int pthreads_unserialize(pthreads_storage storage, zval *pzval TSRMLS_DC){
