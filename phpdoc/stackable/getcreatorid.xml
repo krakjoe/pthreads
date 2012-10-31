@@ -26,11 +26,9 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-  A numeric value representing the identity of the creating context
+  A numeric identity
   </para>
  </refsect1>
-
-
 </refentry>
 
 <!-- Keep this comment at the end of the file

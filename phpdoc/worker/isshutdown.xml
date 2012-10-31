@@ -1,45 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
 
-<refentry xml:id="cond.signal" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+<refentry xml:id="worker.isshutdown" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
-  <refname>Cond::signal</refname>
-  <refpurpose>Signal a condition to a single Thread</refpurpose>
+  <refname>Worker::isShutdown</refname>
+  <refpurpose>State Detection</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>final</modifier> 
-   <modifier>public</modifier> 
-   <modifier>static</modifier> 
-   <type>boolean</type>
-   <methodname>Cond::signal</methodname>
-   <methodparam>
-   <type>long</type>
-   <parameter>condition</parameter>
-  </methodparam>
+   <modifier>final</modifier> <modifier>public</modifier> <type>boolean</type><methodname>Worker::isShutdown</methodname>
+   <void />
   </methodsynopsis>
   <para>
- 
+  Tell if the referenced Worker has been shutdown
   </para>
  </refsect1>
 
  <refsect1 role="parameters">
   &reftitle.parameters;
-  <variablelist>
-   <varlistentry>
-    <term><parameter>condition</parameter></term>
-    <listitem>
-     <para>A handle returned by a previous call to <function>Cond::create</function></para>
-    </listitem>
-   </varlistentry>
-  </variablelist>
+  &no.function.parameters;
  </refsect1>
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>A boolean indication of success.</para>
+  <para>
+  A boolean indication of state
+  </para>
  </refsect1>
 
 

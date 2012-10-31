@@ -10,7 +10,7 @@
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>final</modifier> <modifier>public</modifier> <type>int</type><methodname>Thread::wait</methodname>
+   <modifier>final</modifier> <modifier>public</modifier> <type>boolean</type><methodname>Thread::wait</methodname>
    <methodparam choice="opt"><type>long</type><parameter>timeout</parameter></methodparam>
   </methodsynopsis>
   <para>
@@ -35,11 +35,9 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-  An integral indication of success
+  A boolean indication of success
   </para>
  </refsect1>
-
-
 </refentry>
 
 <!-- Keep this comment at the end of the file
