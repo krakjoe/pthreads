@@ -85,7 +85,7 @@ while($i++<20){
 		"Stacking: %d/%d\n", $i, $worker->stack($work[]=new Work(array(rand()*100)))
 	);
 }
-$worker->join();
+$worker->shutdown();
 printf("Result: %d/%d\n", $worker->getAttempts(), $worker->getStacked());
 print_r($worker->getData());
 ?>

@@ -1,11 +1,5 @@
 <?php
 class Response {
-	public $url;
-	public $start;
-	public $finish;
-	public $data;
-	public $length;
-	public $remain = "my remaining string";
 	
 	public function __construct($url){
 		$this->url = $url;
@@ -43,10 +37,6 @@ class Request extends Thread {
 	* Populate the response object for creating context
 	*/
 	public function run(){
-		/*
-		* Tell anyone waiting we have started executing ...
-		*/
-		$this->notify();
 		
 		/*
 		* Read/Write objects as little as possible
@@ -86,8 +76,7 @@ $request = new Request(
 * Tell you all about it ...
 */
 printf("Fetching: %s ", $request->response->getUrl());
-/* start synchronized */
-if($request->start(true)){
+if($request->start()){
 	/* do something during runtime */
 	while($request->isRunning()) {
 		echo ".";

@@ -8,9 +8,6 @@ class AsyncWebRequest extends Thread {
 	}
 	
 	public function run(){
-		/* started synchronized ... */
-		$this->notify();
-		
 		if($this->url){
 			/*
 			* If a large amount of data is being requested, you might want to
@@ -25,7 +22,7 @@ class AsyncWebRequest extends Thread {
 $t = microtime(true);
 $g = new AsyncWebRequest(sprintf("http://www.google.com/?q=%s", rand()*10));
 /* starting synchronized */
-if($g->start(true)){
+if($g->start()){
 	printf("Request took %f seconds to start ", microtime(true)-$t);
 	while($g->isRunning()){
 		echo ".";
