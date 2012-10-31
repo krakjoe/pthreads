@@ -44,6 +44,10 @@ ZEND_BEGIN_ARG_INFO_EX(Cond_destroy, 0, 0, 1)
 	ZEND_ARG_INFO(0, condition)
 ZEND_END_ARG_INFO()
 
+extern zend_function_entry pthreads_condition_methods[];
+#else
+#	ifndef HAVE_PTHREADS_CLASS_COND
+#	define HAVE_PTHREADS_CLASS_COND
 zend_function_entry pthreads_condition_methods[] = {
 	PHP_ME(Cond, create, Cond_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Cond, signal, Cond_signal, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -52,9 +56,6 @@ zend_function_entry pthreads_condition_methods[] = {
 	PHP_ME(Cond, destroy, Cond_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
-#else
-#	ifndef HAVE_PTHREADS_CLASS_COND
-#	define HAVE_PTHREADS_CLASS_COND
 /* {{{ proto long Cond::create() 
 		This will create a condition, because of their nature you need to destroy these explicitly with Cond::destroy */
 PHP_METHOD(Cond, create)

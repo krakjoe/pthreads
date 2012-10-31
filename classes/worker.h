@@ -56,6 +56,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+extern zend_function_entry pthreads_worker_methods[];
+#else
+#	ifndef HAVE_PTHREADS_CLASS_WORKER
+#	define HAVE_PTHREADS_CLASS_WORKER
 zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, start, Worker_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ABSTRACT_ME(Worker, run, Worker_run)
@@ -73,9 +77,6 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
-#else
-#	ifndef HAVE_PTHREADS_CLASS_WORKER
-#	define HAVE_PTHREADS_CLASS_WORKER
 /* {{{ proto boolean Worker::start()
 		Starts a new Worker Thread, executing the Workers implementation of Worker::run and then waiting for Stackables */
 PHP_METHOD(Worker, start)

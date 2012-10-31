@@ -44,6 +44,10 @@ ZEND_BEGIN_ARG_INFO_EX(Mutex_destroy, 0, 0, 1)
 	ZEND_ARG_INFO(0, mutex)
 ZEND_END_ARG_INFO()
 
+extern zend_function_entry pthreads_mutex_methods[];
+#else
+#	ifndef HAVE_PTHREADS_CLASS_MUTEX
+#	define HAVE_PTHREADS_CLASS_MUTEX
 zend_function_entry pthreads_mutex_methods[] = {
 	PHP_ME(Mutex, create, Mutex_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, lock, Mutex_lock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -52,9 +56,6 @@ zend_function_entry pthreads_mutex_methods[] = {
 	PHP_ME(Mutex, destroy, Mutex_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
-#else
-#	ifndef HAVE_PTHREADS_CLASS_MUTEX
-#	define HAVE_PTHREADS_CLASS_MUTEX
 /* {{{ proto long Mutex::create([boolean lock]) 
 		Will create a new mutex and return it's handle. If lock is true it will lock the mutex before returning the handle to the calling thread.
 		Because of their nature you need to destroy these explicitly with Mutex::destroy */
