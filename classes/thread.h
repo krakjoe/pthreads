@@ -78,6 +78,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_getPeak, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+extern zend_function_entry pthreads_thread_methods[];
+#else
+#	ifndef HAVE_PTHREADS_CLASS_THREAD
+#	define HAVE_PTHREADS_CLASS_THREAD
 zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ABSTRACT_ME(Thread, run, Thread_run)
@@ -96,9 +100,6 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, getPeak, Thread_getPeak, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
-#else
-#	ifndef HAVE_PTHREADS_CLASS_THREAD
-#	define HAVE_PTHREADS_CLASS_THREAD
 /* {{{ proto boolean Thread::start()
 		Starts executing the implementations run method in a thread, will return a boolean indication of success */
 PHP_METHOD(Thread, start)
