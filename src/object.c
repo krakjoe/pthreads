@@ -37,12 +37,14 @@
 /* {{{ pthreads module entry */
 extern zend_module_entry pthreads_module_entry; /* }}} */
 
-/* {{{ base ctor/dtor */
+/* {{{ base ctor/clone/dtor/free */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC);
-static void pthreads_base_dtor(void *arg TSRMLS_DC); /* }}} */
+static void pthreads_base_dtor(void *arg TSRMLS_DC); 
+static void pthreads_base_free(void *arg TSRMLS_DC);
+static void pthreads_base_clone(void *arg, void **pclone TSRMLS_DC); /* }}} */
 
 /* {{{ connect objects */
-static void pthreads_connect(PTHREAD source, PTHREAD destination); /* }}} */
+static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC); /* }}} */
 
 /* {{{ pthreads routine */
 static void * pthreads_routine(void *arg); /* }}} */
@@ -134,7 +136,6 @@ int pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	int acquire = 0;
 	int bubble = 0;
 	zval *that_ptr;
-	zend_class_entry *scope;
 	zend_function *run;
 burst:
 	acquire = pthread_mutex_lock(thread->lock);
@@ -142,19 +143,6 @@ burst:
 		if ((bubble=thread->stack->count) > 0) {
 			work = zend_llist_get_first(thread->stack);
 			if (work && (current = *work) && current) {
-				
-				/*
-				* Find the class entry for work item
-				*/
-				{
-					if ((scope=pthreads_prepared_entry(thread, current->std.ce TSRMLS_CC))==NULL) {
-						if (acquire != EDEADLK) {
-							pthread_mutex_unlock(thread->lock);
-						}
-						return 0;
-					}
-				}
-				
 				/*
 				* Allocate a $that
 				*/
@@ -163,7 +151,15 @@ burst:
 				/*
 				* Initialize it with the new entry
 				*/
-				object_and_properties_init(that_ptr, scope, current->std.properties);
+				object_and_properties_init(
+					that_ptr, 
+					pthreads_prepared_entry
+					(
+						thread, 
+						current->std.ce TSRMLS_CC
+					), 
+					current->std.properties
+				);
 				
 				/*
 				* Switch scope to the next stackable
@@ -185,7 +181,7 @@ burst:
 						if (stackable) {
 							current->tid = thread->tid;
 							current->tls = thread->tls;
-							pthreads_connect(current, stackable);
+							pthreads_connect(current, stackable TSRMLS_CC);
 							if (zend_hash_update(
 								Z_OBJPROP_P(that_ptr), "worker", sizeof("worker"), 
 								(void**) &getThis(), sizeof(zval*), NULL
@@ -236,22 +232,24 @@ int pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
 int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
 	int acquire = 0;
 	int imported = 1;
-	zend_class_entry *pce;
 	
-	if (!PTHREADS_IS_CREATOR(thread)) {
+	if (!PTHREADS_IN_CREATOR(thread)) {
 		acquire = pthread_mutex_lock(thread->lock);
 
 		if (acquire == SUCCESS || acquire == EDEADLK) {
 			/*
 			* Initialize the object in this context
 			*/
-			if ((pce=pthreads_prepared_entry(thread, thread->std.ce TSRMLS_CC))==NULL) {
-				if (acquire != EDEADLK) {
-					pthread_mutex_unlock(thread->lock);
-				}
-				imported = 0;
-			} else if (object_and_properties_init(*return_value, pce, thread->std.properties)==SUCCESS) {
-				pthreads_connect(thread, PTHREADS_FETCH_FROM(*return_value));
+			if (object_and_properties_init(
+					*return_value, 
+					pthreads_prepared_entry
+					(
+						thread,
+						thread->std.ce TSRMLS_CC
+					), 
+					thread->std.properties
+				)==SUCCESS) {
+				pthreads_connect(thread, PTHREADS_FETCH_FROM(*return_value) TSRMLS_CC);
 			} else { imported = 0; }
 			
 			if (acquire != EDEADLK) {
@@ -264,35 +262,17 @@ int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
 } /* }}} */
 
 /* {{{ thread object constructor */
-zend_object_value pthreads_object_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
+zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
 	PTHREAD thread = calloc(1, sizeof(*thread));
 	if (thread) {
-		thread->scope |= PTHREADS_SCOPE_THREAD;
+		thread->scope = PTHREADS_SCOPE_THREAD;
 		pthreads_base_ctor(thread, entry TSRMLS_CC);
 		attach.handle = zend_objects_store_put(
 			thread,
-			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
-			pthreads_base_dtor, 
-			NULL TSRMLS_CC
-		);
-		attach.handlers = &pthreads_handlers;
-	}
-	return attach;
-} /* }}} */
-
-/* {{{ thread connection object constructor */
-zend_object_value pthreads_connection_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
-	zend_object_value attach;
-	PTHREAD thread = calloc(1, sizeof(*thread));
-	if (thread) {
-		thread->scope |= PTHREADS_SCOPE_THREAD|PTHREADS_SCOPE_CONNECTION;
-		pthreads_base_ctor(thread, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
-			thread,
-			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
-			pthreads_base_dtor, 
-			NULL TSRMLS_CC
+			(zend_objects_store_dtor_t) pthreads_base_dtor,
+			(zend_objects_free_object_storage_t) pthreads_base_free,
+			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
 		attach.handlers = &pthreads_handlers;
 	}
@@ -300,35 +280,17 @@ zend_object_value pthreads_connection_thread_ctor(zend_class_entry *entry TSRMLS
 } /* }}} */
 
 /* {{{ worker object constructor */
-zend_object_value pthreads_object_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
+zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
 	PTHREAD worker = calloc(1, sizeof(*worker));
 	if (worker) {
-		worker->scope |= PTHREADS_SCOPE_WORKER;
+		worker->scope = PTHREADS_SCOPE_WORKER;
 		pthreads_base_ctor(worker, entry TSRMLS_CC);
 		attach.handle = zend_objects_store_put(
 			worker,
-			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
-			pthreads_base_dtor, 
-			NULL TSRMLS_CC
-		);
-		attach.handlers = &pthreads_handlers;
-	}
-	return attach;
-} /* }}} */
-
-/* {{{ worker connection object constructor */
-zend_object_value pthreads_connection_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
-	zend_object_value attach;
-	PTHREAD worker = calloc(1, sizeof(*worker));
-	if (worker) {
-		worker->scope |= PTHREADS_SCOPE_WORKER|PTHREADS_SCOPE_CONNECTION;
-		pthreads_base_ctor(worker, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
-			worker,
-			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
-			pthreads_base_dtor, 
-			NULL TSRMLS_CC
+			(zend_objects_store_dtor_t) pthreads_base_dtor,
+			(zend_objects_free_object_storage_t) pthreads_base_free,
+			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
 		attach.handlers = &pthreads_handlers;
 	}
@@ -336,35 +298,17 @@ zend_object_value pthreads_connection_worker_ctor(zend_class_entry *entry TSRMLS
 } /* }}} */
 
 /* {{{ stackable object constructor */
-zend_object_value pthreads_object_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
+zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
 	PTHREAD stackable = calloc(1, sizeof(*stackable));
 	if (stackable) {
-		stackable->scope |= PTHREADS_SCOPE_STACKABLE;
+		stackable->scope = PTHREADS_SCOPE_STACKABLE;
 		pthreads_base_ctor(stackable, entry TSRMLS_CC);
 		attach.handle = zend_objects_store_put(
 			stackable,
-			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
-			pthreads_base_dtor, 
-			NULL TSRMLS_CC
-		);
-		attach.handlers = &pthreads_handlers;
-	}
-	return attach;
-} /* }}} */
-
-/* {{{ stackable connection object constructor */
-zend_object_value pthreads_connection_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
-	zend_object_value attach;
-	PTHREAD stackable = calloc(1, sizeof(*stackable));
-	if (stackable) {
-		stackable->scope |= PTHREADS_SCOPE_STACKABLE|PTHREADS_SCOPE_CONNECTION;
-		pthreads_base_ctor(stackable, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
-			stackable,
-			(zend_objects_store_dtor_t) zend_objects_destroy_object, 
-			pthreads_base_dtor, 
-			NULL TSRMLS_CC
+			(zend_objects_store_dtor_t) pthreads_base_dtor,
+			(zend_objects_free_object_storage_t) pthreads_base_free,
+			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
 		attach.handlers = &pthreads_handlers;
 	}
@@ -372,13 +316,23 @@ zend_object_value pthreads_connection_stackable_ctor(zend_class_entry *entry TSR
 } /* }}} */
 
 /* {{{ connect pthread objects */
-static void pthreads_connect(PTHREAD source, PTHREAD destination) {
+static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 	if (source && destination) {
+		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
+			pthreads_base_dtor(destination TSRMLS_CC);
+			destination->scope |= PTHREADS_SCOPE_CONNECTION;
+			pthreads_base_ctor(destination, destination->std.ce TSRMLS_CC);
+			return pthreads_connect
+			(
+				source, 
+				destination TSRMLS_CC
+			);
+		}
+		
 		destination->thread = source->thread;
 		destination->tid = source->tid;
 		destination->tls = source->tls;
 		destination->cid = source->cid;
-		destination->synchronized = source->synchronized;
 		
 		destination->lock = source->lock;
 		destination->state = source->state;
@@ -386,7 +340,9 @@ static void pthreads_connect(PTHREAD source, PTHREAD destination) {
 		destination->modifiers = source->modifiers;
 		destination->store = source->store;
 		destination->stack = source->stack;
-	}
+		
+		return SUCCESS;
+	} else return FAILURE;
 } /* }}} */
 
 /* {{{ pthreads base constructor */
@@ -409,10 +365,11 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 		object_properties_init(&(base->std), entry);
 #endif		
 
+		pthreads_prepare_classes_init(base TSRMLS_CC);
+		
 		if (PTHREADS_IS_CONNECTION(base)) {
 			base->tid = pthreads_self();
 			base->tls = tsrm_ls;
-			pthreads_prepare_classes_init(base TSRMLS_CC);
 		} else {
 			base->cid = pthreads_self();
 			base->cls = tsrm_ls;
@@ -424,7 +381,6 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
 			base->store = pthreads_serial_alloc(TSRMLS_C);
 			
-			pthreads_prepare_classes_init(base TSRMLS_CC);
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
 				base->stack = (zend_llist*) calloc(1, sizeof(zend_llist));
@@ -462,8 +418,6 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		}
 	}
 	
-	zend_llist_destroy(&(base->preparation.classes));
-	
 	if (base->std.properties) {
 		zend_hash_destroy(base->std.properties);
 		FREE_HASHTABLE(base->std.properties);
@@ -481,11 +435,24 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		efree(base->std.properties_table);
 	}
 #endif
-	free(base);
+} /* }}} */
+
+/* {{{ free object */
+static void pthreads_base_free(void *arg TSRMLS_DC) {
+	PTHREAD base = (PTHREAD) arg;
+	if (base) {
+		pthreads_prepare_classes_free(base TSRMLS_CC);
+		free(base);
+	}
+} /* }}} */
+
+/* {{{ clone object */
+static void pthreads_base_clone(void *arg, void **pclone TSRMLS_DC) {
+	printf("pthreads_base_clone: executing ...\n");
 } /* }}} */
 
 /* {{{ start a pthread */
-int pthreads_start(PTHREAD thread, zend_bool synchronized TSRMLS_DC) {
+int pthreads_start(PTHREAD thread TSRMLS_DC) {
 	int dostart = 0;
 	int started = FAILURE;
 	int tlocked = FAILURE;
@@ -501,14 +468,12 @@ int pthreads_start(PTHREAD thread, zend_bool synchronized TSRMLS_DC) {
 	}
 	
 	if (dostart) {
-		if (synchronized)
-			thread->synchronized = synchronized;
 		tlocked = pthread_mutex_lock(thread->lock);
 		
 		if (tlocked == SUCCESS||tlocked == EDEADLK) {
 			started = pthread_create(&thread->thread, NULL, pthreads_routine, (void*)thread);
 			if (started == SUCCESS) 
-				pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
+				pthreads_state_wait(thread->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 			if (tlocked != EDEADLK)
 				pthread_mutex_unlock(thread->lock);
 		}
@@ -616,7 +581,13 @@ static void * pthreads_routine(void *arg) {
 			*/
 			zend_activate(TSRMLS_C);							
 			zend_activate_modules(TSRMLS_C);
-#endif				
+#endif		
+			
+			/*
+			* Prepare for Execution
+			*/
+			pthreads_prepare(thread TSRMLS_CC);
+			
 			/*
 			* Release global lock
 			*/
@@ -631,7 +602,6 @@ static void * pthreads_routine(void *arg) {
 			* Pointers to the usual
 			*/
 			zval *this_ptr = NULL;
-			zend_class_entry *scope = NULL;
 			
 			/*
 			* A new reference to $this for the current context
@@ -651,11 +621,6 @@ static void * pthreads_routine(void *arg) {
 				EG(current_module)=&pthreads_module_entry;
 				
 				/*
-				* Prepare for execution
-				*/
-				pthreads_prepare(thread TSRMLS_CC);
-				
-				/*
 				* Initialize thread and connection
 				*/
 				{
@@ -665,26 +630,20 @@ static void * pthreads_routine(void *arg) {
 					object_and_properties_init
 					(
 						EG(This)=getThis(), 
-						EG(scope) = scope = pthreads_prepared_entry
+						EG(scope) = pthreads_prepared_entry
 						(
-							thread, 
+							thread,
 							thread->std.ce TSRMLS_CC
-						), 
+						),
 						thread->std.properties
 					);
 					
 					/*
 					* Make connection
 					*/
-					pthreads_connect(thread, PTHREADS_FETCH_FROM(EG(This)));
+					pthreads_connect(thread, PTHREADS_FETCH_FROM(EG(This)) TSRMLS_CC);
 				}
-				
-				/*
-				* Allow the creating thread to continue where appropriate
-				*/
-				if (!thread->synchronized)
-					pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
-				
+
 				/*
 				* Runtime ...
 				*/
@@ -728,7 +687,7 @@ static void * pthreads_routine(void *arg) {
 								cache.calling_scope = EG(scope);
 								cache.called_scope = EG(called_scope);
 								cache.object_ptr = EG(This);
-								
+																																																																										
 								/* call the function */
 								pthreads_state_set((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 								if (zend_call_function(&info, &cache TSRMLS_CC)!=SUCCESS) {
@@ -736,6 +695,19 @@ static void * pthreads_routine(void *arg) {
 									zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while calling %s::run", EG(scope)->name);
 									break;
 								} else pthreads_state_unset((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+								
+#if PHP_VERSION_ID > 50399
+								{
+									zend_op_array *ops = &zrun->op_array;
+								
+									if (ops) {
+										if (ops->run_time_cache) {
+											efree(ops->run_time_cache);
+											ops->run_time_cache = NULL;
+										}
+									}
+								}
+#endif
 
 								/* deal with zresult (ignored) */
 								if (zresult) {

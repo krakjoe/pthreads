@@ -273,13 +273,19 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 											method
 										);
 									} else {
-#if PHP_VERSION_ID > 50399				
-										zend_op_array *cops = &call->op_array;
-										if (cops->run_time_cache) {
-											efree(cops->run_time_cache);
-											cops->run_time_cache = NULL;
+									
+#if PHP_VERSION_ID > 50399
+										{
+											zend_op_array *ops = &call->op_array;
+										
+											if (ops) {
+												if (ops->run_time_cache) {
+													efree(ops->run_time_cache);
+													ops->run_time_cache = NULL;
+												}
+											}
 										}
-#endif								
+#endif
 										if (!return_value_used) {
 											zval_ptr_dtor(&zresult);
 										} else {

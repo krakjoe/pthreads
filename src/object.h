@@ -37,12 +37,9 @@
 #endif
 
 /* {{{ object creation and destruction */
-zend_object_value pthreads_connection_stackable_ctor(zend_class_entry *entry TSRMLS_DC);
-zend_object_value pthreads_object_stackable_ctor(zend_class_entry *entry TSRMLS_DC);
-zend_object_value pthreads_connection_worker_ctor(zend_class_entry *entry TSRMLS_DC);
-zend_object_value pthreads_object_worker_ctor(zend_class_entry *entry TSRMLS_DC);
-zend_object_value pthreads_connection_thread_ctor(zend_class_entry *entry TSRMLS_DC);
-zend_object_value pthreads_object_thread_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC);
 /* }}} */
 
 /*
@@ -63,7 +60,7 @@ int pthreads_stack_length(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
 /* {{{ start/join */
-int pthreads_start(PTHREAD thread, zend_bool synchronized TSRMLS_DC);
+int pthreads_start(PTHREAD thread TSRMLS_DC);
 int pthreads_join(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
