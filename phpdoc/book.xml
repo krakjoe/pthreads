@@ -16,6 +16,7 @@
  &reference.pthreads.thread;
  &reference.pthreads.worker;
  &reference.pthreads.stackable;
+ &reference.pthreads.modifiers;
  &reference.pthreads.mutex;
  &reference.pthreads.cond;
 

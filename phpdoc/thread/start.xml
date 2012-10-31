@@ -11,7 +11,7 @@
   &reftitle.description;
   <methodsynopsis>
    <modifier>final</modifier> <modifier>public</modifier> <type>boolean</type><methodname>Thread::start</methodname>
-   <methodparam choice="opt"><type>boolean</type><parameter>synchronized</parameter></methodparam>
+   <void/>
   </methodsynopsis>
   <para>
   Will start a new Thread to execute the implemented run method
@@ -20,16 +20,7 @@
 
  <refsect1 role="parameters">
   &reftitle.parameters;
-  <variablelist>
-   <varlistentry>
-    <term><parameter>synchronized</parameter></term>
-    <listitem>
-     <para>
-  When true will cause the calling context to wait for notification from the Thread before returning from the call to Thread::start
-     </para>
-    </listitem>
-   </varlistentry>
-  </variablelist>
+  &no.function.parameters;
  </refsect1>
 
  <refsect1 role="returnvalues">

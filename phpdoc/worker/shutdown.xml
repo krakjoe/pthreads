@@ -1,23 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
 
-<refentry xml:id="cond.create" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+<refentry xml:id="worker.shutdown" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
-  <refname>Cond::create</refname>
-  <refpurpose>Create a new Condition Variable</refpurpose>
+  <refname>Worker::shutdown</refname>
+  <refpurpose>Synchronization</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>final</modifier>
-   <modifier>public</modifier>
-   <modifier>static</modifier>
-   <type>long</type>
-   <methodname>Cond::create</methodname>
+   <modifier>final</modifier> <modifier>public</modifier> <type>boolean</type><methodname>Worker::shutdown</methodname>
    <void />
   </methodsynopsis>
-  <para>Creates a new Condition Variable for the caller.</para>
+  <para>
+  Shuts down the Worker after executing all the Stackables previously stacked
+  </para>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -27,7 +25,9 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>A handle to a Condition Variable</para>
+  <para>
+  
+  </para>
  </refsect1>
 </refentry>
 

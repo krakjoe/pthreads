@@ -10,7 +10,7 @@
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>final</modifier> <modifier>public</modifier> <type>int</type><methodname>Stackable::wait</methodname>
+   <modifier>final</modifier> <modifier>public</modifier> <type>boolean</type><methodname>Stackable::wait</methodname>
    <methodparam choice="opt"><type>string</type><parameter>timeout</parameter></methodparam>
   </methodsynopsis>
   <para>
@@ -25,7 +25,7 @@
     <term><parameter>timeout</parameter></term>
     <listitem>
      <para>
-  An optional timeout in millions of a second.
+  An optional timeout in millionths of a second.
      </para>
     </listitem>
    </varlistentry>
@@ -35,7 +35,7 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-  An integral indication of success
+  A boolean indication of success
   </para>
  </refsect1>
 
