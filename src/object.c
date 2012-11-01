@@ -318,13 +318,13 @@ zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 /* {{{ connect pthread objects */
 static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 	if (source && destination) {
-		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
+		if (PTHREADS_IS_NOT_CONNECTION(destination)) {	
 			pthreads_base_dtor(destination TSRMLS_CC);
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
 			pthreads_base_ctor(destination, destination->std.ce TSRMLS_CC);
 			return pthreads_connect
 			(
-				source, 
+				source,
 				destination TSRMLS_CC
 			);
 		}
@@ -347,7 +347,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 
 /* {{{ pthreads base constructor */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {
-
 	if (base) {
 		zend_object_std_init(&base->std, entry TSRMLS_CC);
 #if PHP_VERSION_ID < 50399
@@ -363,10 +362,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 		}
 #else
 		object_properties_init(&(base->std), entry);
-#endif		
-
-		pthreads_prepare_classes_init(base TSRMLS_CC);
-		
+#endif	
 		if (PTHREADS_IS_CONNECTION(base)) {
 			base->tid = pthreads_self();
 			base->tls = tsrm_ls;
@@ -391,13 +387,15 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 				pthreads_globals_add(base);
 			}
 		}
+		
+		pthreads_prepare_classes_init(base TSRMLS_CC);
 	}
 } /* }}} */
 
 /* {{{ pthreads base destructor */
 static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
-
+	
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
 			pthreads_join(base TSRMLS_CC);
@@ -408,6 +406,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 			pthread_mutex_destroy(base->lock);
 			free(base->lock);
 		}
+		
 		pthreads_state_free(base->state  TSRMLS_CC);
 		pthreads_modifiers_free(base->modifiers TSRMLS_CC);
 		pthreads_serial_free(base->store TSRMLS_CC);
@@ -418,30 +417,17 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		}
 	}
 	
-	if (base->std.properties) {
-		zend_hash_destroy(base->std.properties);
-		FREE_HASHTABLE(base->std.properties);
-		base->std.properties = NULL;
-	}
+	zend_object_std_dtor(&base->std TSRMLS_CC);
 	
-#if PHP_VERSION_ID > 50399
-	if (base->std.ce->default_properties_count > 0 && base->std.properties_table) {
-		int i=0;
-		for (;i<base->std.ce->default_properties_count;i++){
-			if (base->std.properties_table[i]) {
-				zval_ptr_dtor(&base->std.properties_table[i]);
-			}
-		}
-		efree(base->std.properties_table);
-	}
-#endif
+	pthreads_prepare_classes_free(
+		base TSRMLS_CC
+	);
 } /* }}} */
 
 /* {{{ free object */
 static void pthreads_base_free(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 	if (base) {
-		pthreads_prepare_classes_free(base TSRMLS_CC);
 		free(base);
 	}
 } /* }}} */

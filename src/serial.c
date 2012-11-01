@@ -41,7 +41,7 @@
 
 /* {{{ serial buffer element structure */
 typedef struct _pthreads_storage {
-	char		*serial;	/* serial data */
+	void		*serial;	/* serial data */
 	size_t 		length;		/* serial length */
 	size_t 		strlen;		/* length of original string */
 	zend_uchar 	type;		/* type of data */
@@ -240,8 +240,8 @@ static pthreads_storage pthreads_serialize(zval *unserial TSRMLS_DC){
 	pthreads_storage storage;
 	
 	if (unserial) {
-	
-		smart_str *output = (smart_str*) calloc(1, sizeof(smart_str));	
+		smart_str *output = (smart_str*) calloc(1, sizeof(smart_str));
+		
 		if (output) {
 			/*
 			* Populate PHP storage
@@ -251,14 +251,16 @@ static pthreads_storage pthreads_serialize(zval *unserial TSRMLS_DC){
 				* This might seem like the long way round
 				* pthreads_storage can be cast to a smart_str pointer but zend doesn't like it
 				*/
-				php_serialize_data_t vars;
-				PHP_VAR_SERIALIZE_INIT(vars);	
-				php_var_serialize(							
-					output, 
-					&unserial, 
-					&vars TSRMLS_CC
-				);
-				PHP_VAR_SERIALIZE_DESTROY(vars);
+				{
+					php_serialize_data_t vars;
+					PHP_VAR_SERIALIZE_INIT(vars);	
+					php_var_serialize(							
+						output, 
+						&unserial, 
+						&vars TSRMLS_CC
+					);
+					PHP_VAR_SERIALIZE_DESTROY(vars);
+				}
 			}
 			
 			/*
@@ -274,11 +276,8 @@ static pthreads_storage pthreads_serialize(zval *unserial TSRMLS_DC){
 					storage->strlen = 0;
 					storage->serial = (char*) calloc(1, output->len);
 					if (storage->serial) {
-						/*
-						* Set serialized storage length
-						*/
 						storage->length = output->len;
-						
+							
 						/*
 						* Set some storage flags
 						*/
@@ -299,7 +298,7 @@ static pthreads_storage pthreads_serialize(zval *unserial TSRMLS_DC){
 						* not memcpy or strndup or anything that cares about null termination
 						*/
 						memmove(
-							storage->serial, (const void*) output->c, output->len
+							(char*) storage->serial, (const void*) output->c, output->len
 						);
 					} else free(storage);
 				}
@@ -334,7 +333,6 @@ static int pthreads_unserialize(pthreads_storage storage, zval *pzval TSRMLS_DC)
 	int result = SUCCESS;
 	
 	if (storage) {
-	
 		const unsigned char* pointer = (const unsigned char*) storage->serial;
 		
 		if (pointer) {
@@ -361,11 +359,13 @@ static void pthreads_serial_store_dtor (void **element){
 	if (*element) {
 		pthreads_storage storage = (pthreads_storage) *element;
 		
-		if (storage->serial) {
-			free(storage->serial);
+		if (storage) {
+			if (storage->serial) {
+				free(storage->serial);
+			}
+			
+			free(storage);
 		}
-		
-		free(storage);
 	}
 } /* }}} */
 

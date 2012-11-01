@@ -26,6 +26,12 @@
 #	include <src/object.h>
 #endif
 
+#ifdef AG
+#	undef AG
+#endif
+
+#define AG(v) TSRMG(alloc_globals_id, zend_alloc_globals *, v)
+
 /* {{{ prepared function ctor */
 static void pthreads_preparation_function_ctor(zend_function *pfe); /* }}} */
 
@@ -55,12 +61,17 @@ zend_function_entry	pthreads_empty_methods[] = {
 
 /* {{{ initialize prepared class entry storage */
 void pthreads_prepare_classes_init(PTHREAD thread TSRMLS_DC) {
-	zend_llist_init(&(thread->preparation.classes), sizeof(zend_class_entry*), (llist_dtor_func_t) pthreads_preparation_classes_dtor, 1);
+	zend_llist *classes = &thread->preparation.classes;
+	if (!classes || !classes->dtor)
+		zend_llist_init(classes, sizeof(zend_class_entry*), (llist_dtor_func_t) pthreads_preparation_classes_dtor, 1);
 } /* }}} */
 
 /* {{{ free prepared class storage */
 void pthreads_prepare_classes_free(PTHREAD thread TSRMLS_DC) {
-	zend_llist_destroy(&(thread->preparation.classes));
+	zend_llist *classes = &thread->preparation.classes;
+	if (classes) {
+		zend_llist_destroy(classes);
+	}
 } /* }}} */
 
 /* {{{ fetch prepared class entry */
@@ -149,14 +160,15 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 #if PHP_VERSION_ID > 50399
 					if (candidate->default_properties_count) {
 						int i;
-						prepared->default_properties_table = emalloc(sizeof(zval*) * candidate->default_properties_count);
+						prepared->default_properties_table = realloc(
+							prepared->default_properties_table, 
+							sizeof(void*) * candidate->default_properties_count
+						);
 						for (i = 0; i < candidate->default_properties_count; i++) {
-							prepared->default_properties_table[i] = candidate->default_properties_table[i];
 							if (candidate->default_properties_table[i]) {
-								ALLOC_INIT_ZVAL(prepared->default_properties_table[i]);
-								MAKE_COPY_ZVAL(
-									&candidate->default_properties_table[i], prepared->default_properties_table[i]
-								);
+								ALLOC_ZVAL(prepared->default_properties_table[i]);
+								prepared->default_properties_table[i]=candidate->default_properties_table[i];
+								INIT_PZVAL(prepared->default_properties_table[i]);
 							}
 						}
 						prepared->default_properties_count = candidate->default_properties_count;
@@ -186,11 +198,14 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 							sizeof(zval*) * candidate->default_static_members_count, 1
 						);
 						for (i = 0; i < candidate->default_static_members_count; i++) {
-							prepared->default_static_members_table[i] = candidate->default_static_members_table[i];
 							if (candidate->default_static_members_table[i]) {
-								SEPARATE_ZVAL_TO_MAKE_IS_REF(&candidate->default_static_members_table[i]);
-								prepared->default_static_members_table[i] = candidate->default_static_members_table[i];
-								Z_ADDREF_P(prepared->default_static_members_table[i]);
+								zval *pzval;
+								{
+									ALLOC_ZVAL(pzval);
+									MAKE_COPY_ZVAL(&candidate->default_static_members_table[i], pzval);
+									prepared->default_static_members_table[i]=pzval;
+									Z_SET_REFCOUNT_P(pzval, 1);
+								}
 							}
 						}
 						prepared->default_static_members_count = candidate->default_static_members_count;
@@ -233,8 +248,10 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				/*
 				* Adjust refcount such that pthreads is responsible for freeing this entry
 				*/
-				prepared->refcount+=2;
-			} else prepared = *searched;
+				prepared->refcount++;
+			} else {
+				prepared = *searched;
+			}
 			
 			/* free lowercase name buffer */
 			free(lcname);
@@ -284,19 +301,18 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /
 #if PHP_VERSION_ID < 50400
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_ctor(zval **property) {
-	zval *defprop = *property;
-	zval *newprop;
+	zval *pointer;
 	
-	if (defprop) {
-		MAKE_STD_ZVAL(newprop);
-		*newprop = *defprop;
-		zval_copy_ctor(newprop);
-		property = &newprop;
-	}
+	ALLOC_ZVAL(pointer);
+	MAKE_COPY_ZVAL(
+		property, pointer
+	);
+	Z_DELREF_PP(property);
+	*property = pointer;
 } /* }}} */
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_dtor(zval *property) {
-	
+	zval_ptr_dtor(&property);
 } /* }}} */
 #endif
 
@@ -338,6 +354,7 @@ static void pthreads_preparation_function_dtor(zend_function *pfe) {
 					efree(ops->run_time_cache);
 					ops->run_time_cache = NULL;
 				}
+				
 			}
 #endif
 		}
@@ -348,24 +365,30 @@ static void pthreads_preparation_function_dtor(zend_function *pfe) {
 static void pthreads_preparation_classes_dtor(void **ppce) {
 	zend_class_entry *pce = (zend_class_entry*) *ppce;
 	if(pce) {
-		if (--pce->refcount == 1) {
+		if (--pce->refcount >= 0) {
 #if PHP_VERSION_ID > 50399
 			if (pce->default_properties_count) {
-				
+				int i;
+				TSRMLS_FETCH();
+				for(i=0; i<pce->default_properties_count; i++) {
+					if (pce->default_properties_table[i]) {
+						zval_ptr_dtor(&pce->default_properties_table[i]);
+					}
+				}
+				free(pce->default_properties_table);
 			}
 #else
 			zend_hash_destroy(&pce->default_properties);
 #endif
 
 #if PHP_VERSION_ID > 50399
-			if (pce->default_static_members_count) {
+			if (pce->default_static_members_table) {
 				int i;
 				for (i=0; i<pce->default_static_members_count; i++) {
 					if (pce->default_static_members_table[i]) {
-						zval_ptr_dtor(&pce->default_static_members_table[i]);
+						//zval_dtor(pce->default_static_members_table[i]);
 					}
 				}
-				free(pce->default_static_members_table);
 			}
 #else
 			zend_hash_destroy(&pce->default_static_members);

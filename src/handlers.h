@@ -41,6 +41,8 @@
 #	define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists, key TSRMLS_CC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member, const struct _zend_literal *key TSRMLS_DC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member, key TSRMLS_CC
+#	define PTHREADS_POINTER_PROPERTY_PASSTHRU_D zval *object, zval *member, const struct _zend_literal *key TSRMLS_DC
+#	define PTHREADS_POINTER_PROPERTY_PASSTHRU_C object, member, key TSRMLS_CC
 #	define PTHREADS_GET_METHOD_PASSTHRU_D zval **pobject, char *method, int methodl, const struct _zend_literal *key TSRMLS_DC
 #	define PTHREADS_GET_METHOD_PASSTHRU_C pobject, method, methodl, key TSRMLS_CC
 #	define PTHREADS_CALL_METHOD_PASSTHRU_D const char *method, INTERNAL_FUNCTION_PARAMETERS
@@ -54,6 +56,8 @@
 #	define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists TSRMLS_CC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member TSRMLS_DC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member TSRMLS_CC
+#	define PTHREADS_POINTER_PROPERTY_PASSTHRU_D zval *object, zval *member TSRMLS_DC
+#	define PTHREADS_POINTER_PROPERTY_PASSTHRU_C object, member TSRMLS_CC
 #	define PTHREADS_GET_METHOD_PASSTHRU_D zval **pobject, char *method, int methodl TSRMLS_DC
 #	define PTHREADS_GET_METHOD_PASSTHRU_C pobject, method, methodl TSRMLS_CC
 #	define PTHREADS_CALL_METHOD_PASSTHRU_D char *method, INTERNAL_FUNCTION_PARAMETERS
@@ -71,6 +75,9 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D); /* }}} */
 
 /* {{{ unset a property in the referenced thread */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D); /* }}} */
+
+/* {{{ get_property_ptr_ptr proxy */
+zval ** pthreads_pointer_property(PTHREADS_POINTER_PROPERTY_PASSTHRU_D); /* }}} */
 
 /* {{{ fetch a pthreads friendly method */
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D); /* }}} */

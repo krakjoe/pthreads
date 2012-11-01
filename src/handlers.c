@@ -55,13 +55,20 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 				if (pthreads_serial_read(line, Z_STRVAL_P(member), Z_STRLEN_P(member), &prop TSRMLS_CC)!=SUCCESS) {
 					zend_error_noreturn(E_WARNING, "pthreads has experienced an internal error while reading %s::$%s (%lu)", Z_OBJCE_P(object)->name, Z_STRVAL_P(member), thread->tid);
 				} else {
-					zend_hash_update(
-						Z_OBJPROP_P(object), 
-						Z_STRVAL_P(member), Z_STRLEN_P(member)+1, 
-						(void**)&prop, sizeof(zval*), 
-						NULL
-					);
-					Z_SET_REFCOUNT_P(prop, 1);
+					HashTable *table = Z_OBJPROP_P(object);
+					zval **container;
+					if (zend_hash_find(table, Z_STRVAL_P(member), Z_STRLEN_P(member), (void**)&container)==SUCCESS){
+						zend_hash_update(
+							table, 
+							Z_STRVAL_P(member), Z_STRLEN_P(member)+1, 
+							(void**)&prop, sizeof(zval*), 
+							(void**)&container
+						);
+						Z_SET_REFCOUNT_P(prop, 1);
+						INIT_PZVAL(*container);
+					} else if (zend_hash_add(table, Z_STRVAL_P(member), Z_STRLEN_P(member)+1, (void**) &prop, sizeof(zval*), (void**)&container)==SUCCESS) {
+						Z_ADDREF_P(prop);
+					}
 				}
 			} else prop = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
 			
@@ -91,7 +98,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 				case IS_BOOL: {
 					if (pthreads_serial_write(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS){
 						zend_error_noreturn(E_WARNING, "pthreads failed to write member %s::$%s (%lu)", Z_OBJCE_P(object)->name, Z_STRVAL_P(member), thread->tid);
-					}
+					} else zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
 				} break;
 				
 				default: zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
@@ -127,7 +134,7 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 /* {{{ unset an object property */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	PTHREAD thread = PTHREADS_FETCH_FROM(object);
-	int acquire = 0;
+	int acquire = 0; 
 	
 	if (thread) {
 		acquire = pthread_mutex_lock(thread->lock);
@@ -148,16 +155,26 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	}
 } /* }}} */
 
+/* {{{ get_property_ptr_ptr */
+zval ** pthreads_pointer_property(PTHREADS_POINTER_PROPERTY_PASSTHRU_D) {
+	HashTable *table = Z_OBJPROP_P(object);
+	zval **container;
+	if (zend_hash_find(table, Z_STRVAL_P(member), Z_STRLEN_P(member), (void**)&container)==SUCCESS) {
+		return container;
+	} else return NULL;
+} /* }}} */
+
 /* {{{ pthreads_get_method will attempt to apply pthreads specific modifiers */
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 	zend_class_entry *scope;
 	zend_function *call;
 	zend_function *callable;
 	char *lcname;
-	
+	int access = 0;
 	PTHREAD thread = PTHREADS_FETCH_FROM(*pobject);
+	
 	if (thread) {
-		switch(pthreads_modifiers_get(thread->modifiers, method TSRMLS_CC)){
+		switch((access=pthreads_modifiers_get(thread->modifiers, method TSRMLS_CC))){
 			case ZEND_ACC_PRIVATE:
 			case ZEND_ACC_PROTECTED:
 				scope = Z_OBJCE_PP(pobject);

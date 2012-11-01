@@ -98,6 +98,7 @@ typedef struct _pthread_construct {
 	*/
 	struct {
 		zend_llist classes;
+		zend_llist resources;
 	} preparation;
 } *PTHREAD;
 

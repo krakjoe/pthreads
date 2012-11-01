@@ -57,7 +57,6 @@ class ExampleWorker extends Worker {
 	*	If a method reads and writes thread data it will often be a good idea to protect the method
 	*/
 	
-	/* protection isn't required for this sort of thing under any circumstances - getAttempts cannot read $this->attempts while addAttempt is writing it anyway */
 	public function addAttempt() 		{ $this->attempts++; }
 	public function getAttempts()		{ return $this->attempts; }
 	
