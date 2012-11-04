@@ -724,8 +724,6 @@ static void * pthreads_routine(void *arg) {
 			} zend_catch {
 				/* do something, it's all gone wrong */
 			} zend_end_try();
-			
-			FREE_ZVAL(this_ptr);
 		}
 		
 		/*
