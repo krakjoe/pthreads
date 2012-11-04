@@ -18,38 +18,64 @@
 
 /* a stackable piece of work */
 class ExampleWork extends Stackable {
-	/* do anything simple */
-	public function run(){
-		if ($this->worker) {
-			$this->worker->addAttempt();
-			printf(
-				"%s executing in %s on attempt %d\n",
-				__CLASS__, $this->worker->getName(), $this->worker->getAttempts()
-			);
-		}
+	
+	public function __construct($data) {
+		$this->local = $data;
 	}
+	
+	public function run() {
+		printf("%s being executed by %s\n", __METHOD__, $this->worker->getThreadId());
+		$this->worker->addAttempt();
+		$this->worker->addData(
+			$this->getData()
+		);
+	} 
+	
+	public function getData() 				{ return $this->local; }
 }
 
-/* a worker thread */
 class ExampleWorker extends Worker {
-	public function __construct($name){
-		$this->name = $name;
-		$this->init = false;
-		$this->attempts = 0;
+	public $data = array();
+	public $setup = false;
+	
+	public function __construct($name) {
+		$this->setName($name);
 	}
-	/* the only thing to do here is initialize an environment which is conducive to the stackables you'll be stacking ... */
+	
+	/*
+	* The run method should just prepare the environment for the work that is coming ...
+	*/
 	public function run(){
-		if (!$this->init) {
-			$this->init = true;
-			if (isset($this->name))
-				$this->name = sprintf("%s (%lu)", __CLASS__, $this->getThreadId());
-		}
+		if (!$this->setup) {
+			$this->setSetup(true);
+			$this->setName(sprintf("%s (%lu)", __CLASS__, $this->getThreadId()));
+		} else printf("%s is being run ... why ??\n", $this->getName());
+		printf("Setup %s Complete\n", $this->getName());
 	}
-	/* get name of the worker */
-	public function getName() { return $this->name; }
-	public function addAttempt(){ $this->attempts++; }
-	public function getAttempts() { return $this->attempts; }
+	
+	public function setSetup($setup)	{ $this->setup = $setup; }
+	public function getName() 			{ return $this->name; }
+	public function setName($name)		{ $this->name = $name; }
+	
+	/*
+	* About protected methods:
+	*	Even if a public or private method read/writes member data the reads and writes will be safe
+	*	So in this particular example they arent strictly required for the objects to function as intended
+	*	Normally methods will read and manipulate data in a more complicated manner than in this example
+	*	If a method reads and writes thread data it will often be a good idea to protect the method
+	*/
+	
+	public function addAttempt() 		{ $this->attempts++; }
+	public function getAttempts()		{ return $this->attempts; }
+	
+	/* this method overwrites thread data */
+	protected function setData($data)	{ $this->data = $data; }
+	/* this method reads and writes thread data */
+	protected function addData($data)	{ $this->data = array_merge($this->data, array($data)); }
+	/* this method reads data but makes no changes, doesnt usually happen in the real world */
+	protected function getData()			{ return $this->data; }
 }
+
 
 /*
 * Dead simple pthreads pool
@@ -66,11 +92,20 @@ class Pool {
 	/* submit Stackable to Worker */
 	public function submit(Stackable $stackable) {
 		if (count($this->workers)<$this->size) {
-			$this->workers[] = $worker = new ExampleWorker(sprintf("Worker [%d]", count($this->workers)-1));
-			$worker->start();
-			if ($worker->stack($stackable)) {
+			$id = count($this->workers);
+			$this->workers[$id] = new ExampleWorker(sprintf("Worker [%d]", $id));
+			$this->workers[$id]->start();
+			if ($this->workers[$id]->stack($stackable)) {
 				return $stackable;
-			} else trigger_error(sprintf("failed to push Stackable onto %s", $worker->getName()), E_USER_WARNING);
+			} else trigger_error(sprintf("failed to push Stackable onto %s", $this->workers[$id]->getName()), E_USER_WARNING);
+		}
+		
+		foreach($this->workers as $worker) {
+			if (!$worker->isWorking()) {
+				if ($worker->stack($stackable)) {
+					return $stackable;
+				}
+			}
 		}
 		
 		if (($select = $this->workers[array_rand($this->workers)])) {
@@ -91,6 +126,8 @@ class Pool {
 		}
 	}
 }
+
+$start = microtime(true);
 
 /*
 * Create a pool of ten threads
@@ -114,9 +151,23 @@ while(++$target<100) {
 $pool->shutdown();
 
 /*
-* Look inside ...
+* Look inside
 */
+$runtime = (microtime(true)-$start);
+echo "<pre>";
+printf("---------------------------------------------------------\n");
+printf("Executed %d tasks in %f seconds in %d threads\n", count($work), $runtime, 10);
+printf("---------------------------------------------------------\n");
+printf("Thread::getPeak(%d) | %s | %.3fMB RAM\n", Thread::getPeak(), $_SERVER["SERVER_SOFTWARE"], memory_get_peak_usage(true)/1048576);
+printf("---------------------------------------------------------\n");
+$attempts = 0;
 foreach($pool->workers as $worker) {
 	printf("Thread %lu made %d attempts ...\n", $worker->getThreadId(), $worker->getAttempts());
+	print_r($worker->getData());
+	$attempts+=$worker->getAttempts();
 }
+printf("---------------------------------------------------------\n");
+printf("Average processing time of %f seconds per task\n", $runtime/$attempts);
+printf("---------------------------------------------------------\n");
+
 ?>

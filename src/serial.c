@@ -182,13 +182,14 @@ int pthreads_serial_read(pthreads_serial serial, char *key, int keyl, zval **rea
 				if (zend_ts_hash_find(&line->store, key, keyl, (void**)&store)==SUCCESS) {
 					ALLOC_ZVAL(*read);
 					if ((result = pthreads_unserialize(*store, *read TSRMLS_CC))!=SUCCESS) {
+						zend_error_noreturn(E_WARNING, "pthreads failed to read %s from storage (%s)", key, (*store)->serial);
 						FREE_ZVAL(*read);
 					} else Z_SET_REFCOUNT_PP(read, 0);
-				}
+				} else zend_error_noreturn(E_WARNING, "pthreads failed to find %s in storage", key);
 				
 				pthreads_serial_unlock(line, &locked TSRMLS_CC);
 			}
-		}
+		} else { /* not found */ zend_error_noreturn(E_WARNING, "pthreads failed to find %s in storage", key); }
 	} else { /* report error */ }
 
 	return result;
@@ -207,7 +208,7 @@ int pthreads_serial_write(pthreads_serial serial, char *key, int keyl, zval **wr
 				} else free(store);
 				pthreads_serial_unlock(serial, &locked TSRMLS_CC);
 			} else { /* report error */ }
-		} else { /* report error */ }
+		} else { /* serialization error */ }
 	} else { /* report error */ }
 	return result;
 } /* }}} */

@@ -151,29 +151,13 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				}
 				
 				/*
-				* Copy Defaults and Statics
+				* Copy Defaults
 				*/
 				{
 					/*
 					* Default Properties
 					*/
-#if PHP_VERSION_ID > 50399
-					if (candidate->default_properties_count) {
-						int i;
-						prepared->default_properties_table = realloc(
-							prepared->default_properties_table, 
-							sizeof(void*) * candidate->default_properties_count
-						);
-						for (i = 0; i < candidate->default_properties_count; i++) {
-							if (candidate->default_properties_table[i]) {
-								ALLOC_ZVAL(prepared->default_properties_table[i]);
-								prepared->default_properties_table[i]=candidate->default_properties_table[i];
-								INIT_PZVAL(prepared->default_properties_table[i]);
-							}
-						}
-						prepared->default_properties_count = candidate->default_properties_count;
-					}
-#else
+#if PHP_VERSION_ID < 50400
 					{
 						zval *tp;
 						zend_hash_copy
@@ -185,47 +169,31 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 						);
 						prepared->default_properties.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
 					}
-#endif
-					
-					/*
-					* Static Properties
-					*/
-#if PHP_VERSION_ID > 50399
-					if (candidate->default_static_members_count) {
-						int i;
-						prepared->default_static_members_table = perealloc(
-							prepared->default_static_members_table, 
-							sizeof(zval*) * candidate->default_static_members_count, 1
-						);
-						for (i = 0; i < candidate->default_static_members_count; i++) {
-							if (candidate->default_static_members_table[i]) {
-								zval *pzval;
-								{
-									ALLOC_ZVAL(pzval);
-									MAKE_COPY_ZVAL(&candidate->default_static_members_table[i], pzval);
-									prepared->default_static_members_table[i]=pzval;
-									Z_SET_REFCOUNT_P(pzval, 1);
-								}
-							}
-						}
-						prepared->default_static_members_count = candidate->default_static_members_count;
-					}
 #else
-					{
-						zval *ts;
-						zend_hash_copy
-						(
-							&prepared->default_static_members,
-							&candidate->default_static_members,
-							(copy_ctor_func_t) zval_add_ref,
-							&ts, sizeof(zval*)
+					if (candidate->default_properties_count) {
+						int i;
+						prepared->default_properties_table = realloc(
+							prepared->default_properties_table, 
+							sizeof(zval*) * candidate->default_properties_count
 						);
+						for (i=0; i<candidate->default_properties_count; i++) {
+							prepared->default_properties_table[i]=candidate->default_properties_table[i];
+							Z_ADDREF_P(prepared->default_properties_table[i]);
+						}
+						prepared->default_properties_count = candidate->default_properties_count;
+					}
+					
+					if (candidate->default_static_members_count) {
+						prepared->default_static_members_count = 0;
 					}
 #endif
+					/*
+					* Static Properties are pointless and cannot be static in the context of threading
+					*/
 				}
 				
 				/*
-				* Copy Constants Table
+				* Copy Constants
 				*/
 				{
 					zval *tc;
@@ -301,14 +269,7 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /
 #if PHP_VERSION_ID < 50400
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_ctor(zval **property) {
-	zval *pointer;
-	
-	ALLOC_ZVAL(pointer);
-	MAKE_COPY_ZVAL(
-		property, pointer
-	);
-	Z_DELREF_PP(property);
-	*property = pointer;
+	zval_add_ref(property);
 } /* }}} */
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_dtor(zval *property) {
@@ -365,11 +326,10 @@ static void pthreads_preparation_function_dtor(zend_function *pfe) {
 static void pthreads_preparation_classes_dtor(void **ppce) {
 	zend_class_entry *pce = (zend_class_entry*) *ppce;
 	if(pce) {
-		if (--pce->refcount >= 0) {
+		if (--pce->refcount == 0) {
 #if PHP_VERSION_ID > 50399
 			if (pce->default_properties_count) {
 				int i;
-				TSRMLS_FETCH();
 				for(i=0; i<pce->default_properties_count; i++) {
 					if (pce->default_properties_table[i]) {
 						zval_ptr_dtor(&pce->default_properties_table[i]);
@@ -382,15 +342,17 @@ static void pthreads_preparation_classes_dtor(void **ppce) {
 #endif
 
 #if PHP_VERSION_ID > 50399
-			if (pce->default_static_members_table) {
+			if (pce->default_static_members_count) {
 				int i;
-				for (i=0; i<pce->default_static_members_count; i++) {
+				for(i=0; i<pce->default_static_members_count; i++) {
 					if (pce->default_static_members_table[i]) {
-						//zval_dtor(pce->default_static_members_table[i]);
+						zval_ptr_dtor(&pce->default_static_members_table[i]);
 					}
 				}
+				free(pce->default_static_members_table);
 			}
 #else
+			/* we don't use statics but the table is still initialized so must be destroyed */
 			zend_hash_destroy(&pce->default_static_members);
 #endif
 
