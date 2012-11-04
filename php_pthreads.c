@@ -168,7 +168,12 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.write_property = pthreads_write_property;
 	pthreads_handlers.has_property = pthreads_has_property;
 	pthreads_handlers.unset_property = pthreads_unset_property;
-	pthreads_handlers.get_property_ptr_ptr = pthreads_pointer_property;
+	
+	pthreads_handlers.get_property_ptr_ptr = NULL;
+	pthreads_handlers.get = NULL;
+	pthreads_handlers.set = NULL;
+	pthreads_handlers.write_dimension = NULL;
+	pthreads_handlers.read_dimension = NULL;
 	
 	return SUCCESS;
 }

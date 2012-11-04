@@ -151,14 +151,13 @@ burst:
 				/*
 				* Initialize it with the new entry
 				*/
-				object_and_properties_init(
+				object_init_ex(
 					that_ptr, 
 					pthreads_prepared_entry
 					(
 						thread, 
 						current->std.ce TSRMLS_CC
-					), 
-					current->std.properties
+					)
 				);
 				
 				/*
@@ -240,14 +239,13 @@ int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
 			/*
 			* Initialize the object in this context
 			*/
-			if (object_and_properties_init(
+			if (object_init_ex(
 					*return_value, 
 					pthreads_prepared_entry
 					(
 						thread,
 						thread->std.ce TSRMLS_CC
-					), 
-					thread->std.properties
+					)
 				)==SUCCESS) {
 				pthreads_connect(thread, PTHREADS_FETCH_FROM(*return_value) TSRMLS_CC);
 			} else { imported = 0; }
@@ -349,14 +347,14 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {
 	if (base) {
 		zend_object_std_init(&base->std, entry TSRMLS_CC);
-#if PHP_VERSION_ID < 50399
+#if PHP_VERSION_ID < 50400
 		{
 			zval *temp;
-		
+
 			zend_hash_copy(															
 				base->std.properties,
 				&entry->default_properties,
-				ZVAL_COPY_CTOR,
+				(copy_ctor_func_t) zval_add_ref,
 				&temp, sizeof(zval*)
 			);
 		}
@@ -417,7 +415,28 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		}
 	}
 	
-	zend_object_std_dtor(&base->std TSRMLS_CC);
+#if PHP_VERSION_ID > 50399
+	{
+		zend_object *object = &base->std;
+		
+		if (object->properties_table) {
+			int i;
+			for (i = 0; i < object->ce->default_properties_count; i++) {
+				if (object->properties_table[i]) {
+					zval_ptr_dtor(&object->properties_table[i]);
+				}
+			}
+			efree(object->properties_table);
+		}
+		
+		if (object->properties) {
+			zend_hash_destroy(object->properties);
+			FREE_HASHTABLE(object->properties);
+		}
+	}
+#else
+	zend_object_std_dtor(&(base->std) TSRMLS_CC);
+#endif
 	
 	pthreads_prepare_classes_free(
 		base TSRMLS_CC
@@ -613,15 +632,14 @@ static void * pthreads_routine(void *arg) {
 					/*
 					* Initialize $this
 					*/
-					object_and_properties_init
+					object_init_ex
 					(
 						EG(This)=getThis(), 
 						EG(scope) = pthreads_prepared_entry
 						(
 							thread,
 							thread->std.ce TSRMLS_CC
-						),
-						thread->std.properties
+						)
 					);
 					
 					/*
@@ -706,6 +724,8 @@ static void * pthreads_routine(void *arg) {
 			} zend_catch {
 				/* do something, it's all gone wrong */
 			} zend_end_try();
+			
+			FREE_ZVAL(this_ptr);
 		}
 		
 		/*
