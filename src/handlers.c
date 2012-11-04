@@ -62,7 +62,9 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	}
 	
 	return value;
-} /* }}} */
+} 
+zval * pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthreads_read_property(PTHREADS_READ_DIMENSION_PASSTHRU_C); }
+/* }}} */
 
 /* {{{ writes a property to a thread in the appropriate way */
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
@@ -91,7 +93,9 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 				pthread_mutex_unlock(thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
 	}
-} /* }}} */
+} 
+void pthreads_write_dimension(PTHREADS_WRITE_DIMENSION_PASSTHRU_D) { pthreads_write_property(PTHREADS_WRITE_DIMENSION_PASSTHRU_C); }
+/* }}} */
 
 /* {{{ check if a thread has a property set, wherever it is available */
 int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
@@ -113,7 +117,9 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	}
 	
 	return result;
-} /* }}} */
+} 
+int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D) { return pthreads_has_property(PTHREADS_HAS_DIMENSION_PASSTHRU_C); }
+/* }}} */
 
 /* {{{ unset an object property */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
@@ -137,7 +143,9 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 				pthread_mutex_unlock(thread->lock);
 		} else zend_error(E_ERROR, "pthreads has experienced an internal error and cannot continue");
 	}
-} /* }}} */
+} 
+void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); }
+/* }}} */
 
 /* {{{ pthreads_get_method will attempt to apply pthreads specific modifiers */
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {

@@ -6,16 +6,16 @@ User methods are now imported from your declared class into the thread
 <?php
 class ThreadTest extends Thread {
 	public function objectTest(){
-		return 1;
+		return $this->value;
 	}
 	
 	public function run(){
-		return $this->objectTest();
+		$this->value = 1;
 	}
 }
 $thread = new ThreadTest();
 if($thread->start())
-	var_dump($thread->join());
+	var_dump($thread->objectTest());
 ?>
 --EXPECT--
 int(1)

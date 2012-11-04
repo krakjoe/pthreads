@@ -23,12 +23,12 @@
  <function name='thread::getpeak' from='PECL pthreads &gt;= 0.34'/>
  <function name='worker::start' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::run' from='PECL pthreads &gt;= 0.36'/>
- <function name='worker::join' from='PECL pthreads &gt;= 0.36'/>
+ <function name='worker::shutdown' from='PECL pthreads &gt;= 0.37'/>
  <function name='worker::getthreadid' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::getcreatorid' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::stack' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::unstack' from='PECL pthreads &gt;= 0.36'/>
- <function name='worker::isjoined' from='PECL pthreads &gt;= 0.36'/>
+ <function name='worker::isshutdown' from='PECL pthreads &gt;= 0.37'/>
  <function name='worker::isworking' from='PECL pthreads &gt;= 0.37'/>
  <function name='worker::getstacked' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::run' from='PECL pthreads &gt;= 0.36'/>
@@ -36,8 +36,6 @@
  <function name='stackable::notify' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::isrunning' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::iswaiting' from='PECL pthreads &gt;= 0.36'/>
- <function name='stackable::getthreadid' from='PECL pthreads &gt;= 0.36'/>
- <function name='stackable::getcreatorid' from='PECL pthreads &gt;= 0.36'/>
  <function name='mutex::create' from='PECL pthreads &gt;= 0.34'/>
  <function name='mutex::lock' from='PECL pthreads &gt;= 0.34'/>
  <function name='mutex::trylock' from='PECL pthreads &gt;= 0.34'/>
