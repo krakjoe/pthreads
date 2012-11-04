@@ -15,71 +15,38 @@
 *	
 *	I insist, give it a go ... this is less than 100 lines, and is mostly babbling ...
 */
-
 /* a stackable piece of work */
 class ExampleWork extends Stackable {
-	
 	public function __construct($data) {
 		$this->local = $data;
-	}
-	
+	}	
 	public function run() {
-		printf("%s being executed by %s\n", __METHOD__, $this->worker->getThreadId());
 		$this->worker->addAttempt();
 		$this->worker->addData(
-			$this->getData()
+			$this->local
 		);
 	} 
-	
 	public function getData() 				{ return $this->local; }
 }
-
 class ExampleWorker extends Worker {
 	public $data = array();
-	public $setup = false;
-	
 	public function __construct($name) {
 		$this->setName($name);
+		$this->data = array();
 	}
-	
-	/*
-	* The run method should just prepare the environment for the work that is coming ...
-	*/
 	public function run(){
-		if (!$this->setup) {
-			$this->setSetup(true);
-			$this->setName(sprintf("%s (%lu)", __CLASS__, $this->getThreadId()));
-		} else printf("%s is being run ... why ??\n", $this->getName());
-		printf("Setup %s Complete\n", $this->getName());
+		$this->setName(sprintf("%s (%lu)", __CLASS__, $this->getThreadId()));
 	}
-	
 	public function setSetup($setup)	{ $this->setup = $setup; }
 	public function getName() 			{ return $this->name; }
 	public function setName($name)		{ $this->name = $name; }
-	
-	/*
-	* About protected methods:
-	*	Even if a public or private method read/writes member data the reads and writes will be safe
-	*	So in this particular example they arent strictly required for the objects to function as intended
-	*	Normally methods will read and manipulate data in a more complicated manner than in this example
-	*	If a method reads and writes thread data it will often be a good idea to protect the method
-	*/
-	
 	public function addAttempt() 		{ $this->attempts++; }
 	public function getAttempts()		{ return $this->attempts; }
-	
-	/* this method overwrites thread data */
-	protected function setData($data)	{ $this->data = $data; }
-	/* this method reads and writes thread data */
-	protected function addData($data)	{ $this->data = array_merge($this->data, array($data)); }
-	/* this method reads data but makes no changes, doesnt usually happen in the real world */
-	protected function getData()			{ return $this->data; }
+	public function setData($data)	{ $this->data = $data; }
+	public function addData($data)	{ $this->data = array_merge($this->data, array($data)); }
+	public function getData()			{ return $this->data; }
 }
-
-
-/*
-* Dead simple pthreads pool
-*/
+/* Dead simple pthreads pool */
 class Pool {
 	/* to hold worker threads */
 	public $workers;
@@ -100,14 +67,6 @@ class Pool {
 			} else trigger_error(sprintf("failed to push Stackable onto %s", $this->workers[$id]->getName()), E_USER_WARNING);
 		}
 		
-		foreach($this->workers as $worker) {
-			if (!$worker->isWorking()) {
-				if ($worker->stack($stackable)) {
-					return $stackable;
-				}
-			}
-		}
-		
 		if (($select = $this->workers[array_rand($this->workers)])) {
 			if ($select->stack($stackable)) {
 				return $stackable;
@@ -116,45 +75,26 @@ class Pool {
 		
 		return false;
 	}
-	
-	/*
-	* Shutdown the pool of threads cleanly, retaining exit status locally
-	*/
+	/* Shutdown the pool of threads cleanly, retaining exit status locally */
 	public function shutdown() {
 		foreach($this->workers as $worker) {
 			$this->status[$worker->getThreadId()]=$worker->shutdown();
 		}
 	}
 }
-
 $start = microtime(true);
-
-/*
-* Create a pool of ten threads
-*/
+/* Create a pool of ten threads */
 $pool = new Pool(10);
-
-/*
-* Create and submit an array of Stackables
-*/
+/* Create and submit an array of Stackables */
 $work = array();
-/*
-* Submit 100 tasks to the pool
-*/
-while(++$target<100) {
+while(++$target<100)
 	$work[]=$pool->submit(new ExampleWork(array_rand($_SERVER)));
-}
-
-/*
-* Shutdown the pool
-*/
 $pool->shutdown();
-
 /*
 * Look inside
 */
 $runtime = (microtime(true)-$start);
-echo "<pre>";
+if ($_SERVER["HTTP_HOST"]) echo "<pre>";
 printf("---------------------------------------------------------\n");
 printf("Executed %d tasks in %f seconds in %d threads\n", count($work), $runtime, 10);
 printf("---------------------------------------------------------\n");
@@ -169,5 +109,5 @@ foreach($pool->workers as $worker) {
 printf("---------------------------------------------------------\n");
 printf("Average processing time of %f seconds per task\n", $runtime/$attempts);
 printf("---------------------------------------------------------\n");
-
+if ($_SERVER["HTTP_HOST"]) echo "</pre>";
 ?>
