@@ -18,7 +18,6 @@
 
 /*
 * These handlers are mutex aware for safer operation in multi-threaded applications
-* They also have the ability to reference the threading context and import variables into the current context
 */
 #ifndef HAVE_PTHREADS_HANDLERS_H
 #define HAVE_PTHREADS_HANDLERS_H
@@ -34,26 +33,50 @@
 /* {{{ these resolve differences in 5.3 and 5.4 object handling API */
 #if PHP_VERSION_ID > 50399
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type, const struct _zend_literal *key TSRMLS_DC
+#	define PTHREADS_READ_DIMENSION_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type, key TSRMLS_CC
+#	define PTHREADS_READ_DIMENSION_PASSTHRU_C object, member, type, NULL TSRMLS_CC
+
 #	define PTHREADS_WRITE_PROPERTY_PASSTHRU_D zval *object, zval *member, zval *value, const struct _zend_literal *key TSRMLS_DC
+#	define PTHREADS_WRITE_DIMENSION_PASSTHRU_D zval *object, zval *member, zval *value TSRMLS_DC
 #	define PTHREADS_WRITE_PROPERTY_PASSTHRU_C object, member, value, key TSRMLS_CC
+#	define PTHREADS_WRITE_DIMENSION_PASSTHRU_C object, member, value, NULL TSRMLS_CC
+
 #	define PTHREADS_HAS_PROPERTY_PASSTHRU_D zval *object, zval *member, int has_set_exists, const struct _zend_literal *key TSRMLS_DC
+#	define PTHREADS_HAS_DIMENSION_PASSTHRU_D zval *object, zval *member, int has_set_exists TSRMLS_DC
 #	define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists, key TSRMLS_CC
+#	define PTHREADS_HAS_DIMENSION_PASSTHRU_C object, member, has_set_exists, NULL TSRMLS_CC
+
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member, const struct _zend_literal *key TSRMLS_DC
+#	define PTHREADS_UNSET_DIMENSION_PASSTHRU_D zval *object, zval *member TSRMLS_DC
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member, key TSRMLS_CC
+#	define PTHREADS_UNSET_DIMENSION_PASSTHRU_C object, member, NULL TSRMLS_CC
+
 #	define PTHREADS_GET_METHOD_PASSTHRU_D zval **pobject, char *method, int methodl, const struct _zend_literal *key TSRMLS_DC
 #	define PTHREADS_GET_METHOD_PASSTHRU_C pobject, method, methodl, key TSRMLS_CC
 #	define PTHREADS_CALL_METHOD_PASSTHRU_D const char *method, INTERNAL_FUNCTION_PARAMETERS
 #	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
 #else
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
+#	define PTHREADS_READ_DIMENSION_PASSTHRU_D PTHREADS_READ_PROPERTY_PASSTHRU_D
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type TSRMLS_CC
-#	define PTHREADS_WRITE_PROPERTY_PASSTHRU_D zval *object, zval *member, zval *value  TSRMLS_DC
+#	define PTHREADS_READ_DIMENSION_PASSTHRU_C PTHREADS_READ_PROPERTY_PASSTHRU_C
+
+#	define PTHREADS_WRITE_PROPERTY_PASSTHRU_D zval *object, zval *member, zval *value TSRMLS_DC
+#	define PTHREADS_WRITE_DIMENSION_PASSTHRU_D PTHREADS_WRITE_PROPERTY_PASSTHRU_D
 #	define PTHREADS_WRITE_PROPERTY_PASSTHRU_C object, member, value TSRMLS_CC
+#	define PTHREADS_WRITE_DIMENSION_PASSTHRU_C PTHREADS_WRITE_PROPERTY_PASSTHRU_C
+
 #	define PTHREADS_HAS_PROPERTY_PASSTHRU_D zval *object, zval *member, int has_set_exists TSRMLS_DC
+#	define PTHREADS_HAS_DIMENSION_PASSTHRU_D PTHREADS_HAS_PROPERTY_PASSTHRU_D
 #	define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists TSRMLS_CC
+#	define PTHREADS_HAS_DIMENSION_PASSTHRU_C PTHREADS_HAS_PROPERTY_PASSTHRU_C
+
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member TSRMLS_DC
+#	define PTHREADS_UNSET_DIMENSION_PASSTHRU_D PTHREADS_UNSET_PROPERTY_PASSTHRU_D
 #	define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member TSRMLS_CC
+#	define PTHREADS_UNSET_DIMENSION_PASSTHRU_C PTHREADS_UNSET_PROPERTY_PASSTHRU_C
+
 #	define PTHREADS_GET_METHOD_PASSTHRU_D zval **pobject, char *method, int methodl TSRMLS_DC
 #	define PTHREADS_GET_METHOD_PASSTHRU_C pobject, method, methodl TSRMLS_CC
 #	define PTHREADS_CALL_METHOD_PASSTHRU_D char *method, INTERNAL_FUNCTION_PARAMETERS
@@ -61,16 +84,20 @@
 #endif /* }}} */
 
 /* {{{ read a property from the referenced thread */
-zval * pthreads_read_property(PTHREADS_READ_PROPERTY_PASSTHRU_D); /* }}} */
+zval * pthreads_read_property(PTHREADS_READ_PROPERTY_PASSTHRU_D); 
+zval * pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D); /* }}} */
 
 /* {{{ write a property to the referenced thread */
-void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D); /* }}} */
+void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D); 
+void pthreads_write_dimension(PTHREADS_WRITE_DIMENSION_PASSTHRU_D); /* }}} */
 
 /* {{{ check if the referenced thread has a specific property */
-int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D); /* }}} */
+int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D); 
+int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D); /* }}} */
 
 /* {{{ unset a property in the referenced thread */
-void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D); /* }}} */
+void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D); 
+void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D); /* }}} */
 
 /* {{{ fetch a pthreads friendly method */
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D); /* }}} */

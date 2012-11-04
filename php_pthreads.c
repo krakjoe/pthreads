@@ -145,7 +145,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	ce.serialize = zend_class_serialize_deny;
 	ce.unserialize = zend_class_unserialize_deny;
 	pthreads_condition_entry=zend_register_internal_class(&ce TSRMLS_CC);
-
+	
 	if ( pthread_mutexattr_init(&defmutex)==SUCCESS ) {
 #ifdef DEFAULT_MUTEX_TYPE
 		pthread_mutexattr_settype(
@@ -164,16 +164,20 @@ PHP_MINIT_FUNCTION(pthreads)
 	
 	pthreads_handlers.get_method = pthreads_get_method;
 	pthreads_handlers.call_method = pthreads_call_method;
+	
 	pthreads_handlers.read_property = pthreads_read_property;
 	pthreads_handlers.write_property = pthreads_write_property;
 	pthreads_handlers.has_property = pthreads_has_property;
 	pthreads_handlers.unset_property = pthreads_unset_property;
 	
+	pthreads_handlers.read_dimension = pthreads_read_dimension;
+	pthreads_handlers.write_dimension = pthreads_write_dimension;
+	pthreads_handlers.has_dimension = pthreads_has_dimension;
+	pthreads_handlers.unset_dimension = pthreads_unset_dimension;
+	
 	pthreads_handlers.get_property_ptr_ptr = NULL;
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
-	pthreads_handlers.write_dimension = NULL;
-	pthreads_handlers.read_dimension = NULL;
 	
 	return SUCCESS;
 }

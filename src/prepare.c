@@ -178,7 +178,6 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 						);
 						for (i=0; i<candidate->default_properties_count; i++) {
 							prepared->default_properties_table[i]=candidate->default_properties_table[i];
-							Z_ADDREF_P(prepared->default_properties_table[i]);
 						}
 						prepared->default_properties_count = candidate->default_properties_count;
 					}
@@ -326,7 +325,7 @@ static void pthreads_preparation_function_dtor(zend_function *pfe) {
 static void pthreads_preparation_classes_dtor(void **ppce) {
 	zend_class_entry *pce = (zend_class_entry*) *ppce;
 	if(pce) {
-		if (--pce->refcount == 0) {
+		if (--pce->refcount >= 0) {
 #if PHP_VERSION_ID > 50399
 			if (pce->default_properties_count) {
 				int i;
