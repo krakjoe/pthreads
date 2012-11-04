@@ -2,6 +2,12 @@ PHP_ARG_ENABLE(pthreads, whether to enable pthreads Threading API,
 [  --enable-pthreads     Enable pthreads Threading API])
 if test "$PHP_PTHREADS" != "no"; then
 	AC_DEFINE(HAVE_PTHREADS, 1, [Wether you have pthreads support])
+	AC_MSG_CHECKING([checking for PHP zts])   
+	if test "$PHP_THREAD_SAFETY" != "no"; then
+		AC_MSG_RESULT([ok])
+	else
+		AC_MSG_ERROR([pthreads require ZTS, please re-compile your PHP with ZTS enabled])
+	fi
 	PHP_NEW_EXTENSION(pthreads, php_pthreads.c \
 								src/globals.c \
 								src/prepare.c \
