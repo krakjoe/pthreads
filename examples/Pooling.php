@@ -29,21 +29,21 @@ class ExampleWork extends Stackable {
 	public function getData() 				{ return $this->local; }
 }
 class ExampleWorker extends Worker {
-	public $data = array();
+	
 	public function __construct($name) {
 		$this->setName($name);
 		$this->data = array();
 	}
 	public function run(){
-		$this->setName(sprintf("%s (%lu)", __CLASS__, $this->getThreadId()));
+		$this->setName(sprintf("%s (%lu)", $this->getName(), $this->getThreadId()));
 	}
 	public function setSetup($setup)	{ $this->setup = $setup; }
 	public function getName() 			{ return $this->name; }
 	public function setName($name)		{ $this->name = $name; }
 	public function addAttempt() 		{ $this->attempts++; }
 	public function getAttempts()		{ return $this->attempts; }
-	public function setData($data)	{ $this->data = $data; }
-	public function addData($data)	{ $this->data = array_merge($this->data, array($data)); }
+	public function setData($data)		{ $this->data = $data; }
+	public function addData($data)		{ $this->data = array_merge($this->data, array($data)); }
 	public function getData()			{ return $this->data; }
 }
 /* Dead simple pthreads pool */
@@ -66,7 +66,6 @@ class Pool {
 				return $stackable;
 			} else trigger_error(sprintf("failed to push Stackable onto %s", $this->workers[$id]->getName()), E_USER_WARNING);
 		}
-		
 		if (($select = $this->workers[array_rand($this->workers)])) {
 			if ($select->stack($stackable)) {
 				return $stackable;
@@ -99,10 +98,10 @@ printf("---------------------------------------------------------\n");
 printf("Executed %d tasks in %f seconds in %d threads\n", count($work), $runtime, 10);
 printf("---------------------------------------------------------\n");
 printf("Thread::getPeak(%d) | %s | %.3fMB RAM\n", Thread::getPeak(), $_SERVER["SERVER_SOFTWARE"], memory_get_peak_usage(true)/1048576);
-printf("---------------------------------------------------------\n");
+printf("---------------------------------------------------------\n");	
 $attempts = 0;
 foreach($pool->workers as $worker) {
-	printf("Thread %lu made %d attempts ...\n", $worker->getThreadId(), $worker->getAttempts());
+	printf("%s made %d attempts ...\n", $worker->getName(), $worker->getAttempts());
 	print_r($worker->getData());
 	$attempts+=$worker->getAttempts();
 }

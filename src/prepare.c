@@ -178,6 +178,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 						);
 						for (i=0; i<candidate->default_properties_count; i++) {
 							prepared->default_properties_table[i]=candidate->default_properties_table[i];
+							Z_ADDREF_P(prepared->default_properties_table[i]);
 						}
 						prepared->default_properties_count = candidate->default_properties_count;
 					}
@@ -268,7 +269,7 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /
 #if PHP_VERSION_ID < 50400
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_ctor(zval **property) {
-	zval_add_ref(property);
+	zval_copy_ctor(*property);
 } /* }}} */
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_dtor(zval *property) {
