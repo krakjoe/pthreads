@@ -172,13 +172,14 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 #else
 					if (candidate->default_properties_count) {
 						int i;
-						prepared->default_properties_table = realloc(
-							prepared->default_properties_table, 
+						prepared->default_properties_table = malloc(
 							sizeof(zval*) * candidate->default_properties_count
 						);
 						for (i=0; i<candidate->default_properties_count; i++) {
-							prepared->default_properties_table[i]=candidate->default_properties_table[i];
-							Z_ADDREF_P(prepared->default_properties_table[i]);
+							pthreads_store_copy(
+								candidate->default_properties_table[i], 
+								prepared->default_properties_table[i] TSRMLS_CC
+							);
 						}
 						prepared->default_properties_count = candidate->default_properties_count;
 					}
@@ -216,7 +217,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				/*
 				* Adjust refcount such that pthreads is responsible for freeing this entry
 				*/
-				prepared->refcount++;
+				(prepared->refcount)++;
 			} else {
 				prepared = *searched;
 			}
@@ -269,7 +270,8 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /
 #if PHP_VERSION_ID < 50400
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_ctor(zval **property) {
-	zval_copy_ctor(*property);
+	ALLOC_ZVAL(*property);
+	MAKE_COPY_ZVAL(property, *property);
 } /* }}} */
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_dtor(zval *property) {
@@ -326,13 +328,13 @@ static void pthreads_preparation_function_dtor(zend_function *pfe) {
 static void pthreads_preparation_classes_dtor(void **ppce) {
 	zend_class_entry *pce = (zend_class_entry*) *ppce;
 	if(pce) {
-		if (--pce->refcount >= 0) {
+		if (--pce->refcount == 0) {
 #if PHP_VERSION_ID > 50399
 			if (pce->default_properties_count) {
 				int i;
 				for(i=0; i<pce->default_properties_count; i++) {
 					if (pce->default_properties_table[i]) {
-						zval_ptr_dtor(&pce->default_properties_table[i]);
+						//zval_dtor(pce->default_properties_table[i]);
 					}
 				}
 				free(pce->default_properties_table);

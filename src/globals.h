@@ -20,7 +20,7 @@
 
 /*
 * NOTES
-* 1. pthreads cannot use the Zend implementation of globals, it makes for instability
+* 1. pthreads cannot use the Zend implementation of globals, it makes for instability - we sometimes require a true global lock
 * 2. providing a mechanism for limiting the threads a user can create may be useful to server admin in shared hosting environments
 * 3. providing peak usage and current realtime statistics can help you to design and execute more efficiently
 * 4. these globals are completely safe; they are protected by mutex
@@ -52,12 +52,12 @@ struct {
 	pthread_mutex_t	lock;
 	
 	/*
-	* Peak Number of Running Threads
+	* Peak Number of Objects
 	*/
 	size_t peak;
 	
 	/*
-	* Maximum number of Running Threads
+	* Maximum number of Objects
 	*/
 	size_t max;
 	
@@ -67,7 +67,7 @@ struct {
 	zend_bool importing;
 	
 	/*
-	* Running Thread List
+	* Objects
 	*/
 	zend_llist threads;
 } pthreads_globals; /* }}} */
@@ -85,19 +85,19 @@ int pthreads_globals_lock(int *acquired); /* }}} */
 /* {{{ release global lock */
 void pthreads_globals_unlock(int *acquired); /* }}} */
 
-/* {{{ get current number of accessible thread objects */
-long pthreads_globals_count(); /* }}} */
+/* {{{ get current number of accessible objects */
+size_t pthreads_globals_count(); /* }}} */
 
-/* {{{ push a thread into global list */
+/* {{{ push an object into global list */
 void pthreads_globals_add(PTHREAD thread); /* }}} */
 
-/* {{{ pop a thread from global list */
+/* {{{ pop an object from global list */
 void pthreads_globals_del(PTHREAD thread); /* }}} */
 
-/* {{{ get peak number of executing contexts */
+/* {{{ get peak number of accessible objects */
 long pthreads_globals_peak(); /* }}} */
 
-/* {{{ find a thread by id in global list */
+/* {{{ find an object by id */
 PTHREAD pthreads_globals_find(ulong tid); /* }}} */
 
 #endif /* HAVE_PTHREADS_GLOBAL_H */
