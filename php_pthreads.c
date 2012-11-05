@@ -34,8 +34,8 @@
 #	include <src/thread.h>
 #endif
 
-#ifndef HAVE_PTHREADS_SERIAL_H
-#	include <src/serial.h>
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
 #endif
 
 #ifndef HAVE_PTHREADS_GLOBALS_H
@@ -52,10 +52,6 @@
 
 #if COMPILE_DL_PTHREADS
 	ZEND_GET_MODULE(pthreads)
-#endif
-
-#ifndef HAVE_PTHREADS_SERIAL_H
-#include <src/serial.h>
 #endif
 
 #ifndef HAVE_PTHREADS_GLOBALS_H

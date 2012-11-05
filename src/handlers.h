@@ -26,8 +26,8 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_SERIAL_H
-#	include <src/serial.h>
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
 #endif
 
 /* {{{ these resolve differences in 5.3 and 5.4 object handling API */

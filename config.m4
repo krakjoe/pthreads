@@ -13,7 +13,7 @@ if test "$PHP_PTHREADS" != "no"; then
 								src/prepare.c \
 								src/synchro.c \
 								src/state.c \
-								src/serial.c \
+								src/store.c \
 								src/modifiers.c\
 								src/handlers.c \
 								src/object.c, $ext_shared)

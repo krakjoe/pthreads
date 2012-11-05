@@ -30,8 +30,8 @@
 #	include <src/modifiers.h>
 #endif
 
-#ifndef HAVE_PTHREADS_SERIAL_H
-#	include <src/serial.h>
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
 #endif
 
 /* {{{ thread structure */
@@ -86,7 +86,7 @@ typedef struct _pthread_construct {
 	/*
 	* Serial Buffers
 	*/
-	pthreads_serial store;
+	pthreads_store store;
 	
 	/*
 	* Work List

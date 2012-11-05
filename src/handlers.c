@@ -26,8 +26,8 @@
 #	include <src/thread.h>
 #endif
 
-#ifndef HAVE_PTHREADS_SERIAL_H
-#	include <src/serial.h>
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
 #endif
 
 #ifndef HAVE_PTHREADS_OBJECT_H
@@ -48,10 +48,9 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 		acquire = pthread_mutex_lock(thread->lock);
 
 		if (acquire == SUCCESS || acquire == EDEADLK) {
-			pthreads_serial line;
-			
-			if(pthreads_serial_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &line TSRMLS_CC)) {
-				if (pthreads_serial_read(line, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS) {
+			pthreads_store line;
+			if(pthreads_store_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &line TSRMLS_CC)) {
+				if (pthreads_store_read(line, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS) {
 					zend_error_noreturn(E_WARNING, "pthreads has experienced an internal error while reading %s::$%s (%lu)", Z_OBJCE_P(object)->name, Z_STRVAL_P(member), thread->tid);
 				} else zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
 			} else value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
@@ -82,7 +81,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 				case IS_NULL:
 				case IS_DOUBLE:
 				case IS_BOOL: {
-					if (pthreads_serial_write(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS){
+					if (pthreads_store_write(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS){
 						zend_error_noreturn(E_WARNING, "pthreads failed to write member %s::$%s (%lu)", Z_OBJCE_P(object)->name, Z_STRVAL_P(member), thread->tid);
 					} else zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
 				} break;
@@ -105,10 +104,9 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	if (thread) {
 		acquire = pthread_mutex_lock(thread->lock);
 		if (acquire == SUCCESS || acquire == EDEADLK) {
-			pthreads_serial line;
-			
-			if (pthreads_serial_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &line TSRMLS_CC)) {
-				result = pthreads_serial_isset(line, Z_STRVAL_P(member), Z_STRLEN_P(member), has_set_exists TSRMLS_CC);
+			pthreads_store line;
+			if (pthreads_store_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &line TSRMLS_CC)) {
+				result = pthreads_store_isset(line, Z_STRVAL_P(member), Z_STRLEN_P(member), has_set_exists TSRMLS_CC);
 			} else result = zend_handlers->has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_C);
 			
 			if (acquire != EDEADLK)
@@ -129,10 +127,10 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	if (thread) {
 		acquire = pthread_mutex_lock(thread->lock);
 		if (acquire == SUCCESS || acquire == EDEADLK) {
-			pthreads_serial line;
+			pthreads_store line;
 			
-			if (pthreads_serial_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &line TSRMLS_CC)) {
-				if (pthreads_serial_delete(line, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
+			if (pthreads_store_contains(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &line TSRMLS_CC)) {
+				if (pthreads_store_delete(line, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
 					zend_error_noreturn(E_WARNING, "pthreads has experienced an internal error while deleting %s from %s (%lu)", Z_STRVAL_P(member), Z_OBJCE_P(object)->name, thread->tid);
 				}
 			}

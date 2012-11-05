@@ -373,7 +373,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->state = pthreads_state_alloc(0 TSRMLS_CC);
 			base->synchro = pthreads_synchro_alloc(TSRMLS_C);
 			base->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
-			base->store = pthreads_serial_alloc(TSRMLS_C);
+			base->store = pthreads_store_alloc(TSRMLS_C);
 			
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
@@ -407,7 +407,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		
 		pthreads_state_free(base->state  TSRMLS_CC);
 		pthreads_modifiers_free(base->modifiers TSRMLS_CC);
-		pthreads_serial_free(base->store TSRMLS_CC);
+		pthreads_store_free(base->store TSRMLS_CC);
 		pthreads_synchro_free(base->synchro TSRMLS_CC);
 		if (PTHREADS_IS_WORKER(base)) {
 			zend_llist_destroy(base->stack);

@@ -55,8 +55,8 @@ void pthreads_globals_unlock(int *acquired) {
 } /* }}} */
 
 /* {{{ pthreads_globals_count */
-long pthreads_globals_count() {
-	long result = 0L;
+size_t pthreads_globals_count() {
+	size_t result = 0L;
 	int locked;
 	
 	if (pthreads_globals_lock(&locked)) {
