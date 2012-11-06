@@ -31,8 +31,10 @@ class ExampleWork extends Stackable {
 class ExampleWorker extends Worker {
 	
 	public function __construct($name) {
-		$this->setName($name);
+		$this->name = $name;
 		$this->data = array();
+		$this->setup = false;
+		$this->attempts = 0;
 	}
 	public function run(){
 		$this->setName(sprintf("%s (%lu)", $this->getName(), $this->getThreadId()));
@@ -97,7 +99,9 @@ if ($_SERVER["HTTP_HOST"]) echo "<pre>";
 printf("---------------------------------------------------------\n");
 printf("Executed %d tasks in %f seconds in %d threads\n", count($work), $runtime, 10);
 printf("---------------------------------------------------------\n");
-printf("Thread::getPeak(%d) | %s | %.3fMB RAM\n", Thread::getPeak(), $_SERVER["SERVER_SOFTWARE"], memory_get_peak_usage(true)/1048576);
+if ($_SERVER["HTTP_HOST"]) 
+	printf("%s | %.3fMB RAM\n", $_SERVER["SERVER_SOFTWARE"], memory_get_peak_usage(true)/1048576);
+else printf("%.3fMB RAM\n", memory_get_peak_usage(true)/1048576);
 printf("---------------------------------------------------------\n");	
 $attempts = 0;
 foreach($pool->workers as $worker) {

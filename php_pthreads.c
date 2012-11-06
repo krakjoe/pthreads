@@ -72,10 +72,8 @@ zend_module_entry pthreads_module_entry = {
 };
 
 PHP_INI_BEGIN()
-	/* {{{ pthreads.max allows admins some control over how many threads a user can create */
+	/* {{{ pthreads.max allows admins some control over how many objects an instance can create */
 	PHP_INI_ENTRY("pthreads.max", "0", PHP_INI_SYSTEM, NULL) /* }}} */
-	/* {{{ pthreads.importing allows importing threads to be disabled where it poses a security risk */
-	PHP_INI_ENTRY("pthreads.importing", "1", PHP_INI_SYSTEM, NULL) /* }}} */
 PHP_INI_END()
 
 #ifndef HAVE_PTHREADS_OBJECT_H
@@ -128,8 +126,8 @@ PHP_MINIT_FUNCTION(pthreads)
 	
 	INIT_CLASS_ENTRY(se, "Stackable", pthreads_stackable_methods);
 	se.create_object = pthreads_stackable_ctor;
-	se.serialize = zend_class_serialize_deny;
-	se.unserialize = zend_class_unserialize_deny;
+	se.serialize = pthreads_internal_serialize;
+	se.unserialize = pthreads_internal_unserialize;
 	pthreads_stackable_entry=zend_register_internal_class(&se TSRMLS_CC);
 	
 	INIT_CLASS_ENTRY(me, "Mutex", pthreads_mutex_methods);
@@ -196,14 +194,14 @@ PHP_MINFO_FUNCTION(pthreads)
 	php_info_print_table_start();
 	php_info_print_table_row(2, "Version", PHP_PTHREADS_VERSION);
 	if (PTHREADS_G(max)) {
-		php_info_print_table_row(2, "Maximum Threads", INI_STR("pthreads.max"));
-	} else php_info_print_table_row(2, "Maximum Threads", "No Limits");
+		php_info_print_table_row(2, "Maximum Objects", INI_STR("pthreads.max"));
+	} else php_info_print_table_row(2, "Maximum Objects", "No Limits");
 	
 	snprintf(numbers, sizeof(numbers), "%d", pthreads_globals_count());
-	php_info_print_table_row(2, "Current Threads", numbers);
+	php_info_print_table_row(2, "Current Objects", numbers);
 	
 	snprintf(numbers, sizeof(numbers), "%d", pthreads_globals_peak());
-	php_info_print_table_row(2, "Peak Threads", numbers);
+	php_info_print_table_row(2, "Peak Objects", numbers);
 
 	php_info_print_table_end();
 }

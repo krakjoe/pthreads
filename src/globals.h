@@ -69,7 +69,12 @@ struct {
 	/*
 	* Objects
 	*/
-	zend_llist threads;
+	zend_llist objects;
+	
+	/*
+	* Next Object Identifier
+	*/
+	ulong nid;
 } pthreads_globals; /* }}} */
 
 /* {{{ PTHREADS_G */
@@ -97,7 +102,7 @@ void pthreads_globals_del(PTHREAD thread); /* }}} */
 /* {{{ get peak number of accessible objects */
 long pthreads_globals_peak(); /* }}} */
 
-/* {{{ find an object by id */
-PTHREAD pthreads_globals_find(ulong tid); /* }}} */
+/* {{{ find an object using internal ids */
+PTHREAD pthreads_globals_fetch(ulong target); /* }}} */
 
 #endif /* HAVE_PTHREADS_GLOBAL_H */

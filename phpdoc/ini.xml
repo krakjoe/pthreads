@@ -23,12 +23,6 @@
       <entry>PHP_INI_SYSTEM</entry>
       <entry><!-- leave empty, this will be filled by an automatic script --></entry>
      </row>
-     <row>
-      <entry><link linkend="ini.pthreads.importing">pthreads.importing</link></entry>
-      <entry>1</entry>
-      <entry>PHP_INI_SYSTEM</entry>
-      <entry><!-- leave empty, this will be filled by an automatic script --></entry>
-     </row>
     </tbody>
    </tgroup>
   </table>
@@ -45,22 +39,10 @@
      </term>
      <listitem>
       <para>
-  provides system administrators a way to limit the amount of threads or workers an instance of PHP can create.
+  provides system administrators a way to limit the amount of objects an instance of PHP can create.
       </para>
      </listitem>
     </varlistentry>
-    <varlistentry xml:id="ini.pthreads.importing">
-     <term>
-      <parameter>pthreads.importing</parameter>
-      <type>integer</type>
-     </term>
-     <listitem>
-      <para>
-  provides system administrators a way to disable importing threads from other contexts for security.
-      </para>
-     </listitem>
-    </varlistentry>
-
   </variablelist>
  </para>
 </section>

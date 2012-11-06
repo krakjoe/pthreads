@@ -27,10 +27,11 @@ void pthreads_globals_init(){
 	if (!PTHREADS_G(init)) {
 		PTHREADS_G(init)=1;
 		PTHREADS_G(peak)=0;
+		PTHREADS_G(nid)=0L;
 		PTHREADS_G(importing)=INI_BOOL("pthreads.importing");
 		PTHREADS_G(max)=INI_INT("pthreads.max");
 		pthread_mutex_init(&PTHREADS_G(lock), &defmutex);
-		zend_llist_init(&PTHREADS_G(threads), sizeof(void**), NULL, 1);
+		zend_llist_init(&PTHREADS_G(objects), sizeof(void**), NULL, 1);
 	}
 } /* }}} */
 
@@ -60,7 +61,7 @@ size_t pthreads_globals_count() {
 	int locked;
 	
 	if (pthreads_globals_lock(&locked)) {
-		result = PTHREADS_G(threads).count;
+		result = PTHREADS_G(objects).count;
 		pthreads_globals_unlock(&locked);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	return result;
@@ -69,12 +70,14 @@ size_t pthreads_globals_count() {
 /* {{{ pthreads_globals_add */
 void pthreads_globals_add(PTHREAD thread) {
 	int locked;
-	
 	if (pthreads_globals_lock(&locked)) {
-		PTHREADS_LIST_INSERT(&PTHREADS_G(threads), thread);
-		if (PTHREADS_G(peak)<PTHREADS_G(threads).count) {
-			PTHREADS_G(peak)=PTHREADS_G(threads).count;
+		PTHREADS_LIST_INSERT(
+			&PTHREADS_G(objects), thread
+		);
+		if (PTHREADS_G(peak)<PTHREADS_G(objects).count) {
+			PTHREADS_G(peak)=PTHREADS_G(objects).count;
 		}
+		thread->gid = ++PTHREADS_G(nid);
 		pthreads_globals_unlock(&locked);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 } /* }}} */
@@ -84,7 +87,7 @@ void pthreads_globals_del(PTHREAD thread) {
 	int locked;
 	
 	if (pthreads_globals_lock(&locked)) {
-		PTHREADS_LIST_REMOVE(&PTHREADS_G(threads), thread);
+		PTHREADS_LIST_REMOVE(&PTHREADS_G(objects), thread);
 		pthreads_globals_unlock(&locked);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 }  /* }}} */
@@ -101,23 +104,23 @@ long pthreads_globals_peak() {
 	return result;
 } /* }}} */
 
-/* {{{ pthreads_globals_find */
-PTHREAD pthreads_globals_find(ulong tid) {
+/* {{{ pthreads_globals_fetch */
+PTHREAD pthreads_globals_fetch(ulong target) {
 	PTHREAD search = NULL;
-	zend_bool found = 0;
+	zend_bool fetched = 0;
 	int locked = 0;
 	
 	if (pthreads_globals_lock(&locked)) {
-		PTHREADS_LIST_BEGIN_LOOP(&PTHREADS_G(threads), search)
-		if (search->tid == tid) {
-			found = 1;
+		PTHREADS_LIST_BEGIN_LOOP(&PTHREADS_G(objects), search)
+		if (search->gid == target) {
+			fetched = 1;
 			break;
 		}
-		PTHREADS_LIST_END_LOOP(&PTHREADS_G(threads), search)
+		PTHREADS_LIST_END_LOOP(&PTHREADS_G(objects), search)
 		pthreads_globals_unlock(&locked);
 	}
 	
-	if (found) {
+	if (fetched) {
 		return search;
 	} else return NULL;
 	

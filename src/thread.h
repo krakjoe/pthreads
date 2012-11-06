@@ -34,6 +34,11 @@
 #	include <src/store.h>
 #endif
 
+/* {{{ stack structure */
+typedef struct _pthreads_stack {
+	zend_llist objects;
+} *pthreads_stack; /* }}} */
+
 /* {{{ thread structure */
 typedef struct _pthread_construct {
 	/*
@@ -50,6 +55,16 @@ typedef struct _pthread_construct {
 	* Thread Scope
 	*/
 	int scope;
+	
+	/*
+	* Global Object Identity
+	*/
+	ulong gid;
+	
+	/*
+	* Target Identity
+	*/
+	ulong target;
 	
 	/*
 	* Thread Identity and LS
@@ -91,7 +106,7 @@ typedef struct _pthread_construct {
 	/*
 	* Work List
 	*/
-	zend_llist *stack;
+	pthreads_stack stack;
 	
 	/*
 	* Preparation

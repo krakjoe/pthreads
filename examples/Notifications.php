@@ -9,7 +9,7 @@ class ExampleThread extends Thread {
 			printf("Allowing process to continue ...\n");
 			printf("Thread Notifying Process 1: %d\n", $this->notify());
 			printf("Process Waiting ...\n");
-			printf("Thread Notifying Process 2: %d\n", $this->notify());
+			printf("Thread Notifying Process 2: %b\n", $this->notify());
 			$this->wait();		
 			printf("Thread exiting ...");
         }

@@ -64,6 +64,10 @@ int pthreads_start(PTHREAD thread TSRMLS_DC);
 int pthreads_join(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
+/* {{{ serialize/unserialize threaded objects */
+int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *blength, zend_serialize_data *data TSRMLS_DC);
+int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC); /* }}} */
+
 /* {{{ TSRM manipulation */
 #define PTHREADS_FETCH_ALL(ls, id, type) ((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
 #define PTHREADS_FETCH_CTX(ls, id, type, element) (((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)
