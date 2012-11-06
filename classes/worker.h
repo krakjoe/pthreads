@@ -216,38 +216,24 @@ PHP_METHOD(Worker, shutdown)
 	* Check that we are in the correct context
 	*/
 	if (PTHREADS_IN_CREATOR(thread)) {
-		/*
-		* Ensure this thread was started
-		*/
 		RETURN_BOOL((pthreads_join(thread TSRMLS_CC)==SUCCESS));
 	} else {
 		zend_error(E_WARNING, "pthreads has detected an attempt to join from an incorrect context, only the creating context may join with %s (%lu)", PTHREADS_FRIENDLY_NAME);
 		RETURN_FALSE;
 	}
 } /* }}} */
-
-/* {{{ proto long Worker::getThreadId() 
-	Will return the identifier of the Worker */
+/* {{{ proto long Worker::getThreadId()
+	Will return the identifier of the referenced Worker */
 PHP_METHOD(Worker, getThreadId)
 {
-	if (getThis()) {
-		PTHREAD thread = PTHREADS_FETCH;
-		if (thread) {
-			ZVAL_LONG(return_value, thread->tid);
-		} else ZVAL_LONG(return_value, 0L);
-	} else ZVAL_LONG(return_value, pthreads_self());
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->tid);
 } /* }}} */
 
 /* {{{ proto long Worker::getCreatorId() 
-	Will return the identity of the context that created the Worker */
+	Will return the identifier of the thread ( or process ) that created the referenced Worker */
 PHP_METHOD(Worker, getCreatorId)
 {
-	if (getThis()) {
-		PTHREAD thread = PTHREADS_FETCH;
-		if (thread) {
-			ZVAL_LONG(return_value, thread->cid);
-		} else ZVAL_LONG(return_value, 0L);
-	} else ZVAL_LONG(return_value, 0L);
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->cid);
 } /* }}} */
 
 #	endif

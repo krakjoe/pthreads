@@ -15,12 +15,8 @@
  <function name='thread::isrunning' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::isjoined' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::iswaiting' from='PECL pthreads &gt;= 0.34'/>
- <function name='thread::getthread' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::getthreadid' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::getcreatorid' from='PECL pthreads &gt;= 0.36'/>
- <function name='thread::getcount' from='PECL pthreads &gt;= 0.34'/>
- <function name='thread::getmax' from='PECL pthreads &gt;= 0.34'/>
- <function name='thread::getpeak' from='PECL pthreads &gt;= 0.34'/>
  <function name='worker::start' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::run' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::shutdown' from='PECL pthreads &gt;= 0.37'/>

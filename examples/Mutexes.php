@@ -52,5 +52,4 @@ for($i=0;$i<50;$i++){
 foreach($workers as $worker)
 	$worker->join();
 printf("Dribbling: %f seconds\n", microtime(true)-$timer);
-printf("Peak Usage: %d/Max Allowed: %d\n", Thread::getPeak(), Thread::getMax());
 ?>

@@ -34,15 +34,14 @@
 #	include <src/globals.h>
 #endif
 
-/* {{{ element structure */
 typedef struct _pthreads_storage {
-	void		*data;		/* data */
-	size_t 		length;		/* length */
-	zend_uchar 	type;		/* type of data */
-	zend_bool 	exists;		/* quicker isset() */
-	long		lval;		/* long value */
-	double		dval;		/* double value */
-} *pthreads_storage; /* }}} */
+	void		*data;
+	size_t 		length;
+	zend_uchar 	type;
+	zend_bool 	exists;
+	long		lval;
+	double		dval;
+} *pthreads_storage;
 
 /* {{{ statics */
 static pthreads_storage pthreads_store_create(zval *pzval TSRMLS_DC);
@@ -57,7 +56,6 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	pthreads_store store = calloc(1, sizeof(*store));
 	
 	if (store) {
-		store->line = NULL;
 		if (zend_ts_hash_init(&store->table, 32, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){
 			if (pthread_mutex_init(&store->lock, &defmutex)==SUCCESS) {
 				return store;
@@ -83,65 +81,18 @@ int pthreads_store_lock(pthreads_store store, int *acquired TSRMLS_DC) {
 	} else return 0;
 } /* }}} */
 
-/* {{{ extend store line */
-int pthreads_store_extend(pthreads_store store, pthreads_store line TSRMLS_DC) {
-	int result = SUCCESS;
-	if (store && line) {
-		if (store != line) {
-			int locked[2] = {0, 0};
-			if (pthreads_store_lock(store, &locked[0] TSRMLS_CC)) {
-				if (pthreads_store_lock(line, &locked[1] TSRMLS_CC)) {
-					store->line = &line;
-					pthreads_store_unlock(line, &locked[1] TSRMLS_CC);
-				} else result = FAILURE;
-				pthreads_store_unlock(store, &locked[0] TSRMLS_CC);
-			} else result = FAILURE;
-		} else result = FAILURE;
-	} else result = FAILURE;
-	return result;
-} /* }}} */
-
-/* {{{ tell if the store contains a specific value */
-int pthreads_store_contains(pthreads_store store, char *key, int keyl, pthreads_store *line TSRMLS_DC) {
-	int contains = 0, locked = 0;
-	
-	if (store) {
-		pthreads_store *pointer = &store;
-		
-		do {
-			if (pthreads_store_lock((*pointer), &locked TSRMLS_CC)) {
-				if (zend_ts_hash_exists(&((*pointer)->table), key, keyl)) {
-					contains = 1;
-				}
-				pthreads_store_unlock((*pointer), &locked TSRMLS_CC);
-			} else break;
-			
-		} while(!contains && (pointer=((*pointer)->line))!=NULL);
-
-		if (contains) {
-			*line = *pointer;
-		}
-	}
-	
-	return contains;
-} /* }}} */
-
 /* {{{ delete a value from the store */
 int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC) {
 	int result = FAILURE, locked = 0;
-	
 	if (store) {
-		pthreads_store *pointer = &store;
-		do {
-			if (pthreads_store_lock((*pointer), &locked TSRMLS_CC)) {
-				if (zend_ts_hash_exists(&((*pointer)->table), key, keyl)) {
-					if (zend_ts_hash_del(&((*pointer)->table), key, keyl)!=SUCCESS) {
-						result = FAILURE;
-					} else result = SUCCESS;
+		if (pthreads_store_lock(store, &locked TSRMLS_CC)) {
+			if (zend_ts_hash_exists(&store->table, key, keyl)) {
+				if (zend_ts_hash_del(&store->table, key, keyl)!=SUCCESS) {
+					result = FAILURE;
 				} else result = SUCCESS;
-				pthreads_store_unlock((*pointer), &locked TSRMLS_CC);
-			} else break;
-		} while(result != FAILURE && (pointer=((*pointer)->line))!=NULL);
+			} else result = SUCCESS;
+			pthreads_store_unlock(store, &locked TSRMLS_CC);
+		} else result = FAILURE;
 	}
 	return result;
 }
@@ -152,51 +103,38 @@ int pthreads_store_isset(pthreads_store store, char *key, int keyl, int has_set_
 	int locked = 0, result = 0;
 	
 	if (store) {
-		pthreads_store line;
-		if (pthreads_store_contains(store, key, keyl, &line TSRMLS_CC)) {
-			if (pthreads_store_lock(line, &locked TSRMLS_CC)) {
-				pthreads_storage *store;
-				if (zend_ts_hash_find(&line->table, key, keyl, (void**)&store)==SUCCESS) {
-					result=((*store)->exists);
-				}
-				pthreads_store_unlock(line, &locked TSRMLS_CC);
+		if (pthreads_store_lock(store, &locked TSRMLS_CC)) {
+			pthreads_storage *storage;
+			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS) {
+				result=((*storage)->exists);
 			}
+			pthreads_store_unlock(store, &locked TSRMLS_CC);
 		}
 	}
-	
 	return result;
 } /* }}} */
 
 /* {{{ read a value from store */
 int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read TSRMLS_DC) {
 	int result = FAILURE, locked = 0;
-	
 	if (store) {
-		pthreads_store line;
-		if (pthreads_store_contains(store, key, keyl, &line TSRMLS_CC)) {
-			if (pthreads_store_lock(line, &locked TSRMLS_CC)) {
-				pthreads_storage *store;
-
-				if (zend_ts_hash_find(&line->table, key, keyl, (void**)&store)==SUCCESS) {
-					ALLOC_ZVAL(*read);
-					if ((result = pthreads_store_convert(*store, *read TSRMLS_CC))!=SUCCESS) {
-						zend_error_noreturn(E_WARNING, "pthreads failed to read %s from storage (%s)", key, (*store)->data);
-						FREE_ZVAL(*read);
-					} else Z_SET_REFCOUNT_PP(read, 0);
-				} else zend_error_noreturn(E_WARNING, "pthreads failed to find %s in storage", key);
-				
-				pthreads_store_unlock(line, &locked TSRMLS_CC);
+		if (pthreads_store_lock(store, &locked TSRMLS_CC)) {
+			pthreads_storage *storage;
+			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS) {
+				ALLOC_ZVAL(*read);
+				if ((result = pthreads_store_convert(*storage, *read TSRMLS_CC))!=SUCCESS) {
+					FREE_ZVAL(*read);
+				} else Z_SET_REFCOUNT_PP(read, 0);
 			}
-		} else { /* not found */ zend_error_noreturn(E_WARNING, "pthreads failed to find %s in storage", key); }
-	} else { /* report error */ }
-
+			pthreads_store_unlock(store, &locked TSRMLS_CC);
+		}
+	}
 	return result;
 } /* }}} */
 
 /* {{{ write a value to store */
 int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC) {
 	int result = FAILURE, locked = 0;
-	
 	if (store) {
 		pthreads_storage storage = pthreads_store_create(*write TSRMLS_CC);
 		if (storage) {
@@ -205,9 +143,9 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 					result = SUCCESS;
 				} else free(store);
 				pthreads_store_unlock(store, &locked TSRMLS_CC);
-			} else { /* report error */ }
-		} else { /* storeization error */ }
-	} else { /* report error */ }
+			}
+		}
+	}
 	return result;
 } /* }}} */
 
@@ -218,52 +156,6 @@ int pthreads_store_unlock(pthreads_store store, int *acquired TSRMLS_DC) {
 			return pthread_mutex_unlock(&store->lock);
 		} else return 1;
 	} else return 0;
-} /* }}} */
-
-/* {{{ copy a zval */
-int pthreads_store_copy(zval *source, zval *destination TSRMLS_DC) {
-	int result = SUCCESS;
-	
-	if (source) {
-		ALLOC_ZVAL(destination);
-		
-		switch (Z_TYPE_P(source)) {
-			case IS_NULL:
-				ZVAL_NULL(destination);
-			break;
-			
-			case IS_STRING: {
-				ZVAL_STRINGL(destination, Z_STRVAL_P(source), Z_STRLEN_P(source), 1);
-			} break;
-			
-			case IS_BOOL: ZVAL_BOOL(destination, Z_BVAL_P(destination)); break;
-			case IS_LONG: ZVAL_LONG(destination, Z_LVAL_P(destination)); break;
-			case IS_DOUBLE: ZVAL_DOUBLE(destination, Z_DVAL_P(destination)); break;
-			
-			case IS_OBJECT:
-			case IS_ARRAY: {
-				char *store;
-				size_t slength;
-				if (pthreads_store_tostring(source, &store, &slength TSRMLS_CC)==SUCCESS) {
-					if (pthreads_store_tozval(destination, store, slength TSRMLS_CC)!=SUCCESS) {
-						result = FAILURE;
-					}
-					free(store);
-				} else result = FAILURE;
-			} break;
-		}
-		
-		if (Z_REFCOUNT_P(destination)==0)
-			Z_ADDREF_P(destination);
-		if (Z_ISREF_P(destination))
-			Z_UNSET_ISREF_P(destination);
-			
-	} else {
-		destination = NULL;
-		result = FAILURE;
-	}
-	
-	return result;
 } /* }}} */
 
 /* {{{ free store storage for a thread */
@@ -278,16 +170,6 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 		pthread_mutex_destroy(&store->lock);
 		free(store);
 	}
-} /* }}} */
-
-/* {{{ storeize instantce of a Thread, Worker or Stackable */
-int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *buf_len, zend_serialize_data *data TSRMLS_DC) {
-	return FAILURE;
-} /* }}} */
-
-/* {{{ unstoreize an instance of a Thread, Worker or Stackable */
-int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buf, zend_uint buf_len, zend_unserialize_data *data TSRMLS_DC) {
-	return FAILURE;
 } /* }}} */
 
 /* {{{ zval to string */
@@ -342,8 +224,9 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 				}							
 				PHP_VAR_UNSERIALIZE_DESTROY(vars);
 			}
-		}
-	}
+		} else result = FAILURE;
+	} else result = FAILURE;
+	
 	return result;
 } /* }}} */
 
@@ -406,7 +289,7 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 	
 	if (storage) {
 		switch(storage->type) {
-			case IS_STRING: 
+			case IS_STRING:
 				if (storage->data && storage->length) {
 					ZVAL_STRINGL(pzval, (char*)storage->data, storage->length, 1); 
 				} else ZVAL_EMPTY_STRING(pzval);
@@ -418,12 +301,12 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			case IS_DOUBLE: ZVAL_DOUBLE(pzval, storage->dval); break;
 			
 			case IS_ARRAY:
-			case IS_OBJECT: { 
+			case IS_OBJECT: {
 				result = pthreads_store_tozval(
 					pzval, 
 					(char*) storage->data, 
 					storage->length TSRMLS_CC
-				);		
+				);
 			} break;
 			
 			default: ZVAL_NULL(pzval);

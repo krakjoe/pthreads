@@ -116,9 +116,71 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 					ce.clone = candidate->clone;
 				
 				/*
+					_zend_function *constructor;
+					_zend_function *destructor;
+					_zend_function *clone;
+					_zend_function *__get;
+					_zend_function *__set;
+					_zend_function *__unset;
+					_zend_function *__isset;
+					_zend_function *__call;
+					_zend_function *__callstatic;
+					_zend_function *__tostring;
+					_zend_function *serialize_func;
+					_zend_function *unserialize_func;
+				*/
+				
+				/*
 				* Registration
 				*/
 				prepared=zend_register_internal_class(&ce TSRMLS_CC);
+				
+				{
+					zend_uint umethod = 0;
+					zend_function *usources[13] = {
+						candidate->constructor,
+						candidate->destructor,
+						candidate->clone,
+						candidate->__get,
+						candidate->__set,
+						candidate->__unset,
+						candidate->__isset,
+						candidate->__call,
+						candidate->__callstatic,
+						candidate->__tostring,
+						candidate->serialize_func,
+						candidate->unserialize_func,
+						NULL
+					};
+					
+					do {
+						zend_function **utarget;
+						if (usources[umethod]) {
+							switch(umethod){
+								case 0: utarget = &prepared->constructor; break;
+								case 1: utarget = &prepared->destructor; break;
+								case 2: utarget = &prepared->clone; break;
+								case 3: utarget = &prepared->__get; break;
+								case 4: utarget = &prepared->__set; break;
+								case 5: utarget = &prepared->__unset; break;
+								case 6: utarget = &prepared->__isset; break;
+								case 7: utarget = &prepared->__call; break;
+								case 8: utarget = &prepared->__callstatic; break;
+								case 9: utarget = &prepared->__tostring; break;
+								case 10: utarget = &prepared->serialize_func; break;
+								case 11: utarget = &prepared->unserialize_func; break;
+							}
+							if (utarget) {
+								*utarget = (zend_function*) emalloc(sizeof(zend_function));
+								if ((*utarget)) {
+									memcpy(
+										(*utarget), usources[umethod], sizeof(zend_function)
+									);
+								}
+							}
+						}
+					} while(++umethod < 13);
+				}
 				
 				/*
 				* Copy Function Table
@@ -176,10 +238,12 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 							sizeof(zval*) * candidate->default_properties_count
 						);
 						for (i=0; i<candidate->default_properties_count; i++) {
-							pthreads_store_copy(
-								candidate->default_properties_table[i], 
-								prepared->default_properties_table[i] TSRMLS_CC
-							);
+							prepared->default_properties_table[i]=candidate->default_properties_table[i];
+							if (candidate->default_properties_table[i]) {
+								ALLOC_ZVAL(prepared->default_properties_table[i]);
+								Z_ADDREF_P(prepared->default_properties_table[i]);
+								INIT_PZVAL(prepared->default_properties_table[i]);
+							}
 						}
 						prepared->default_properties_count = candidate->default_properties_count;
 					}
@@ -272,7 +336,9 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /
 static void pthreads_preparation_default_properties_ctor(zval **property) {
 	ALLOC_ZVAL(*property);
 	MAKE_COPY_ZVAL(property, *property);
+	INIT_PZVAL(*property);
 } /* }}} */
+
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_dtor(zval *property) {
 	zval_ptr_dtor(&property);

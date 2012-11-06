@@ -34,7 +34,6 @@
 typedef struct _pthreads_store {
 	TsHashTable table;
 	pthread_mutex_t lock;
-	struct _pthreads_store **line;
 } *pthreads_store; /* }}} */
 
 /* {{{ allocate and initialize buffers */
@@ -42,12 +41,6 @@ pthreads_store pthreads_store_alloc(TSRMLS_D); /* }}} */
 
 /* {{{ lock buffer */
 int pthreads_store_lock(pthreads_store store, int *acquired TSRMLS_DC); /* }}} */
-
-/* {{{ extend line */
-int pthreads_store_extend(pthreads_store store, pthreads_store line TSRMLS_DC); /* }}} */
-
-/* {{{ tell if the buffer contains a specific value */
-int pthreads_store_contains(pthreads_store store, char *key, int keyl, pthreads_store *line TSRMLS_DC); /* }}} */
 
 /* {{{ delete a value from the buffer */
 int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC); /* }}} */
@@ -64,15 +57,6 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 /* {{{ unlock buffer */
 int pthreads_store_unlock(pthreads_store store, int *acquired TSRMLS_DC); /* }}} */
 
-/* {{{ copy a zval */
-int pthreads_store_copy(zval *source, zval *destination TSRMLS_DC); /* }}} */
-
 /* {{{ free buffers */
 void pthreads_store_free(pthreads_store store TSRMLS_DC); /* }}} */
-
-/* {{{ storeize instantce of a Thread, Worker or Stackable */
-int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *buf_len, zend_serialize_data *data TSRMLS_DC); /* }}} */
-
-/* {{{ unstoreize an instance of a Thread, Worker or Stackable */
-int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buf, zend_uint buf_len, zend_unserialize_data *data TSRMLS_DC); /* }}} */
 #endif
