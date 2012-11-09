@@ -56,42 +56,30 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	pthreads_store store = calloc(1, sizeof(*store));
 	
 	if (store) {
-		if (zend_ts_hash_init(&store->table, 32, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){
-			if (pthread_mutex_init(&store->lock, &defmutex)==SUCCESS) {
+		if (zend_ts_hash_init(&store->table, 32, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){	
+			if ((store->lock = pthreads_lock_alloc(TSRMLS_C))) {
 				return store;
-			} else zend_ts_hash_destroy(&store->table);
-		} else free(store);
+			} 
+			zend_ts_hash_destroy(&store->table);
+		} 
+		free(store);
 	}
 	return NULL;
 } /* }}} */
 
-/* {{{ lock buffer */
-int pthreads_store_lock(pthreads_store store, int *acquired TSRMLS_DC) {
-	if (store) {
-		switch (pthread_mutex_lock(&store->lock)) {
-			case SUCCESS:
-				return (((*acquired)=1)==1);
-				
-			case EDEADLK:
-				return (((*acquired)=0)==0);
-				
-			default:
-				return (((*acquired)=0)==1);
-		}
-	} else return 0;
-} /* }}} */
-
 /* {{{ delete a value from the store */
 int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC) {
-	int result = FAILURE, locked = 0;
+	int result = FAILURE;
+	zend_bool locked;
+	
 	if (store) {
-		if (pthreads_store_lock(store, &locked TSRMLS_CC)) {
+		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			if (zend_ts_hash_exists(&store->table, key, keyl)) {
 				if (zend_ts_hash_del(&store->table, key, keyl)!=SUCCESS) {
 					result = FAILURE;
 				} else result = SUCCESS;
 			} else result = SUCCESS;
-			pthreads_store_unlock(store, &locked TSRMLS_CC);
+			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		} else result = FAILURE;
 	}
 	return result;
@@ -99,34 +87,34 @@ int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC) {
 /* }}} */
 
 /* {{{ isset helper for handlers */
-int pthreads_store_isset(pthreads_store store, char *key, int keyl, int has_set_exists TSRMLS_DC) {
-	int locked = 0, result = 0;
-	
+zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int has_set_exists TSRMLS_DC) {
+	zend_bool locked = 0, isset = 0;
 	if (store) {
-		if (pthreads_store_lock(store, &locked TSRMLS_CC)) {
+		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			pthreads_storage *storage;
 			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS) {
-				result=((*storage)->exists);
+				isset=((*storage)->exists);
 			}
-			pthreads_store_unlock(store, &locked TSRMLS_CC);
+			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 	}
-	return result;
+	return isset;
 } /* }}} */
 
 /* {{{ read a value from store */
 int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read TSRMLS_DC) {
-	int result = FAILURE, locked = 0;
+	zend_bool locked = 0;
+	int result = FAILURE;
 	if (store) {
-		if (pthreads_store_lock(store, &locked TSRMLS_CC)) {
-			pthreads_storage *storage;
-			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS) {
+		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
+			pthreads_storage *storage = NULL;
+			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
 				ALLOC_ZVAL(*read);
 				if ((result = pthreads_store_convert(*storage, *read TSRMLS_CC))!=SUCCESS) {
 					FREE_ZVAL(*read);
 				} else Z_SET_REFCOUNT_PP(read, 0);
 			}
-			pthreads_store_unlock(store, &locked TSRMLS_CC);
+			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 	}
 	return result;
@@ -134,40 +122,31 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 
 /* {{{ write a value to store */
 int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC) {
-	int result = FAILURE, locked = 0;
+	int result = FAILURE;
+	zend_bool locked;
 	if (store) {
 		pthreads_storage storage = pthreads_store_create(*write TSRMLS_CC);
 		if (storage) {
-			if (pthreads_store_lock(store, &locked TSRMLS_CC)) {
+			if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 				if (zend_ts_hash_update(&store->table, key, keyl, (void**) &storage, sizeof(pthreads_storage), NULL)==SUCCESS) {
 					result = SUCCESS;
 				} else free(store);
-				pthreads_store_unlock(store, &locked TSRMLS_CC);
+				pthreads_lock_release(store->lock, locked TSRMLS_CC);
 			}
 		}
 	}
 	return result;
 } /* }}} */
 
-/* {{{ unlock store */
-int pthreads_store_unlock(pthreads_store store, int *acquired TSRMLS_DC) {
-	if (store) {
-		if ((*acquired)) {
-			return pthread_mutex_unlock(&store->lock);
-		} else return 1;
-	} else return 0;
-} /* }}} */
-
 /* {{{ free store storage for a thread */
 void pthreads_store_free(pthreads_store store TSRMLS_DC){
 	if (store) {
-		int locked;
-		
-		if (pthreads_store_lock(store, &locked TSRMLS_CC)) {
+		zend_bool locked;
+		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			zend_ts_hash_destroy(&store->table);
-			pthreads_store_unlock(store, &locked TSRMLS_CC);
+			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
-		pthread_mutex_destroy(&store->lock);
+		pthreads_lock_free(store->lock TSRMLS_CC);
 		free(store);
 	}
 } /* }}} */

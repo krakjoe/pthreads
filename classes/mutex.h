@@ -17,6 +17,8 @@
  */
 #ifndef HAVE_PTHREADS_CLASS_MUTEX_H
 #define HAVE_PTHREADS_CLASS_MUTEX_H
+
+
 PHP_METHOD(Mutex, create);
 PHP_METHOD(Mutex, lock);
 PHP_METHOD(Mutex, trylock);
@@ -48,6 +50,9 @@ extern zend_function_entry pthreads_mutex_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_MUTEX
 #	define HAVE_PTHREADS_CLASS_MUTEX
+#	ifndef HAVE_PTHREADS_LOCK_H
+#		include <src/lock.h>
+#	endif
 zend_function_entry pthreads_mutex_methods[] = {
 	PHP_ME(Mutex, create, Mutex_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, lock, Mutex_lock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -63,9 +68,14 @@ PHP_METHOD(Mutex, create)
 {
 	zend_bool lock;
 	pthread_mutex_t *mutex;
-	
+	int result = FAILURE;
 	if ((mutex=(pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t)))!=NULL) {
-		switch(pthread_mutex_init(mutex, &defmutex)){
+		pthread_mutexattr_t mutype;
+		pthread_mutexattr_init(&mutype);
+		pthread_mutexattr_settype(&mutype, PTHREADS_LOCK_TYPE);
+		result = pthread_mutex_init(mutex, &mutype);
+		pthread_mutexattr_destroy(&mutype);
+		switch(result){
 			case SUCCESS: 
 				if (ZEND_NUM_ARGS()) {				
 					if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &lock)==SUCCESS) {

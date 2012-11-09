@@ -22,6 +22,10 @@
 #	include <src/pthreads.h>
 #endif
 
+#ifndef HAVE_PTHREADS_LOCK_H
+#	include <src/lock.h>
+#endif
+
 #ifndef HAVE_PTHREADS_STATE_H
 #	include <src/state.h>
 #endif
@@ -81,7 +85,7 @@ typedef struct _pthread_construct {
 	/*
 	*  Thread Lock
 	*/
-	pthread_mutex_t *lock;
+	pthreads_lock lock;
 	
 	/*
 	* Thread State
@@ -188,18 +192,5 @@ static inline ulong pthreads_self() {
 /* {{{ remove an item from a list of threads */
 #define PTHREADS_LIST_REMOVE(l, t) zend_llist_del_element(l, &t, (int (*)(void *, void *)) pthreads_equal_func);
 /* }}} */
-
-/* {{{ defmutex setup  */
-#ifndef _WIN32
-#	ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-#		define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK_NP
-#	elifdef PTHREAD_MUTEX_ERRORCHECK
-#		define DEFAULT_MUTEX_TYPE	PTHREAD_MUTEX_ERRORCHECK
-#	endif
-#endif
-/* }}} */
-
-/* {{{ default mutex attributes */
-pthread_mutexattr_t		defmutex; /* }}} */
 
 #endif /* }}} */ /* HAVE_PTHREADS_THREAD_H */

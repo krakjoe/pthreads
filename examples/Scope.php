@@ -47,7 +47,6 @@ class ExampleThread extends Thread {
 		printf("%s: %s\n", __METHOD__, microtime(true));
 		printf("%s: %s\n", __METHOD__, $this->noaccess());
 		printf("OUT->%s: %s\n", __METHOD__, microtime(true));
-		return $this->data;
 	}
 }
 

@@ -9,6 +9,7 @@ if test "$PHP_PTHREADS" != "no"; then
 		AC_MSG_ERROR([pthreads require ZTS, please re-compile your PHP with ZTS enabled])
 	fi
 	PHP_NEW_EXTENSION(pthreads, php_pthreads.c \
+								src/lock.c \
 								src/globals.c \
 								src/prepare.c \
 								src/synchro.c \

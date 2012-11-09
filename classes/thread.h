@@ -90,7 +90,7 @@ PHP_METHOD(Thread, start)
 	* See if there are any limits in this environment
 	*/
 	if (PTHREADS_IS_NOT_CONNECTION(thread)) {
-		if (PTHREADS_G(max) && !(pthreads_globals_count()<PTHREADS_G(max))) {
+		if (PTHREADS_G(max) && !(pthreads_globals_count(TSRMLS_C)<PTHREADS_G(max))) {
 			zend_error(E_WARNING, "pthreads has reached the maximum numbers of threads allowed (%lu) by your server administrator, and cannot start %s", PTHREADS_G(max), PTHREADS_NAME);
 			RETURN_FALSE;
 		}

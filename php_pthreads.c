@@ -22,6 +22,10 @@
 #	include <src/pthreads.h>
 #endif
 
+#ifndef HAVE_PTHREADS_LOCK_H
+#	include <src/lock.h>
+#endif
+
 #ifndef HAVE_PHP_PTHREADS_H
 #	include <php_pthreads.h>
 #endif
@@ -110,7 +114,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	* Global Init
 	*/
 	if (!PTHREADS_G(init)) 
-		pthreads_globals_init();
+		pthreads_globals_init(TSRMLS_C);
 	
 	INIT_CLASS_ENTRY(te, "Thread", pthreads_thread_methods);
 	te.create_object = pthreads_thread_ctor;
@@ -139,15 +143,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	ce.serialize = zend_class_serialize_deny;
 	ce.unserialize = zend_class_unserialize_deny;
 	pthreads_condition_entry=zend_register_internal_class(&ce TSRMLS_CC);
-	
-	if ( pthread_mutexattr_init(&defmutex)==SUCCESS ) {
-#ifdef DEFAULT_MUTEX_TYPE
-		pthread_mutexattr_settype(
-			&defmutex, 
-			DEFAULT_MUTEX_TYPE
-		);
-#endif
-	}
 	
 	/*
 	* Setup standard and pthreads object handlers
@@ -180,10 +175,6 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 {
 	UNREGISTER_INI_ENTRIES();
 	
-	pthread_mutexattr_destroy(
-		&defmutex
-	);
-	
 	return SUCCESS;
 }
 
@@ -197,10 +188,10 @@ PHP_MINFO_FUNCTION(pthreads)
 		php_info_print_table_row(2, "Maximum Objects", INI_STR("pthreads.max"));
 	} else php_info_print_table_row(2, "Maximum Objects", "No Limits");
 	
-	snprintf(numbers, sizeof(numbers), "%d", pthreads_globals_count());
+	snprintf(numbers, sizeof(numbers), "%d", pthreads_globals_count(TSRMLS_C));
 	php_info_print_table_row(2, "Current Objects", numbers);
 	
-	snprintf(numbers, sizeof(numbers), "%d", pthreads_globals_peak());
+	snprintf(numbers, sizeof(numbers), "%d", pthreads_globals_peak(TSRMLS_C));
 	php_info_print_table_row(2, "Peak Objects", numbers);
 
 	php_info_print_table_end();
