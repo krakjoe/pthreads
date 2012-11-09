@@ -53,7 +53,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 			&value TSRMLS_CC
 		)!=SUCCESS) {	
 			value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
-		} else zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
+		}
 	} else value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
 	return value;
 } 
@@ -168,8 +168,9 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 	zend_fcall_info 		info;
 	zend_fcall_info_cache	cache;
 	zend_class_entry		*scope;
-	int 					called = -1, acquire = 0, argc = ZEND_NUM_ARGS(), access = ZEND_ACC_PUBLIC, mlength = 0;
+	int 					called = -1, argc = ZEND_NUM_ARGS(), access = ZEND_ACC_PUBLIC, mlength = 0;
 	char					*lcname;
+	zend_bool				unprotect;
 	
 	if (getThis()) {
 		PTHREAD thread = PTHREADS_FETCH;
@@ -213,11 +214,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 							* Make protected method call
 							*/
 							{
-								if (access == ZEND_ACC_PROTECTED) {
-									acquire = pthreads_modifiers_protect(thread->modifiers, method TSRMLS_CC);
-								} else acquire = EDEADLK;
-								
-								if (acquire == SUCCESS || acquire == EDEADLK) {
+								if (access != ZEND_ACC_PROTECTED || pthreads_modifiers_protect(thread->modifiers, method, &unprotect TSRMLS_CC)) {
 								
 									ZVAL_STRINGL(&zmethod, method, strlen(method), 0);
 									
@@ -245,7 +242,6 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 											method
 										);
 									} else {
-									
 #if PHP_VERSION_ID > 50399
 										{
 											zend_op_array *ops = &call->op_array;
@@ -266,9 +262,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 									}
 									
 									if (access == ZEND_ACC_PROTECTED) {
-										if (acquire != EDEADLK) {
-											pthreads_modifiers_unprotect(thread->modifiers, method TSRMLS_CC);
-										}
+										pthreads_modifiers_unprotect(thread->modifiers, method, unprotect TSRMLS_CC);
 									}
 								} else {
 									zend_error_noreturn(

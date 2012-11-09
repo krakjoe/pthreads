@@ -50,18 +50,15 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC); /* }
 static void * pthreads_routine(void *arg); /* }}} */
 
 /* {{{ set state bits on a thread, timeout where appropriate/required */
-int pthreads_set_state_ex(PTHREAD thread, int mask, long timeout TSRMLS_DC) {
-	int result = 0;
-	
+zend_bool pthreads_set_state_ex(PTHREAD thread, int mask, long timeout TSRMLS_DC) {
+	zend_bool locked, dowait, result;
 	if (mask & PTHREADS_ST_WAITING) {
-		int slocked = pthreads_state_lock(thread->state TSRMLS_CC);
-		int dowait = 0;
-		if (slocked == SUCCESS ||slocked == EDEADLK) {
+		if (pthreads_state_lock(thread->state, &locked TSRMLS_CC)) {
 			dowait = !pthreads_state_check(thread->state, PTHREADS_ST_JOINED TSRMLS_CC);
 			if (dowait)
 				pthreads_state_set_locked(thread->state, PTHREADS_ST_WAITING TSRMLS_CC);
-			if (slocked != EDEADLK)
-				pthreads_state_unlock(thread->state TSRMLS_CC);
+			if (locked)
+				pthreads_state_unlock(thread->state, locked TSRMLS_CC);
 			if (dowait) {
 				result = pthreads_synchro_wait_ex(
 					thread->synchro, timeout TSRMLS_CC
@@ -73,13 +70,13 @@ int pthreads_set_state_ex(PTHREAD thread, int mask, long timeout TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ set state bits on a thread */
-int pthreads_set_state(PTHREAD thread, int mask TSRMLS_DC) {
+zend_bool pthreads_set_state(PTHREAD thread, int mask TSRMLS_DC) {
 	return pthreads_set_state_ex(thread, mask, 0L TSRMLS_CC);
 } /* }}} */
 
 /* {{{ unset state bits on a thread */
-int pthreads_unset_state(PTHREAD thread, int mask TSRMLS_DC){
-	int result = 0;
+zend_bool pthreads_unset_state(PTHREAD thread, int mask TSRMLS_DC){
+	zend_bool result = 0;
 	
 	if (mask & PTHREADS_ST_WAITING) {
 		if (pthreads_state_unset(thread->state, mask TSRMLS_CC)) {
@@ -91,44 +88,40 @@ int pthreads_unset_state(PTHREAD thread, int mask TSRMLS_DC){
 } /* }}} */
 
 /* {{{ pop for php */
-int pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC) {
-	int acquire = 0;
+size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC) {
+	zend_bool locked;
 	int remain = 0;
 	
-	acquire = pthread_mutex_lock(thread->lock);
-	if (acquire == SUCCESS || acquire == EDEADLK) {
+	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
 		zend_llist *stack = &thread->stack->objects;
 		if (work) {
 			zend_llist_del_element(stack, &work, (int (*)(void *, void *)) pthreads_equal_func);
 		} else zend_llist_destroy(stack);
 		remain = stack->count;
-		if (acquire != EDEADLK)
-			pthread_mutex_unlock(thread->lock);
+		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 	} else remain = -1;
 	return remain;
 } /* }}} */
 
 /* {{{ push an item onto the work buffer */
-int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
-	int acquire = 0;
-	int counted = -1;
+size_t pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
+	zend_bool locked;
+	size_t counted = 0L;
 	
-	acquire = pthread_mutex_lock(thread->lock);
-	if (acquire == SUCCESS || acquire == EDEADLK) {
+	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
 		zend_llist *stack = &thread->stack->objects;
 		if (stack) {
 			zend_llist_add_element(
 				stack, &work
 			);
 			counted = stack->count;
-		} else counted = -1;
-		if (acquire != EDEADLK)
-			pthread_mutex_unlock(thread->lock);
-	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue: %d", acquire);
-	
-	if (counted > 0) {
-		if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC)) {
-			pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
+		}
+		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
+		
+		if (counted > 0L) {
+			if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC)) {
+				pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
+			}
 		}
 	}
 	
@@ -136,16 +129,14 @@ int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ pop the next item from the work buffer */
-int pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
-	PTHREAD *work = NULL;
-	PTHREAD current = NULL;
-	int acquire = 0;
-	int bubble = 0;
+size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
+	PTHREAD *work = NULL, current = NULL;
+	zend_bool locked;
+	size_t bubble = 0;
 	zval *that_ptr;
 	zend_function *run;
 burst:
-	acquire = pthread_mutex_lock(thread->lock);
-	if (acquire == SUCCESS || acquire == EDEADLK) {
+	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
 		zend_llist *stack = &thread->stack->objects;
 		if ((bubble=stack->count) > 0) {
 			work = zend_llist_get_first(stack);
@@ -204,47 +195,39 @@ burst:
 				}
 			}
 		}
+		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
-		if (acquire != EDEADLK)
-			pthread_mutex_unlock(thread->lock);
-	}
-	
-	if (!bubble) {
-		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
-			if (pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC)) {
-				goto burst;
-			}
-		} else return 0;
+		if (!bubble) {
+			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
+				if (pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC)) {
+					goto burst;
+				}
+			} else return 0;
+		}
 	}
 	
 	return bubble;
 } /* }}} */
 
 /* {{{ return the number of items currently stacked */
-int pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
-	int acquire = 0;
-	int counted = -1;
-	
-	acquire = pthread_mutex_lock(thread->lock);
-	if (acquire == SUCCESS || acquire == EDEADLK) {
+size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
+	zend_bool locked;
+	size_t counted = 0;
+	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
 		zend_llist *stack = &thread->stack->objects;
 		if (stack)
 			counted = stack->count;
-		if (acquire != EDEADLK)
-			pthread_mutex_unlock(thread->lock);
-	} else counted = -1;
+		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
+	}
 	return counted;
 } /* }}} */
 
 /* {{{ import a thread created in another context into the current context */
-int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
-	int acquire = 0;
-	int imported = 1;
+zend_bool pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
+	zend_bool locked, imported = 1;
 	
 	if (!PTHREADS_IN_CREATOR(thread)) {
-		acquire = pthread_mutex_lock(thread->lock);
-
-		if (acquire == SUCCESS || acquire == EDEADLK) {
+		if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
 			/*
 			* Initialize the object in this context
 			*/
@@ -258,10 +241,7 @@ int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
 				)==SUCCESS) {
 				pthreads_connect(thread, PTHREADS_FETCH_FROM(*return_value) TSRMLS_CC);
 			} else { imported = 0; }
-			
-			if (acquire != EDEADLK) {
-				pthread_mutex_unlock(thread->lock);
-			}
+			pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		} else imported = 0;
 	} else imported = 0;
 	
@@ -326,11 +306,8 @@ zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
-			pthreads_globals_del(destination);
-			if (destination->lock) {
-				pthread_mutex_destroy(destination->lock);
-				free(destination->lock);
-			}
+			pthreads_globals_del(destination TSRMLS_CC);
+			pthreads_lock_free(destination->lock TSRMLS_CC);
 			pthreads_state_free(destination->state  TSRMLS_CC);
 			pthreads_modifiers_free(destination->modifiers TSRMLS_CC);
 			pthreads_store_free(destination->store TSRMLS_CC);
@@ -391,9 +368,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->target = 0L;
 			base->cid = pthreads_self();
 			base->cls = tsrm_ls;
-			if ((base->lock = (pthread_mutex_t*) calloc(1, sizeof(pthread_mutex_t)))!=NULL) {
-				pthread_mutex_init(base->lock, &defmutex);
-			}
+			base->lock = pthreads_lock_alloc(TSRMLS_C);
 			base->state = pthreads_state_alloc(0 TSRMLS_CC);
 			base->synchro = pthreads_synchro_alloc(TSRMLS_C);
 			base->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
@@ -406,7 +381,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 					zend_llist_init(&base->stack->objects, sizeof(void**), NULL, 1);
 			}
 			
-			pthreads_globals_add(base);
+			pthreads_globals_add(base TSRMLS_CC);
 		}
 		
 		pthreads_prepare_classes_init(base TSRMLS_CC);
@@ -424,14 +399,8 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 				pthreads_join(base TSRMLS_CC);
 			}
 		}
-		
-		pthreads_globals_del(base);
-		
-		if (base->lock) {
-			pthread_mutex_destroy(base->lock);
-			free(base->lock);
-		}
-		
+		pthreads_globals_del(base TSRMLS_CC);
+		pthreads_lock_free(base->lock TSRMLS_CC);
 		pthreads_state_free(base->state  TSRMLS_CC);
 		pthreads_modifiers_free(base->modifiers TSRMLS_CC);
 		pthreads_store_free(base->store TSRMLS_CC);
@@ -487,27 +456,22 @@ static void pthreads_base_clone(void *arg, void **pclone TSRMLS_DC) {
 int pthreads_start(PTHREAD thread TSRMLS_DC) {
 	int dostart = 0;
 	int started = FAILURE;
-	int tlocked = FAILURE;
-	int slocked = pthreads_state_lock(thread->state TSRMLS_CC);
-	
-	if (slocked == SUCCESS||slocked == EDEADLK) {
+	zend_bool tlocked, slocked;
+	if (pthreads_state_lock(thread->state, &slocked TSRMLS_CC)) {
 		if (!pthreads_state_check(thread->state, PTHREADS_ST_STARTED TSRMLS_CC)) {
 			pthreads_state_set_locked(thread->state, PTHREADS_ST_STARTED TSRMLS_CC);
 			dostart = 1;
 		} else started = PTHREADS_ST_STARTED;
-		if (slocked != EDEADLK)
-			pthreads_state_unlock(thread->state TSRMLS_CC);
-	}
-	
-	if (dostart) {
-		tlocked = pthread_mutex_lock(thread->lock);
+		if (slocked)
+			pthreads_state_unlock(thread->state, slocked TSRMLS_CC);
 		
-		if (tlocked == SUCCESS||tlocked == EDEADLK) {
+	}
+	if (dostart) {
+		if (pthreads_lock_acquire(thread->lock, &tlocked TSRMLS_CC)) {
 			started = pthread_create(&thread->thread, NULL, pthreads_routine, (void*)thread);
 			if (started == SUCCESS) 
 				pthreads_state_wait(thread->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-			if (tlocked != EDEADLK)
-				pthread_mutex_unlock(thread->lock);
+			pthreads_lock_release(thread->lock, tlocked TSRMLS_CC);
 		}
 	}
 	
@@ -518,9 +482,9 @@ int pthreads_start(PTHREAD thread TSRMLS_DC) {
 int pthreads_join(PTHREAD thread TSRMLS_DC) {
 	int dojoin = 0;
 	int donotify = 0;
-	int slocked = pthreads_state_lock(thread->state TSRMLS_CC);
+	zend_bool slocked;
 	
-	if (slocked == SUCCESS || slocked == EDEADLK) {
+	if (pthreads_state_lock(thread->state, &slocked TSRMLS_CC)) {
 		if (pthreads_state_check(thread->state, PTHREADS_ST_STARTED TSRMLS_CC) && 
 			!pthreads_state_check(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
 			pthreads_state_set_locked(thread->state, PTHREADS_ST_JOINED TSRMLS_CC);
@@ -528,8 +492,8 @@ int pthreads_join(PTHREAD thread TSRMLS_DC) {
 				donotify = pthreads_state_check(thread->state, PTHREADS_ST_WAITING TSRMLS_CC);
 			dojoin = 1;
 		}
-		if (slocked != EDEADLK)
-			pthreads_state_unlock(thread->state TSRMLS_CC);
+		if (slocked)
+			pthreads_state_unlock(thread->state, slocked TSRMLS_CC);
 	}
 	
 	if (donotify) do {
@@ -560,7 +524,7 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC) {
 	ulong target;
 	if (sscanf((char*)buffer, "%lu", &target)) {
-		PTHREAD source = pthreads_globals_fetch(target);
+		PTHREAD source = pthreads_globals_fetch(target TSRMLS_CC);
 		if (source) {
 			if (object_init_ex(
 				*object, pthreads_prepared_entry(source, ce TSRMLS_CC)
@@ -590,12 +554,12 @@ static void * pthreads_routine(void *arg) {
 		/*
 		* Thread safe storage
 		*/
-		void ***tsrm_ls;
+		void ***tsrm_ls = NULL;
 		
 		/*
 		* Global lock acquisition indicator
 		*/
-		int glocked;
+		zend_bool glocked = 0;
 		
 		/*
 		* Startup Block
@@ -604,7 +568,7 @@ static void * pthreads_routine(void *arg) {
 			/*
 			* Acquire Global Lock
 			*/
-			pthreads_globals_lock(&glocked);
+			pthreads_globals_lock(&glocked TSRMLS_CC);
 			
 			/*
 			* Allocate Context
@@ -662,7 +626,7 @@ static void * pthreads_routine(void *arg) {
 			/*
 			* Release global lock
 			*/
-			pthreads_globals_unlock(&glocked);
+			pthreads_globals_unlock(glocked TSRMLS_CC);
 		}
 		
 		/*
@@ -760,11 +724,15 @@ static void * pthreads_routine(void *arg) {
 																																																																										
 								/* call the function */
 								pthreads_state_set((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-								if (zend_call_function(&info, &cache TSRMLS_CC)!=SUCCESS) {
-									pthreads_state_unset((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-									zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while calling %s::run", EG(scope)->name);
-									break;
-								} else pthreads_state_unset((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+								{
+									zend_try {
+										zend_call_function(&info, &cache TSRMLS_CC);
+									} zend_catch {
+										zval_ptr_dtor(&getThis());
+										break;
+									} zend_end_try();
+								}
+								pthreads_state_unset((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 								
 #if PHP_VERSION_ID > 50399
 								{
@@ -799,7 +767,7 @@ static void * pthreads_routine(void *arg) {
 			/*
 			* Acquire global lock
 			*/
-			pthreads_globals_lock(&glocked);
+			pthreads_globals_lock(&glocked TSRMLS_CC);
 		
 			/*
 			* Deactivate Zend
@@ -819,7 +787,7 @@ static void * pthreads_routine(void *arg) {
 			/*
 			* Release global lock
 			*/
-			pthreads_globals_unlock(&glocked);
+			pthreads_globals_unlock(glocked TSRMLS_CC);
 		}
 	}
 	

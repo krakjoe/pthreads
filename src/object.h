@@ -49,14 +49,14 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC);
 */
 
 /* {{{ state and stack management */
-int pthreads_set_state_ex(PTHREAD thread, int state, long timeout TSRMLS_DC);
-int pthreads_set_state(PTHREAD thread, int state TSRMLS_DC);
-int pthreads_unset_state(PTHREAD thread, int state TSRMLS_DC);
-int pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC);
-int pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC);
-int pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC);
-int pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC);
-int pthreads_stack_length(PTHREAD thread TSRMLS_DC);
+zend_bool pthreads_set_state_ex(PTHREAD thread, int state, long timeout TSRMLS_DC);
+zend_bool pthreads_set_state(PTHREAD thread, int state TSRMLS_DC);
+zend_bool pthreads_unset_state(PTHREAD thread, int state TSRMLS_DC);
+zend_bool pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC);
+size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC);
+size_t pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC);
+size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC);
+size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
 /* {{{ start/join */

@@ -23,54 +23,45 @@
 #endif
 
 /* {{{ pthreads_globals_init */
-void pthreads_globals_init(){
+void pthreads_globals_init(TSRMLS_D){
 	if (!PTHREADS_G(init)) {
 		PTHREADS_G(init)=1;
 		PTHREADS_G(peak)=0;
-		PTHREADS_G(nid)=0L;
+		PTHREADS_G(nid)=1;
 		PTHREADS_G(importing)=INI_BOOL("pthreads.importing");
 		PTHREADS_G(max)=INI_INT("pthreads.max");
-		pthread_mutex_init(&PTHREADS_G(lock), &defmutex);
+		PTHREADS_G(lock)=pthreads_lock_alloc(TSRMLS_C);
 		zend_llist_init(&PTHREADS_G(objects), sizeof(void**), NULL, 1);
 	}
 } /* }}} */
 
 /* {{{ pthreads_globals_lock */
-int pthreads_globals_lock(int *acquired){
-	switch (pthread_mutex_lock(&PTHREADS_G(lock))) {
-		case SUCCESS:
-			return (((*acquired)=1)==1);	
-		
-		case EDEADLK:
-			return (((*acquired)=0)==0);
-		
-		default: return (((*acquired)=0)==1);
-	}
+zend_bool pthreads_globals_lock(zend_bool *locked TSRMLS_DC){
+	return pthreads_lock_acquire(PTHREADS_G(lock), locked TSRMLS_CC);
 } /* }}} */
 
 /* {{{ pthreads_globals_unlock */
-void pthreads_globals_unlock(int *acquired) {
-	if ((*acquired)==1) {
-		pthread_mutex_unlock(&PTHREADS_G(lock));
-	}
+void pthreads_globals_unlock(zend_bool locked TSRMLS_DC) {
+	pthreads_lock_release(PTHREADS_G(lock), locked TSRMLS_CC);
 } /* }}} */
 
 /* {{{ pthreads_globals_count */
-size_t pthreads_globals_count() {
+size_t pthreads_globals_count(TSRMLS_D) {
 	size_t result = 0L;
-	int locked;
+	zend_bool locked = 0;
 	
-	if (pthreads_globals_lock(&locked)) {
+	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
 		result = PTHREADS_G(objects).count;
-		pthreads_globals_unlock(&locked);
+		pthreads_globals_unlock(locked TSRMLS_CC);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	return result;
 } /* }}} */
 
 /* {{{ pthreads_globals_add */
-void pthreads_globals_add(PTHREAD thread) {
-	int locked;
-	if (pthreads_globals_lock(&locked)) {
+void pthreads_globals_add(PTHREAD thread TSRMLS_DC) {
+	zend_bool locked = 0;
+	
+	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
 		PTHREADS_LIST_INSERT(
 			&PTHREADS_G(objects), thread
 		);
@@ -78,51 +69,51 @@ void pthreads_globals_add(PTHREAD thread) {
 			PTHREADS_G(peak)=PTHREADS_G(objects).count;
 		}
 		thread->gid = ++PTHREADS_G(nid);
-		pthreads_globals_unlock(&locked);
+		pthreads_globals_unlock(locked TSRMLS_CC);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 } /* }}} */
 
 /* {{{ pthreads_globals_del */
-void pthreads_globals_del(PTHREAD thread) {
-	int locked;
+void pthreads_globals_del(PTHREAD thread TSRMLS_DC) {
+	zend_bool locked= 0;
 	
-	if (pthreads_globals_lock(&locked)) {
+	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
 		PTHREADS_LIST_REMOVE(&PTHREADS_G(objects), thread);
-		pthreads_globals_unlock(&locked);
+		pthreads_globals_unlock(locked TSRMLS_CC);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 }  /* }}} */
 
 /* {{{ pthreads_globals_peak */
-long pthreads_globals_peak() {
+long pthreads_globals_peak(TSRMLS_D) {
 	long result = 0L;
-	int locked;
+	zend_bool locked = 0;
 	
-	if (pthreads_globals_lock(&locked)) {
+	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
 		result = PTHREADS_G(peak);
-		pthreads_globals_unlock(&locked);
+		pthreads_globals_unlock(locked TSRMLS_CC);
 	} else zend_error(E_ERROR, "pthreads has suffered an internal error and cannot continue");
 	return result;
 } /* }}} */
 
+
 /* {{{ pthreads_globals_fetch */
-PTHREAD pthreads_globals_fetch(ulong target) {
+PTHREAD pthreads_globals_fetch(ulong gid TSRMLS_DC) {
 	PTHREAD search = NULL;
 	zend_bool fetched = 0;
-	int locked = 0;
+	zend_bool locked = 0;
 	
-	if (pthreads_globals_lock(&locked)) {
+	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
 		PTHREADS_LIST_BEGIN_LOOP(&PTHREADS_G(objects), search)
-		if (search->gid == target) {
+		if (search->gid == gid) {
 			fetched = 1;
 			break;
 		}
 		PTHREADS_LIST_END_LOOP(&PTHREADS_G(objects), search)
-		pthreads_globals_unlock(&locked);
+		pthreads_globals_unlock(locked TSRMLS_CC);
 	}
 	
 	if (fetched) {
 		return search;
 	} else return NULL;
-	
 } /* }}} */
 #endif

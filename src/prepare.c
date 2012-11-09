@@ -133,7 +133,12 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				/*
 				* Registration
 				*/
-				prepared=zend_register_internal_class(&ce TSRMLS_CC);
+				if (candidate->parent && candidate != candidate->parent) {
+					prepared=zend_register_internal_class_ex(&ce, pthreads_prepared_entry(
+						thread, candidate->parent TSRMLS_CC
+					), NULL TSRMLS_CC);
+				} else prepared=zend_register_internal_class(&ce TSRMLS_CC);
+				prepared->ce_flags = candidate->ce_flags;
 				
 				{
 					zend_uint umethod = 0;
@@ -241,7 +246,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 							prepared->default_properties_table[i]=candidate->default_properties_table[i];
 							if (candidate->default_properties_table[i]) {
 								ALLOC_ZVAL(prepared->default_properties_table[i]);
-								Z_ADDREF_P(prepared->default_properties_table[i]);
+								MAKE_COPY_ZVAL(&candidate->default_properties_table[i], prepared->default_properties_table[i]);
 								INIT_PZVAL(prepared->default_properties_table[i]);
 							}
 						}

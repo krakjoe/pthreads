@@ -39,6 +39,10 @@
 #	include <src/thread.h>
 #endif
 
+#ifndef HAVE_PTHREADS_LOCK_H
+#	include <src/lock.h>
+#endif
+
 /* {{{ pthreads_globals */
 struct {
 	/*
@@ -49,7 +53,7 @@ struct {
 	/*
 	* Globals Mutex
 	*/
-	pthread_mutex_t	lock;
+	pthreads_lock lock;
 	
 	/*
 	* Peak Number of Objects
@@ -82,27 +86,27 @@ struct {
 /* }}} */
 
 /* {{{ initialize (true) globals */
-void pthreads_globals_init(); /* }}} */
+void pthreads_globals_init(TSRMLS_D); /* }}} */
 
 /* {{{ acquire global lock */
-int pthreads_globals_lock(int *acquired); /* }}} */
+zend_bool pthreads_globals_lock(zend_bool *locked TSRMLS_DC); /* }}} */
 
 /* {{{ release global lock */
-void pthreads_globals_unlock(int *acquired); /* }}} */
+void pthreads_globals_unlock(zend_bool locked TSRMLS_DC); /* }}} */
 
 /* {{{ get current number of accessible objects */
-size_t pthreads_globals_count(); /* }}} */
+size_t pthreads_globals_count(TSRMLS_D); /* }}} */
 
 /* {{{ push an object into global list */
-void pthreads_globals_add(PTHREAD thread); /* }}} */
+void pthreads_globals_add(PTHREAD thread TSRMLS_DC); /* }}} */
 
 /* {{{ pop an object from global list */
-void pthreads_globals_del(PTHREAD thread); /* }}} */
+void pthreads_globals_del(PTHREAD thread TSRMLS_DC); /* }}} */
 
 /* {{{ get peak number of accessible objects */
-long pthreads_globals_peak(); /* }}} */
+long pthreads_globals_peak(TSRMLS_D); /* }}} */
 
 /* {{{ find an object using internal ids */
-PTHREAD pthreads_globals_fetch(ulong target); /* }}} */
+PTHREAD pthreads_globals_fetch(ulong target TSRMLS_DC); /* }}} */
 
 #endif /* HAVE_PTHREADS_GLOBAL_H */

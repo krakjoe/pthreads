@@ -88,8 +88,8 @@ PHP_METHOD(Worker, start)
 	* See if there are any limits in this environment
 	*/
 	if (PTHREADS_IS_NOT_CONNECTION(thread)) {
-		if (PTHREADS_G(max) && !(pthreads_globals_count()<PTHREADS_G(max))) {
-			zend_error(E_WARNING, "pthreads has reached the maximum numbers of threads allowed (%lu) by your server administrator, and cannot start %s", PTHREADS_G(max), PTHREADS_NAME);
+		if (PTHREADS_G(max) && !(pthreads_globals_count(TSRMLS_C)<PTHREADS_G(max))) {
+			zend_error(E_WARNING, "pthreads has reached the maximum numbers of objects allowed (%lu) by your server administrator, and cannot start %s", PTHREADS_G(max), PTHREADS_NAME);
 			RETURN_FALSE;
 		}
 		
@@ -128,16 +128,14 @@ PHP_METHOD(Worker, stack)
 	int		size;
 	
 	if (thread) {
-		if (PTHREADS_IS_NOT_CONNECTION(thread)) {
-			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
-				if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
-					size = pthreads_stack_push(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC);
-					if (size) {
-						RETURN_LONG(size);
-					}
+		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
+				size = pthreads_stack_push(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC);
+				if (size) {
+					RETURN_LONG(size);
 				}
-			} else zend_error(E_ERROR, "pthreads has detected an attempt to stack onto %s (%lu) which has already been joined", PTHREADS_FRIENDLY_NAME);
-		} else zend_error(E_WARNING, "pthreads has detected an attempt to call an external method on %s (%lu), you cannot stack in this context", PTHREADS_FRIENDLY_NAME);
+			}
+		} else zend_error(E_ERROR, "pthreads has detected an attempt to stack onto %s (%lu) which has already been shutdown", PTHREADS_FRIENDLY_NAME);
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while stacking onto %s (%lu) and cannot continue", PTHREADS_FRIENDLY_NAME);
 	RETURN_FALSE;
 } /* }}} */
@@ -150,13 +148,11 @@ PHP_METHOD(Worker, unstack)
 	zval * work;
 	
 	if (thread) {
-		if (PTHREADS_IS_NOT_CONNECTION(thread)) {
-			if (ZEND_NUM_ARGS() > 0) {
-				if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
-					RETURN_LONG(pthreads_stack_pop(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC));
-				}
-			} else RETURN_LONG(pthreads_stack_pop(thread, NULL TSRMLS_CC));
-		} else zend_error(E_WARNING, "pthreads has detected an attempt to call an external method on %s (%lu), you cannot unstack in this context", PTHREADS_FRIENDLY_NAME);
+		if (ZEND_NUM_ARGS() > 0) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
+				RETURN_LONG(pthreads_stack_pop(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC));
+			}
+		} else RETURN_LONG(pthreads_stack_pop(thread, NULL TSRMLS_CC));
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while unstacking from %s (%lu) and cannot continue", PTHREADS_FRIENDLY_NAME);
 	RETURN_FALSE;
 }
@@ -218,7 +214,7 @@ PHP_METHOD(Worker, shutdown)
 	if (PTHREADS_IN_CREATOR(thread)) {
 		RETURN_BOOL((pthreads_join(thread TSRMLS_CC)==SUCCESS));
 	} else {
-		zend_error(E_WARNING, "pthreads has detected an attempt to join from an incorrect context, only the creating context may join with %s (%lu)", PTHREADS_FRIENDLY_NAME);
+		zend_error(E_WARNING, "pthreads has detected an attempt to shutdown from an incorrect context, only the creating context may shutdown %s (%lu)", PTHREADS_FRIENDLY_NAME);
 		RETURN_FALSE;
 	}
 } /* }}} */

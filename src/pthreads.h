@@ -52,14 +52,44 @@
 #include <Zend/zend_vm.h>
 #include <TSRM/TSRM.h>
 
-zend_class_entry *pthreads_thread_entry;
-zend_class_entry *pthreads_worker_entry;
-zend_class_entry *pthreads_stackable_entry;
-zend_class_entry *pthreads_mutex_entry;
-zend_class_entry *pthreads_condition_entry;
-zend_class_entry *pthreads_exception_entry;
+#if defined(PTHREAD_MUTEX_ERRORCHECK)
+#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK
+#elif defined(PTHREAD_MUTEX_ERRORCHECK_NP)
+#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK_NP
+#elif defined(PTHREAD_MUTEX_NORMAL)
+#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_NORMAL
+#elif defined(_WIN32)
+#	define PTHREADS_LOCK_TYPE 0
+#else
+#	define PTHREADS_LOCK_TYPE NULL
+#endif
 
+#ifndef pthreads_thread_entry
+zend_class_entry *pthreads_thread_entry;
+#endif
+
+#ifndef pthreads_worker_entry
+zend_class_entry *pthreads_worker_entry;
+#endif
+
+#ifndef pthreads_stackable_entry
+zend_class_entry *pthreads_stackable_entry;
+#endif
+
+#ifndef pthreads_mutex_entry
+zend_class_entry *pthreads_mutex_entry;
+#endif
+
+#ifndef pthreads_condition_entry
+zend_class_entry *pthreads_condition_entry;
+#endif
+
+#ifndef pthreads_handlers
 zend_object_handlers pthreads_handlers;
+#endif
+
+#ifndef zend_handlers
 zend_object_handlers *zend_handlers;
+#endif
 
 #endif

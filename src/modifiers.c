@@ -22,6 +22,10 @@
 #	include <src/modifiers.h>
 #endif
 
+#ifndef HAVE_PTHREADS_LOCK_H
+#	include <src/lock.h>
+#endif
+
 #ifndef HAVE_PTHREADS_OBJECT_H
 #	include <src/object.h>
 #endif
@@ -84,13 +88,12 @@ int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zen
 			(void**) &modified, sizeof(zend_uint*), 
 			NULL
 		)==SUCCESS) {
-			pthread_mutex_t *lock = calloc(1, sizeof(*lock));
+			pthreads_lock lock = pthreads_lock_alloc(TSRMLS_C);
 			if (lock) {
-				pthread_mutex_init(lock, &defmutex);
 				return zend_hash_add(
 					&modifiers->protection, 
 					method, sizeof(method), 
-					(void**) &lock, sizeof(pthread_mutex_t*), 
+					(void**) &lock, sizeof(*lock), 
 					NULL
 				);
 			}
@@ -113,19 +116,19 @@ zend_uint pthreads_modifiers_get(pthreads_modifiers modifiers, const char *metho
 } /* }}} */
 
 /* {{{ protect a method call */
-int pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method TSRMLS_DC) {
-	pthread_mutex_t **protection;
+zend_bool pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method, zend_bool *unprotect TSRMLS_DC) {
+	pthreads_lock *protection;
 	if (zend_hash_find(&modifiers->protection, method, sizeof(method), (void**)&protection)==SUCCESS) {
-		return pthread_mutex_lock(*protection);
-	} else return FAILURE;
+		return pthreads_lock_acquire(*protection, unprotect TSRMLS_CC);
+	} else return 0;
 } /* }}} */
 
 /* {{{ unprotect a method call */
-int pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method TSRMLS_DC) {
-	pthread_mutex_t **protection;
+zend_bool pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method, zend_bool unprotect TSRMLS_DC) {
+	pthreads_lock *protection;
 	if (zend_hash_find(&modifiers->protection, method, sizeof(method), (void**)&protection)==SUCCESS) {
-		return pthread_mutex_unlock(*protection);
-	} else return FAILURE;
+		return pthreads_lock_release(*protection, unprotect TSRMLS_CC);
+	} else return 0;
 } /* }}} */
 
 /* {{{ free modifiers */
@@ -145,11 +148,9 @@ static void pthreads_modifiers_modifiers_dtor(void **element) {
 
 /* {{{ destructor callback for modifiers (protection) hash table */
 static void pthreads_modifiers_protection_dtor(void **element) {
-	pthread_mutex_t *protection = (pthread_mutex_t *) *element;
-	if (protection) {
-		pthread_mutex_destroy(protection);
-		free(protection);
-	}
+	TSRMLS_FETCH();
+	
+	pthreads_lock_free((pthreads_lock) (*element) TSRMLS_CC);
 } /* }}} */
 
 #endif

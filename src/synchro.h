@@ -22,8 +22,12 @@
 #	include <src/pthreads.h>
 #endif
 
+#ifndef HAVE_PTHREADS_LOCK_H
+#	include <src/lock.h>
+#endif
+
 typedef struct _pthreads_synchro {
-	pthread_mutex_t lock;
+	pthreads_lock lock;
 	pthread_cond_t 	notify;
 } *pthreads_synchro;
 

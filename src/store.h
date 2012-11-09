@@ -26,21 +26,26 @@
 #	include <src/pthreads.h>
 #endif
 
+#ifndef HAVE_PTHREADS_LOCK_H
+#	include <src/lock.h>
+#endif
+
 #ifndef ZEND_TS_HASH_H
 #	include <Zend/zend_ts_hash.h>
 #endif
 
+#define PTHREADS_STORE_OK 0
+#define PTHREADS_STORE_PASS 1
+#define PTHREADS_STORE_EMPTY 2
+
 /* {{{ buffer structure */
 typedef struct _pthreads_store {
 	TsHashTable table;
-	pthread_mutex_t lock;
+	pthreads_lock lock;
 } *pthreads_store; /* }}} */
 
 /* {{{ allocate and initialize buffers */
 pthreads_store pthreads_store_alloc(TSRMLS_D); /* }}} */
-
-/* {{{ lock buffer */
-int pthreads_store_lock(pthreads_store store, int *acquired TSRMLS_DC); /* }}} */
 
 /* {{{ delete a value from the buffer */
 int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC); /* }}} */
@@ -49,13 +54,10 @@ int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC); 
 int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read TSRMLS_DC); /* }}} */
 
 /* {{{ see if a value isset in buffer */
-int pthreads_store_isset(pthreads_store store, char *key, int keyl, int has_set_exists TSRMLS_DC); /* }}} */
+zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int has_set_exists TSRMLS_DC); /* }}} */
 
 /* {{{ write value to buffer */
 int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC); /* }}} */
-
-/* {{{ unlock buffer */
-int pthreads_store_unlock(pthreads_store store, int *acquired TSRMLS_DC); /* }}} */
 
 /* {{{ free buffers */
 void pthreads_store_free(pthreads_store store TSRMLS_DC); /* }}} */

@@ -44,10 +44,10 @@ int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zen
 zend_uint pthreads_modifiers_get(pthreads_modifiers modifiers, const char *method TSRMLS_DC); /* }}} */
 
 /* {{{ protect a method call */
-int pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method TSRMLS_DC); /* }}} */
+zend_bool pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method, zend_bool *unprotect TSRMLS_DC); /* }}} */
 
 /* {{{ unprotect a method call */
-int pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method TSRMLS_DC); /* }}} */
+zend_bool pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method, zend_bool unprotect TSRMLS_DC); /* }}} */
 
 /* {{{ free modifiers object */
 void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC); /* }}} */

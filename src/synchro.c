@@ -31,11 +31,13 @@ pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 	pthreads_synchro sync = (pthreads_synchro) calloc(1, sizeof(*sync));
 	
 	if (sync) {
-		if (pthread_mutex_init(&sync->lock, &defmutex)==SUCCESS) {
+		if ((sync->lock = pthreads_lock_alloc(TSRMLS_C))) {
 			if (pthread_cond_init(&sync->notify, NULL)==SUCCESS) {
 				return sync;
-			} else free(sync);
-		} else free(sync);
+			}
+			pthreads_lock_free(sync->lock TSRMLS_CC);
+		}
+		free(sync);
 	}
 	
 	return NULL;
@@ -61,12 +63,12 @@ int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
 	}
 	
 	if (sync) {
-		if (pthread_mutex_lock(&sync->lock) == SUCCESS) {
+		if (pthread_mutex_lock(&sync->lock->mutex) == SUCCESS) {
 			if (timeout > 0L) {
-				result = pthread_cond_timedwait(&sync->notify, &sync->lock, &until);
-			} else { result = pthread_cond_wait(&sync->notify, &sync->lock); }
+				result = pthread_cond_timedwait(&sync->notify, &sync->lock->mutex, &until);
+			} else { result = pthread_cond_wait(&sync->notify, &sync->lock->mutex); }
 			
-			pthread_mutex_unlock(&sync->lock);	
+			pthread_mutex_unlock(&sync->lock->mutex);	
 		} else { /* report fatality */ }
 	} else { /* report unknown error */ }
 	
@@ -83,12 +85,12 @@ int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
 	int result = FAILURE;
 	
 	if (sync) {
-		if (pthread_mutex_lock(&sync->lock) == SUCCESS) {
+		if (pthread_mutex_lock(&sync->lock->mutex) == SUCCESS) {
 			if ((result = pthread_cond_broadcast(&sync->notify))!=SUCCESS) {
 				/* report error */
 			}
 			
-			pthread_mutex_unlock(&sync->lock);
+			pthread_mutex_unlock(&sync->lock->mutex);
 		} else { /* report error */ }
 	} else { /* report unknown error */ }
 	return (result == SUCCESS) ? 1 : 0;
@@ -97,7 +99,7 @@ int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
 /* {{{ free synchronization object */
 void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC) {
 	pthread_cond_destroy(&sync->notify);
-	pthread_mutex_destroy(&sync->lock);
+	pthreads_lock_free(sync->lock TSRMLS_CC);
 	free(sync);
 } /* }}} */
 

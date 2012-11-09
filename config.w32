@@ -4,6 +4,6 @@ if (PHP_PTHREADS != "no") {
 	EXTENSION("pthreads", "php_pthreads.c", true, "/I" + configure_module_dirname);
 	ADD_SOURCES(
 		"ext/pthreads/src",
-		"globals.c prepare.c synchro.c state.c store.c modifiers.c handlers.c object.c", "pthreads"
+		"lock.c globals.c prepare.c synchro.c state.c store.c modifiers.c handlers.c object.c", "pthreads"
 	);
 }

@@ -27,26 +27,30 @@
 #	include <src/pthreads.h>
 #endif
 
+#ifndef HAVE_PTHREADS_LOCK_H
+#	include <src/lock.h>
+#endif
+
 #ifndef HAVE_PTHREADS_SYNCHRO_H
 #	include <src/synchro.h>
 #endif
 
 typedef struct _pthreads_state {
-	pthread_mutex_t		lock;
+	pthreads_lock		lock;
 	int					bits;
 	pthreads_synchro 	synchro;
 	int					was;
 } *pthreads_state;
 
 pthreads_state pthreads_state_alloc(int mask TSRMLS_DC);
-int pthreads_state_lock(pthreads_state state TSRMLS_DC);
+zend_bool pthreads_state_lock(pthreads_state state, zend_bool *locked TSRMLS_DC);
 int pthreads_state_check(pthreads_state, int mask TSRMLS_DC);
-int pthreads_state_unlock(pthreads_state state TSRMLS_DC);
-int pthreads_state_set(pthreads_state state, int mask TSRMLS_DC);
-int pthreads_state_wait(pthreads_state state, int mask TSRMLS_DC);
+zend_bool pthreads_state_unlock(pthreads_state state, zend_bool locked TSRMLS_DC);
+zend_bool pthreads_state_set(pthreads_state state, int mask TSRMLS_DC);
+zend_bool pthreads_state_wait(pthreads_state state, int mask TSRMLS_DC);
 int pthreads_state_set_locked(pthreads_state state, int mask TSRMLS_DC);
 int pthreads_state_unset_locked(pthreads_state state, int mask TSRMLS_DC);
-int pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC);
-int pthreads_state_unset(pthreads_state state, int mask TSRMLS_DC);
+zend_bool pthreads_state_isset(pthreads_state state, int mask TSRMLS_DC);
+zend_bool pthreads_state_unset(pthreads_state state, int mask TSRMLS_DC);
 void pthreads_state_free(pthreads_state state TSRMLS_DC);
 #endif

@@ -48,11 +48,12 @@ class GlobalStorage extends Stackable {
 class MyThread extends Thread {
 	public $stored;
 	public $storage;
+	public $worker;
 	
-	public function __construct($storage) {
+	public function __construct($storage, $worker = null) {
 		$this->storage = $storage;
+		$this->worker = $worker;
 		$this->stored = 0;
-		print_r($this);
 	}
 	
 	public function run(){
@@ -61,14 +62,22 @@ class MyThread extends Thread {
 		/* if logic requires reuse of a reference then pull it into the method scope */
 		/* a stackable does NOT need to be written back to the method scope for changes to data to be visible in other contexts */
 		/* ANY other type of object DOES */
-		if (($storage = $this->storage)) {
+		if ($this->storage) {
 			printf("%s (%lu) STORAGE AVAILABLE\n", __METHOD__, $this->getThreadId());
-			$this->stored = $storage->getUniqueId();
-			$storage->addToObject(
+			$this->stored = $this->storage->getUniqueId();
+			$this->storage->addToObject(
 				$this->stored,
 				array(rand()*120)
 			);
-			printf("%s (%lu) STORED %s@%s\n", __METHOD__, $this->getThreadId(), $storage->fetch($this->stored), $this->getStorageId());
+			if ($this->worker) {
+				printf("%s (%lu) WORKER AVAILABLE\n", __METHOD__, $this->getThreadId());
+				if (!$this->worker->isShutdown()){
+					$work = new MyWork($this->storage);
+					$this->worker->stack($work);
+					print_r($work);
+				} else printf("%s (%lu) WORKER SHUTDOWN\n", __METHOD__, $this->getThreadId());
+			} else printf("NO WORKER !!\n");
+			printf("%s (%lu) STORED %s@%s\n", __METHOD__, $this->getThreadId(), $this->storage->fetch($this->stored), $this->getStorageId());
 		} else printf("%s (%lu) NO STORAGE\n", __METHOD__, $this->getThreadId());
 	}
 	
@@ -122,11 +131,12 @@ class MyWork extends Stackable {
 				can reference the same objects 
 			* that all the things I just said can ...
 			*/
-			$thread = new MyThread($storage);
+			$thread = new MyThread($storage, $this->worker);
 			if ($thread->start()) {
 				$thread->join();
 				$this->tstored = $thread->getStorageId();
 				/* @NOTE doesnt matter what reference to the stackable is passed to the thread */
+				
 			}
 		}
 	}
@@ -147,7 +157,7 @@ $worker->start();
 
 /* random array of work to populate some storage from the worker */
 $work = array();
-while(++$o<20) {
+while(++$o<2) {
 	/* items stacked could be using resources available in worker */
 	$work[]=new MyWork($storage);
 }
@@ -173,6 +183,7 @@ foreach($work as $w) {
 }
 printf("set by the worker (alt syntax):\n");
 var_dump($storage->fetch("GlobalWorker"));
+
 /* 
 	@NOTE pretty cool, right ?
 */

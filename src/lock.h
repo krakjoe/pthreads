@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | pthreads                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2012                               		 |
+  | Copyright (c) Joe Watkins 2012                                		 |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -15,36 +15,21 @@
   | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
-#ifndef HAVE_PHP_PTHREADS_H
-#define HAVE_PHP_PTHREADS_H
-#define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "0.38-rc"
+#ifndef HAVE_PTHREADS_LOCK_H
+#define HAVE_PTHREADS_LOCK_H
 
-PHP_MINIT_FUNCTION(pthreads);
-PHP_MSHUTDOWN_FUNCTION(pthreads);
-PHP_MINFO_FUNCTION(pthreads);
-
-#ifndef HAVE_PTHREADS_CLASS_THREAD_H
-#	include <classes/thread.h>
+#ifndef HAVE_PTHREADS_H
+#	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_CLASS_WORKER_H
-#	include <classes/worker.h>
+typedef struct {
+	pthread_mutex_t mutex;
+	void ***owner;
+} *pthreads_lock;
+
+pthreads_lock pthreads_lock_alloc(TSRMLS_D);
+zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC);
+zend_bool pthreads_lock_try(pthreads_lock lock, zend_bool *acquired TSRMLS_DC);
+zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC);
+void pthreads_lock_free(pthreads_lock lock TSRMLS_DC);
 #endif
-
-#ifndef HAVE_PTHREADS_CLASS_STACKABLE_H
-#	include <classes/stackable.h>
-#endif
-
-#ifndef HAVE_PTHREADS_CLASS_MUTEX_H
-#	include <classes/mutex.h>
-#endif
-
-#ifndef HAVE_PTHREADS_CLASS_COND_H
-#	include <classes/cond.h>
-#endif
-
-extern zend_module_entry pthreads_module_entry;
-#define phpext_pthreads_ptr &pthreads_module_entry
-
-#endif 
