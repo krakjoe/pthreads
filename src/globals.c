@@ -22,6 +22,8 @@
 #	include <src/globals.h>
 #endif
 
+struct _pthreads_globals pthreads_globals;
+
 /* {{{ pthreads_globals_init */
 void pthreads_globals_init(TSRMLS_D){
 	if (!PTHREADS_G(init)) {
