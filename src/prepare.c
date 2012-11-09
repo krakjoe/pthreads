@@ -323,7 +323,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 					zend_llist_add_element(&(thread->preparation.classes), (void**) &prepared);
 				} else {
 					zend_error_noreturn(
-						E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
+						E_ERROR, "pthreads detected failure while preparing %s in %s thread: %lu", (*entry)->name, thread->std.ce->name, thread->tid
 					);
 					break;
 				}

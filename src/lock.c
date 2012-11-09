@@ -32,11 +32,14 @@ pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
 					pthread_mutexattr_destroy(&mutype);
 					lock->owner = NULL;
 					return lock;
-				} else free(lock);
-			} else free(lock);
+				}
+			}
 			pthread_mutexattr_destroy(&mutype);
-		} else free(lock);
-	} else return NULL;
+		}
+		free(lock);
+	}
+
+	return NULL;
 }
 
 zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC) {
@@ -64,7 +67,7 @@ zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_D
 }
 
 zend_bool pthreads_lock_try(pthreads_lock lock, zend_bool *acquired TSRMLS_DC) {
-	
+	return SUCCESS;
 }
 
 zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC) {
