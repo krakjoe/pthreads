@@ -507,10 +507,10 @@ int pthreads_join(PTHREAD thread TSRMLS_DC) {
 int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *blength, zend_serialize_data *data TSRMLS_DC) {
 	PTHREAD threaded = PTHREADS_FETCH_FROM(object);
 	if (threaded) {
-		(*buffer) = (char*) emalloc(64);
+		(*buffer) = (unsigned char*) emalloc(64);
 		if ((*buffer)) {
 			(*blength) = sprintf(
-				(*buffer), 
+				(char*)(*buffer),
 				"%lu", 
 				(threaded->target > 0L) ? threaded->target : threaded->gid
 			)+1;
