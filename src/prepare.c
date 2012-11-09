@@ -26,12 +26,6 @@
 #	include <src/object.h>
 #endif
 
-#ifdef AG
-#	undef AG
-#endif
-
-#define AG(v) TSRMG(alloc_globals_id, zend_alloc_globals *, v)
-
 /* {{{ prepared function ctor */
 static void pthreads_preparation_function_ctor(zend_function *pfe); /* }}} */
 
@@ -114,32 +108,24 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 					ce.unserialize = candidate->unserialize;
 				if (candidate->clone)
 					ce.clone = candidate->clone;
-				
+
 				/*
-					_zend_function *constructor;
-					_zend_function *destructor;
-					_zend_function *clone;
-					_zend_function *__get;
-					_zend_function *__set;
-					_zend_function *__unset;
-					_zend_function *__isset;
-					_zend_function *__call;
-					_zend_function *__callstatic;
-					_zend_function *__tostring;
-					_zend_function *serialize_func;
-					_zend_function *unserialize_func;
-				*/
-				
-				/*
-				* Registration
+				* Registration, including inheritance
 				*/
 				if (candidate->parent && candidate != candidate->parent) {
 					prepared=zend_register_internal_class_ex(&ce, pthreads_prepared_entry(
 						thread, candidate->parent TSRMLS_CC
 					), NULL TSRMLS_CC);
 				} else prepared=zend_register_internal_class(&ce TSRMLS_CC);
+				
+				/*
+				* Set flags
+				*/
 				prepared->ce_flags = candidate->ce_flags;
 				
+				/*
+				* Copy user declared internal significant methods
+				*/
 				{
 					zend_uint umethod = 0;
 					zend_function *usources[13] = {
@@ -234,7 +220,14 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 							(copy_ctor_func_t) pthreads_preparation_default_properties_ctor,
 							&tp, sizeof(zval*)
 						);
+						zend_hash_copy(
+							&prepared->default_static_members, 
+							&candidate->default_static_members,
+							(copy_ctor_func_t) pthreads_preparation_default_properties_ctor,
+							&tp, sizeof(zval*)
+						);
 						prepared->default_properties.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
+						prepared->default_static_members.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
 					}
 #else
 					if (candidate->default_properties_count) {
@@ -298,13 +291,23 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 	return prepared;
 } /* }}} */
 
-/* {{{ prepares the current context to execute the referenced thread */
+/* {{{ prepares the current context to execute the referenced thread 
+	@NOTE other preparation could take place here, but it shouldn't !
+			pthreads creates and requires objects and nothing else 
+			function tables can get rather large and to loop over it is a waste 
+			get used to organizing code for efficiency and you can group 
+			collections of functions in static classes or include them explicitly
+			for the same reason the global scope variables aren't inherited;
+			if a thread/worker/stackable requires access to _POST/_SERVER etc 
+			then pass them the information they need explicitly, in normal PHP
+			scripts it doesn't make a difference if you pass around big arrays like _GLOBALS 
+			in pthreads it does ! */
 void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	HashPosition position;
 	zend_class_entry **entry;
 	HashTable *source = PTHREADS_CG(thread->cls, class_table);
 	HashTable *destination = CG(class_table);
-	
+	/* give em what they need, and nothing more ... */
 	for(zend_hash_internal_pointer_reset_ex(source, &position);
 		zend_hash_get_current_data_ex(source, (void**) &entry, &position)==SUCCESS;
 		zend_hash_move_forward_ex(source, &position)) {
@@ -316,6 +319,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 		if (zend_hash_get_current_key_ex(source, &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
 			if (!zend_hash_exists(destination, lcname, lcnamel)){
 				if ((prepared=pthreads_prepared_entry(thread, *entry TSRMLS_CC))!=NULL) {
+					/* we do this to control destruction of the class entries we create */
 					zend_llist_add_element(&(thread->preparation.classes), (void**) &prepared);
 				} else {
 					zend_error_noreturn(
