@@ -53,7 +53,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 			&value TSRMLS_CC
 		)!=SUCCESS) {	
 			value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
-		}
+		} else zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
 	} else value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
 	return value;
 } 
@@ -244,7 +244,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 									} else {
 #if PHP_VERSION_ID > 50399
 										{
-											zend_op_array *ops = &call->op_array;
+											zend_op_array *ops = (zend_op_array*) call;
 										
 											if (ops) {
 												if (ops->run_time_cache) {

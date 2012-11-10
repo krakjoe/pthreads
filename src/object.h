@@ -42,6 +42,18 @@ zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC);
 zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC);
 /* }}} */
 
+/* {{{ object cache */
+typedef struct {
+	zend_llist cache;
+} *pthreads_objects; /* }}} */
+
+/* {{{ object caching */
+pthreads_objects pthreads_objects_alloc(TSRMLS_D);
+zval * pthreads_objects_create(pthreads_objects pobjects TSRMLS_DC);
+void pthreads_objects_free(pthreads_objects pobjects TSRMLS_DC);
+void pthreads_objects_cache_dtor(zval **ppobject);
+/* }}} */
+
 /*
 * @NOTE
 *	pthreads_state_* functions work with pthreads_state directly
@@ -52,10 +64,9 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC);
 zend_bool pthreads_set_state_ex(PTHREAD thread, int state, long timeout TSRMLS_DC);
 zend_bool pthreads_set_state(PTHREAD thread, int state TSRMLS_DC);
 zend_bool pthreads_unset_state(PTHREAD thread, int state TSRMLS_DC);
-zend_bool pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC);
 size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC);
 size_t pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC);
-size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC);
+size_t pthreads_stack_next(PTHREAD thread, pthreads_objects pobjects, zval *this_ptr TSRMLS_DC);
 size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC);
 /* }}} */
 

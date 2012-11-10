@@ -29,7 +29,6 @@ typedef struct {
 
 pthreads_lock pthreads_lock_alloc(TSRMLS_D);
 zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC);
-zend_bool pthreads_lock_try(pthreads_lock lock, zend_bool *acquired TSRMLS_DC);
 zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC);
 void pthreads_lock_free(pthreads_lock lock TSRMLS_DC);
 #endif

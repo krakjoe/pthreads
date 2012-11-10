@@ -157,7 +157,7 @@ $worker->start();
 
 /* random array of work to populate some storage from the worker */
 $work = array();
-while(++$o<2) {
+while(++$o<10) {
 	/* items stacked could be using resources available in worker */
 	$work[]=new MyWork($storage);
 }

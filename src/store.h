@@ -59,6 +59,12 @@ zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int ha
 /* {{{ write value to buffer */
 int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC); /* }}} */
 
+/* {{{ separate a zval using internals */
+int pthreads_store_separate(zval * pzval, zval **seperated, zend_bool allocate TSRMLS_DC); /* }}} */
+
+/* {{{ separate a zval pointer using internals */
+int pthreads_store_separate_pointer(zval **ppzval, zval **seperated, zend_bool allocate TSRMLS_DC); /* }}} */
+
 /* {{{ free buffers */
 void pthreads_store_free(pthreads_store store TSRMLS_DC); /* }}} */
 #endif

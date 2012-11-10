@@ -6,11 +6,7 @@ This test will create and join a simple thread
 <?php
 class ThreadTest extends Thread {
 	public function run(){
-		$i=0;
-		while(++$i<100){
-			continue;
-		}
-		return $i;
+		/* nothing to do */
 	}
 }
 $thread = new ThreadTest();
@@ -18,4 +14,4 @@ if($thread->start())
 	var_dump($thread->join());
 ?>
 --EXPECT--
-int(100)
+bool(true)

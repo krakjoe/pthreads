@@ -109,7 +109,7 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			pthreads_storage *storage = NULL;
 			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
-				ALLOC_ZVAL(*read);
+				MAKE_STD_ZVAL(*read);
 				if ((result = pthreads_store_convert(*storage, *read TSRMLS_CC))!=SUCCESS) {
 					FREE_ZVAL(*read);
 				} else Z_SET_REFCOUNT_PP(read, 0);
@@ -136,6 +136,30 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 		}
 	}
 	return result;
+} /* }}} */
+
+/* {{{ seperate a zval using internals */
+int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate TSRMLS_DC) {
+	int result = FAILURE;
+	if (pzval) {
+		pthreads_storage storage = pthreads_store_create(pzval TSRMLS_CC);
+		if (storage) {
+			if (allocate) {
+				MAKE_STD_ZVAL(*separated);
+			}
+				
+			result = pthreads_store_convert(
+				storage, *separated TSRMLS_CC
+			);
+			pthreads_store_storage_dtor(&storage);
+		}
+	}
+	return result;
+} /* }}} */
+
+/* {{{ seperate a zval pointer using internals */
+int pthreads_store_separate_pointer(zval **ppzval, zval **separated, zend_bool allocate TSRMLS_DC) {
+	return FAILURE;
 } /* }}} */
 
 /* {{{ free store storage for a thread */
@@ -290,7 +314,9 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			
 			default: ZVAL_NULL(pzval);
 		}
-		Z_ADDREF_P(pzval);
+		
+		if (Z_TYPE_P(pzval)!=IS_NULL)
+			Z_ADDREF_P(pzval);
 	}
 	return result;
 }

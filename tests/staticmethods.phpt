@@ -10,12 +10,13 @@ class ThreadTest extends Thread {
 	}
 	
 	public function run(){
-		return self::staticTest();
+		$this->result = self::staticTest();
 	}
 }
 $thread = new ThreadTest();
 if($thread->start())
-	var_dump($thread->join());
+	if ($thread->join())
+		var_dump($thread->result);
 ?>
 --EXPECT--
 int(1)

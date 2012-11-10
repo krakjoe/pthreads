@@ -30,7 +30,6 @@ void pthreads_globals_init(TSRMLS_D){
 		PTHREADS_G(init)=1;
 		PTHREADS_G(peak)=0;
 		PTHREADS_G(nid)=1;
-		PTHREADS_G(importing)=INI_BOOL("pthreads.importing");
 		PTHREADS_G(max)=INI_INT("pthreads.max");
 		PTHREADS_G(lock)=pthreads_lock_alloc(TSRMLS_C);
 		zend_llist_init(&PTHREADS_G(objects), sizeof(void**), NULL, 1);
