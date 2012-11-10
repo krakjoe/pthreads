@@ -64,32 +64,15 @@
 #	define PTHREADS_LOCK_TYPE NULL
 #endif
 
-#ifndef pthreads_thread_entry
-zend_class_entry *pthreads_thread_entry;
-#endif
+extern zend_class_entry *pthreads_thread_entry;
+extern zend_class_entry *pthreads_worker_entry;
+extern zend_class_entry *pthreads_stackable_entry;
+extern zend_class_entry *pthreads_mutex_entry;
+extern zend_class_entry *pthreads_condition_entry;
+extern zend_class_entry *pthreads_exception_entry;
 
-#ifndef pthreads_worker_entry
-zend_class_entry *pthreads_worker_entry;
-#endif
+extern zend_object_handlers pthreads_handlers;
+extern zend_object_handlers *zend_handlers;
 
-#ifndef pthreads_stackable_entry
-zend_class_entry *pthreads_stackable_entry;
-#endif
-
-#ifndef pthreads_mutex_entry
-zend_class_entry *pthreads_mutex_entry;
-#endif
-
-#ifndef pthreads_condition_entry
-zend_class_entry *pthreads_condition_entry;
-#endif
-
-#ifndef pthreads_handlers
-zend_object_handlers pthreads_handlers;
-#endif
-
-#ifndef zend_handlers
-zend_object_handlers *zend_handlers;
-#endif
-
+extern struct _pthreads_globals pthreads_globals;
 #endif
