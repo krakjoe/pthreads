@@ -75,6 +75,15 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				/* perform inheritance */
 				if (candidate->parent)
 					candidate->parent = pthreads_prepared_entry(thread, candidate->parent TSRMLS_CC);
+
+				/* declare interfaces */
+				if (candidate->num_interfaces) {
+					uint interface;
+					prepared->interfaces = emalloc(sizeof(zend_class_entry*) * candidate->num_interfaces);
+					for(interface=0; interface<prepared->num_interfaces; interface++)
+						prepared->interfaces[interface] = pthreads_prepared_entry(thread, candidate->interfaces[interface] TSRMLS_CC);
+					prepared->num_interfaces = candidate->num_interfaces;
+				} else prepared->num_interfaces = 0;
 				
 				/* copy user declared significant methods */
 				{
