@@ -38,7 +38,6 @@ pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
 		}
 		free(lock);
 	}
-
 	return NULL;
 }
 
@@ -64,10 +63,6 @@ zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_D
 			return locked;
 		} else return (((*acquired)=0)==0);
 	} else return (((*acquired)=0)==1);
-}
-
-zend_bool pthreads_lock_try(pthreads_lock lock, zend_bool *acquired TSRMLS_DC) {
-	return SUCCESS;
 }
 
 zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC) {

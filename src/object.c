@@ -49,6 +49,46 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC); /* }
 /* {{{ pthreads routine */
 static void * pthreads_routine(void *arg); /* }}} */
 
+/* {{{ object caching */
+pthreads_objects pthreads_objects_alloc(TSRMLS_D) {
+	pthreads_objects pobjects = (pthreads_objects) emalloc(sizeof(*pobjects));
+	if (pobjects) {
+		zend_llist_init(
+			&pobjects->cache, sizeof(zval**), 
+			(llist_dtor_func_t) pthreads_objects_cache_dtor, 1
+		);
+	}
+	return pobjects;
+}
+
+zval * pthreads_objects_create(pthreads_objects pobjects TSRMLS_DC) {
+	zval * pobject;
+	MAKE_STD_ZVAL(pobject);
+	if (pobject) {
+		zend_llist_add_element(
+			&pobjects->cache, &pobject
+		);
+	}
+	return pobject;
+}
+
+void pthreads_objects_free(pthreads_objects pobjects TSRMLS_DC) { 
+	if (pobjects) {
+		zend_llist_destroy(&pobjects->cache); 
+		efree(pobjects);
+	}
+}
+
+void pthreads_objects_cache_dtor(zval **ppobject) { 
+	if (ppobject) {
+		zval *pobject = *ppobject;
+		if (pobject) {
+			zval_ptr_dtor(&pobject);
+		}
+	}
+}
+/* }}} */
+
 /* {{{ set state bits on a thread, timeout where appropriate/required */
 zend_bool pthreads_set_state_ex(PTHREAD thread, int mask, long timeout TSRMLS_DC) {
 	zend_bool locked, dowait, result;
@@ -129,7 +169,7 @@ size_t pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ pop the next item from the work buffer */
-size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
+size_t pthreads_stack_next(PTHREAD thread, pthreads_objects pobjects, zval *this_ptr TSRMLS_DC) {
 	PTHREAD *work = NULL, current = NULL;
 	zend_bool locked;
 	size_t bubble = 0;
@@ -144,7 +184,7 @@ burst:
 				/*
 				* Allocate a $that
 				*/
-				MAKE_STD_ZVAL(that_ptr);
+				that_ptr = pthreads_objects_create(pobjects TSRMLS_CC);
 				
 				/*
 				* Initialize it with the new entry
@@ -220,32 +260,6 @@ size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 	}
 	return counted;
-} /* }}} */
-
-/* {{{ import a thread created in another context into the current context */
-zend_bool pthreads_import(PTHREAD thread, zval** return_value TSRMLS_DC){
-	zend_bool locked, imported = 1;
-	
-	if (!PTHREADS_IN_CREATOR(thread)) {
-		if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
-			/*
-			* Initialize the object in this context
-			*/
-			if (object_init_ex(
-					*return_value, 
-					pthreads_prepared_entry
-					(
-						thread,
-						thread->std.ce TSRMLS_CC
-					)
-				)==SUCCESS) {
-				pthreads_connect(thread, PTHREADS_FETCH_FROM(*return_value) TSRMLS_CC);
-			} else { imported = 0; }
-			pthreads_lock_release(thread->lock, locked TSRMLS_CC);
-		} else imported = 0;
-	} else imported = 0;
-	
-	return imported;
 } /* }}} */
 
 /* {{{ thread object constructor */
@@ -383,8 +397,6 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			
 			pthreads_globals_add(base TSRMLS_CC);
 		}
-		
-		pthreads_prepare_classes_init(base TSRMLS_CC);
 	}
 } /* }}} */
 
@@ -433,10 +445,6 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 #else
 	zend_object_std_dtor(&(base->std) TSRMLS_CC);
 #endif
-	
-	pthreads_prepare_classes_free(
-		base TSRMLS_CC
-	);
 } /* }}} */
 
 /* {{{ free object */
@@ -510,7 +518,7 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 		(*buffer) = (unsigned char*) emalloc(64);
 		if ((*buffer)) {
 			(*blength) = sprintf(
-				(char*)(*buffer),
+				(char*) (*buffer), 
 				"%lu", 
 				(threaded->target > 0L) ? threaded->target : threaded->gid
 			)+1;
@@ -533,7 +541,6 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
 				if (pthreads_connect(
 					source, destination TSRMLS_CC
 				)==SUCCESS) {
-					INIT_PZVAL(*object);
 					return SUCCESS;
 				}
 			}
@@ -544,263 +551,194 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
 
 /* {{{ this is aptly named ... */
 static void * pthreads_routine(void *arg) {
-
-	/*
-	* The thread object
-	*/
+	/* passed the object as argument */
 	PTHREAD thread = (PTHREAD) arg;
 
 	if (thread) {
-		/*
-		* Thread safe storage
-		*/
+		/* TSRM */
 		void ***tsrm_ls = NULL;
 		
-		/*
-		* Global lock acquisition indicator
-		*/
+		/* pthreads object cache */
+		pthreads_objects pobjects = NULL;
+		
+		/* global lock inidicator */
 		zend_bool glocked = 0;
 		
-		/*
-		* Startup Block
-		*/
-		{
-			/*
-			* Acquire Global Lock
-			*/
-			pthreads_globals_lock(&glocked TSRMLS_CC);
-			
-			/*
-			* Allocate Context
-			*/
-			tsrm_ls = tsrm_new_interpreter_context();
-			
-			/*
-			* Set Context/TSRMLS
-			*/
-			tsrm_set_interpreter_context(tsrm_ls);
-			
-			/*
-			* Set Thread Identifier
-			*/
-			thread->tid = pthreads_self();
-			
-			/*
-			* Activate Zend
-			*/
-#if COMPILE_DL_PTHREADS
-			/*
-			* Same server context as parent
-			*/
-			SG(server_context)=PTHREADS_SG(thread->cls, server_context);
-			
-			/*
-			* Stops PHP from attempting to add headers to null structs
-			*/
-			PG(expose_php) = 0;
-			PG(auto_globals_jit) = 0;
-			
-			/*
-			* Startup the request ...
-			*/
-			php_request_startup(TSRMLS_C);
-			
-			/*
-			* Stop any pointless output from threads
-			*/
-			SG(headers_sent)=1;
-			SG(request_info).no_headers = 1;
-#else
-			/*
-			* Not nearly as much work !!
-			*/
-			zend_activate(TSRMLS_C);							
-			zend_activate_modules(TSRMLS_C);
-#endif		
-			
-			/*
-			* Prepare for Execution
-			*/
-			pthreads_prepare(thread TSRMLS_CC);
-			
-			/*
-			* Release global lock
-			*/
-			pthreads_globals_unlock(glocked TSRMLS_CC);
-		}
+		/**
+		* Startup Block Begin
+		**/
 		
-		/*
-		* Thread Block
-		*/
-		{
-			/*
-			* Pointers to the usual
-			*/
-			zval *this_ptr = NULL;
+		/* acquire a global lock */
+		pthreads_globals_lock(&glocked TSRMLS_CC);
+		
+		/* create new context */
+		tsrm_ls = tsrm_new_interpreter_context();
+		
+		/* set interpreter context */
+		tsrm_set_interpreter_context(tsrm_ls);
+		
+		/* set thread id for this object */
+		thread->tid = pthreads_self();
+		
+		/* set context the same as parent */
+		SG(server_context)=PTHREADS_SG(thread->cls, server_context);
+		
+		/* some php globals */
+		PG(expose_php) = 0;
+		PG(auto_globals_jit) = 0;
+		
+		/* request startup */
+		php_request_startup(TSRMLS_C);
+		
+		/* do not send headers again */
+		SG(headers_sent)=1;
+		SG(request_info).no_headers = 1;
+		
+		/* prepare environment */
+		pthreads_prepare(thread TSRMLS_CC);
+		
+		/* release global lock */
+		pthreads_globals_unlock(glocked TSRMLS_CC);
+		
+		/**
+		* Startup Block End
+		**/
+		
+		/* initialize object cache */
+		pobjects = pthreads_objects_alloc(TSRMLS_C);
+		
+		/**
+		* Thread Block Begin
+		**/
+		zend_first_try {
+			/* create pointer to this */
+			zval * this_ptr = pthreads_objects_create(pobjects TSRMLS_CC);
 			
-			/*
-			* A new reference to $this for the current context
-			*/ 
-			MAKE_STD_ZVAL(this_ptr);
-				
-			/*
-			* Set bailout address
-			*/
-			zend_first_try {
+			/* EG setup */
+			EG(in_execution) = 1;							
+			EG(current_execute_data)=NULL;					
+			EG(current_module)=&pthreads_module_entry;
 			
-				/*
-				* First some basic executor setup
-				*/
-				EG(in_execution) = 1;							
-				EG(current_execute_data)=NULL;					
-				EG(current_module)=&pthreads_module_entry;
+			/* init $this */
+			object_init_ex
+			(
+				EG(This)=getThis(), 
+				EG(scope)=pthreads_prepared_entry
+				(
+					thread, thread->std.ce
+					 TSRMLS_CC
+				)
+			);
+			
+			/* connect $this */
+			if (pthreads_connect(thread, PTHREADS_FETCH_FROM(EG(This)) TSRMLS_CC)==SUCCESS) {	
+				/* always the same no point recreating this for every execution */
+				zval zmethod;
 				
-				/*
-				* Initialize thread and connection
-				*/
-				{
-					/*
-					* Initialize $this
-					*/
-					object_init_ex
-					(
-						EG(This)=getThis(), 
-						EG(scope) = pthreads_prepared_entry
-						(
-							thread,
-							thread->std.ce TSRMLS_CC
-						)
-					);
-					
-					/*
-					* Make connection
-					*/
-					pthreads_connect(thread, PTHREADS_FETCH_FROM(EG(This)) TSRMLS_CC);
-				}
-
-				/*
-				* Runtime ...
-				*/
-				{	
-					/* always the same no point recreating this for every execution */
-					zval zmethod;
-					
-					ZVAL_STRINGL(&zmethod, "run", sizeof("run"), 0);
-					
-					/*
-					* Now time to execute ::run
-					*/
-					do {	
-						zend_function *zrun;
-						/* find zrun method */
-						if (zend_hash_find(&EG(scope)->function_table, "run", sizeof("run"), (void**) &zrun)==SUCCESS) {
-							zval *zresult;
-							zend_fcall_info info;
-							zend_fcall_info_cache cache;
+				ZVAL_STRINGL(&zmethod, "run", sizeof("run"), 0);
+				
+				/* execute $this */
+				do {	
+					zend_function *zrun;
+					/* find zrun method */
+					if (zend_hash_find(&EG(scope)->function_table, "run", sizeof("run"), (void**) &zrun)==SUCCESS) {
+						zval *zresult;
+						zend_fcall_info info;
+						zend_fcall_info_cache cache;
+						
+						/* populate a cache and call the run method */
+						{
+							/* set if not set explicitly elsewhere */
+							if (!EG(called_scope))
+								EG(called_scope)=EG(scope);
+							if (!EG(active_symbol_table))
+								EG(active_symbol_table)=&EG(symbol_table);
 							
-							/* populate a cache and call the run method */
+							/* initialize info object */
+							info.size = sizeof(info);
+							info.object_ptr = EG(This);
+							info.function_name = &zmethod;
+							info.retval_ptr_ptr = &zresult;
+							info.no_separation = 1;
+							info.symbol_table = NULL;
+							info.param_count = 0;
+							info.params = NULL;
+							
+							/* initialize cache object */
+							cache.initialized = 1;
+							cache.function_handler = zrun;
+							cache.calling_scope = EG(scope);
+							cache.called_scope = EG(called_scope);
+							cache.object_ptr = EG(This);
+																																																																									
+							/* call the function */
+							pthreads_state_set((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							{
-								/* set if not set explicitly elsewhere */
-								if (!EG(called_scope)) {
-									EG(called_scope)=EG(scope);
-								}
-								
-								/* initialize info object */
-								info.size = sizeof(info);
-								info.object_ptr = EG(This);
-								info.function_name = &zmethod;
-								info.retval_ptr_ptr = &zresult;
-								info.no_separation = 1;
-								info.symbol_table = NULL;
-								info.param_count = 0;
-								info.params = NULL;
-								
-								/* initialize cache object */
-								cache.initialized = 1;
-								cache.function_handler = zrun;
-								cache.calling_scope = EG(scope);
-								cache.called_scope = EG(called_scope);
-								cache.object_ptr = EG(This);
-																																																																										
-								/* call the function */
-								pthreads_state_set((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-								{
-									zend_try {
-										zend_call_function(&info, &cache TSRMLS_CC);
-									} zend_catch {
-										zval_ptr_dtor(&getThis());
-										break;
-									} zend_end_try();
-								}
-								pthreads_state_unset((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-								
+								zend_try {
+									zend_call_function(&info, &cache TSRMLS_CC);
+								} zend_catch {
+									zval_ptr_dtor(&getThis());
+									break;
+								} zend_end_try();
+							}
+							pthreads_state_unset((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+							
 #if PHP_VERSION_ID > 50399
-								{
-									zend_op_array *ops = &zrun->op_array;
-								
-									if (ops) {
-										if (ops->run_time_cache) {
-											efree(ops->run_time_cache);
-											ops->run_time_cache = NULL;
-										}
+							{
+								zend_op_array *ops = &zrun->op_array;
+							
+								if (ops) {
+									if (ops->run_time_cache) {
+										efree(ops->run_time_cache);
+										ops->run_time_cache = NULL;
 									}
 								}
-#endif
-
-								/* deal with zresult (ignored) */
-								if (zresult) {
-									zval_ptr_dtor(&zresult);
-								}
 							}
-						} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
-					} while(PTHREADS_IS_WORKER(thread) && pthreads_stack_next(thread, getThis() TSRMLS_CC));
-				}
-			} zend_catch {
-				/* do something, it's all gone wrong */
-			} zend_end_try();
-		}
-		
-		/*
-		* Shutdown Block
-		*/
-		{
-			/*
-			* Acquire global lock
-			*/
-			pthreads_globals_lock(&glocked TSRMLS_CC);
-		
-			/*
-			* Deactivate Zend
-			*/
-#if COMPILE_DL_PTHREADS
-			php_request_shutdown(TSRMLS_C);
-#else
-			zend_deactivate_modules(TSRMLS_C);
-			zend_deactivate(TSRMLS_C);
 #endif
+							/* deal with zresult (ignored) */
+							if (zresult) {
+								zval_ptr_dtor(&zresult);
+							}
+						}
+					} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
+				} while(PTHREADS_IS_WORKER(thread) && pthreads_stack_next(thread, pobjects, getThis() TSRMLS_CC));
+			}
+		} zend_catch {
+			/* do something, it's all gone wrong */
+		} zend_end_try();
+		
+		/**
+		* Thread Block End
+		**/
+		
+		/* kill all humans ... I mean free all objects */
+		pthreads_objects_free(pobjects TSRMLS_CC);
+		
+		/**
+		* Shutdown Block Begin
+		**/
+		
+		/* acquire global lock */
+		pthreads_globals_lock(&glocked TSRMLS_CC);
+	
+		/* shutdown request */
+		php_request_shutdown(TSRMLS_C);
 
-			/*
-			* Free Context
-			*/
-			tsrm_free_interpreter_context(tsrm_ls);	
-				
-			/*
-			* Release global lock
-			*/
-			pthreads_globals_unlock(glocked TSRMLS_CC);
-		}
+		/* free interpreter */
+		tsrm_free_interpreter_context(tsrm_ls);	
+			
+		/* release global lock */
+		pthreads_globals_unlock(glocked TSRMLS_CC);
+		
+		/**
+		* Shutdown Block End
+		**/
 	}
 	
-	/*
-	* Donetime ...
-	*/
 	pthread_exit(NULL);
 	
 #ifdef _WIN32
-	/*
-	* Silence MSVC Compiler
-	*/
-	return NULL;
+	return NULL; /* silence MSVC compiler */
 #endif
 } 
 /* }}} */

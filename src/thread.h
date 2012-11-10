@@ -111,13 +111,6 @@ typedef struct _pthread_construct {
 	* Work List
 	*/
 	pthreads_stack stack;
-	
-	/*
-	* Preparation
-	*/
-	struct {
-		zend_llist classes;
-	} preparation;
 } *PTHREAD;
 
 /* {{{ comparison function */

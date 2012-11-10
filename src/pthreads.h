@@ -23,14 +23,13 @@
 #endif
 
 #include <stdio.h>
-#include <pthread.h>
 #ifndef _WIN32
-#define _GNU_SOURCE
 #include <unistd.h>
 #include <sys/time.h>
-#else
-#include <win32/time.h>
 #endif
+
+#include <pthread.h>
+
 #include <php.h>
 #include <php_globals.h>
 #include <php_main.h>

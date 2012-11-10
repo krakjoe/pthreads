@@ -21,15 +21,12 @@
 /*
 * NOTES
 * 1. pthreads cannot use the Zend implementation of globals, it makes for instability - we sometimes require a true global lock
-* 2. providing a mechanism for limiting the threads a user can create may be useful to server admin in shared hosting environments
-* 3. providing peak usage and current realtime statistics can help you to design and execute more efficiently
-* 4. these globals are completely safe; they are protected by mutex
-* 5. in some SAPI environments it may not make sense to use pthreads.max ini setting, that is for the server administrator to decide
-* 6. in some SAPI environments it may make sense to disable importing Threads for security reasons, pthreads.importing should be set to 0
-* 7. pthreads.* ini settings are system only for security
+* 2. providing a mechanism for limiting the number of objects a user can create may be useful to server admin in shared hosting environments
+* 3. pthreads.* ini settings will be system only for security
 *
 * TODO
 * 1. make errors more meaningful
+* 2. make statistics more meaningfull (Stackable::getCount, Worker::getCount maybe)
 */
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
@@ -64,11 +61,6 @@ struct _pthreads_globals {
 	* Maximum number of Objects
 	*/
 	size_t max;
-	
-	/*
-	* Flag for disable/enable importing
-	*/
-	zend_bool importing;
 	
 	/*
 	* Objects

@@ -58,6 +58,10 @@
 	ZEND_GET_MODULE(pthreads)
 #endif
 
+#ifndef HAVE_PTHREADS_GLOBALS_H
+#include <src/globals.h>
+#endif
+
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,
@@ -76,7 +80,6 @@ zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_stackable_entry;
 zend_class_entry *pthreads_mutex_entry;
 zend_class_entry *pthreads_condition_entry;
-zend_class_entry *pthreads_exception_entry;
 
 zend_object_handlers pthreads_handlers;
 zend_object_handlers *zend_handlers;

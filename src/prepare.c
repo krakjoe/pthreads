@@ -26,18 +26,8 @@
 #	include <src/object.h>
 #endif
 
-/* {{{ prepared function ctor */
-static void pthreads_preparation_function_ctor(zend_function *pfe); /* }}} */
-
 /* {{{ prepared property info ctor */
 static void pthreads_preparation_property_info_ctor(zend_property_info *pi); /* }}} */
-
-/* {{{ prepared classes dtor */
-static void pthreads_preparation_classes_dtor(void **ppce); /* }}} */
-
-/* {{{ prepared function ctor */
-static void pthreads_preparation_function_dtor(zend_function *pfe); /* }}} */
-
 /* {{{ prepared property info dtor */
 static void pthreads_preparation_property_info_dtor(zend_property_info *pi); /* }}} */
 
@@ -53,245 +43,167 @@ zend_function_entry	pthreads_empty_methods[] = {
 	{NULL, NULL, NULL}
 }; /* }}} */
 
-/* {{{ initialize prepared class entry storage */
-void pthreads_prepare_classes_init(PTHREAD thread TSRMLS_DC) {
-	zend_llist *classes = &thread->preparation.classes;
-	if (!classes || !classes->dtor)
-		zend_llist_init(classes, sizeof(zend_class_entry*), (llist_dtor_func_t) pthreads_preparation_classes_dtor, 1);
-} /* }}} */
-
-/* {{{ free prepared class storage */
-void pthreads_prepare_classes_free(PTHREAD thread TSRMLS_DC) {
-	zend_llist *classes = &thread->preparation.classes;
-	if (classes) {
-		zend_llist_destroy(classes);
-	}
-} /* }}} */
-
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC) {
 	zend_class_entry *prepared = NULL, **searched = NULL;
-	
-	if (candidate) {
-		char *lcname = (char*) malloc(candidate->name_length+1);
-		
-		if (lcname != NULL) {
-			zend_str_tolower_copy(lcname, candidate->name, candidate->name_length);
-			
-			/*
-			* look for class entry in current context
-			*/
-			if (zend_hash_find(CG(class_table), lcname, candidate->name_length+1, (void**)&searched)!=SUCCESS) {
-				/*
-				* create class entry in current context
-				*/
-				zend_class_entry ce;
-				
-				/*
-				* Initialize an interned class entry
-				*/
-				INIT_CLASS_ENTRY_EX(
-					ce, 
-					candidate->name, 
-					candidate->name_length,
-					pthreads_empty_methods
-				);
-				
-				/*
-				* Attach appropriate handlers
-				*/
-				if (candidate->create_object)
-					ce.create_object = candidate->create_object;
-				if (candidate->serialize)
-					ce.serialize = candidate->serialize;
-				if (candidate->unserialize)
-					ce.unserialize = candidate->unserialize;
-				if (candidate->clone)
-					ce.clone = candidate->clone;
 
-				/*
-				* Registration, including inheritance
-				*/
-				if (candidate->parent && candidate != candidate->parent) {
-					prepared=zend_register_internal_class_ex(&ce, pthreads_prepared_entry(
-						thread, candidate->parent TSRMLS_CC
-					), NULL TSRMLS_CC);
-				} else prepared=zend_register_internal_class(&ce TSRMLS_CC);
-				
-				/*
-				* Set flags
-				*/
+	if (candidate) {
+#if PHP_VERSION_ID > 50399
+		char *lcname = (char*) emalloc(candidate->name_length+1);
+#else
+		char *lcname = (char*) malloc(candidate->name_length+1);
+#endif
+		if (lcname != NULL) {
+			/* lowercase name for lookup/insertion */
+			zend_str_tolower_copy(lcname, candidate->name, candidate->name_length);
+			/* perform lookup for existing class */
+			if (zend_hash_find(CG(class_table), lcname, candidate->name_length+1, (void**)&searched)!=SUCCESS) {
+				zval *tz;
+				zend_function *tf;
+				zend_property_info *ti;
+	
+				/* create a new user class for this context */
+				prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
+				prepared->name = estrndup(candidate->name, candidate->name_length);
+				prepared->name_length = candidate->name_length;
+				prepared->type = ZEND_USER_CLASS;
 				prepared->ce_flags = candidate->ce_flags;
 				
-				/*
-				* Copy user declared internal significant methods
-				*/
+				/* initialize class data */
+				zend_initialize_class_data(prepared, 1 TSRMLS_CC);
+				
+				/* perform inheritance */
+				if (candidate->parent)
+					candidate->parent = pthreads_prepared_entry(thread, candidate->parent TSRMLS_CC);
+				
+				/* copy user declared significant methods */
 				{
 					zend_uint umethod = 0;
-					zend_function *usources[13] = {
+					void *usources[9] = {
 						candidate->constructor,
 						candidate->destructor,
 						candidate->clone,
-						candidate->__get,
-						candidate->__set,
-						candidate->__unset,
-						candidate->__isset,
-						candidate->__call,
-						candidate->__callstatic,
-						candidate->__tostring,
 						candidate->serialize_func,
 						candidate->unserialize_func,
-						NULL
+			
+						candidate->create_object,
+						candidate->serialize,
+						candidate->unserialize,
+						candidate->get_iterator
 					};
 					
 					do {
-						zend_function **utarget;
 						if (usources[umethod]) {
 							switch(umethod){
-								case 0: utarget = &prepared->constructor; break;
-								case 1: utarget = &prepared->destructor; break;
-								case 2: utarget = &prepared->clone; break;
-								case 3: utarget = &prepared->__get; break;
-								case 4: utarget = &prepared->__set; break;
-								case 5: utarget = &prepared->__unset; break;
-								case 6: utarget = &prepared->__isset; break;
-								case 7: utarget = &prepared->__call; break;
-								case 8: utarget = &prepared->__callstatic; break;
-								case 9: utarget = &prepared->__tostring; break;
-								case 10: utarget = &prepared->serialize_func; break;
-								case 11: utarget = &prepared->unserialize_func; break;
-							}
-							if (utarget) {
-								*utarget = (zend_function*) emalloc(sizeof(zend_function));
-								if ((*utarget)) {
-									memcpy(
-										(*utarget), usources[umethod], sizeof(zend_function)
-									);
-								}
+								case 0: zend_hash_update(&prepared->function_table, "__construct", sizeof("__construct"), &candidate->constructor, sizeof(zend_function), (void**) &prepared->constructor); break;
+								case 1: zend_hash_update(&prepared->function_table, "__destruct", sizeof("__destruct"), &candidate->destructor, sizeof(zend_function), (void**) &prepared->destructor); break;
+								case 2: zend_hash_update(&prepared->function_table, "__clone", sizeof("__clone"), &candidate->clone, sizeof(zend_function), (void**) &prepared->clone); break;
+								case 3: zend_hash_update(&prepared->function_table, "__serialize", sizeof("__serialize"), &candidate->serialize_func, sizeof(zend_function), (void**) &prepared->serialize_func); break;
+								case 4: zend_hash_update(&prepared->function_table, "__unserialize", sizeof("__unserialize"), &candidate->unserialize_func, sizeof(zend_function), (void**) &prepared->unserialize_func); break;
+								
+								case 5: prepared->create_object = candidate->create_object; break;
+								case 6: prepared->serialize = candidate->serialize; break;
+								case 7: prepared->unserialize = candidate->unserialize; break;
+								case 8: 
+									prepared->get_iterator = candidate->get_iterator; 
+									prepared->iterator_funcs = candidate->iterator_funcs;
+								break;
+								
 							}
 						}
-					} while(++umethod < 13);
+					} while(++umethod < 9);
 				}
 				
-				/*
-				* Copy Function Table
-				*/
-				{
-					zend_function *tf;
-					zend_hash_copy
-					(
-						&prepared->function_table, 
-						&candidate->function_table,
-						(copy_ctor_func_t) pthreads_preparation_function_ctor,
-						&tf, sizeof(zend_function)
-					);
-					prepared->function_table.pDestructor = (dtor_func_t) pthreads_preparation_function_dtor;
-				}
+				/* copy function table */
+				zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) function_add_ref, &tf, sizeof(zend_function));
 				
-				/*
-				* Copy Property Info
-				*/
-				{
-					zend_property_info *ti;
-					zend_hash_copy
-					(
-						&prepared->properties_info, 
-						&candidate->properties_info,
-						(copy_ctor_func_t) pthreads_preparation_property_info_ctor,
-						&ti, sizeof(zend_property_info)
-					);
-					prepared->properties_info.pDestructor = (dtor_func_t) pthreads_preparation_property_info_dtor;
-				}
+				/* copy property info structures */
+				zend_hash_copy(&prepared->properties_info, &candidate->properties_info, (copy_ctor_func_t) pthreads_preparation_property_info_ctor, &ti, sizeof(zend_property_info));
+				prepared->properties_info.pDestructor = (dtor_func_t) pthreads_preparation_property_info_dtor;
 				
-				/*
-				* Copy Defaults
-				*/
+				/* copy statics and defaults */
 				{
-					/*
-					* Default Properties
-					*/
 #if PHP_VERSION_ID < 50400
-					{
-						zval *tp;
-						zend_hash_copy
-						(
-							&prepared->default_properties,
-							&candidate->default_properties,
-							(copy_ctor_func_t) pthreads_preparation_default_properties_ctor,
-							&tp, sizeof(zval*)
-						);
-						zend_hash_copy(
-							&prepared->default_static_members, 
-							&candidate->default_static_members,
-							(copy_ctor_func_t) pthreads_preparation_default_properties_ctor,
-							&tp, sizeof(zval*)
-						);
-						prepared->default_properties.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
-						prepared->default_static_members.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
-					}
+					zend_hash_copy(&prepared->default_properties, &candidate->default_properties, (copy_ctor_func_t) pthreads_preparation_default_properties_ctor, &tz, sizeof(zval*));
+					zend_hash_copy(&prepared->default_static_members, &candidate->default_static_members, (copy_ctor_func_t) pthreads_preparation_default_properties_ctor, &tz, sizeof(zval*));
+					prepared->default_properties.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
+					prepared->default_static_members.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
 #else
 					if (candidate->default_properties_count) {
 						int i;
-						prepared->default_properties_table = malloc(
+						prepared->default_properties_table = emalloc(
 							sizeof(zval*) * candidate->default_properties_count
 						);
 						for (i=0; i<candidate->default_properties_count; i++) {
-							prepared->default_properties_table[i]=candidate->default_properties_table[i];
+							prepared->default_properties_table[i]=&EG(uninitialized_zval);
 							if (candidate->default_properties_table[i]) {
-								ALLOC_ZVAL(prepared->default_properties_table[i]);
-								MAKE_COPY_ZVAL(&candidate->default_properties_table[i], prepared->default_properties_table[i]);
-								INIT_PZVAL(prepared->default_properties_table[i]);
+								/* we use real separation for a reason */
+								pthreads_store_separate(
+									candidate->default_properties_table[i],
+									&prepared->default_properties_table[i],
+									1 TSRMLS_CC
+								);
 							}
 						}
 						prepared->default_properties_count = candidate->default_properties_count;
 					}
 					
 					if (candidate->default_static_members_count) {
-						prepared->default_static_members_count = 0;
+						int i;
+						prepared->default_static_members_table = emalloc(
+							sizeof(zval*) * candidate->default_static_members_count
+						);
+						for (i=0; i<candidate->default_static_members_count; i++) {
+							prepared->default_static_members_table[i]=&EG(uninitialized_zval);
+							if (candidate->default_static_members_table[i]) {
+								/* we use real separation for a reason */
+								pthreads_store_separate(
+									candidate->default_static_members_table[i],
+									&prepared->default_static_members_table[i],
+									1 TSRMLS_CC
+								);
+							}
+						}
+						prepared->default_static_members_count = candidate->default_static_members_count;
 					}
+					
+					/* copy user info struct */
+					memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
+					/* no traits: not yet, should be dooooable */
+					prepared->num_traits = 0;
+					prepared->trait_aliases = 0;
+					prepared->trait_precedences = 0;
 #endif
-					/*
-					* Static Properties are pointless and cannot be static in the context of threading
-					*/
 				}
 				
-				/*
-				* Copy Constants
-				*/
-				{
-					zval *tc;
-					zend_hash_copy
-					(
-						&prepared->constants_table,
-						&candidate->constants_table,
-						(copy_ctor_func_t) zval_add_ref,
-						&tc, sizeof(zval*)
-					);
-				}
-				
-#if PHP_VERSION_ID > 50399
-				/*
-				* Copy user info struct
-				*/
-				memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
-#endif
+				/* copy constants */
+				zend_hash_copy(&prepared->constants_table, &candidate->constants_table, (copy_ctor_func_t) zval_add_ref, &tz, sizeof(zval*));
 
-				/*
-				* Adjust refcount such that pthreads is responsible for freeing this entry
-				*/
-				(prepared->refcount)++;
+				/* update class table */
+#if PHP_VERSION_ID > 50399
+				lcname = (char*)zend_new_interned_string(lcname, prepared->name_length+1, 1 TSRMLS_CC);
+				if (IS_INTERNED(lcname)) {
+					 zend_hash_quick_update(CG(class_table), lcname, prepared->name_length+1, INTERNED_HASH(lcname), &prepared, sizeof(zend_class_entry*), NULL);
+				} else zend_hash_update(CG(class_table), lcname, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), NULL);
+#else
+				zend_hash_update(CG(class_table), lcname, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), NULL);
+#endif
 			} else {
 				prepared = *searched;
 			}
-			
+
 			/* free lowercase name buffer */
+#if PHP_VERSION_ID > 50399
+			str_efree(lcname);
+#else
 			free(lcname);
+#endif
 		} else zend_error(E_ERROR, "pthreads has detected a memory error while attempting to prepare %s for execution in %s %lu", candidate->name, thread->std.ce->name, thread->tid);
 	}
 	return prepared;
 } /* }}} */
 
-/* {{{ prepares the current context to execute the referenced thread 
+/* {{{ prepares the current context to execute the referenced thread
 	@NOTE other preparation could take place here, but it shouldn't !
 			pthreads creates and requires objects and nothing else 
 			function tables can get rather large and to loop over it is a waste 
@@ -307,6 +219,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	zend_class_entry **entry;
 	HashTable *source = PTHREADS_CG(thread->cls, class_table);
 	HashTable *destination = CG(class_table);
+	
 	/* give em what they need, and nothing more ... */
 	for(zend_hash_internal_pointer_reset_ex(source, &position);
 		zend_hash_get_current_data_ex(source, (void**) &entry, &position)==SUCCESS;
@@ -314,16 +227,12 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 		char *lcname;
 		uint lcnamel;
 		ulong idx;
-		zend_class_entry *prepared;
 		
 		if (zend_hash_get_current_key_ex(source, &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
 			if (!zend_hash_exists(destination, lcname, lcnamel)){
-				if ((prepared=pthreads_prepared_entry(thread, *entry TSRMLS_CC))!=NULL) {
-					/* we do this to control destruction of the class entries we create */
-					zend_llist_add_element(&(thread->preparation.classes), (void**) &prepared);
-				} else {
+				if (pthreads_prepared_entry(thread, *entry TSRMLS_CC)==NULL) {
 					zend_error_noreturn(
-						E_ERROR, "pthreads detected failure while preparing %s in %s thread: %lu", (*entry)->name, thread->std.ce->name, thread->tid
+						E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
 					);
 					break;
 				}
@@ -343,9 +252,9 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /
 #if PHP_VERSION_ID < 50400
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_ctor(zval **property) {
-	ALLOC_ZVAL(*property);
-	MAKE_COPY_ZVAL(property, *property);
-	INIT_PZVAL(*property);
+	TSRMLS_FETCH();
+	/* we use real separation for a reason */
+	pthreads_store_separate(*property, property, 0 TSRMLS_CC);
 } /* }}} */
 
 /* {{{ default property dtor for 5.3 */
@@ -353,97 +262,5 @@ static void pthreads_preparation_default_properties_dtor(zval *property) {
 	zval_ptr_dtor(&property);
 } /* }}} */
 #endif
-
-/* {{{ construct prepared function 
-	@TODO statics */
-static void pthreads_preparation_function_ctor(zend_function *pfe) {
-	zend_function *function = (zend_function*) pfe;
-	
-	if (function) {
-		if (function->type == ZEND_USER_FUNCTION) {
-#if PHP_VERSION_ID > 50399
-			zend_op_array *ops = &function->op_array;
-			if (ops) {
-				if (ops->run_time_cache) {
-					ops->run_time_cache = NULL;
-				}
-				(*ops->refcount)++;
-			}
-#endif
-		}
-	}
-} /* }}} */
-
-/* {{{ destroy prepared function
-	@TODO statics */
-static void pthreads_preparation_function_dtor(zend_function *pfe) {
-	zend_function *function = (zend_function*) pfe;
-	
-	if (function) {
-		if (function->type == ZEND_USER_FUNCTION) {
-#if PHP_VERSION_ID > 50399
-			zend_op_array *ops = &function->op_array;		
-			if (ops) {
-				if (--(*ops->refcount)>0) {
-					return;
-				}
-				
-				if (ops->run_time_cache) {
-					efree(ops->run_time_cache);
-					ops->run_time_cache = NULL;
-				}
-				
-			}
-#endif
-		}
-	}
-} /* }}} */
-
-/* {{{ destroy prepared classes */
-static void pthreads_preparation_classes_dtor(void **ppce) {
-	zend_class_entry *pce = (zend_class_entry*) *ppce;
-	if(pce) {
-		if (--pce->refcount == 0) {
-#if PHP_VERSION_ID > 50399
-			if (pce->default_properties_count) {
-				int i;
-				for(i=0; i<pce->default_properties_count; i++) {
-					if (pce->default_properties_table[i]) {
-						//zval_dtor(pce->default_properties_table[i]);
-					}
-				}
-				free(pce->default_properties_table);
-			}
-#else
-			zend_hash_destroy(&pce->default_properties);
-#endif
-
-#if PHP_VERSION_ID > 50399
-			if (pce->default_static_members_count) {
-				int i;
-				for(i=0; i<pce->default_static_members_count; i++) {
-					if (pce->default_static_members_table[i]) {
-						zval_ptr_dtor(&pce->default_static_members_table[i]);
-					}
-				}
-				free(pce->default_static_members_table);
-			}
-#else
-			/* we don't use statics but the table is still initialized so must be destroyed */
-			zend_hash_destroy(&pce->default_static_members);
-#endif
-
-			zend_hash_destroy(&pce->properties_info);
-			zend_hash_destroy(&pce->constants_table);
-			zend_hash_destroy(&pce->function_table);
-			
-			if (pce->name) {
-				free((char*)pce->name);
-			}
-			
-			free(pce);
-		}
-	}
-} /* }}} */
 
 #endif

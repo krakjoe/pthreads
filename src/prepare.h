@@ -31,11 +31,4 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 
 /* {{{ prepare for execution in context */
 void pthreads_prepare(PTHREAD thread TSRMLS_DC); /* }}} */
-
-/* {{{ initialize prepared class storage */
-void pthreads_prepare_classes_init(PTHREAD thread TSRMLS_DC); /* }}} */
-
-/* {{{ free prepared classes */
-void pthreads_prepare_classes_free(PTHREAD thread TSRMLS_DC); /* }}} */
-
 #endif
