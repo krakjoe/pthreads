@@ -44,7 +44,7 @@
 #endif
 
 /* {{{ pthreads_globals */
-struct {
+struct _pthreads_globals {
 	/*
 	* Initialized flag
 	*/
@@ -79,7 +79,9 @@ struct {
 	* Next Object Identifier
 	*/
 	ulong nid;
-} pthreads_globals; /* }}} */
+}; /* }}} */
+
+extern struct _pthreads_globals pthreads_globals;
 
 /* {{{ PTHREADS_G */
 #define PTHREADS_G(v) pthreads_globals.v
