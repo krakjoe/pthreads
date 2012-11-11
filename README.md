@@ -18,11 +18,8 @@ This project provides multi-threading that is compatible with PHP based on Posix
 * Synchronized Methods
 * Complete Support for OO - ie. traits, interfaces, inheritance
 * Full read/write/execute support for threaded objects
-
-## Super Geeky Features
-
-* Mutex
-* Conditions
+* Mutex ( direct, subset )
+* Conditions ( direct, subset )
 
 pthreads was written with simplicity, compatibiilty and efficiency in mind, it's performance beggars belief !!
 
