@@ -13,10 +13,16 @@ This project provides multi-threading that is compatible with PHP based on Posix
 ## Technical Features
 
 * Posix Threads
-* Mutex
-* Conditions
 * Synchronization
 * Worker Threads
+* Synchronized Methods
+* Complete Support for OO - ie. traits, interfaces, inheritance
+* Full read/write/execute support for threaded objects
+
+## Super Geeky Features
+
+* Mutex
+* Conditions
 
 pthreads was written with simplicity, compatibiilty and efficiency in mind, it's performance beggars belief !!
 
@@ -30,7 +36,7 @@ Testing has been carried out both on x86 and x64 architechtures with varying har
 
 ### Supported PHP Versions
 
-pthreads should compile and work in any version of PHP from 5.3.0 to 5.4.7, many versions of PHP are used in testing from both 5.3 and 5.4 series
+pthreads should compile and work in any version of PHP from 5.3.0 to the latest release.
 
 ### Windows Support
 
@@ -38,7 +44,7 @@ Yes !! Windows support is offered thanks to the pthread-w32 library. Pre-built b
 
 ### Mac OSX Support
 
-Yes !! It's reported to me that pthreads compiles fine on your machines, I don't have access to a Mac so any reports are very welcome :)
+Yes !! Users of Mac will be glad to hear that pthreads is now tested on OSX as part of the development process.
 
 ### Hello World
 
