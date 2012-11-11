@@ -20,7 +20,8 @@
 
 #include <stdio.h>
 #ifndef _WIN32
-#define _GNU_SOURCE
+#define __USE_UNIX98
+#include <unistd.h>
 #include <pthread.h>
 #include <sys/time.h>
 #else
@@ -29,6 +30,18 @@
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#if defined(PTHREAD_MUTEX_ERRORCHECK)
+#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK
+#elif defined(PTHREAD_MUTEX_ERRORCHECK_NP)
+#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK_NP
+#elif defined(PTHREAD_MUTEX_NORMAL)
+#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_NORMAL
+#elif defined(_WIN32)
+#	define PTHREADS_LOCK_TYPE 0
+#else
+#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK
 #endif
 
 #include <php.h>
@@ -51,18 +64,6 @@
 #include <Zend/zend_variables.h>
 #include <Zend/zend_vm.h>
 #include <TSRM/TSRM.h>
-
-#if defined(PTHREAD_MUTEX_ERRORCHECK)
-#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK
-#elif defined(PTHREAD_MUTEX_ERRORCHECK_NP)
-#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK_NP
-#elif defined(PTHREAD_MUTEX_NORMAL)
-#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_NORMAL
-#elif defined(_WIN32)
-#	define PTHREADS_LOCK_TYPE 0
-#else
-#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK
-#endif
 
 extern zend_class_entry *pthreads_thread_entry;
 extern zend_class_entry *pthreads_worker_entry;
