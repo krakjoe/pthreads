@@ -18,17 +18,18 @@
 #ifndef HAVE_PTHREADS_H
 #define HAVE_PTHREADS_H
 
-#ifdef HAVE_CONFIG_H
-#	include "config.h"
-#endif
-
 #include <stdio.h>
 #ifndef _WIN32
-#include <unistd.h>
+#define _GNU_SOURCE
+#include <pthread.h>
 #include <sys/time.h>
+#else
+#include <pthread.h>
 #endif
 
-#include <pthread.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <php.h>
 #include <php_globals.h>
@@ -60,7 +61,7 @@
 #elif defined(_WIN32)
 #	define PTHREADS_LOCK_TYPE 0
 #else
-#	define PTHREADS_LOCK_TYPE NULL
+#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK
 #endif
 
 extern zend_class_entry *pthreads_thread_entry;
