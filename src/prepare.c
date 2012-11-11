@@ -36,12 +36,14 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi); /* 
 static void pthreads_preparation_default_properties_ctor(zval **property); /* }}} */
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_dtor(zval *property); /* }}} */
+#else
+/* {{{ trail alias copy for 5.4 */
+static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, zend_trait_alias *alias TSRMLS_DC); /* }}} */
+/* {{{ trait precendence for 5.4 */
+static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREAD thread, zend_trait_precedence *precedence TSRMLS_DC); /* }}} */
+/* {{{ method reference copy for traits */
+static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference TSRMLS_DC); /* }}} */
 #endif
-
-/* {{{ empty method entries */
-zend_function_entry	pthreads_empty_methods[] = {
-	{NULL, NULL, NULL}
-}; /* }}} */
 
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC) {
@@ -66,7 +68,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
 				prepared->name = estrndup(candidate->name, candidate->name_length);
 				prepared->name_length = candidate->name_length;
-				prepared->type = ZEND_USER_CLASS;
+				prepared->type = candidate->type;
 				prepared->ce_flags = candidate->ce_flags;
 				
 				/* initialize class data */
@@ -84,11 +86,50 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 						prepared->interfaces[interface] = pthreads_prepared_entry(thread, candidate->interfaces[interface] TSRMLS_CC);
 					prepared->num_interfaces = candidate->num_interfaces;
 				} else prepared->num_interfaces = 0;
-				
-				/* copy user declared significant methods */
+
+#if PHP_VERSION_ID > 50399
+				/* traits */
+				if (candidate->num_traits) {
+					uint trait;
+					prepared->traits = emalloc(sizeof(zend_class_entry*) * candidate->num_traits);
+					for (trait=0; trait<candidate->num_traits; trait++)
+						prepared->traits[trait] = pthreads_prepared_entry(thread, candidate->traits[trait] TSRMLS_CC);
+					prepared->num_traits = candidate->num_traits;
+					
+					if (candidate->trait_aliases) {
+						size_t alias = 0;
+						prepared->trait_aliases = emalloc(sizeof(zend_trait_alias*)*prepared->num_traits);
+						while (candidate->trait_aliases[alias]) {
+							prepared->trait_aliases[alias] = pthreads_preparation_copy_trait_alias(
+								thread, candidate->trait_aliases[alias] TSRMLS_CC
+							);
+							alias++;
+						}
+						prepared->trait_aliases[alias]=NULL;
+					} else prepared->trait_aliases = NULL;
+					
+					if (candidate->trait_precedences) {
+						size_t precedence = 0;
+						prepared->trait_precedences = emalloc(sizeof(zend_trait_precedence*)*prepared->num_traits);
+						while (candidate->trait_precedences[precedence]) {
+							prepared->trait_precedences[precedence] = pthreads_preparation_copy_trait_precedence(
+								thread, candidate->trait_precedences[precedence] TSRMLS_CC
+							);
+							precedence++;
+						}
+						prepared->trait_precedences[precedence]=NULL;
+					} else prepared->trait_precedences = NULL;
+				} else {
+					prepared->num_traits = 0;
+					prepared->trait_aliases = 0;
+					prepared->trait_precedences = 0;
+				}
+#endif
+
+				/* copy uternals ! */
 				{
 					zend_uint umethod = 0;
-					void *usources[9] = {
+					void *usources[11] = {
 						candidate->constructor,
 						candidate->destructor,
 						candidate->clone,
@@ -98,29 +139,33 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 						candidate->create_object,
 						candidate->serialize,
 						candidate->unserialize,
-						candidate->get_iterator
+						candidate->get_iterator,
+						candidate->interface_gets_implemented,
+						candidate->get_static_method
 					};
 					
 					do {
 						if (usources[umethod]) {
 							switch(umethod){
+								/* user internals, I call them uternals */
 								case 0: zend_hash_update(&prepared->function_table, "__construct", sizeof("__construct"), &candidate->constructor, sizeof(zend_function), (void**) &prepared->constructor); break;
 								case 1: zend_hash_update(&prepared->function_table, "__destruct", sizeof("__destruct"), &candidate->destructor, sizeof(zend_function), (void**) &prepared->destructor); break;
 								case 2: zend_hash_update(&prepared->function_table, "__clone", sizeof("__clone"), &candidate->clone, sizeof(zend_function), (void**) &prepared->clone); break;
 								case 3: zend_hash_update(&prepared->function_table, "__serialize", sizeof("__serialize"), &candidate->serialize_func, sizeof(zend_function), (void**) &prepared->serialize_func); break;
 								case 4: zend_hash_update(&prepared->function_table, "__unserialize", sizeof("__unserialize"), &candidate->unserialize_func, sizeof(zend_function), (void**) &prepared->unserialize_func); break;
-								
+								/* handlers */
 								case 5: prepared->create_object = candidate->create_object; break;
 								case 6: prepared->serialize = candidate->serialize; break;
 								case 7: prepared->unserialize = candidate->unserialize; break;
-								case 8: 
-									prepared->get_iterator = candidate->get_iterator; 
+								case 8: {
+									prepared->get_iterator = candidate->get_iterator;
 									prepared->iterator_funcs = candidate->iterator_funcs;
-								break;
-								
+								} break;
+								case 9: prepared->interface_gets_implemented = candidate->interface_gets_implemented; break;
+								case 10: prepared->get_static_method = candidate->get_static_method; break;
 							}
 						}
-					} while(++umethod < 9);
+					} while(++umethod < 11);
 				}
 				
 				/* copy function table */
@@ -178,10 +223,6 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 					
 					/* copy user info struct */
 					memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
-					/* no traits: not yet, should be dooooable */
-					prepared->num_traits = 0;
-					prepared->trait_aliases = 0;
-					prepared->trait_precedences = 0;
 #endif
 				}
 				
@@ -269,6 +310,62 @@ static void pthreads_preparation_default_properties_ctor(zval **property) {
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_dtor(zval *property) {
 	zval_ptr_dtor(&property);
+} /* }}} */
+#else
+/* {{{ trail alias copy for 5.4 */
+static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, zend_trait_alias *alias TSRMLS_DC) {
+	zend_trait_alias *copy = emalloc(sizeof(zend_trait_alias));
+	if (copy) {
+		copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, alias->trait_method TSRMLS_CC);
+		copy->alias = estrndup(alias->alias, alias->alias_len);
+		copy->alias_len = alias->alias_len;
+		copy->modifiers = alias->modifiers;
+		copy->function = alias->function;
+	}
+	return copy;
+} /* }}} */
+
+/* {{{ trait precendence for 5.4 */
+static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREAD thread, zend_trait_precedence *precedence TSRMLS_DC) {
+	zend_trait_precedence *copy = emalloc(sizeof(zend_trait_precedence));
+	if (copy) {
+		copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, precedence->trait_method TSRMLS_CC);
+		if (precedence->exclude_from_classes) {
+			size_t exclude = 0;
+			copy->exclude_from_classes = emalloc(sizeof(zend_class_entry**));
+			while (precedence->exclude_from_classes[exclude]) {
+				copy->exclude_from_classes[exclude] = pthreads_prepared_entry(
+					thread, precedence->exclude_from_classes[exclude] TSRMLS_CC
+				);
+				exclude++;
+			}
+			precedence->exclude_from_classes[exclude]=NULL;
+		}
+		copy->function = precedence->function;
+	}
+	return copy;
+} /* }}} */
+
+/* {{{ method reference copy for traits */
+static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference TSRMLS_DC) {
+	zend_trait_method_reference *copy = emalloc(sizeof(zend_trait_method_reference));
+	if (copy) {
+		copy->mname_len = reference->mname_len;
+		copy->method_name = estrndup(
+			reference->method_name, 
+			copy->mname_len
+		);
+		copy->cname_len = reference->cname_len;
+		copy->class_name = estrndup(
+			reference->class_name, 
+			copy->cname_len
+		);
+		
+		copy->ce = pthreads_prepared_entry(
+			thread, reference->ce TSRMLS_CC
+		);
+	}
+	return copy;
 } /* }}} */
 #endif
 
