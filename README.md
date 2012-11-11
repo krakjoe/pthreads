@@ -83,8 +83,6 @@ you can in Java or .NET, or any other language ( perhaps ), and as a result, you
 
 No restrictions here, you should have no problem running pthreads in your chosen SAPI.
 
-You should bear in mind that in a SAPI environment your threads cannot write the standard output or read the standard input of the serving process, this may be obvious to some of you, but being a new subject probably worth mentioning.
-
 ### Documentation
 
 Documentation can be found on http://pthreads.org, and some examples can be found in the "examples" folder in the master repository.
