@@ -14,8 +14,10 @@ class ThreadTest extends Thread {
 	}
 }
 $thread = new ThreadTest();
-if($thread->start())
+if($thread->start()) {
+	$thread->join();
 	var_dump($thread->objectTest());
+}
 ?>
 --EXPECT--
 int(1)
