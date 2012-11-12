@@ -301,7 +301,7 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /
 #if PHP_VERSION_ID < 50400
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_ctor(zval **property) {
-	zval_add_ref(*property);
+	
 } /* }}} */
 
 /* {{{ default property dtor for 5.3 */
