@@ -98,6 +98,9 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
 /* {{{ fetches the current PTHREAD from $this */
 #define PTHREADS_FETCH (PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC) /* }}} */
 
+/* {{{ fetches a PTHREAD from object store using handle */
+#define PTHREADS_FROM_HANDLE(h) (PTHREAD) zend_object_store_get_object_by_handle(h TSRMLS_CC) /* }}} */
+
 /* {{{ handlers included here for access to macros above */
 #ifndef HAVE_PTHREADS_HANDLERS_H
 #	include <src/handlers.h>

@@ -206,7 +206,7 @@ PHP_METHOD(Thread, join)
 	/*
 	* Check that we are in the correct context
 	*/
-	if (PTHREADS_IN_CREATOR(thread)) {
+	if (PTHREADS_IS_NOT_CONNECTION(thread)) {
 		/*
 		* Ensure this thread was started
 		*/

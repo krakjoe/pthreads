@@ -1,9 +1,35 @@
+/*
+  +----------------------------------------------------------------------+
+  | pthreads                                                             |
+  +----------------------------------------------------------------------+
+  | Copyright (c) Joe Watkins 2012                               		 |
+  +----------------------------------------------------------------------+
+  | This source file is subject to version 3.01 of the PHP license,      |
+  | that is bundled with this package in the file LICENSE, and is        |
+  | available through the world-wide-web at the following url:           |
+  | http://www.php.net/license/3_01.txt                                  |
+  | If you did not receive a copy of the PHP license and are unable to   |
+  | obtain it through the world-wide-web, please send a note to          |
+  | license@php.net so we can mail you a copy immediately.               |
+  +----------------------------------------------------------------------+
+  | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
+  +----------------------------------------------------------------------+
+*/
+PTHREADS_EXT_NAME="pthreads";
+PTHREADS_EXT_SRC="lock.c globals.c prepare.c synchro.c state.c store.c modifiers.c handlers.c object.c";
+PTHREADS_EXT_DIR="ext/pthreads/src";
+PTHREADS_EXT_API="php_pthreads.c";
+PTHREADS_EXT_FLAGS="/I" + configure_module_dirname;
+PTHREADS_EXT_DEP="pthreadVC2.lib";
+/* --------------------------------------------------------------------- */
 ARG_ENABLE("pthreads", "for pthreads support", "no");
+
 if (PHP_PTHREADS != "no") {
-	CHECK_LIB("pthreadVC2.lib", "pthreads", PHP_PTHREADS);
-	EXTENSION("pthreads", "php_pthreads.c", true, "/I" + configure_module_dirname);
+	CHECK_LIB(PTHREADS_EXT_DEP, PTHREADS_EXT_NAME, PHP_PTHREADS);
+	EXTENSION(PTHREADS_EXT_NAME, PTHREADS_EXT_API, PHP_PTHREADS_SHARED, PTHREADS_EXT_FLAGS);
 	ADD_SOURCES(
-		"ext/pthreads/src",
-		"lock.c globals.c prepare.c synchro.c state.c store.c modifiers.c handlers.c object.c", "pthreads"
+		PTHREADS_EXT_DIR,
+		PTHREADS_EXT_SRC, 
+		PTHREADS_EXT_NAME
 	);
 }

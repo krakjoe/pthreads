@@ -375,13 +375,14 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 #else
 		object_properties_init(&(base->std), entry);
 #endif	
+		base->cls = tsrm_ls;
+		
 		if (PTHREADS_IS_CONNECTION(base)) {
 			base->tid = pthreads_self();
 			base->tls = tsrm_ls;
 		} else {
 			base->target = 0L;
 			base->cid = pthreads_self();
-			base->cls = tsrm_ls;
 			base->lock = pthreads_lock_alloc(TSRMLS_C);
 			base->state = pthreads_state_alloc(0 TSRMLS_CC);
 			base->synchro = pthreads_synchro_alloc(TSRMLS_C);
@@ -515,12 +516,14 @@ int pthreads_join(PTHREAD thread TSRMLS_DC) {
 int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *blength, zend_serialize_data *data TSRMLS_DC) {
 	PTHREAD threaded = PTHREADS_FETCH_FROM(object);
 	if (threaded) {
-		(*buffer) = (unsigned char*) emalloc(64);
+		/* long numbers can be pretty long */
+		(*buffer) = (unsigned char*) emalloc(128);
 		if ((*buffer)) {
 			(*blength) = sprintf(
 				(char*) (*buffer), 
-				"%lu", 
-				(threaded->target > 0L) ? threaded->target : threaded->gid
+				"%lu:%lu", 
+				(threaded->target > 0L) ? threaded->target : threaded->gid,
+				(long) threaded
 			)+1;
 			return SUCCESS;
 		}
@@ -531,9 +534,10 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 /* {{{ connects to an instance of a threaded object */
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC) {
 	ulong target;
-	if (sscanf((char*)buffer, "%lu", &target)) {
-		PTHREAD source = pthreads_globals_fetch(target TSRMLS_CC);
-		if (source) {
+	PTHREAD source = NULL;
+	
+	if (sscanf((char*)buffer, "%lu:%lu", &target, &source)) {
+		if (source || (source = pthreads_globals_fetch(target TSRMLS_CC))) {
 			if (object_init_ex(
 				*object, pthreads_prepared_entry(source, ce TSRMLS_CC)
 			)==SUCCESS) {
