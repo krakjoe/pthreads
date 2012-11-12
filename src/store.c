@@ -141,13 +141,13 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 /* {{{ seperate a zval using internals */
 int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate TSRMLS_DC) {
 	int result = FAILURE;
-	if (pzval) {
-		pthreads_storage storage = pthreads_store_create(pzval TSRMLS_CC);
+	pthreads_storage storage;
+	
+	if (pzval) {	
+		storage = pthreads_store_create(pzval TSRMLS_CC);
 		if (storage) {
-			if (allocate) {
+			if (allocate)
 				MAKE_STD_ZVAL(*separated);
-			}
-				
 			result = pthreads_store_convert(
 				storage, *separated TSRMLS_CC
 			);
@@ -182,7 +182,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength 
 	
 	if (psmart) {
 		php_serialize_data_t vars;
-		PHP_VAR_SERIALIZE_INIT(vars);	
+		PHP_VAR_SERIALIZE_INIT(vars);
 		php_var_serialize(							
 			psmart, 
 			&pzval, 
@@ -212,6 +212,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength 
 /* {{{ string to zval */
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC) {
 	int result = SUCCESS;
+	ulong refcount = Z_REFCOUNT_P(pzval);
 	if (pstring) {
 		const unsigned char* pointer = (const unsigned char*) pstring;
 		if (pointer) {
@@ -227,6 +228,8 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 				}							
 				PHP_VAR_UNSERIALIZE_DESTROY(vars);
 			}
+			if (pzval && refcount)
+				Z_SET_REFCOUNT_P(pzval, refcount);
 		} else result = FAILURE;
 	} else result = FAILURE;
 	
@@ -289,6 +292,7 @@ static pthreads_storage pthreads_store_create(zval *unstore TSRMLS_DC){
 /* {{{ Will unstoreize data into the allocated zval passed */
 static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_DC){
 	int result = SUCCESS;
+	ulong refcount = Z_REFCOUNT_P(pzval);
 	
 	if (storage) {
 		switch(storage->type) {
@@ -315,8 +319,8 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			default: ZVAL_NULL(pzval);
 		}
 		
-		if (Z_TYPE_P(pzval)!=IS_NULL)
-			Z_ADDREF_P(pzval);
+		if (Z_TYPE_P(pzval)!=IS_NULL && refcount)
+			Z_SET_REFCOUNT_P(pzval, refcount);
 	}
 	return result;
 }

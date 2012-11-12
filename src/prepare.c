@@ -48,7 +48,7 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC) {
 	zend_class_entry *prepared = NULL, **searched = NULL;
-
+	
 	if (candidate) {
 #if PHP_VERSION_ID > 50399
 		char *lcname = (char*) emalloc(candidate->name_length+1);
@@ -189,7 +189,6 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 							sizeof(zval*) * candidate->default_properties_count
 						);
 						for (i=0; i<candidate->default_properties_count; i++) {
-							prepared->default_properties_table[i]=&EG(uninitialized_zval);
 							if (candidate->default_properties_table[i]) {
 								/* we use real separation for a reason */
 								pthreads_store_separate(
@@ -197,18 +196,18 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 									&prepared->default_properties_table[i],
 									1 TSRMLS_CC
 								);
-							}
+							} else prepared->default_properties_table[i] = NULL;
 						}
 						prepared->default_properties_count = candidate->default_properties_count;
-					}
+					} else prepared->default_properties_count = 0;
 					
 					if (candidate->default_static_members_count) {
 						int i;
 						prepared->default_static_members_table = emalloc(
 							sizeof(zval*) * candidate->default_static_members_count
 						);
-						for (i=0; i<candidate->default_static_members_count; i++) {
-							prepared->default_static_members_table[i]=&EG(uninitialized_zval);
+						prepared->default_static_members_count = candidate->default_static_members_count;
+						for (i=0; i<prepared->default_static_members_count; i++) {
 							if (candidate->default_static_members_table[i]) {
 								/* we use real separation for a reason */
 								pthreads_store_separate(
@@ -216,10 +215,10 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 									&prepared->default_static_members_table[i],
 									1 TSRMLS_CC
 								);
-							}
+							} else prepared->default_static_members_table[i]=NULL;
 						}
-						prepared->default_static_members_count = candidate->default_static_members_count;
-					}
+						prepared->static_members_table = prepared->default_static_members_table;
+					} else prepared->default_static_members_count = 0;
 					
 					/* copy user info struct */
 					memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
@@ -302,9 +301,7 @@ static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /
 #if PHP_VERSION_ID < 50400
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_ctor(zval **property) {
-	TSRMLS_FETCH();
-	/* we use real separation for a reason */
-	pthreads_store_separate(*property, property, 0 TSRMLS_CC);
+	zval_add_ref(*property);
 } /* }}} */
 
 /* {{{ default property dtor for 5.3 */
