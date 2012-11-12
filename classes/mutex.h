@@ -18,6 +18,7 @@
 #ifndef HAVE_PTHREADS_CLASS_MUTEX_H
 #define HAVE_PTHREADS_CLASS_MUTEX_H
 
+
 PHP_METHOD(Mutex, create);
 PHP_METHOD(Mutex, lock);
 PHP_METHOD(Mutex, trylock);

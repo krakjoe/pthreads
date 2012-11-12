@@ -16,13 +16,14 @@ class ThreadTesting extends Thread {
 			printf("%s\n", __METHOD__);
 		}
 		$this->isDone(true);
-		$this->notify();
 	}
 	
+	/* we are just ensuring the correct order of output */
+	/* else the tests fail */
 	protected function isDone($done = null) {
-		if ($done === null)
+		if (!$done)
 			return $this->done;
-		return ($this->done = $done);
+		return ($this->done = $this->notify());
 	}
 }
 
@@ -38,13 +39,13 @@ class ThreadTest extends Thread {
 			printf("%s\n", __METHOD__);
 		}
 		$this->isDone(true);
-		$this->notify();
 	}
-	
+	/* we are just ensuring the correct order of output */
+	/* else the tests fail */
 	protected function isDone($done = null) {
-		if ($done === null)
+		if (!$done)
 			return $this->done;
-		return ($this->done = $done);
+		return ($this->done = $this->notify());
 	}
 }
 

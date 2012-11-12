@@ -5,9 +5,16 @@ This test will verify wait/notify functionality
 --FILE--
 <?php
 class ThreadTest extends Thread {
+	public $sent;
 	public function run(){
-		$this->sent = $this->notify();
-		var_dump($this->sent);
+		$this->isSent(true);
+	}
+	
+	/* good use of protection ! kudos, me !! */
+	protected function isSent($flag = null) {
+		if ($flag === null) {
+			return $this->sent;
+		} else return ($this->sent = $this->notify());
 	}
 }
 $thread = new ThreadTest();
@@ -15,28 +22,18 @@ if($thread->start()) {
 	/* 
 		you only ever wait FOR something !
 	*/
-	if (!$thread->sent) {
+	if (!$thread->isSent()) {
 		var_dump($thread->wait());
 	} else printf("bool(true)\n");
 	
-	/* 
-		note that:
-			joining is necessary to check the value of sent
-			by this point in the execution we have been notified
-			or sent is set ( so no need to wait )
-			but zend may not have yet assigned the resutlt of the call
-			to notify to the variable in the thread
-			joining here ensures that you get the value set in the thread
-			and is only necessary because we are checking that value
-	*/
-	$thread->join();
-	
-	/* test that notification was sent by checking 
-		the result of the call to notify from the threading context */
-	var_dump($thread->sent);
+	/* note that: this works because of protection */
+	/* without protection, notify in the other thread can cause the process to continue */
+	/* without the other thread having set the value of "sent" */
+	/* the call to notify is made in the same protected method that writes the variable */
+	/* and this thread uses that same method to access the variable */
+	var_dump($thread->isSent());
 } else printf("bool(false)\n");
 ?>
 --EXPECT--
-bool(true)
 bool(true)
 bool(true)
