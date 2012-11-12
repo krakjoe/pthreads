@@ -65,7 +65,7 @@ struct _pthreads_globals {
 	/*
 	* Objects
 	*/
-	zend_llist objects;
+	TsHashTable objects;
 	
 	/*
 	* Next Object Identifier
@@ -92,10 +92,10 @@ void pthreads_globals_unlock(zend_bool locked TSRMLS_DC); /* }}} */
 size_t pthreads_globals_count(TSRMLS_D); /* }}} */
 
 /* {{{ push an object into global list */
-void pthreads_globals_add(PTHREAD thread TSRMLS_DC); /* }}} */
+void pthreads_globals_add(PTHREAD pobject TSRMLS_DC); /* }}} */
 
 /* {{{ pop an object from global list */
-void pthreads_globals_del(PTHREAD thread TSRMLS_DC); /* }}} */
+void pthreads_globals_del(PTHREAD pobject TSRMLS_DC); /* }}} */
 
 /* {{{ get peak number of accessible objects */
 long pthreads_globals_peak(TSRMLS_D); /* }}} */

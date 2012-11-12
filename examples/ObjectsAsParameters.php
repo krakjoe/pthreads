@@ -59,12 +59,10 @@ class Request extends Thread {
 		* Referencing the object context on every call will have no adverse affects ( no leaks/errors )
 		* The hints above are best practices but not required.
 		*/
-		if(($response = $this->response)){
-			if($response->getUrl()){
-				$response->setStart(microtime(true));
-				$response->setData(file_get_contents($response->url));
-				$response->setFinish(microtime(true));
-			}
+		if($this->response->getUrl()){
+			$this->response->setStart(microtime(true));
+			$this->response->setData(file_get_contents($this->response->getUrl()));
+			$this->response->setFinish(microtime(true));
 		}
 	}
 }
