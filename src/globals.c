@@ -22,6 +22,10 @@
 #	include <src/globals.h>
 #endif
 
+#ifndef HAVE_PTHREADS_OBJECT_H
+#	include <src/object.h>
+#endif
+
 struct _pthreads_globals pthreads_globals;
 
 /* {{{ pthreads_globals_init */
@@ -32,7 +36,10 @@ void pthreads_globals_init(TSRMLS_D){
 		PTHREADS_G(nid)=1;
 		PTHREADS_G(max)=INI_INT("pthreads.max");
 		PTHREADS_G(lock)=pthreads_lock_alloc(TSRMLS_C);
-		zend_ts_hash_init(&PTHREADS_G(objects), 10, NULL, NULL, 1);
+		/* trying something with global lists, work in progress */
+		zend_ts_hash_init(
+			&PTHREADS_G(objects), 10, NULL, NULL, 1
+		);
 	}
 } /* }}} */
 

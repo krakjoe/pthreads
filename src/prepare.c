@@ -264,26 +264,62 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 			scripts it doesn't make a difference if you pass around big arrays like _GLOBALS 
 			in pthreads it does ! */
 void pthreads_prepare(PTHREAD thread TSRMLS_DC){
-	HashPosition position;
-	zend_class_entry **entry;
-	HashTable *source = PTHREADS_CG(thread->cls, class_table);
-	HashTable *destination = CG(class_table);
-	
-	/* give em what they need, and nothing more ... */
-	for(zend_hash_internal_pointer_reset_ex(source, &position);
-		zend_hash_get_current_data_ex(source, (void**) &entry, &position)==SUCCESS;
-		zend_hash_move_forward_ex(source, &position)) {
-		char *lcname;
-		uint lcnamel;
-		ulong idx;
+	{
+		zend_ini_entry *entry[2];
+		HashPosition position;
+		HashTable *source = PTHREADS_EG(thread->cls, ini_directives);
+		HashTable *destination = EG(ini_directives);
 		
-		if (zend_hash_get_current_key_ex(source, &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
-			if (!zend_hash_exists(destination, lcname, lcnamel)){
-				if (pthreads_prepared_entry(thread, *entry TSRMLS_CC)==NULL) {
-					zend_error_noreturn(
-						E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
-					);
-					break;
+		/* inherit ini entries from parent ... */
+		for(zend_hash_internal_pointer_reset_ex(source, &position);
+			zend_hash_get_current_data_ex(source, (void**) &entry[0], &position)==SUCCESS;
+			zend_hash_move_forward_ex(source, &position)) {
+			char *setting;
+			uint slength;
+			ulong idx;
+			if ((zend_hash_get_current_key_ex(source, &setting, &slength, &idx, 0, &position)==HASH_KEY_IS_STRING) &&
+				(zend_hash_find(destination, setting, slength, (void**) &entry[1])==SUCCESS)) {
+				if (((entry[0]->value && entry[1]->value) && (strcmp(entry[0]->value, entry[1]->value) != 0)) || entry[0]->value) {
+					entry[1]->orig_value = entry[1]->value;
+					entry[1]->orig_value_length = entry[1]->orig_value_length;
+					entry[1]->orig_modifiable = entry[1]->modifiable;
+					entry[1]->value = estrndup(entry[0]->value, entry[0]->value_length);
+					entry[1]->value_length = entry[0]->value_length;
+					entry[1]->modified = 1;
+					
+					if (!EG(modified_ini_directives)) {
+						ALLOC_HASHTABLE(EG(modified_ini_directives));
+						zend_hash_init(EG(modified_ini_directives), 8, NULL, NULL, 0);
+					}
+					
+					zend_hash_add(EG(modified_ini_directives), setting, slength, (void**) &entry[1], sizeof(zend_ini_entry*), NULL);
+				}
+			}
+		}
+	}
+	
+	{
+		HashPosition position;
+		zend_class_entry **entry;
+		HashTable *source = PTHREADS_CG(thread->cls, class_table);
+		HashTable *destination = CG(class_table);
+		
+		/* inherit class table from parent ... */
+		for(zend_hash_internal_pointer_reset_ex(source, &position);
+			zend_hash_get_current_data_ex(source, (void**) &entry, &position)==SUCCESS;
+			zend_hash_move_forward_ex(source, &position)) {
+			char *lcname;
+			uint lcnamel;
+			ulong idx;
+			
+			if (zend_hash_get_current_key_ex(source, &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
+				if (!zend_hash_exists(destination, lcname, lcnamel)){
+					if (pthreads_prepared_entry(thread, *entry TSRMLS_CC)==NULL) {
+						zend_error_noreturn(
+							E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
+						);
+						break;
+					}
 				}
 			}
 		}
