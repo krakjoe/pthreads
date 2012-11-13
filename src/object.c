@@ -269,7 +269,7 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 	if (thread) {
 		thread->scope = PTHREADS_SCOPE_THREAD;
 		pthreads_base_ctor(thread, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
+		thread->handle = attach.handle = zend_objects_store_put(
 			thread,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
@@ -287,7 +287,7 @@ zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 	if (worker) {
 		worker->scope = PTHREADS_SCOPE_WORKER;
 		pthreads_base_ctor(worker, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
+		worker->handle = attach.handle = zend_objects_store_put(
 			worker,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
@@ -305,7 +305,7 @@ zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 	if (stackable) {
 		stackable->scope = PTHREADS_SCOPE_STACKABLE;
 		pthreads_base_ctor(stackable, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
+		stackable->handle = attach.handle = zend_objects_store_put(
 			stackable,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
@@ -480,6 +480,7 @@ int pthreads_start(PTHREAD thread TSRMLS_DC) {
 			started = pthread_create(&thread->thread, NULL, pthreads_routine, (void*)thread);
 			if (started == SUCCESS) 
 				pthreads_state_wait(thread->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+			zend_objects_store_add_ref(EG(This) TSRMLS_CC);
 			pthreads_lock_release(thread->lock, tlocked TSRMLS_CC);
 		}
 	}

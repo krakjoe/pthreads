@@ -111,6 +111,11 @@ typedef struct _pthread_construct {
 	* Work List
 	*/
 	pthreads_stack stack;
+	
+	/*
+	* Object Store Handle
+	*/
+	zend_object_handle handle;
 } *PTHREAD;
 
 /* {{{ comparison function */
