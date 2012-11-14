@@ -18,18 +18,17 @@
 #ifndef HAVE_PTHREADS_H
 #define HAVE_PTHREADS_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #ifndef _WIN32
 #define __USE_UNIX98
-#include <unistd.h>
 #include <pthread.h>
 #include <sys/time.h>
 #else
 #include <pthread.h>
-#endif
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
 #endif
 
 #if defined(PTHREAD_MUTEX_ERRORCHECK)

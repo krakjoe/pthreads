@@ -43,12 +43,12 @@ pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
 
 zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC) {
 	if (lock) {
-		if (!lock->owner || lock->owner != TSRMLS_C){
+		if (!TSRMLS_C || lock->owner != TSRMLS_C){
 			int locked, result = pthread_mutex_lock(&lock->mutex);
-
 			switch (result) {
 				case SUCCESS: locked = (((*acquired)=1)==1); break;
 				case EDEADLK: locked = (((*acquired)=0)==0); break;
+				
 				default: {
 					zend_error_noreturn(
 						E_ERROR, "pthreads has experienced an internal error while acquiring lock @ %p and cannot continue", lock
@@ -58,8 +58,7 @@ zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_D
 			}
 			
 			if (locked)
-				lock->owner = TSRMLS_C;
-				
+				lock->owner = tsrm_ls;
 			return locked;
 		} else return (((*acquired)=0)==0);
 	} else return (((*acquired)=0)==1);
@@ -70,7 +69,10 @@ zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC
 		if (acquired) {
 			int result = pthread_mutex_unlock(&lock->mutex);
 			switch (result) {
-				case SUCCESS: return 1;
+				case SUCCESS: 
+					lock->owner = NULL;
+				return 1;
+				
 				default: {
 					zend_error_noreturn(
 						E_ERROR, 

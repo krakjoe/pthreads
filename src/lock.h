@@ -24,7 +24,8 @@
 
 typedef struct {
 	pthread_mutex_t mutex;
-	void ***owner;
+	void*** 		owner;
+	
 } *pthreads_lock;
 
 pthreads_lock pthreads_lock_alloc(TSRMLS_D);
