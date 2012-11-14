@@ -43,6 +43,12 @@ typedef struct _pthreads_stack {
 	zend_llist objects;
 } *pthreads_stack; /* }}} */
 
+/* {{{ address structure */
+typedef struct _pthreads_address {
+	unsigned char *serial;
+	size_t length;
+} *pthreads_address; /* }}} */
+
 /* {{{ thread structure */
 typedef struct _pthread_construct {
 	/*
@@ -59,16 +65,6 @@ typedef struct _pthread_construct {
 	* Thread Scope
 	*/
 	int scope;
-	
-	/*
-	* Global Object Identity
-	*/
-	ulong gid;
-	
-	/*
-	* Target Identity
-	*/
-	ulong target;
 	
 	/*
 	* Thread Identity and LS
@@ -113,9 +109,9 @@ typedef struct _pthread_construct {
 	pthreads_stack stack;
 	
 	/*
-	* Object Store Handle
+	* Thread Address
 	*/
-	zend_object_handle handle;
+	pthreads_address address;
 } *PTHREAD;
 
 /* {{{ comparison function */
@@ -167,28 +163,5 @@ static inline ulong pthreads_self() {
 
 /* {{{ tell if the referenced thread is the threading context */
 #define PTHREADS_IN_THREAD(t)	(t->tls == tsrm_ls) /* }}} */
-
-/* {{{ begin a loop over a list of threads */
-#define PTHREADS_LIST_BEGIN_LOOP(l, s) \
-	zend_llist_position position;\
-	PTHREAD *pointer;\
-	if ((pointer = (PTHREAD*) zend_llist_get_first_ex(l, &position))!=NULL) {\
-			do {\
-				(s) = (*pointer);
-/* }}} */
-
-/* {{{ end a loop over a list of threads */
-#define PTHREADS_LIST_END_LOOP(l, s) \
-	} while((pointer = (PTHREAD*) zend_llist_get_next_ex(l, &position))!=NULL);\
-		} else zend_error(E_WARNING, "pthreads has not yet created any threads, nothing to search");
-/* }}} */
-
-/* {{{ insert an item into a list of threads */
-#define PTHREADS_LIST_INSERT(l, t) zend_llist_add_element(l, &t)
-/* }}} */
-
-/* {{{ remove an item from a list of threads */
-#define PTHREADS_LIST_REMOVE(l, t) zend_llist_del_element(l, &t, (int (*)(void *, void *)) pthreads_equal_func);
-/* }}} */
 
 #endif /* }}} */ /* HAVE_PTHREADS_THREAD_H */

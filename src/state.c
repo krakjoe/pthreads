@@ -33,7 +33,7 @@
 
 /* {{{ allocate state object */
 pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
-	pthreads_state state = calloc(1, sizeof(*state));
+	pthreads_state state = emalloc(sizeof(*state));
 	if (state != NULL) {
 		state->bits |= mask;
 		if (!(state->lock = pthreads_lock_alloc(TSRMLS_C)))
@@ -49,7 +49,7 @@ pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 void pthreads_state_free(pthreads_state state TSRMLS_DC) {
 	pthreads_lock_free(state->lock TSRMLS_CC);
 	pthreads_synchro_free(state->synchro TSRMLS_CC);
-	free(state);
+	efree(state);
 } /* }}} */
 
 /* {{{ lock state */

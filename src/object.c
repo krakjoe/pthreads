@@ -265,11 +265,11 @@ size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
 /* {{{ thread object constructor */
 zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD thread = calloc(1, sizeof(*thread));
+	PTHREAD thread = emalloc(sizeof(*thread));
 	if (thread) {
 		thread->scope = PTHREADS_SCOPE_THREAD;
 		pthreads_base_ctor(thread, entry TSRMLS_CC);
-		thread->handle = attach.handle = zend_objects_store_put(
+		attach.handle = zend_objects_store_put(
 			thread,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
@@ -283,11 +283,11 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 /* {{{ worker object constructor */
 zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD worker = calloc(1, sizeof(*worker));
+	PTHREAD worker = emalloc(sizeof(*worker));
 	if (worker) {
 		worker->scope = PTHREADS_SCOPE_WORKER;
 		pthreads_base_ctor(worker, entry TSRMLS_CC);
-		worker->handle = attach.handle = zend_objects_store_put(
+		attach.handle = zend_objects_store_put(
 			worker,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
@@ -301,11 +301,11 @@ zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 /* {{{ stackable object constructor */
 zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD stackable = calloc(1, sizeof(*stackable));
+	PTHREAD stackable = emalloc(sizeof(*stackable));
 	if (stackable) {
 		stackable->scope = PTHREADS_SCOPE_STACKABLE;
 		pthreads_base_ctor(stackable, entry TSRMLS_CC);
-		stackable->handle = attach.handle = zend_objects_store_put(
+		attach.handle = zend_objects_store_put(
 			stackable,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
@@ -320,7 +320,6 @@ zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
-			pthreads_globals_del(destination TSRMLS_CC);
 			pthreads_lock_free(destination->lock TSRMLS_CC);
 			pthreads_state_free(destination->state  TSRMLS_CC);
 			pthreads_modifiers_free(destination->modifiers TSRMLS_CC);
@@ -328,12 +327,13 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 			pthreads_synchro_free(destination->synchro TSRMLS_CC);
 			
 			if (PTHREADS_IS_WORKER(destination)) {
-				zend_llist_destroy(&destination->stack->objects);
-				free(destination->stack);
+				zend_llist_destroy(
+					&destination->stack->objects
+				);
+				efree(destination->stack);
 			}
 			
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
-			destination->target = source->gid;
 			return pthreads_connect
 			(
 				source,
@@ -345,6 +345,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 		destination->tid = source->tid;
 		destination->tls = source->tls;
 		destination->cid = source->cid;
+		destination->address = source->address;
 		
 		destination->lock = source->lock;
 		destination->state = source->state;
@@ -376,12 +377,11 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 		object_properties_init(&(base->std), entry);
 #endif	
 		base->cls = tsrm_ls;
-		
+		base->address = NULL;
 		if (PTHREADS_IS_CONNECTION(base)) {
 			base->tid = pthreads_self();
 			base->tls = tsrm_ls;
 		} else {
-			base->target = 0L;
 			base->cid = pthreads_self();
 			base->lock = pthreads_lock_alloc(TSRMLS_C);
 			base->state = pthreads_state_alloc(0 TSRMLS_CC);
@@ -391,12 +391,10 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
-				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
+				base->stack = (pthreads_stack) emalloc(sizeof(*base->stack));
 				if (base->stack)
 					zend_llist_init(&base->stack->objects, sizeof(void**), NULL, 1);
 			}
-			
-			pthreads_globals_add(base TSRMLS_CC);
 		}
 	}
 } /* }}} */
@@ -412,15 +410,25 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 				pthreads_join(base TSRMLS_CC);
 			}
 		}
-		pthreads_globals_del(base TSRMLS_CC);
+		
 		pthreads_lock_free(base->lock TSRMLS_CC);
 		pthreads_state_free(base->state  TSRMLS_CC);
 		pthreads_modifiers_free(base->modifiers TSRMLS_CC);
 		pthreads_store_free(base->store TSRMLS_CC);
 		pthreads_synchro_free(base->synchro TSRMLS_CC);
+		
 		if (PTHREADS_IS_WORKER(base)) {
-			zend_llist_destroy(&base->stack->objects);
-			free(base->stack);
+			zend_llist_destroy(
+				&base->stack->objects
+			);
+			efree(base->stack);
+		}
+		
+		if (base->address) {
+			if (base->address->serial) {
+				efree(base->address->serial);
+			}
+			efree(base->address);
 		}
 	}
 	
@@ -452,7 +460,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 static void pthreads_base_free(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 	if (base) {
-		free(base);
+		efree(base);
 	}
 } /* }}} */
 
@@ -516,34 +524,43 @@ int pthreads_join(PTHREAD thread TSRMLS_DC) {
 int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *blength, zend_serialize_data *data TSRMLS_DC) {
 	PTHREAD threaded = PTHREADS_FETCH_FROM(object);
 	if (threaded) {
-		/* long numbers can be pretty long */
-		(*buffer) = (unsigned char*) emalloc(128);
-		if ((*buffer)) {
-			(*blength) = sprintf(
-				(char*) (*buffer), 
-				"%lu:%lu", 
-				(threaded->target > 0L) ? threaded->target : threaded->gid,
-				(long) threaded
-			)+1;
-			return SUCCESS;
+		if (!threaded->address) {
+			threaded->address = (pthreads_address) emalloc(sizeof(*(threaded->address)));
+			if (threaded->address) {
+				/* add the space for null here, once */
+				threaded->address->length = snprintf(
+					NULL, 0, "%lu", (long) threaded
+				)+1;
+				if (threaded->address->length) {
+					threaded->address->serial = emalloc(threaded->address->length);
+					if (threaded->address->serial) {
+						sprintf(
+							threaded->address->serial, "%lu", (long) threaded
+						);
+					} else return FAILURE;
+				}
+			} else return FAILURE;
 		}
+		
+		(*buffer) = estrndup((char*)threaded->address->serial, threaded->address->length);
+		(*blength) = threaded->address->length;
+		
+		return SUCCESS;
 	}
 	return FAILURE;
 } /* }}} */
 
 /* {{{ connects to an instance of a threaded object */
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC) {
-	ulong target;
-	PTHREAD source = NULL;
-	
-	if (sscanf((char*)buffer, "%lu:%lu", &target, &source)) {
-		if (source || (source = pthreads_globals_fetch(target TSRMLS_CC))) {
+	PTHREAD address = NULL;
+	if (sscanf((char*)buffer, "%lu", &address)) {
+		if (address) {
 			if (object_init_ex(
-				*object, pthreads_prepared_entry(source, ce TSRMLS_CC)
+				*object, pthreads_prepared_entry(address, ce TSRMLS_CC)
 			)==SUCCESS) {
 				PTHREAD destination = PTHREADS_FETCH_FROM(*object);
 				if (pthreads_connect(
-					source, destination TSRMLS_CC
+					address, destination TSRMLS_CC
 				)==SUCCESS) {
 					return SUCCESS;
 				}
