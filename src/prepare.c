@@ -252,33 +252,23 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 	return prepared;
 } /* }}} */
 
-/* {{{ prepares the current context to execute the referenced thread
-	@NOTE other preparation could take place here, but it shouldn't !
-			pthreads creates and requires objects and nothing else 
-			function tables can get rather large and to loop over it is a waste 
-			get used to organizing code for efficiency and you can group 
-			collections of functions in static classes or include them explicitly
-			for the same reason the global scope variables aren't inherited;
-			if a thread/worker/stackable requires access to _POST/_SERVER etc 
-			then pass them the information they need explicitly, in normal PHP
-			scripts it doesn't make a difference if you pass around big arrays like _GLOBALS 
-			in pthreads it does ! */
+/* {{{ prepares the current context to execute the referenced thread */
 void pthreads_prepare(PTHREAD thread TSRMLS_DC){
+	HashPosition position;
+	
+	/* inherit ini entries from parent ... */
 	{
 		zend_ini_entry *entry[2];
-		HashPosition position;
-		HashTable *source = PTHREADS_EG(thread->cls, ini_directives);
-		HashTable *destination = EG(ini_directives);
-		
-		/* inherit ini entries from parent ... */
-		for(zend_hash_internal_pointer_reset_ex(source, &position);
-			zend_hash_get_current_data_ex(source, (void**) &entry[0], &position)==SUCCESS;
-			zend_hash_move_forward_ex(source, &position)) {
+		HashTable *table[2] = {PTHREADS_EG(thread->cls, ini_directives), EG(ini_directives)};
+
+		for(zend_hash_internal_pointer_reset_ex(table[0], &position);
+			zend_hash_get_current_data_ex(table[0], (void**) &entry[0], &position)==SUCCESS;
+			zend_hash_move_forward_ex(table[0], &position)) {
 			char *setting;
 			uint slength;
 			ulong idx;
-			if ((zend_hash_get_current_key_ex(source, &setting, &slength, &idx, 0, &position)==HASH_KEY_IS_STRING) &&
-				(zend_hash_find(destination, setting, slength, (void**) &entry[1])==SUCCESS)) {
+			if ((zend_hash_get_current_key_ex(table[0], &setting, &slength, &idx, 0, &position)==HASH_KEY_IS_STRING) &&
+				(zend_hash_find(table[1], setting, slength, (void**) &entry[1])==SUCCESS)) {
 				if (((entry[0]->value && entry[1]->value) && (strcmp(entry[0]->value, entry[1]->value) != 0)) || entry[0]->value) {
 					entry[1]->orig_value = entry[1]->value;
 					entry[1]->orig_value_length = entry[1]->orig_value_length;
@@ -298,22 +288,31 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 		}
 	}
 	
+	/* inherit function table from parent ... */
 	{
-		HashPosition position;
+		zend_function function;
+		zend_hash_merge(
+			EG(function_table), 
+			PTHREADS_EG(thread->cls, function_table), 
+			(copy_ctor_func_t) function_add_ref, 
+			&function, sizeof(zend_function), 0
+		);
+	}
+	
+	/* inherit class table from parent ... */
+	{
 		zend_class_entry **entry;
-		HashTable *source = PTHREADS_CG(thread->cls, class_table);
-		HashTable *destination = CG(class_table);
-		
-		/* inherit class table from parent ... */
-		for(zend_hash_internal_pointer_reset_ex(source, &position);
-			zend_hash_get_current_data_ex(source, (void**) &entry, &position)==SUCCESS;
-			zend_hash_move_forward_ex(source, &position)) {
+		HashTable *table[2] = {PTHREADS_CG(thread->cls, class_table), CG(class_table)};
+
+		for(zend_hash_internal_pointer_reset_ex(table[0], &position);
+			zend_hash_get_current_data_ex(table[0], (void**) &entry, &position)==SUCCESS;
+			zend_hash_move_forward_ex(table[0], &position)) {
 			char *lcname;
 			uint lcnamel;
 			ulong idx;
 			
-			if (zend_hash_get_current_key_ex(source, &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
-				if (!zend_hash_exists(destination, lcname, lcnamel)){
+			if (zend_hash_get_current_key_ex(table[0], &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
+				if (!zend_hash_exists(table[1], lcname, lcnamel)){
 					if (pthreads_prepared_entry(thread, *entry TSRMLS_CC)==NULL) {
 						zend_error_noreturn(
 							E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
@@ -321,6 +320,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 						break;
 					}
 				}
+				
 			}
 		}
 	}

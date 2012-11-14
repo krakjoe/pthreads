@@ -480,7 +480,6 @@ int pthreads_start(PTHREAD thread TSRMLS_DC) {
 			started = pthread_create(&thread->thread, NULL, pthreads_routine, (void*)thread);
 			if (started == SUCCESS) 
 				pthreads_state_wait(thread->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-			zend_objects_store_add_ref(EG(This) TSRMLS_CC);
 			pthreads_lock_release(thread->lock, tlocked TSRMLS_CC);
 		}
 	}

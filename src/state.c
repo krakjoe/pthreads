@@ -83,7 +83,7 @@ int pthreads_state_unset_locked(pthreads_state state, int mask TSRMLS_DC) {
 
 /* {{{ set state on state object */
 zend_bool pthreads_state_set(pthreads_state state, int mask TSRMLS_DC) {
-	zend_bool locked, result;
+	zend_bool locked, result = 1;
 	
 	if (state) {
 		if (pthreads_lock_acquire(state->lock, &locked TSRMLS_CC)) {
@@ -109,7 +109,6 @@ zend_bool pthreads_state_wait(pthreads_state state, int mask TSRMLS_DC) {
 			if (!wasset) do {
 				pthreads_synchro_wait(state->synchro TSRMLS_CC);
 			} while(!((state->was & mask)==mask));
-			pthreads_lock_release(state->lock, locked TSRMLS_CC);
 		} else result = 0;
 	} else result = 0;
 	return result;
