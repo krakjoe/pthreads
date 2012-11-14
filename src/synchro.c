@@ -28,7 +28,7 @@
 
 /* {{{ allocate (and initialize) a synchronization object */
 pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
-	pthreads_synchro sync = (pthreads_synchro) calloc(1, sizeof(*sync));
+	pthreads_synchro sync = (pthreads_synchro) emalloc(sizeof(*sync));
 	
 	if (sync) {
 		if ((sync->lock = pthreads_lock_alloc(TSRMLS_C))) {
@@ -37,7 +37,7 @@ pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 			}
 			pthreads_lock_free(sync->lock TSRMLS_CC);
 		}
-		free(sync);
+		efree(sync);
 	}
 	
 	return NULL;
@@ -100,7 +100,7 @@ int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
 void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC) {
 	pthread_cond_destroy(&sync->notify);
 	pthreads_lock_free(sync->lock TSRMLS_CC);
-	free(sync);
+	efree(sync);
 } /* }}} */
 
 #endif

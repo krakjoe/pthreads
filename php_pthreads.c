@@ -80,11 +80,6 @@ zend_class_entry *pthreads_condition_entry;
 zend_object_handlers pthreads_handlers;
 zend_object_handlers *zend_handlers;
 
-PHP_INI_BEGIN()
-	/* {{{ pthreads.max allows admins some control over how many objects an instance can create */
-	PHP_INI_ENTRY("pthreads.max", "0", PHP_INI_SYSTEM, NULL) /* }}} */
-PHP_INI_END()
-
 #ifndef HAVE_PTHREADS_OBJECT_H
 #	include <src/object.h>
 #endif
@@ -113,8 +108,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_class_entry se;
 	zend_class_entry we;
 	
-	REGISTER_INI_ENTRIES();
-
 	/*
 	* Global Init
 	*/
@@ -178,27 +171,13 @@ PHP_MINIT_FUNCTION(pthreads)
 
 PHP_MSHUTDOWN_FUNCTION(pthreads)
 {
-	UNREGISTER_INI_ENTRIES();
-	
 	return SUCCESS;
 }
 
 PHP_MINFO_FUNCTION(pthreads)
 {
-	char numbers[10];
-	
 	php_info_print_table_start();
 	php_info_print_table_row(2, "Version", PHP_PTHREADS_VERSION);
-	if (PTHREADS_G(max)) {
-		php_info_print_table_row(2, "Maximum Objects", INI_STR("pthreads.max"));
-	} else php_info_print_table_row(2, "Maximum Objects", "No Limits");
-	
-	snprintf(numbers, sizeof(numbers), "%d", pthreads_globals_count(TSRMLS_C));
-	php_info_print_table_row(2, "Current Objects", numbers);
-	
-	snprintf(numbers, sizeof(numbers), "%d", pthreads_globals_peak(TSRMLS_C));
-	php_info_print_table_row(2, "Peak Objects", numbers);
-
 	php_info_print_table_end();
 }
 
