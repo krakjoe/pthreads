@@ -22,27 +22,36 @@
 #	include <src/globals.h>
 #endif
 
-#ifndef HAVE_PTHREADS_OBJECT_H
-#	include <src/object.h>
+struct _pthreads_globals pthreads_globals;
+
+#ifndef HAVE_PTHREADS_LOCK_H
+#	include <src/lock.h>
 #endif
 
-struct _pthreads_globals pthreads_globals;
+#ifndef PTHREADS_GTSRMLS_C
+#	define PTHREADS_GTSRMLS_C (TSRMLS_C) ? TSRMLS_C : (void***) &pthreads_globals
+#endif
+
+#ifndef PTHREADS_GLOBAL_LOCK_ARGS
+#	define PTHREADS_GLOBAL_LOCK_ARGS \
+		locked, PTHREADS_GTSRMLS_C
+#endif
 
 /* {{{ pthreads_globals_init */
 void pthreads_globals_init(TSRMLS_D){
 	if (!PTHREADS_G(init)) {
 		PTHREADS_G(init)=1;
-		PTHREADS_G(lock)=pthreads_lock_alloc(TSRMLS_C);
+		PTHREADS_G(lock)=pthreads_lock_alloc(PTHREADS_GTSRMLS_C);
 	}
 } /* }}} */
 
 /* {{{ pthreads_globals_lock */
 zend_bool pthreads_globals_lock(zend_bool *locked TSRMLS_DC){
-	return pthreads_lock_acquire(PTHREADS_G(lock), locked TSRMLS_CC);
+	return pthreads_lock_acquire(PTHREADS_G(lock), PTHREADS_GLOBAL_LOCK_ARGS);
 } /* }}} */
 
 /* {{{ pthreads_globals_unlock */
 void pthreads_globals_unlock(zend_bool locked TSRMLS_DC) {
-	pthreads_lock_release(PTHREADS_G(lock), locked TSRMLS_CC);
+	pthreads_lock_release(PTHREADS_G(lock), PTHREADS_GLOBAL_LOCK_ARGS);
 } /* }}} */
 #endif

@@ -535,14 +535,14 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 					threaded->address->serial = calloc(1, threaded->address->length);
 					if (threaded->address->serial) {
 						sprintf(
-							threaded->address->serial, "%lu", (long) threaded
+							(char*) threaded->address->serial, "%lu", (long) threaded
 						);
 					} else return FAILURE;
 				}
 			} else return FAILURE;
 		}
 		
-		(*buffer) = estrndup((char*)threaded->address->serial, threaded->address->length);
+		(*buffer) = (unsigned char*) estrndup((char*)threaded->address->serial, threaded->address->length);
 		(*blength) = threaded->address->length;
 		
 		return SUCCESS;
@@ -553,7 +553,7 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 /* {{{ connects to an instance of a threaded object */
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC) {
 	PTHREAD address = NULL;
-	if (sscanf((char*)buffer, "%lu", &address)) {
+	if (sscanf((const char*)buffer, "%lu", &address)) {
 		if (address) {
 			if (object_init_ex(
 				*object, pthreads_prepared_entry(address, ce TSRMLS_CC)

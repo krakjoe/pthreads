@@ -267,22 +267,17 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			char *setting;
 			uint slength;
 			ulong idx;
+			
 			if ((zend_hash_get_current_key_ex(table[0], &setting, &slength, &idx, 0, &position)==HASH_KEY_IS_STRING) &&
 				(zend_hash_find(table[1], setting, slength, (void**) &entry[1])==SUCCESS)) {
 				if (((entry[0]->value && entry[1]->value) && (strcmp(entry[0]->value, entry[1]->value) != 0)) || entry[0]->value) {
-					entry[1]->orig_value = entry[1]->value;
-					entry[1]->orig_value_length = entry[1]->orig_value_length;
-					entry[1]->orig_modifiable = entry[1]->modifiable;
-					entry[1]->value = estrndup(entry[0]->value, entry[0]->value_length);
-					entry[1]->value_length = entry[0]->value_length;
-					entry[1]->modified = 1;
-					
-					if (!EG(modified_ini_directives)) {
-						ALLOC_HASHTABLE(EG(modified_ini_directives));
-						zend_hash_init(EG(modified_ini_directives), 8, NULL, NULL, 0);
-					}
-					
-					zend_hash_add(EG(modified_ini_directives), setting, slength, (void**) &entry[1], sizeof(zend_ini_entry*), NULL);
+					zend_bool modifiable = entry[1]->modifiable;
+					zend_alter_ini_entry_ex(
+						setting, slength, 
+						entry[0]->value, entry[0]->value_length,
+						ZEND_INI_STAGE_ACTIVATE, ZEND_INI_SYSTEM, 1 TSRMLS_CC
+					);
+					entry[1]->modifiable = modifiable;
 				}
 			}
 		}
