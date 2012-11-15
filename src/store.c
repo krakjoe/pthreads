@@ -30,10 +30,6 @@
 #	include <src/object.h>
 #endif
 
-#ifndef HAVE_PTHREADS_GLOBALS_H
-#	include <src/globals.h>
-#endif
-
 typedef struct _pthreads_storage {
 	void		*data;
 	size_t 		length;

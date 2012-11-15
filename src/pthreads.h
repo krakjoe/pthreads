@@ -31,18 +31,6 @@
 #include <pthread.h>
 #endif
 
-#if defined(PTHREAD_MUTEX_ERRORCHECK)
-#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK
-#elif defined(PTHREAD_MUTEX_ERRORCHECK_NP)
-#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK_NP
-#elif defined(PTHREAD_MUTEX_NORMAL)
-#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_NORMAL
-#elif defined(_WIN32)
-#	define PTHREADS_LOCK_TYPE 0
-#else
-#	define PTHREADS_LOCK_TYPE PTHREAD_MUTEX_ERRORCHECK
-#endif
-
 #include <php.h>
 #include <php_globals.h>
 #include <php_main.h>

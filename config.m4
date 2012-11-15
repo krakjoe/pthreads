@@ -8,16 +8,7 @@ if test "$PHP_PTHREADS" != "no"; then
 	else
 		AC_MSG_ERROR([pthreads requires ZTS, please re-compile PHP with ZTS enabled])
 	fi
-	PHP_NEW_EXTENSION(pthreads, php_pthreads.c \
-								src/lock.c \
-								src/globals.c \
-								src/prepare.c \
-								src/synchro.c \
-								src/state.c \
-								src/store.c \
-								src/modifiers.c\
-								src/handlers.c \
-								src/object.c, $ext_shared)
+	PHP_NEW_EXTENSION(pthreads, php_pthreads.c src/lock.c src/globals.c src/prepare.c src/synchro.c src/state.c src/store.c src/modifiers.c src/handlers.c src/object.c, $ext_shared)
 	PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 	PHP_ADD_INCLUDE($ext_builddir)
 	PHP_SUBST(PTHREADS_SHARED_LIBADD)

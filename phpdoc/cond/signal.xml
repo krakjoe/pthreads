@@ -4,7 +4,6 @@
 <refentry xml:id="cond.signal" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Cond::signal</refname>
-  <refpurpose>Signal a condition to a single Thread</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">

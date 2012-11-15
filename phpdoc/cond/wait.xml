@@ -4,7 +4,6 @@
 <refentry xml:id="cond.wait" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Cond::wait</refname>
-  <refpurpose>Wait for a signal on a Condition Variable</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">

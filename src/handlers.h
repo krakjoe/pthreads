@@ -17,7 +17,7 @@
  */
 
 /*
-* These handlers are mutex aware for safer operation in multi-threaded applications
+* These handlers provide thread-safe read/write/call for pthreads objects
 */
 #ifndef HAVE_PTHREADS_HANDLERS_H
 #define HAVE_PTHREADS_HANDLERS_H

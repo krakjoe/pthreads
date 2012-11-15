@@ -4,7 +4,6 @@
 <refentry xml:id="cond.destroy" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Cond::destroy</refname>
-  <refpurpose>Destroy a handle to a Condition Variable and free the associated resources</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
