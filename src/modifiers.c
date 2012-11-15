@@ -36,7 +36,7 @@ static void pthreads_modifiers_protection_dtor(void **element); /* }}} */
 
 /* {{{ allocate modifiers */
 pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D) {
-	pthreads_modifiers modifiers = emalloc(sizeof(*modifiers));
+	pthreads_modifiers modifiers = calloc(1, sizeof(*modifiers));
 	
 	if (modifiers) {
 		/*
@@ -79,7 +79,7 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 
 /* {{{ set access modifier for method */
 int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zend_uint modify TSRMLS_DC) {
-	zend_uint *modified = emalloc(sizeof(*modified));
+	zend_uint *modified = calloc(1, sizeof(*modified));
 	{
 		*modified = modify;
 		if (zend_hash_add(
@@ -135,14 +135,14 @@ zend_bool pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char 
 void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC) {
 	zend_hash_destroy(&modifiers->modified);
 	zend_hash_destroy(&modifiers->protection);
-	efree(modifiers);
+	free(modifiers);
 } /* }}} */
 
 /* {{{ destructor callback for modifiers (definition) hash table */
 static void pthreads_modifiers_modifiers_dtor(void **element) {
 	zend_uint *modified = (zend_uint *) *element;
 	if (modified && *modified) {
-		efree(modified);
+		free(modified);
 	}
 } /* }}} */
 

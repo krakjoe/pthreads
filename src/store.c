@@ -53,7 +53,7 @@ static void pthreads_store_storage_dtor (pthreads_storage *element);
 
 /* {{{ allocate storage for an object */
 pthreads_store pthreads_store_alloc(TSRMLS_D) {
-	pthreads_store store = emalloc(sizeof(*store));
+	pthreads_store store = calloc(1, sizeof(*store));
 	
 	if (store) {
 		if (zend_ts_hash_init(&store->table, 32, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){	
@@ -62,7 +62,7 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 			} 
 			zend_ts_hash_destroy(&store->table);
 		} 
-		efree(store);
+		free(store);
 	}
 	return NULL;
 } /* }}} */
@@ -171,7 +171,7 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 		pthreads_lock_free(store->lock TSRMLS_CC);
-		efree(store);
+		free(store);
 	}
 } /* }}} */
 

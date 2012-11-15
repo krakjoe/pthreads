@@ -69,7 +69,6 @@ extern zend_class_entry *pthreads_worker_entry;
 extern zend_class_entry *pthreads_stackable_entry;
 extern zend_class_entry *pthreads_mutex_entry;
 extern zend_class_entry *pthreads_condition_entry;
-extern zend_class_entry *pthreads_exception_entry;
 
 extern zend_object_handlers pthreads_handlers;
 extern zend_object_handlers *zend_handlers;
