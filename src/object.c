@@ -51,7 +51,7 @@ static void * pthreads_routine(void *arg); /* }}} */
 
 /* {{{ object caching */
 pthreads_objects pthreads_objects_alloc(TSRMLS_D) {
-	pthreads_objects pobjects = (pthreads_objects) emalloc(sizeof(*pobjects));
+	pthreads_objects pobjects = (pthreads_objects) calloc(1, sizeof(*pobjects));
 	if (pobjects) {
 		zend_llist_init(
 			&pobjects->cache, sizeof(zval**), 
@@ -75,7 +75,7 @@ zval * pthreads_objects_create(pthreads_objects pobjects TSRMLS_DC) {
 void pthreads_objects_free(pthreads_objects pobjects TSRMLS_DC) { 
 	if (pobjects) {
 		zend_llist_destroy(&pobjects->cache); 
-		efree(pobjects);
+		free(pobjects);
 	}
 }
 
@@ -265,7 +265,7 @@ size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
 /* {{{ thread object constructor */
 zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD thread = emalloc(sizeof(*thread));
+	PTHREAD thread = calloc(1, sizeof(*thread));
 	if (thread) {
 		thread->scope = PTHREADS_SCOPE_THREAD;
 		pthreads_base_ctor(thread, entry TSRMLS_CC);
@@ -283,7 +283,7 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 /* {{{ worker object constructor */
 zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD worker = emalloc(sizeof(*worker));
+	PTHREAD worker = calloc(1, sizeof(*worker));
 	if (worker) {
 		worker->scope = PTHREADS_SCOPE_WORKER;
 		pthreads_base_ctor(worker, entry TSRMLS_CC);
@@ -301,7 +301,7 @@ zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 /* {{{ stackable object constructor */
 zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD stackable = emalloc(sizeof(*stackable));
+	PTHREAD stackable = calloc(1, sizeof(*stackable));
 	if (stackable) {
 		stackable->scope = PTHREADS_SCOPE_STACKABLE;
 		pthreads_base_ctor(stackable, entry TSRMLS_CC);
@@ -330,7 +330,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 				zend_llist_destroy(
 					&destination->stack->objects
 				);
-				efree(destination->stack);
+				free(destination->stack);
 			}
 			
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
@@ -391,7 +391,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
-				base->stack = (pthreads_stack) emalloc(sizeof(*base->stack));
+				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
 				if (base->stack)
 					zend_llist_init(&base->stack->objects, sizeof(void**), NULL, 1);
 			}
@@ -421,14 +421,14 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 			zend_llist_destroy(
 				&base->stack->objects
 			);
-			efree(base->stack);
+			free(base->stack);
 		}
 		
 		if (base->address) {
 			if (base->address->serial) {
-				efree(base->address->serial);
+				free(base->address->serial);
 			}
-			efree(base->address);
+			free(base->address);
 		}
 	}
 	
@@ -460,7 +460,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 static void pthreads_base_free(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 	if (base) {
-		efree(base);
+		free(base);
 	}
 } /* }}} */
 
@@ -525,14 +525,14 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 	PTHREAD threaded = PTHREADS_FETCH_FROM(object);
 	if (threaded) {
 		if (!threaded->address) {
-			threaded->address = (pthreads_address) emalloc(sizeof(*(threaded->address)));
+			threaded->address = (pthreads_address) calloc(1, sizeof(*(threaded->address)));
 			if (threaded->address) {
 				/* add the space for null here, once */
 				threaded->address->length = snprintf(
 					NULL, 0, "%lu", (long) threaded
 				)+1;
 				if (threaded->address->length) {
-					threaded->address->serial = emalloc(threaded->address->length);
+					threaded->address->serial = calloc(1, threaded->address->length);
 					if (threaded->address->serial) {
 						sprintf(
 							threaded->address->serial, "%lu", (long) threaded

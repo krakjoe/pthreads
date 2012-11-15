@@ -133,7 +133,7 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 			case ZEND_ACC_PRIVATE:
 			case ZEND_ACC_PROTECTED:
 				scope = Z_OBJCE_PP(pobject);
-				lcname =  (char*) emalloc(methodl+1);
+				lcname =  (char*) calloc(1, methodl+1);
 				zend_str_tolower_copy(lcname, method, methodl);
 				if (zend_hash_find(&scope->function_table, lcname, methodl+1, (void**)&call)==SUCCESS) {
 					callable = (zend_function*) emalloc(sizeof(zend_function));
@@ -149,7 +149,7 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 					callable->common.return_reference = call->common.return_reference;
 #endif
 				}
-				efree(lcname);
+				free(lcname);
 			return callable;
 			
 			default: call = zend_handlers->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
@@ -205,7 +205,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 					}
 							
 					mlength = strlen(method);
-					lcname =  emalloc(mlength+1);
+					lcname =  calloc(1, mlength+1);
 					zend_str_tolower_copy(lcname, method, mlength);
 					
 					if (zend_hash_find(&scope->function_table, lcname, mlength+1, (void**)&call)==SUCCESS) {
@@ -292,7 +292,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 					if (argc) {
 						efree(argv);
 					}
-					efree(lcname);
+					free(lcname);
 					return called;
 				} break;
 			}
