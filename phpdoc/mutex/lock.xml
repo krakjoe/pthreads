@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision: 328015 $ -->
+<!-- $Revision: 328370 $ -->
 
 <refentry xml:id="mutex.lock" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Mutex::lock</refname>
+  <refpurpose>Acquire Mutex</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
