@@ -283,6 +283,46 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 		}
 	}
 	
+	/* copy constants */
+	{
+		zend_constant *zconstant;
+		HashTable *table[2] = {PTHREADS_EG(thread->cls, zend_constants), EG(zend_constants)};
+		
+		for(zend_hash_internal_pointer_reset_ex(table[0], &position);
+			zend_hash_get_current_data_ex(table[0], (void**) &zconstant, &position)==SUCCESS;
+			zend_hash_move_forward_ex(table[0], &position)) {
+			if (strcmp(zconstant->name, "STDIN")!=0 &&
+				strcmp(zconstant->name, "STDOUT")!=0 &&
+				strcmp(zconstant->name, "STDERR")!=0 &&
+				strcmp(zconstant->name, "TRUE")!=0 &&
+				strcmp(zconstant->name, "FALSE")!=0 &&
+				strcmp(zconstant->name, "NULL")!=0) {
+				if (!zend_hash_exists(table[1], zconstant->name, zconstant->name_len)) {
+					zend_constant constant;
+					
+					constant.flags = zconstant->flags;
+					constant.module_number = zconstant->module_number;
+					constant.name = zend_strndup(zconstant->name, zconstant->name_len);
+					constant.name_len = zconstant->name_len;
+					
+					switch((Z_TYPE(constant.value)=Z_TYPE(zconstant->value))) {
+						case IS_BOOL:
+						case IS_LONG: {
+							Z_LVAL(constant.value)=Z_LVAL(zconstant->value);
+						} break;
+						case IS_DOUBLE: Z_DVAL(constant.value)=Z_DVAL(zconstant->value); break;
+						case IS_STRING: {
+							Z_STRVAL(constant.value)=estrndup(Z_STRVAL(zconstant->value), Z_STRLEN(zconstant->value)); 
+							Z_STRLEN(constant.value)=Z_STRLEN(zconstant->value);
+						} break;
+					}
+					
+					zend_register_constant(&constant TSRMLS_CC);
+				}
+			}
+		}
+	}
+	
 	/* inherit function table from parent ... */
 	{
 		zend_function function;
@@ -315,9 +355,18 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 						break;
 					}
 				}
-				
 			}
 		}
+	}
+	
+	/* merge included files with parent, more compatible than copying ( think apc ) */
+	{
+		int included;
+		zend_hash_merge(
+			&EG(included_files), 
+			&PTHREADS_EG(thread->cls, included_files),
+			NULL, &included, sizeof(int), 0
+		);
 	}
 } /* }}} */
 

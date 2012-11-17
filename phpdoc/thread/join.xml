@@ -26,7 +26,7 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-  
+   A boolean indication of success
   </para>
  </refsect1>
 
