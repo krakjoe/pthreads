@@ -17,11 +17,15 @@
  */
 #ifndef HAVE_PTHREADS_CLASS_COND_H
 #define HAVE_PTHREADS_CLASS_COND_H
+PHP_METHOD(Cond, __construct);
 PHP_METHOD(Cond, create);
 PHP_METHOD(Cond, signal);
 PHP_METHOD(Cond, broadcast);
 PHP_METHOD(Cond, wait);
 PHP_METHOD(Cond, destroy);
+
+ZEND_BEGIN_ARG_INFO_EX(Cond_construct, 0, 0, 0)
+ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Cond_create, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -49,6 +53,7 @@ extern zend_function_entry pthreads_condition_methods[];
 #	ifndef HAVE_PTHREADS_CLASS_COND
 #	define HAVE_PTHREADS_CLASS_COND
 zend_function_entry pthreads_condition_methods[] = {
+	PHP_ME(Cond, __construct, Cond_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR|ZEND_ACC_FINAL)
 	PHP_ME(Cond, create, Cond_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Cond, signal, Cond_signal, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Cond, wait, Cond_wait, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -56,6 +61,13 @@ zend_function_entry pthreads_condition_methods[] = {
 	PHP_ME(Cond, destroy, Cond_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
+
+/* {{{ proto void Cond::__construct() */
+PHP_METHOD(Cond, __construct) 
+{
+	zend_error(E_ERROR, "pthreads has detected an attempt to incorrectly create a Condition, please refer to the PHP manual");
+} /* }}} */
+
 /* {{{ proto long Cond::create() 
 		This will create a condition, because of their nature you need to destroy these explicitly with Cond::destroy */
 PHP_METHOD(Cond, create)
