@@ -48,23 +48,43 @@ zend_function_entry pthreads_stackable_methods[] = {
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Stackable::wait([long timeout]) 
-		Will cause the calling thread to wait for notification from the referenced Stackable
-		When a timeout is used an reached boolean false will return
-		When no timeout is used a boolean indication of success will return */
+	   proto boolean Stackable::wait(string member, [long timeout])
+		Will cause the calling thread to wait for notification from the referenced object
+		If $member is set, the calling thread will be notified when the member is set on the object
+		If $member is set and already written to the object boolean true will return immediately
+		When a timeout is used and reached boolean false will return
+		Otherwise returns a boolean indication of success */
 PHP_METHOD(Stackable, wait)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	long timeout = 0L;
 	
-	if(ZEND_NUM_ARGS()){
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &timeout)!=SUCCESS) {
-			RETURN_FALSE;
-		}
+	switch(ZEND_NUM_ARGS()) {
+		case 0: RETURN_BOOL(pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC)); break;
+		case 1: {
+			zval *parameter;
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &parameter)==SUCCESS) {
+				switch (Z_TYPE_P(parameter)) {
+					case IS_STRING: {
+						RETURN_BOOL(pthreads_store_wait(thread->store, Z_STRVAL_P(parameter), Z_STRLEN_P(parameter), 0L TSRMLS_CC));
+					} break;
+					case IS_LONG: RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, Z_LVAL_P(parameter) TSRMLS_CC)); break;
+					default: zend_error(E_ERROR, "pthreads has detected incorrect use of ::wait, please consult the PHP manual");
+				}
+			}
+		} break;
+		case 2: {
+			zval *member;
+			zval *timeout;
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &member, &timeout)==SUCCESS) {
+				if (Z_TYPE_P(member)==IS_STRING && Z_TYPE_P(timeout)==IS_LONG) {
+					RETURN_BOOL(pthreads_store_wait(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), Z_LVAL_P(timeout) TSRMLS_CC));
+				} else zend_error(E_ERROR, "pthreads has detected incorrect use of ::wait, please consult the PHP manual");
+			}
+		} break;
+		
+		default: zend_error(E_ERROR, "ptherads has detected incorrect use of ::wait, please consult the PHP manual"); 
 	}
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, timeout TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to wait for a %s and cannot continue", PTHREADS_NAME);
 } /* }}} */
 
 /* {{{ proto boolean Stackable::notify()
