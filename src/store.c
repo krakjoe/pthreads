@@ -45,6 +45,7 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength TSRMLS_DC);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
+static void pthreads_store_event_dtor (pthreads_synchro *element);
 /* }}} */
 
 /* {{{ allocate storage for an object */
@@ -52,12 +53,15 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	pthreads_store store = calloc(1, sizeof(*store));
 	
 	if (store) {
-		if (zend_ts_hash_init(&store->table, 32, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){	
-			if ((store->lock = pthreads_lock_alloc(TSRMLS_C))) {
-				return store;
-			} 
+		if (zend_ts_hash_init(&store->table, 8, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){
+			if (zend_ts_hash_init(&store->event, 8, NULL, (dtor_func_t) pthreads_store_event_dtor, 1)==SUCCESS) {
+				if ((store->lock = pthreads_lock_alloc(TSRMLS_C))) {
+					return store;
+				}
+				zend_ts_hash_destroy(&store->event);
+			}
 			zend_ts_hash_destroy(&store->table);
-		} 
+		}
 		free(store);
 	}
 	return NULL;
@@ -125,6 +129,12 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 		if (storage) {
 			if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 				if (zend_ts_hash_update(&store->table, key, keyl, (void**) &storage, sizeof(pthreads_storage), NULL)==SUCCESS) {
+					if (zend_ts_hash_exists(&store->event, key, keyl)) {
+						pthreads_synchro *psync;
+						if (zend_ts_hash_find(&store->event, key, keyl, (void**)&psync)==SUCCESS) {
+							pthreads_synchro_notify(*psync TSRMLS_CC);
+						}
+					}
 					result = SUCCESS;
 				} else free(store);
 				pthreads_lock_release(store->lock, locked TSRMLS_CC);
@@ -132,6 +142,51 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 		}
 	}
 	return result;
+} /* }}} */
+
+/* {{{ wait for a value to be set on buffer */
+zend_bool pthreads_store_wait(pthreads_store store, char *key, int keyl, ulong timeout TSRMLS_DC) {
+	zend_bool isset = 0, locked;
+	
+	if (store) {
+		pthreads_synchro event = NULL, *pevent = NULL;
+		
+		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
+			if (!zend_ts_hash_exists(&store->event, key, keyl)) {
+				event = pthreads_synchro_alloc(TSRMLS_C);
+				if (event) {
+					if (zend_ts_hash_update(
+						&store->event, 
+						key, keyl, 
+						(void**)&event, sizeof(pthreads_synchro*), NULL
+					)!=SUCCESS) {
+						pthreads_synchro_free(
+							event TSRMLS_CC
+						);
+						event = NULL;
+						
+						goto unlock;
+					}
+				}
+			} else {
+				if (zend_ts_hash_find(&store->event, key, keyl, (void**)&pevent)==SUCCESS) {
+					event = *pevent;
+				}
+			}
+unlock:
+			pthreads_lock_release(store->lock, locked TSRMLS_CC);
+		}
+		
+		if (event) {
+			if (!(isset=pthreads_store_isset(store, key, keyl, 2 TSRMLS_CC))) {
+				pthreads_synchro_wait_ex(event, timeout TSRMLS_CC);
+			} else isset = 1;
+			if (isset)
+				pthreads_synchro_notify(event TSRMLS_CC);
+			isset = pthreads_store_isset(store, key, keyl, 2 TSRMLS_CC);
+		} else zend_error(E_ERROR, "event not created, pthreads bailing ...");
+	}
+	return isset;
 } /* }}} */
 
 /* {{{ seperate a zval using internals */
@@ -164,6 +219,7 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 		zend_bool locked;
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			zend_ts_hash_destroy(&store->table);
+			zend_ts_hash_destroy(&store->event);
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 		pthreads_lock_free(store->lock TSRMLS_CC);
@@ -337,6 +393,14 @@ static void pthreads_store_storage_dtor (pthreads_storage *storage){
 		}
 		
 		free((*storage));
+	}
+} /* }}} */
+
+/* {{{ Will free store event */
+static void pthreads_store_event_dtor (pthreads_synchro *psync){
+	TSRMLS_FETCH();
+	if (psync && (*psync)) {
+		pthreads_synchro_free(*psync TSRMLS_CC);
 	}
 } /* }}} */
 
