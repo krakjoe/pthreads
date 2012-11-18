@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
+<!-- $Revision: 328274 $ -->
 
 <chapter xml:id="pthreads.setup" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.setup;
@@ -13,7 +13,12 @@
 
  <section xml:id="pthreads.installation">
   &reftitle.install;
-  &no.install;
+  <para>
+ To enable pthreads support, configure PHP with <option role="configure">--enable-maintainer-zts</option> and <option role="configure">--enable-pthreads</option>
+  </para>
+  <para>
+ Windows users can download prebuilt binaries from GitHub or from PECL Windows.
+  </para>
  </section>
 
  <section xml:id="pthreads.configuration">
@@ -23,9 +28,7 @@
 
  <section xml:id="pthreads.resources">
   &reftitle.resources;
-  <para>
-
-  </para>
+  &no.resource;
  </section>
 
 </chapter>
