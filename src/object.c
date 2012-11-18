@@ -34,6 +34,10 @@
 #	include <src/modifiers.h>
 #endif
 
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
+#endif
+
 /* {{{ pthreads module entry */
 extern zend_module_entry pthreads_module_entry; /* }}} */
 
@@ -518,6 +522,20 @@ int pthreads_join(PTHREAD thread TSRMLS_DC) {
 	} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
 	
 	return dojoin ? pthread_join(thread->thread, NULL) 	: FAILURE;
+} /* }}} */
+
+/* {{{ synchronization helper */
+zend_bool pthreads_wait_member_ex(PTHREAD thread, zval *member, ulong timeout TSRMLS_DC) {
+	if (!pthreads_store_isset(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), 2 TSRMLS_CC)) {
+		if (pthreads_synchro_wait_ex(thread->synchro, timeout TSRMLS_CC))
+			return pthreads_store_isset(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), 2 TSRMLS_CC);
+		else return 0;
+	} else return 1;
+} /* }}} */
+
+/* {{{ synchronization helper */
+zend_bool pthreads_wait_member(PTHREAD thread, zval *member TSRMLS_DC) {
+	return pthreads_wait_member_ex(thread, member, 0L TSRMLS_CC);
 } /* }}} */
 
 /* {{{ serialize an instance of a threaded object for connection in another thread */

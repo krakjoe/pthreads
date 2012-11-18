@@ -75,6 +75,10 @@ int pthreads_start(PTHREAD thread TSRMLS_DC);
 int pthreads_join(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
+/* {{{ synchronization heplers */
+zend_bool pthreads_wait_member(PTHREAD thread, zval *member TSRMLS_DC);
+zend_bool pthreads_wait_member_ex(PTHREAD thread, zval *member, ulong timeout TSRMLS_DC); /* }}} */
+
 /* {{{ serialize/unserialize threaded objects */
 int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *blength, zend_serialize_data *data TSRMLS_DC);
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC); /* }}} */
