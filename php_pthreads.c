@@ -79,6 +79,7 @@ zend_class_entry *pthreads_condition_entry;
 
 zend_object_handlers pthreads_handlers;
 zend_object_handlers *zend_handlers;
+void ***pthreads_instance = NULL;
 
 #ifndef HAVE_PTHREADS_OBJECT_H
 #	include <src/object.h>
@@ -108,12 +109,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_class_entry se;
 	zend_class_entry we;
 	
-	/*
-	* Global Init
-	*/
-	if (!PTHREADS_G(init)) 
-		pthreads_globals_init(TSRMLS_C);
-	
 	INIT_CLASS_ENTRY(te, "Thread", pthreads_thread_methods);
 	te.create_object = pthreads_thread_ctor;
 	te.serialize = pthreads_internal_serialize;
@@ -136,11 +131,13 @@ PHP_MINIT_FUNCTION(pthreads)
 	me.serialize = zend_class_serialize_deny;
 	me.unserialize = zend_class_unserialize_deny;
 	pthreads_mutex_entry=zend_register_internal_class(&me TSRMLS_CC);
+	pthreads_mutex_entry->ce_flags |= ZEND_ACC_FINAL;
 	
 	INIT_CLASS_ENTRY(ce, "Cond", pthreads_condition_methods);
 	ce.serialize = zend_class_serialize_deny;
 	ce.unserialize = zend_class_unserialize_deny;
 	pthreads_condition_entry=zend_register_internal_class(&ce TSRMLS_CC);
+	pthreads_condition_entry->ce_flags |= ZEND_ACC_FINAL;
 	
 	/*
 	* Setup standard and pthreads object handlers
@@ -166,11 +163,22 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
 	
+	if (pthreads_globals_init(TSRMLS_C)) {
+		/*
+		* Global Init
+		*/
+		pthreads_instance = TSRMLS_C;
+	}
+	
 	return SUCCESS;
 }
 
 PHP_MSHUTDOWN_FUNCTION(pthreads)
 {
+	if (pthreads_instance == TSRMLS_C) {
+		pthreads_globals_shutdown(TSRMLS_C);
+	}
+	
 	return SUCCESS;
 }
 

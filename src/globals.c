@@ -38,11 +38,15 @@ struct _pthreads_globals pthreads_globals;
 #endif
 
 /* {{{ pthreads_globals_init */
-void pthreads_globals_init(TSRMLS_D){
-	if (!PTHREADS_G(init)) {
+zend_bool pthreads_globals_init(TSRMLS_D){
+	if (!PTHREADS_G(init)&&!PTHREADS_G(failed)) {
 		PTHREADS_G(init)=1;
-		PTHREADS_G(lock)=pthreads_lock_alloc(PTHREADS_GTSRMLS_C);
-	}
+		if (!(PTHREADS_G(lock)=pthreads_lock_alloc(PTHREADS_GTSRMLS_C)))
+			PTHREADS_G(failed)=1;
+		if (PTHREADS_G(failed))
+			PTHREADS_G(init)=0;
+		return PTHREADS_G(init);
+	} else return 0;
 } /* }}} */
 
 /* {{{ pthreads_globals_lock */
@@ -53,5 +57,14 @@ zend_bool pthreads_globals_lock(zend_bool *locked TSRMLS_DC){
 /* {{{ pthreads_globals_unlock */
 void pthreads_globals_unlock(zend_bool locked TSRMLS_DC) {
 	pthreads_lock_release(PTHREADS_G(lock), PTHREADS_GLOBAL_LOCK_ARGS);
+} /* }}} */
+
+/* {{{ shutdown global structures */
+void pthreads_globals_shutdown(TSRMLS_D) {
+	if (PTHREADS_G(init)) {
+		pthreads_lock_free(
+			PTHREADS_G(lock) TSRMLS_CC
+		);
+	}
 } /* }}} */
 #endif

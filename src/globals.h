@@ -42,6 +42,11 @@ struct _pthreads_globals {
 	zend_bool init;
 	
 	/*
+	* Failed flag
+	*/
+	zend_bool failed;
+	
+	/*
 	* Globals Mutex
 	*/
 	pthreads_lock lock;
@@ -54,12 +59,15 @@ extern struct _pthreads_globals pthreads_globals;
 /* }}} */
 
 /* {{{ initialize (true) globals */
-void pthreads_globals_init(TSRMLS_D); /* }}} */
+zend_bool pthreads_globals_init(TSRMLS_D); /* }}} */
 
 /* {{{ acquire global lock */
 zend_bool pthreads_globals_lock(zend_bool *locked TSRMLS_DC); /* }}} */
 
 /* {{{ release global lock */
 void pthreads_globals_unlock(zend_bool locked TSRMLS_DC); /* }}} */
+
+/* {{{ shutdown global structures */
+void pthreads_globals_shutdown(TSRMLS_D); /* }}} */
 
 #endif /* HAVE_PTHREADS_GLOBAL_H */

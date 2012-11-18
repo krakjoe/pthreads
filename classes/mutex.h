@@ -18,12 +18,15 @@
 #ifndef HAVE_PTHREADS_CLASS_MUTEX_H
 #define HAVE_PTHREADS_CLASS_MUTEX_H
 
-
+PHP_METHOD(Mutex, __construct);
 PHP_METHOD(Mutex, create);
 PHP_METHOD(Mutex, lock);
 PHP_METHOD(Mutex, trylock);
 PHP_METHOD(Mutex, unlock);
 PHP_METHOD(Mutex, destroy);
+
+ZEND_BEGIN_ARG_INFO_EX(Mutex_construct, 0, 0, 0)
+ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Mutex_create, 0, 0, 0)
 	ZEND_ARG_INFO(0, lock)
@@ -51,6 +54,7 @@ extern zend_function_entry pthreads_mutex_methods[];
 #	ifndef HAVE_PTHREADS_CLASS_MUTEX
 #	define HAVE_PTHREADS_CLASS_MUTEX
 zend_function_entry pthreads_mutex_methods[] = {
+	PHP_ME(Mutex, __construct, Mutex_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, create, Mutex_create, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, lock, Mutex_lock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	PHP_ME(Mutex, trylock, Mutex_trylock, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
@@ -58,9 +62,16 @@ zend_function_entry pthreads_mutex_methods[] = {
 	PHP_ME(Mutex, destroy, Mutex_destroy, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
+
+/* {{{ proto void Mutex::__construct() */
+PHP_METHOD(Mutex, __construct) 
+{
+	zend_error(E_ERROR, "pthreads has detected an attempt to incorrectly create a Mutex, please refer to the PHP manual");
+} /* }}} */
+
 /* {{{ proto long Mutex::create([boolean lock]) 
-		Will create a new mutex and return it's handle. If lock is true it will lock the mutex before returning the handle to the calling thread.
-		Because of their nature you need to destroy these explicitly with Mutex::destroy */
+	Will create a new mutex and return it's handle. If lock is true it will lock the mutex before returning the handle to the calling thread.
+	Because of their nature you need to destroy these explicitly with Mutex::destroy */
 PHP_METHOD(Mutex, create)
 {
 	zend_bool lock;
@@ -118,17 +129,10 @@ PHP_METHOD(Mutex, lock)
 		switch (pthread_mutex_lock(mutex)) {
 			case SUCCESS: RETURN_TRUE; break;
 			
-			case EDEADLK:
-				zend_error(E_WARNING, "pthreads has detected that the calling thread already owns the mutex");
-				RETURN_TRUE;
-			break;
-			
 			case EINVAL: 
 				zend_error(E_WARNING, "pthreads has detected that the variable passed is not a valid mutex");  			
 			break;
 			
-			/* 	the default type of mutex prohibits this error from being raised 
-				there may be more control over mutex types in the future so left for completeness */
 			case E_ERROR: 
 				zend_error(E_WARNING, "The mutex could not be acquired because the maximum number of recursive locks for mutex has been exceeded");
 			break;
@@ -149,19 +153,12 @@ PHP_METHOD(Mutex, trylock)
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
 		switch (pthread_mutex_trylock(mutex)) {
 			case SUCCESS: RETURN_TRUE; break;
-			
 			case EBUSY: RETURN_FALSE; break;
-			
-			case EDEADLK:
-				zend_error(E_WARNING, "pthreads has detected that the calling thread already owns the mutex");
-				RETURN_TRUE;
-			break;
 			
 			case EINVAL: 
 				zend_error(E_WARNING, "pthreads has detected that the variable passed is not a valid mutex");  
 			break;
 			
-			/* again the defmutex setup prohibits this from occuring, present for completeness */
 			case EAGAIN: 
 				zend_error(E_WARNING, "pthreads detected that the mutex could not be acquired because the maximum number of recursive locks has been exceeded");
 			break;
