@@ -162,14 +162,15 @@ PHP_METHOD(Thread, isWaiting)
 
 /* {{{ 	proto boolean Thread::wait([long timeout])
 		proto boolean Thread::wait(string member, [long timeout])
-		Will cause the calling process or thread to wait for the referenced thread to notify
-		When a timeout is used an reached boolean false will return
-		When no timeout is used a boolean indication of success will return */
+		Will cause the calling thread to wait for notification from the referenced object
+		If $member is set, the calling thread will be notified when the member is set on the object
+		If $member is set and already written to the object boolean true will return immediately
+		When a timeout is used and reached boolean false will return
+		Otherwise returns a boolean indication of success */
 PHP_METHOD(Thread, wait)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	long timeout = 0L;
-	zval **arguments;
 	
 	switch(ZEND_NUM_ARGS()) {
 		case 0: RETURN_BOOL(pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC)); break;
