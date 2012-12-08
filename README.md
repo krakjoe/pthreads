@@ -87,6 +87,10 @@ No restrictions here, you should have no problem running pthreads in your chosen
 
 Documentation can be found in the PHP manual: http://docs.php.net/manual/en/book.pthreads.php, and some examples can be found in the "examples" folder in the master repository.
 
+Further insights and occasional announcements can be read at the http://pthreads.org site where pthreads is developed and tested in the real world.
+
+If you have had the time to put any cool demo's together and would like them showcased on pthreads.org please get in touch.
+
 ### Feedback
 
 Please submit issues, and send your feedback and suggestions as often as you have them.
