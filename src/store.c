@@ -48,6 +48,10 @@ static void pthreads_store_storage_dtor (pthreads_storage *element);
 static void pthreads_store_event_dtor (pthreads_synchro *element);
 /* }}} */
 
+#ifndef Z_OBJ_P
+#	define Z_OBJ_P(zval_p) ((zend_object*)(EG(objects_store).object_buckets[Z_OBJ_HANDLE_P(zval_p)].bucket.obj.object))
+#endif
+
 /* {{{ allocate storage for an object */
 pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	pthreads_store store = calloc(1, sizeof(*store));
@@ -197,12 +201,14 @@ int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate T
 	if (pzval) {	
 		storage = pthreads_store_create(pzval TSRMLS_CC);
 		if (storage) {
-			if (allocate)
+			if (allocate) {
 				MAKE_STD_ZVAL(*separated);
-			result = pthreads_store_convert(
-				storage, *separated TSRMLS_CC
-			);
-			pthreads_store_storage_dtor(&storage);
+			}
+
+			result = pthreads_store_convert(storage, *separated TSRMLS_CC);
+
+			if (result == SUCCESS)
+				pthreads_store_storage_dtor(&storage);
 		}
 	}
 	return result;
@@ -229,20 +235,19 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 
 /* {{{ zval to string */
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength TSRMLS_DC) {
-	smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
 	int result = FAILURE;
-	
-	if (psmart) {
-		php_serialize_data_t vars;
-		PHP_VAR_SERIALIZE_INIT(vars);
-		php_var_serialize(							
-			psmart, 
-			&pzval, 
-			&vars TSRMLS_CC
-		);
-		PHP_VAR_SERIALIZE_DESTROY(vars);
+	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {	
+		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
+		if (psmart) {	
+			php_serialize_data_t vars;
+			PHP_VAR_SERIALIZE_INIT(vars);
+			php_var_serialize(							
+				psmart, 
+				&pzval, 
+				&vars TSRMLS_CC
+			);
+			PHP_VAR_SERIALIZE_DESTROY(vars);
 		
-		if (psmart) {
 			*slength = psmart->len;
 			if (psmart->len) {
 				*pstring = calloc(1, psmart->len+1);
@@ -257,7 +262,6 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength 
 			free(psmart);
 		}
 	}
-	
 	return result;
 } /* }}} */
 
