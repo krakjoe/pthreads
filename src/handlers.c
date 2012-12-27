@@ -229,7 +229,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 									
 									cache.initialized = 1;
 									cache.function_handler = call;
-									cache.calling_scope = EG(called_scope);
+									cache.calling_scope = EG(scope);
 									cache.called_scope = scope;
 									cache.object_ptr = getThis();
 									

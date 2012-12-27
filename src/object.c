@@ -687,12 +687,6 @@ static void * pthreads_routine(void *arg) {
 						
 						/* populate a cache and call the run method */
 						{
-							/* set if not set explicitly elsewhere */
-							if (!EG(called_scope))
-								EG(called_scope)=EG(scope);
-							if (!EG(active_symbol_table))
-								EG(active_symbol_table)=&EG(symbol_table);
-							
 							/* initialize info object */
 							info.size = sizeof(info);
 							info.object_ptr = EG(This);
@@ -709,7 +703,7 @@ static void * pthreads_routine(void *arg) {
 							cache.calling_scope = EG(scope);
 							cache.called_scope = EG(called_scope);
 							cache.object_ptr = EG(This);
-																																																																									
+																																																																					
 							/* call the function */
 							pthreads_state_set((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							{
