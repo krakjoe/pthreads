@@ -291,26 +291,34 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 		for(zend_hash_internal_pointer_reset_ex(table[0], &position);
 			zend_hash_get_current_data_ex(table[0], (void**) &zconstant, &position)==SUCCESS;
 			zend_hash_move_forward_ex(table[0], &position)) {
-			zend_constant constant;
-			if (zend_get_constant(zconstant->name, zconstant->name_len, &constant TSRMLS_CC)==FAILURE) {
-				constant.flags = zconstant->flags;
-				constant.module_number = zconstant->module_number;
-				constant.name = zend_strndup(zconstant->name, zconstant->name_len);
-				constant.name_len = zconstant->name_len;
+			if (strncmp(zconstant->name, "STDIN", zconstant->name_len-1)==0||
+				strncmp(zconstant->name, "STDOUT", zconstant->name_len-1)==0||
+				strncmp(zconstant->name, "STDERR", zconstant->name_len-1)==0){
+				continue;
+			} else {
+				zend_constant constant;
+				zval pzconstant;
+				if (!zend_get_constant(zconstant->name, zconstant->name_len-1, &pzconstant TSRMLS_CC)) {
+
+					constant.flags = zconstant->flags;
+					constant.module_number = zconstant->module_number;
+					constant.name = zend_strndup(zconstant->name, zconstant->name_len);
+					constant.name_len = zconstant->name_len;
 				
-				switch((Z_TYPE(constant.value)=Z_TYPE(zconstant->value))) {
-					case IS_BOOL:
-					case IS_LONG: {
-						Z_LVAL(constant.value)=Z_LVAL(zconstant->value);
-					} break;
-					case IS_DOUBLE: Z_DVAL(constant.value)=Z_DVAL(zconstant->value); break;
-					case IS_STRING: {
-						Z_STRVAL(constant.value)=estrndup(Z_STRVAL(zconstant->value), Z_STRLEN(zconstant->value)); 
-						Z_STRLEN(constant.value)=Z_STRLEN(zconstant->value);
-					} break;
-				}
+					switch((Z_TYPE(constant.value)=Z_TYPE(zconstant->value))) {
+						case IS_BOOL:
+						case IS_LONG: {
+							Z_LVAL(constant.value)=Z_LVAL(zconstant->value);
+						} break;
+						case IS_DOUBLE: Z_DVAL(constant.value)=Z_DVAL(zconstant->value); break;
+						case IS_STRING: {
+							Z_STRVAL(constant.value)=estrndup(Z_STRVAL(zconstant->value), Z_STRLEN(zconstant->value)); 
+							Z_STRLEN(constant.value)=Z_STRLEN(zconstant->value);
+						} break;
+					}
 				
-				zend_register_constant(&constant TSRMLS_CC);
+					zend_register_constant(&constant TSRMLS_CC);
+				} else zval_dtor(&pzconstant);
 			}
 		}
 	}
