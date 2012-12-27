@@ -45,14 +45,8 @@ static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREA
 static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference TSRMLS_DC); /* }}} */
 #endif
 
-static void pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC) {
-	if (function && scope) {
-		zend_op_array *ops = (zend_op_array*) function;
-		if (ops) {
-			ops->scope = scope;
-		}
-	}
-}
+/* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
+static void pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC); /* }}} */
 
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC) {
@@ -455,5 +449,15 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 	return copy;
 } /* }}} */
 #endif
+
+/* {{{ fix method scope for prepared entries, enabling self:: and parent:: to work */
+static void pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC) {
+	if (function && scope) {
+		zend_op_array *ops = (zend_op_array*) function;
+		if (ops) {
+			ops->scope = scope;
+		}
+	}
+} /* }}} */
 
 #endif
