@@ -79,7 +79,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				
 				/* perform inheritance */
 				if (candidate->parent)
-					candidate->parent = pthreads_prepared_entry(thread, candidate->parent TSRMLS_CC);
+					prepared->parent = pthreads_prepared_entry(thread, candidate->parent TSRMLS_CC);
 
 				/* declare interfaces */
 				if (candidate->num_interfaces) {
