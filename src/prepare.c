@@ -45,6 +45,15 @@ static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREA
 static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference TSRMLS_DC); /* }}} */
 #endif
 
+static void pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC) {
+	if (function && scope) {
+		zend_op_array *ops = (zend_op_array*) function;
+		if (ops) {
+			ops->scope = scope;
+		}
+	}
+}
+
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC) {
 	zend_class_entry *prepared = NULL, **searched = NULL;
@@ -170,6 +179,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				
 				/* copy function table */
 				zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) function_add_ref, &tf, sizeof(zend_function));
+				zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) prepared TSRMLS_CC);
 				
 				/* copy property info structures */
 				zend_hash_copy(&prepared->properties_info, &candidate->properties_info, (copy_ctor_func_t) pthreads_preparation_property_info_ctor, &ti, sizeof(zend_property_info));
