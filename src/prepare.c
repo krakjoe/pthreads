@@ -26,6 +26,10 @@
 #	include <src/object.h>
 #endif
 
+#ifndef HAVE_PTHREADS_RESOURCES_H
+#	include <src/resources.h>
+#endif
+
 /* {{{ prepared property info ctor */
 static void pthreads_preparation_property_info_ctor(zend_property_info *pi); /* }}} */
 /* {{{ prepared property info dtor */
@@ -47,6 +51,9 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 
 /* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
 static void pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC); /* }}} */
+
+/* {{{ prepared resource destructor */
+static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry); /* }}} */
 
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC) {
@@ -372,6 +379,12 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			NULL, &included, sizeof(int), 0
 		);
 	}
+
+	/* set sensible resource destructor */
+	if (EG(regular_list).pDestructor) {
+		thread->resources->destructor = EG(regular_list).pDestructor;
+	}
+	EG(regular_list).pDestructor = pthreads_prepared_resource_dtor;	
 } /* }}} */
 
 /* {{{ copy property info 
@@ -456,6 +469,20 @@ static void pthreads_apply_method_scope(zend_function *function, zend_class_entr
 		zend_op_array *ops = (zend_op_array*) function;
 		if (ops) {
 			ops->scope = scope;
+		}
+	}
+} /* }}} */
+
+/* {{{ destroy a resource, if we created it */
+static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry) {
+	TSRMLS_FETCH();
+	
+	PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
+	if (object) {
+		if (!pthreads_resources_kept(object->resources, entry TSRMLS_CC)) {
+			if (object->resources->destructor) {
+				object->resources->destructor(entry);
+			}
 		}
 	}
 } /* }}} */

@@ -113,4 +113,5 @@ printf("---------------------------------------------------------\n");
 printf("Average processing time of %f seconds per task\n", $runtime/$attempts);
 printf("---------------------------------------------------------\n");
 if ($_SERVER["HTTP_HOST"]) echo "</pre>";
+profiler_output(sprintf("/tmp/callgrind.%d", zend_thread_id()));
 ?>

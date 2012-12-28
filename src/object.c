@@ -348,6 +348,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 		destination->thread = source->thread;
 		destination->tid = source->tid;
 		destination->tls = source->tls;
+		destination->cls = source->cls;
 		destination->cid = source->cid;
 		destination->address = source->address;
 		
@@ -400,6 +401,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 					zend_llist_init(&base->stack->objects, sizeof(void**), NULL, 1);
 			}
 		}
+		base->resources = pthreads_resources_alloc(TSRMLS_C);
 	}
 } /* }}} */
 
@@ -435,6 +437,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 			free(base->address);
 		}
 	}
+	pthreads_resources_free(base->resources TSRMLS_CC);
 	
 #if PHP_VERSION_ID > 50399
 	{

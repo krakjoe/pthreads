@@ -16,7 +16,7 @@
   +----------------------------------------------------------------------+
 */
 PTHREADS_EXT_NAME="pthreads";
-PTHREADS_EXT_SRC="lock.c globals.c prepare.c synchro.c state.c store.c modifiers.c handlers.c object.c";
+PTHREADS_EXT_SRC="lock.c globals.c prepare.c synchro.c state.c store.c resources.c modifiers.c handlers.c object.c";
 PTHREADS_EXT_DIR="ext/pthreads/src";
 PTHREADS_EXT_API="php_pthreads.c";
 PTHREADS_EXT_FLAGS="/I" + configure_module_dirname;
