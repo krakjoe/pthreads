@@ -30,6 +30,10 @@
 #	include <src/object.h>
 #endif
 
+#ifndef HAVE_PTHREADS_RESOURCES_H
+#	include <src/resources.h>
+#endif
+
 typedef struct _pthreads_storage {
 	void		*data;
 	size_t 		length;
@@ -325,6 +329,12 @@ static pthreads_storage pthreads_store_create(zval *unstore TSRMLS_DC){
 				case IS_LONG: {
 					storage->exists = ((storage->lval=Z_LVAL_P(unstore)) > 0L);
 				} break;
+
+				case IS_RESOURCE: {
+					storage->data = tsrm_ls;
+					storage->lval = Z_RESVAL_P(unstore);
+					storage->exists = 1;
+				} break;
 				
 				case IS_DOUBLE: storage->exists = ((storage->dval=Z_DVAL_P(unstore)) > 0.0); break;
 				
@@ -363,7 +373,47 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			case IS_BOOL: ZVAL_BOOL(pzval, storage->lval); break;
 			case IS_LONG: ZVAL_LONG(pzval, storage->lval); break;
 			case IS_DOUBLE: ZVAL_DOUBLE(pzval, storage->dval); break;
-			
+			case IS_RESOURCE: {
+				if (storage->data != tsrm_ls) {
+					zend_rsrc_list_entry *original;
+					PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
+					if (zend_hash_index_find(&PTHREADS_EG(object->cls, regular_list), storage->lval, (void**)&original)==SUCCESS) {
+						zend_rsrc_list_entry *search;
+						HashPosition position;	
+						zend_bool found = 0;
+						int existed = 0;
+						for(zend_hash_internal_pointer_reset_ex(&EG(regular_list), &position);
+							zend_hash_get_current_data_ex(&EG(regular_list), (void**) &search, &position)==SUCCESS;
+							zend_hash_move_forward_ex(&EG(regular_list), &position)) {
+							if (search->ptr == original->ptr) {
+								found=1;
+								break;
+							}
+							existed++;
+						}
+						if (!found) {
+							int created;
+							zend_rsrc_list_entry create;
+							zend_rsrc_list_entry *keep;
+							{
+								create.type = original->type;
+								create.ptr = original->ptr;
+								create.refcount = ++create.refcount;
+								created=zend_hash_next_free_element(&EG(regular_list));
+								
+								if (zend_hash_index_update(
+									&EG(regular_list), created, (void*) &create, sizeof(zend_rsrc_list_entry), (void**) &keep
+								)==SUCCESS) {
+									ZVAL_RESOURCE(pzval, created);
+									pthreads_resources_keep(
+										object->resources, keep TSRMLS_CC
+									);
+								} else ZVAL_NULL(pzval);
+							}
+						} else ZVAL_RESOURCE(pzval, existed);
+					} else ZVAL_RESOURCE(pzval, storage->lval);
+				} else ZVAL_RESOURCE(pzval, storage->lval);
+			} break;
 			case IS_ARRAY:
 			case IS_OBJECT: {
 				result = pthreads_store_tozval(

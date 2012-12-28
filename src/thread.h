@@ -38,6 +38,10 @@
 #	include <src/store.h>
 #endif
 
+#ifndef HAVE_PTHREADS_RESOURCES_H
+#	include <src/resources.h>
+#endif
+
 /* {{{ stack structure */
 typedef struct _pthreads_stack {
 	zend_llist objects;
@@ -112,6 +116,11 @@ typedef struct _pthread_construct {
 	* Thread Address
 	*/
 	pthreads_address address;
+
+	/**
+	* Shared Resources
+	**/
+	pthreads_resources resources;
 } *PTHREAD;
 
 /* {{{ comparison function */
