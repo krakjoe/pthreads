@@ -398,7 +398,7 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 							{
 								create.type = original->type;
 								create.ptr = original->ptr;
-								create.refcount = ++create.refcount;
+								create.refcount = ++original->refcount;
 								created=zend_hash_next_free_element(&EG(regular_list));
 								
 								if (zend_hash_index_update(
