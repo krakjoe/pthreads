@@ -71,7 +71,7 @@ class Client extends Thread {
 /* ladies and gentlemen, the world first multi-threaded socket server in PHP :) */
 $server = socket_create_listen(10000);
 while(($client = socket_accept($server))){
-	new Client($client);
+	$clients[]=new Client($client);
 	/* we will serve a few clients and quit, to show that memory is freed and there are no errors on shutdown (hopefully) */
 	if (++$count>100)
 		break;
