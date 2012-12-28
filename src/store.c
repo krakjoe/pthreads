@@ -377,7 +377,7 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 				if (storage->data != tsrm_ls) {
 					zend_rsrc_list_entry *original;
 					PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
-					if (zend_hash_index_find(&PTHREADS_EG(object->cls, regular_list), storage->lval, (void**)&original)==SUCCESS) {
+					if (zend_hash_index_find(&PTHREADS_EG(storage->data, regular_list), storage->lval, (void**)&original)==SUCCESS) {
 						zend_rsrc_list_entry *search;
 						HashPosition position;	
 						zend_bool found = 0;
@@ -394,19 +394,18 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 						if (!found) {
 							int created;
 							zend_rsrc_list_entry create;
-							zend_rsrc_list_entry *keep;
 							{
 								create.type = original->type;
 								create.ptr = original->ptr;
-								create.refcount = ++original->refcount;
+								create.refcount = 1;
 								created=zend_hash_next_free_element(&EG(regular_list));
 								
 								if (zend_hash_index_update(
-									&EG(regular_list), created, (void*) &create, sizeof(zend_rsrc_list_entry), (void**) &keep
+									&EG(regular_list), created, (void*) &create, sizeof(zend_rsrc_list_entry), NULL
 								)==SUCCESS) {
-									ZVAL_RESOURCE(pzval, created);
+									ZVAL_RESOURCE(pzval, created);								
 									pthreads_resources_keep(
-										object->resources, keep TSRMLS_CC
+										object->resources, &create TSRMLS_CC
 									);
 								} else ZVAL_NULL(pzval);
 							}

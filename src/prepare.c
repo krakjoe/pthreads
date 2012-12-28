@@ -30,6 +30,10 @@
 #	include <src/resources.h>
 #endif
 
+#ifndef HAVE_PTHREADS_GLOBALS_H
+#	include <src/globals.h>
+#endif
+
 /* {{{ prepared property info ctor */
 static void pthreads_preparation_property_info_ctor(zend_property_info *pi); /* }}} */
 /* {{{ prepared property info dtor */
@@ -381,10 +385,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	}
 
 	/* set sensible resource destructor */
-	if (EG(regular_list).pDestructor) {
-		thread->resources->destructor = EG(regular_list).pDestructor;
-	}
-	EG(regular_list).pDestructor = pthreads_prepared_resource_dtor;	
+	EG(regular_list).pDestructor =  (dtor_func_t) pthreads_prepared_resource_dtor;	
 } /* }}} */
 
 /* {{{ copy property info 
@@ -473,17 +474,18 @@ static void pthreads_apply_method_scope(zend_function *function, zend_class_entr
 	}
 } /* }}} */
 
-/* {{{ destroy a resource, if we created it */
+/* {{{ destroy a resource, if we created it ( ie. it is not being kept by another thread ) */
 static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry) {
 	TSRMLS_FETCH();
-	
-	PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
-	if (object) {
-	//	if (!pthreads_resources_kept(object->resources, entry TSRMLS_CC)) {
-	//		if (object->resources->destructor) {
-	//			object->resources->destructor(entry);
-	//		}
-	//	}
+	if (EG(This)) {
+		PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
+		if (object) {
+			if (object->resources) {
+				if (!pthreads_resources_kept(object->resources, entry TSRMLS_CC)){
+					PTHREADS_G(default_resource_dtor)(entry);
+				}
+			}
+		}
 	}
 } /* }}} */
 
