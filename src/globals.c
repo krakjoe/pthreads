@@ -37,6 +37,7 @@ struct _pthreads_globals pthreads_globals;
 		locked, PTHREADS_GTSRMLS_C
 #endif
 
+
 /* {{{ pthreads_globals_init */
 zend_bool pthreads_globals_init(TSRMLS_D){
 	if (!PTHREADS_G(init)&&!PTHREADS_G(failed)) {
@@ -45,6 +46,9 @@ zend_bool pthreads_globals_init(TSRMLS_D){
 			PTHREADS_G(failed)=1;
 		if (PTHREADS_G(failed))
 			PTHREADS_G(init)=0;
+		if (PTHREADS_G(init)) {
+			PTHREADS_G(default_resource_dtor)=(EG(regular_list).pDestructor);
+		}
 		return PTHREADS_G(init);
 	} else return 0;
 } /* }}} */

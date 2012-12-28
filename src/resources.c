@@ -31,7 +31,7 @@
 pthreads_resources pthreads_resources_alloc(TSRMLS_D) {
 	pthreads_resources resources = calloc(1, sizeof(*resources));
 	if (resources) {
-		zend_hash_init(&resources->keep, 8, NULL, NULL, 0);
+		zend_hash_init(&resources->keep, 8, NULL, NULL, 1);
 	}
 	return resources;
 } /* }}} */
@@ -51,12 +51,12 @@ zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_e
 /* {{{ tells if a resource is being kept */
 zend_bool pthreads_resources_kept(pthreads_resources resources, zend_rsrc_list_entry *entry TSRMLS_DC) {
 	HashPosition position;
-	zend_rsrc_list_entry search;
+	zend_rsrc_list_entry *search;
+	
 	for (zend_hash_internal_pointer_reset_ex(&resources->keep, &position);
 		zend_hash_get_current_data_ex(&resources->keep, (void**)&search, &position)==SUCCESS;
 		zend_hash_move_forward_ex(&resources->keep, &position)) {
-		if (search.ptr == entry->ptr)
-			printf("s.ptr==e.ptr\n");
+		if (search->ptr == entry->ptr)
 			return 1;
 	}
 	return 0;

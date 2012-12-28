@@ -50,6 +50,11 @@ struct _pthreads_globals {
 	* Globals Mutex
 	*/
 	pthreads_lock lock;
+
+	/*
+	* Global/Default Resource Destructor
+	*/
+	dtor_func_t (default_resource_dtor);
 }; /* }}} */
 
 extern struct _pthreads_globals pthreads_globals;

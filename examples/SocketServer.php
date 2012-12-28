@@ -72,6 +72,9 @@ class Client extends Thread {
 $server = socket_create_listen(10000);
 while(($client = socket_accept($server))){
 	new Client($client);
+	/* we will serve a few clients and quit, to show that memory is freed and there are no errors on shutdown (hopefully) */
+	if (++$count>100)
+		break;
 	/* in the real world, do something here to ensure clients not running are destroyed */
 	/* the nature of a socket server is an endless loop, 
 		if you do not do something to explicitly destroy clients you create this may leak */

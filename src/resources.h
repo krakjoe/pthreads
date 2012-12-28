@@ -28,7 +28,6 @@
 
 typedef struct {
 	HashTable keep;
-	dtor_func_t destructor;
 } *pthreads_resources;
 
 pthreads_resources pthreads_resources_alloc(TSRMLS_D);
