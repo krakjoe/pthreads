@@ -479,11 +479,11 @@ static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry) {
 	
 	PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
 	if (object) {
-		if (!pthreads_resources_kept(object->resources, entry TSRMLS_CC)) {
-			if (object->resources->destructor) {
-				object->resources->destructor(entry);
-			}
-		}
+	//	if (!pthreads_resources_kept(object->resources, entry TSRMLS_CC)) {
+	//		if (object->resources->destructor) {
+	//			object->resources->destructor(entry);
+	//		}
+	//	}
 	}
 } /* }}} */
 
