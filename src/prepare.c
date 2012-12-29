@@ -415,7 +415,9 @@ static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, 
 		copy->alias = estrndup(alias->alias, alias->alias_len);
 		copy->alias_len = alias->alias_len;
 		copy->modifiers = alias->modifiers;
+#if PHP_VERSION_ID < 50600
 		copy->function = alias->function;
+#endif
 	}
 	return copy;
 } /* }}} */
@@ -436,7 +438,9 @@ static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREA
 			}
 			precedence->exclude_from_classes[exclude]=NULL;
 		}
+#if PHP_VERSION_ID < 50600
 		copy->function = precedence->function;
+#endif
 	}
 	return copy;
 } /* }}} */
