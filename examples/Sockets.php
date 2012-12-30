@@ -9,16 +9,20 @@ class Test extends Thread {
 	public function run(){
 		while(++$clients < 10 &&
 			($client = socket_accept($this->socket))){
+			printf("Accept in %lu\n", $this->getThreadId());
 			var_dump($client);
 			var_dump($this->socket);
 			socket_close($client);
 		}
 	}
 }
-$sock = socket_create_listen(9090);
-if ($sock) {
-	$test = new Test($sock);
-	$test->start();
+$workers = array();
+$sock = socket_create_listen($argv[1]);
+if ($sock) {	
+	while(++$worker<5){
+		$workers[$worker] = new Test($sock);
+		$workers[$worker]->start();
+	}
+	printf("%d threads waiting on port %d\n", count($workers), $argv[1]);
 }
-
 ?>
