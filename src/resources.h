@@ -30,8 +30,13 @@ typedef struct {
 	TsHashTable keep;
 } *pthreads_resources;
 
+typedef struct {
+	void 				***ls;
+	zend_class_entry	*scope;
+} *pthreads_resource;
+
 pthreads_resources pthreads_resources_alloc(TSRMLS_D);
-zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_entry *entry TSRMLS_DC);
+zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_entry *entry, pthreads_resource data TSRMLS_DC);
 zend_bool pthreads_resources_kept(pthreads_resources resources, zend_rsrc_list_entry *entry TSRMLS_DC);
 void pthreads_resources_free(pthreads_resources resources TSRMLS_DC);
 

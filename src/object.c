@@ -663,7 +663,7 @@ static void * pthreads_routine(void *arg) {
 			EG(current_execute_data)=NULL;					
 			EG(current_module)=&pthreads_module_entry;
 			
-			
+			/* init $this */
 			object_init_ex
 			(
 				EG(This)=getThis(), 
@@ -674,7 +674,7 @@ static void * pthreads_routine(void *arg) {
 			);
 
 			/* connect $this */
-			if (pthreads_connect(thread, PTHREADS_ZG(pointer)=PTHREADS_FETCH_FROM(EG(This)) TSRMLS_CC)==SUCCESS) {
+			if (pthreads_connect(PTHREADS_ZG(pointer)=thread, PTHREADS_FETCH_FROM(EG(This)) TSRMLS_CC)==SUCCESS) {
 				/* always the same no point recreating this for every execution */
 				zval zmethod;
 				

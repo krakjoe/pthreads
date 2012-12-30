@@ -331,9 +331,15 @@ static pthreads_storage pthreads_store_create(zval *unstore TSRMLS_DC){
 				} break;
 
 				case IS_RESOURCE: {
-					storage->data = TSRMLS_C;
-					storage->lval = Z_RESVAL_P(unstore);
-					storage->exists = 1;
+					pthreads_resource resource = calloc(1, sizeof(*resource));
+					if (resource) {
+						resource->scope = EG(scope);
+						resource->ls = TSRMLS_C;
+						
+						storage->lval = Z_RESVAL_P(unstore);
+						storage->exists = 1;
+						storage->data = resource;
+					}
 				} break;
 				
 				case IS_DOUBLE: storage->exists = ((storage->dval=Z_DVAL_P(unstore)) > 0.0); break;
@@ -374,32 +380,37 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			case IS_LONG: ZVAL_LONG(pzval, storage->lval); break;
 			case IS_DOUBLE: ZVAL_DOUBLE(pzval, storage->dval); break;
 			case IS_RESOURCE: {	
-				if (storage->data != TSRMLS_C) {
+				pthreads_resource resource = (pthreads_resource) storage->data;
+				if (EG(scope) != resource->scope) {
 					zend_rsrc_list_entry *original;
-					PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
-					if (zend_hash_index_find(&PTHREADS_EG(storage->data, regular_list), storage->lval, (void**)&original)==SUCCESS) {
-						zend_rsrc_list_entry *search;
-						HashPosition position;	
+					if (resource->ls != TSRMLS_C && zend_hash_index_find(&PTHREADS_EG(resource->ls, regular_list), storage->lval, (void**)&original)==SUCCESS) {
+							
 						zend_bool found = 0;
 						int existed = 0;
-
-						for(zend_hash_internal_pointer_reset_ex(&EG(regular_list), &position);
-							zend_hash_get_current_data_ex(&EG(regular_list), (void**) &search, &position)==SUCCESS;
-							zend_hash_move_forward_ex(&EG(regular_list), &position)) {			
-							if (search->ptr == original->ptr) {
-								found=1;
-								existed++;
-								break;
-							} else ++existed;
+						{
+							zend_rsrc_list_entry *search;
+							HashPosition position;
+							for(zend_hash_internal_pointer_reset_ex(&EG(regular_list), &position);
+								zend_hash_get_current_data_ex(&EG(regular_list), (void**) &search, &position)==SUCCESS;
+								zend_hash_move_forward_ex(&EG(regular_list), &position)) {			
+								if (search->ptr == original->ptr) {
+									found=1;
+									existed++;
+									break;
+								} else ++existed;
+							}
 						}
+						
 						if (!found) {
-							int created;
-
+							PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
+							
 							zend_rsrc_list_entry create;
 							{
+								int created;
+								
 								create.type = original->type;
 								create.ptr = original->ptr;
-								create.refcount = ++original->refcount;
+								create.refcount = 1;
 								created=zend_hash_next_free_element(&EG(regular_list));
 								
 								if (zend_hash_index_update(
@@ -407,7 +418,7 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 								)==SUCCESS) {
 									ZVAL_RESOURCE(pzval, created);								
 									pthreads_resources_keep(
-										object->resources, &create TSRMLS_CC
+										object->resources, &create, resource TSRMLS_CC
 									);
 								} else ZVAL_NULL(pzval);
 							}
@@ -443,6 +454,7 @@ static void pthreads_store_storage_dtor (pthreads_storage *storage){
 			case IS_OBJECT:
 			case IS_STRING:
 			case IS_ARRAY:
+			case IS_RESOURCE:
 				if ((*storage)->data) {
 					free((*storage)->data);
 				}

@@ -37,10 +37,10 @@ pthreads_resources pthreads_resources_alloc(TSRMLS_D) {
 } /* }}} */
 
 /* {{{ mark a resource for keeping */
-zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_entry *entry TSRMLS_DC) {
+zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_entry *entry, pthreads_resource data TSRMLS_DC) {
 	if (resources) {
 		if (zend_ts_hash_update(
-			&resources->keep, entry->ptr, sizeof(entry->ptr), TSRMLS_C, sizeof(TSRMLS_C), NULL
+			&resources->keep, entry, sizeof(entry), data, sizeof(*data), NULL
 		) == SUCCESS) {
 			return 1;
 		}
@@ -48,17 +48,16 @@ zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_e
 	return 0;
 } /* }}} */
 
-/* {{{ 
-	For this to work, a "kept" resource has to be kept in the scope of an object in a thread
-	I haven't yet worked out a way to do this, so this is incomplete and will cause errors 
-}}} */
-
 /* {{{ tells if a resource is being kept */
 zend_bool pthreads_resources_kept(pthreads_resources resources, zend_rsrc_list_entry *entry TSRMLS_DC) {
-	void **context;
-	if (zend_ts_hash_find(&resources->keep, entry->ptr, sizeof(entry->ptr), (void**) &context)==SUCCESS) {
-		return 1;
-	} else return 0;
+	pthreads_resource data;
+	if (entry) {
+		if (zend_ts_hash_find(&resources->keep, entry, sizeof(entry), (void**) &data)==SUCCESS) {
+			if (EG(scope)!=data->scope || TSRMLS_C != data->ls) {
+				return 1;
+			} else return 0;
+		} else return 0;
+	}
 } /* }}} */
 
 /* {{{ free resource structure */
