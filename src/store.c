@@ -331,7 +331,7 @@ static pthreads_storage pthreads_store_create(zval *unstore TSRMLS_DC){
 				} break;
 
 				case IS_RESOURCE: {
-					storage->data = tsrm_ls;
+					storage->data = TSRMLS_C;
 					storage->lval = Z_RESVAL_P(unstore);
 					storage->exists = 1;
 				} break;
@@ -373,8 +373,8 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			case IS_BOOL: ZVAL_BOOL(pzval, storage->lval); break;
 			case IS_LONG: ZVAL_LONG(pzval, storage->lval); break;
 			case IS_DOUBLE: ZVAL_DOUBLE(pzval, storage->dval); break;
-			case IS_RESOURCE: {
-				if (storage->data != tsrm_ls) {
+			case IS_RESOURCE: {	
+				if (storage->data != TSRMLS_C) {
 					zend_rsrc_list_entry *original;
 					PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
 					if (zend_hash_index_find(&PTHREADS_EG(storage->data, regular_list), storage->lval, (void**)&original)==SUCCESS) {
@@ -382,22 +382,24 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 						HashPosition position;	
 						zend_bool found = 0;
 						int existed = 0;
+
 						for(zend_hash_internal_pointer_reset_ex(&EG(regular_list), &position);
 							zend_hash_get_current_data_ex(&EG(regular_list), (void**) &search, &position)==SUCCESS;
-							zend_hash_move_forward_ex(&EG(regular_list), &position)) {
+							zend_hash_move_forward_ex(&EG(regular_list), &position)) {			
 							if (search->ptr == original->ptr) {
 								found=1;
+								existed++;
 								break;
-							}
-							existed++;
+							} else ++existed;
 						}
 						if (!found) {
 							int created;
+
 							zend_rsrc_list_entry create;
 							{
 								create.type = original->type;
 								create.ptr = original->ptr;
-								create.refcount = 1;
+								create.refcount = ++original->refcount;
 								created=zend_hash_next_free_element(&EG(regular_list));
 								
 								if (zend_hash_index_update(
@@ -424,9 +426,11 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			
 			default: ZVAL_NULL(pzval);
 		}
-		
-		if (Z_TYPE_P(pzval)!=IS_NULL && refcount)
+
+		if (Z_TYPE_P(pzval)!=IS_NULL && refcount) {
 			Z_SET_REFCOUNT_P(pzval, refcount);
+		}
+			
 	}
 	return result;
 }

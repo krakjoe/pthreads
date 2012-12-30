@@ -62,4 +62,13 @@ extern zend_object_handlers pthreads_handlers;
 extern zend_object_handlers *zend_handlers;
 
 extern struct _pthreads_globals pthreads_globals;
+
+ZEND_BEGIN_MODULE_GLOBALS(pthreads)
+	void * pointer;
+ZEND_END_MODULE_GLOBALS(pthreads)
+
+#ifndef PTHREADS_ZG
+#	define PTHREADS_ZG(v) TSRMG(pthreads_globals_id, zend_pthreads_globals *, v)
+#endif
+
 #endif

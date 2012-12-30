@@ -53,7 +53,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 			&value TSRMLS_CC
 		)!=SUCCESS) {	
 			value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
-		} else zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
+		}
 	} else value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
 	return value;
 } 

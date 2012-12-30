@@ -1,12 +1,13 @@
 <?php
 class SQLQuery extends Stackable {
 	
-	public function __construct($sql) { $this->sql = $sql; }
+	public function __construct($sql) { 
+		$this->sql = $sql; 
+	}
 	public function run() {
 		/** included in 0.0.37 is access to the real worker object for stackables **/
 		if ($this->worker->isReady()) {
-			printf("MySQL in %s: %s\n", __CLASS__, $this->worker->getConnection());
-			$result = mysql_query($this->sql, $this->worker->getConnection());
+			$result = mysql_query($this->sql, $this->worker->getConnection());  
 			if ($result) {
 				while(($row = mysql_fetch_assoc($result))){
 					/** $this->rows[]=$row; segfaults */
@@ -17,7 +18,7 @@ class SQLQuery extends Stackable {
 				}
 				mysql_free_result($result);
 			} else printf("%s got no result\n", __CLASS__);
-		} else printf("%s not ready\n", $this->worker->getName());
+		} else printf("%s not ready\n", $this->worker->getConnection());
 		$this->rows = $rows;
 		$this->notify();
 	}
@@ -26,6 +27,8 @@ class SQLQuery extends Stackable {
 }
 
 class SQLWorker extends Worker {
+	public $mysql;	
+	
 	public function __construct($host, $user, $pass, $db) {
 		$this->host = $host;
 		$this->user = $user;
@@ -34,14 +37,12 @@ class SQLWorker extends Worker {
 		$this->ready = false;
 		$this->name = null;
 	}
-	
 	public function run() {
 		$this->setName(sprintf("%s (%lu)", __CLASS__, $this->getThreadId()));
 		if (($this->mysql = mysql_connect($this->host, $this->user, $this->pass))) {
 			$this->ready = (boolean) mysql_select_db($this->db, $this->mysql);
 		}
 	}
-	
 	public function getConnection(){ return $this->mysql; }
 	protected function isReady($flag = null) { 
 		if (is_null($flag)) {

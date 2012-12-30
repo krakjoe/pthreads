@@ -71,6 +71,8 @@ zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_PROPERTIES
 };
 
+ZEND_DECLARE_MODULE_GLOBALS(pthreads)
+
 zend_class_entry *pthreads_thread_entry;
 zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_stackable_entry;
@@ -100,6 +102,11 @@ void ***pthreads_instance = NULL;
 #ifndef PTHREADS_FRIENDLY_NAME
 #	define PTHREADS_FRIENDLY_NAME PTHREADS_NAME, PTHREADS_TID
 #endif
+
+static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
+	pg->pointer = NULL;
+}
+static inline void pthreads_globals_dtor(zend_pthreads_globals *pg TSRMLS_DC) {}
 
 PHP_MINIT_FUNCTION(pthreads)
 {
@@ -162,7 +169,9 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.get_property_ptr_ptr = NULL;
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
-	
+
+	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, pthreads_globals_dtor);	
+
 	if (pthreads_globals_init(TSRMLS_C)) {
 		/*
 		* Global Init
