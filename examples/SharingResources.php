@@ -31,8 +31,8 @@ class MyShared extends Thread {
 		if ($this->mutex)
 			printf("LOCK(%d): %d\n", $this->getThreadId(), Mutex::lock($this->mutex));
 
-		if (($result = mysql_query("SHOW PROCESSLIST;", $this->mysql))) {
-			while(($row = mysql_fetch_assoc($result))) {
+		if (($result = mysqli_query($this->mysql, "SHOW PROCESSLIST;"))) {
+			while(($row = mysqli_fetch_assoc($result))) {
 				print_r($row);
 			}
 		}
@@ -43,7 +43,7 @@ class MyShared extends Thread {
 }
 
 
-$mysql = mysql_connect("127.0.0.1", "", "");
+$mysql = mysqli_connect("127.0.0.1", "root", "perchmicro24");
 if ($mysql) {
 	$mutex = Mutex::create();
 	$instances = array(new MyShared($mysql, $mutex), new MyShared($mysql, $mutex), new MyShared($mysql, $mutex));

@@ -55,7 +55,7 @@
 #endif
 
 #ifndef HAVE_PTHREADS_GLOBALS_H
-#include <src/globals.h>
+#	include <src/globals.h>
 #endif
 
 zend_module_entry pthreads_module_entry = {
@@ -70,8 +70,6 @@ zend_module_entry pthreads_module_entry = {
   PHP_PTHREADS_VERSION,
   STANDARD_MODULE_PROPERTIES
 };
-
-ZEND_DECLARE_MODULE_GLOBALS(pthreads)
 
 zend_class_entry *pthreads_thread_entry;
 zend_class_entry *pthreads_worker_entry;
