@@ -101,6 +101,8 @@ void ***pthreads_instance = NULL;
 #	define PTHREADS_FRIENDLY_NAME PTHREADS_NAME, PTHREADS_TID
 #endif
 
+ZEND_DECLARE_MODULE_GLOBALS(pthreads)
+
 static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 	pg->pointer = NULL;
 }

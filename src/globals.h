@@ -59,6 +59,8 @@ struct _pthreads_globals {
 
 extern struct _pthreads_globals pthreads_globals;
 
+ZEND_EXTERN_MODULE_GLOBALS(pthreads)
+
 /* {{{ PTHREADS_G */
 #define PTHREADS_G(v) pthreads_globals.v
 /* }}} */
@@ -74,7 +76,5 @@ void pthreads_globals_unlock(zend_bool locked TSRMLS_DC); /* }}} */
 
 /* {{{ shutdown global structures */
 void pthreads_globals_shutdown(TSRMLS_D); /* }}} */
-
-ZEND_DECLARE_MODULE_GLOBALS(pthreads)
 
 #endif /* HAVE_PTHREADS_GLOBAL_H */
