@@ -27,7 +27,7 @@
 #endif
 
 typedef struct {
-	HashTable keep;
+	TsHashTable keep;
 } *pthreads_resources;
 
 pthreads_resources pthreads_resources_alloc(TSRMLS_D);

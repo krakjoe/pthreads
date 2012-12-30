@@ -385,6 +385,8 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	}
 
 	/* set sensible resource destructor */
+	if (!PTHREADS_G(default_resource_dtor))
+		PTHREADS_G(default_resource_dtor)=(EG(regular_list).pDestructor);
 	EG(regular_list).pDestructor =  (dtor_func_t) pthreads_prepared_resource_dtor;	
 } /* }}} */
 
@@ -482,15 +484,21 @@ static void pthreads_apply_method_scope(zend_function *function, zend_class_entr
 static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry) {
 	TSRMLS_FETCH();
 	if (EG(This)) {
-		PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
-		if (object) {
-			if (object->resources) {
-				if (!pthreads_resources_kept(object->resources, entry TSRMLS_CC)){
-					PTHREADS_G(default_resource_dtor)(entry);
+		zend_try {
+			PTHREAD object = PTHREADS_ZG(pointer);
+			if (object) {
+				if (object->resources) {
+					if (!pthreads_resources_kept(object->resources, entry TSRMLS_CC)){
+						if (PTHREADS_G(default_resource_dtor))
+							PTHREADS_G(default_resource_dtor)(entry);
+					}
 				}
 			}
-		}
+		} zend_catch {
+			zend_error(E_WARNING, "pthreads has detected failure while cleaning resources and is likely to fail");
+		} zend_end_try();
 	}
 } /* }}} */
 
 #endif
+

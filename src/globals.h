@@ -75,4 +75,6 @@ void pthreads_globals_unlock(zend_bool locked TSRMLS_DC); /* }}} */
 /* {{{ shutdown global structures */
 void pthreads_globals_shutdown(TSRMLS_D); /* }}} */
 
+ZEND_DECLARE_MODULE_GLOBALS(pthreads)
+
 #endif /* HAVE_PTHREADS_GLOBAL_H */

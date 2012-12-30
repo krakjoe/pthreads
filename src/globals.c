@@ -46,9 +46,6 @@ zend_bool pthreads_globals_init(TSRMLS_D){
 			PTHREADS_G(failed)=1;
 		if (PTHREADS_G(failed))
 			PTHREADS_G(init)=0;
-		if (PTHREADS_G(init)) {
-			PTHREADS_G(default_resource_dtor)=(EG(regular_list).pDestructor);
-		}
 		return PTHREADS_G(init);
 	} else return 0;
 } /* }}} */
