@@ -12,7 +12,7 @@
   <methodsynopsis>
    <modifier>final</modifier> <modifier>public</modifier> <type>mixed</type><methodname>Stackable::synchronized</methodname>
    <methodparam><type>Closure</type><parameter>block</parameter></methodparam>
-   <methodparam choice="opt" rep="repeat"><type>mixed</type><parameter>use</parameter></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>...</parameter></methodparam>
   </methodsynopsis>
   <para>
   Executes the block while retaining the synchronization lock for the current context.
@@ -31,7 +31,7 @@
     </listitem>
    </varlistentry>
    <varlistentry>
-    <term><parameter>use</parameter></term>
+    <term><parameter>...</parameter></term>
     <listitem>
      <para>
   Variable length list of arguments to use as function arguments to the block
