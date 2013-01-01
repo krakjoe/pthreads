@@ -29,6 +29,7 @@
 typedef struct _pthreads_synchro {
 	pthreads_lock lock;
 	pthread_cond_t 	notify;
+	zend_bool *synchronized;
 } *pthreads_synchro;
 
 /* {{{ allocate synchronization object */
@@ -42,6 +43,9 @@ int pthreads_synchro_wait(pthreads_synchro sync TSRMLS_DC); /* }}} */
 
 /* {{{ send notification */
 int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC); /* }}} */
+
+/* {{{ execute a block of code synchronized */
+void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_info_cache *cache, uint argc, zval ***argv, zval *return_value TSRMLS_DC); /* }}} */
 
 /* {{{ free synchronization object */
 void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC); /* }}} */

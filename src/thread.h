@@ -121,6 +121,11 @@ typedef struct _pthread_construct {
 	* Shared Resources
 	**/
 	pthreads_resources resources;
+
+	/*
+	* Store Hold
+	*/
+	zend_bool hold;
 } *PTHREAD;
 
 /* {{{ comparison function */

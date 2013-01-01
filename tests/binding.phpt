@@ -12,18 +12,12 @@ class ThreadTesting extends Thread {
 		$this->other = $other;
 	}
 	public function run(){
-		if ($this->other) {
-			printf("%s\n", __METHOD__);
-		}
 		$this->isDone(true);
 	}
-	
-	/* we are just ensuring the correct order of output */
-	/* else the tests fail */
-	protected function isDone($done = null) {
+	public function isDone($done = null) {
 		if (!$done)
 			return $this->done;
-		return ($this->done = $this->notify());
+		return ($this->done = $done);
 	}
 }
 
@@ -35,17 +29,13 @@ class ThreadTest extends Thread {
 		$this->other = $other;
 	}
 	public function run(){
-		if ($this->other) {
-			printf("%s\n", __METHOD__);
-		}
 		$this->isDone(true);
 	}
-	/* we are just ensuring the correct order of output */
-	/* else the tests fail */
-	protected function isDone($done = null) {
+	
+	public function isDone($done = null) {
 		if (!$done)
 			return $this->done;
-		return ($this->done = $this->notify());
+		return ($this->done = $done);
 	}
 }
 
@@ -56,10 +46,11 @@ $threads[1]->setOther($threads[0]);
 foreach($threads as $thread)
 	$thread->start();
 foreach($threads as $thread) {
-	if (!$thread->isDone())
-		$thread->wait();
-}	
+	$thread->synchronized(function() use($thread){
+		$thread->wait("done");
+	});
+}
+printf("DONE\n");
 ?>
 --EXPECT--
-ThreadTesting::run
-ThreadTest::run
+DONE

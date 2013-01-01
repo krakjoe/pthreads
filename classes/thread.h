@@ -28,6 +28,10 @@ PHP_METHOD(Thread, isWaiting);
 PHP_METHOD(Thread, getThreadId);
 PHP_METHOD(Thread, getCreatorId);
 
+PHP_METHOD(Thread, synchronized);
+PHP_METHOD(Thread, lock);
+PHP_METHOD(Thread, unlock);
+
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -46,6 +50,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_getThreadId, 0, 0, 0)
 ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(Thread_getCreatorId, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -59,6 +64,16 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_isJoined, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_isWaiting, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_synchronized, 0, 0, 1)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_lock, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_unlock, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_thread_methods[];
@@ -77,6 +92,9 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, isWaiting, Thread_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getCreatorId, Thread_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, synchronized, Thread_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, unlock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Thread::start()
@@ -244,6 +262,41 @@ PHP_METHOD(Thread, getThreadId)
 PHP_METHOD(Thread, getCreatorId)
 {
 	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->cid);
+} /* }}} */
+
+/* {{{ proto void Thread::synchronized(Callable function, ...)
+	Will synchronize the thread, call the function, passing anything after the function as parameters
+	 */
+PHP_METHOD(Thread, synchronized) 
+{
+	zend_fcall_info *info = emalloc(sizeof(zend_fcall_info));
+	zend_fcall_info_cache *cache = emalloc(sizeof(zend_fcall_info_cache));
+	
+	uint argc = 0;
+	zval ***argv = NULL;
+	
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "f|+", info, cache, &argv, &argc) == SUCCESS) {
+		pthreads_synchro_block(getThis(), info, cache, argc, argv, return_value TSRMLS_CC);
+	}
+	
+	if (argc) 
+		efree(argv);	
+	efree(info);
+	efree(cache);
+} /* }}} */
+
+/* {{{ proto boolean Thread::lock()
+	Will acquire the storage lock */
+PHP_METHOD(Thread, lock) 
+{
+	ZVAL_BOOL(return_value, pthreads_store_lock(getThis() TSRMLS_CC));
+} /* }}} */
+
+/* {{{ proto boolean Thread::unlock()
+	Will release the storage lock */
+PHP_METHOD(Thread, unlock) 
+{
+	ZVAL_BOOL(return_value, pthreads_store_unlock(getThis() TSRMLS_CC));
 } /* }}} */
 #	endif
 #endif

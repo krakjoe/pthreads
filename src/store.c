@@ -75,6 +75,28 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	return NULL;
 } /* }}} */
 
+/* {{{ lock storage */
+zend_bool pthreads_store_lock(zval *this_ptr TSRMLS_DC) {	
+	PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());
+	if (pobject) {
+		return pthreads_lock_acquire(
+			pobject->store->lock,
+			&pobject->hold TSRMLS_CC
+		);
+	} else return 0;
+} /* }}} */
+
+/* {{{ unlock storage */
+zend_bool pthreads_store_unlock(zval *this_ptr TSRMLS_DC) {
+	PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());
+	if (pobject) {
+		return pthreads_lock_release(
+			pobject->store->lock,
+			pobject->hold TSRMLS_CC
+		);
+	} else return 0;
+} /* }}} */
+
 /* {{{ delete a value from the store */
 int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC) {
 	int result = FAILURE;

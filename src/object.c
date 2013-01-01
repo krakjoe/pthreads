@@ -384,6 +384,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 #endif	
 		base->cls = tsrm_ls;
 		base->address = NULL;
+		
 		if (PTHREADS_IS_CONNECTION(base)) {
 			base->tid = pthreads_self();
 			base->tls = tsrm_ls;

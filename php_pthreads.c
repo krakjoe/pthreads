@@ -106,7 +106,6 @@ ZEND_DECLARE_MODULE_GLOBALS(pthreads)
 static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 	pg->pointer = NULL;
 }
-static inline void pthreads_globals_dtor(zend_pthreads_globals *pg TSRMLS_DC) {}
 
 PHP_MINIT_FUNCTION(pthreads)
 {
@@ -170,7 +169,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
 
-	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, pthreads_globals_dtor);	
+	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 
 	if (pthreads_globals_init(TSRMLS_C)) {
 		/*
