@@ -47,6 +47,43 @@
   The return value from the block
   </para>
  </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Synchronizing</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class My extends Stackable {
+    public function run() {
+        $this->synchronized(function($object){
+            var_dump($object->isWaiting());
+            $object->notify();
+        }, $this);
+    }
+}
+/** create worker **/
+$my = new My();
+/** stack my **/
+/** execute something here **/
+$my->synchronized(function($object){
+    $object->wait();
+}, $my);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(/** true or false **/)
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
 </refentry>
 
 <!-- Keep this comment at the end of the file

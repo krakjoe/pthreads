@@ -39,6 +39,50 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Notifications and Waiting</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Work extends Stackable {
+    public function run() {
+        $this->synchronized(function($object){
+        printf("%s Synchronized\n", __CLASS__);    
+        $object->notify();
+        }, $this);
+    }
+}
+class My extends Worker {
+    public function run() {
+        /** ... **/
+    }
+}
+
+$my = new My();
+$my->start();
+$work = array(new Work());
+$my->stack($work[0]);
+/** send notification to the waiting thread **/
+$work[0]->synchronized(function($object){
+    printf("Process Synchronized\n");
+    $object->wait();
+}, $work[0]);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Process Synchronized
+Work Synchronized
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
 
 </refentry>
 
