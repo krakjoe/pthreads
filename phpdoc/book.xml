@@ -59,7 +59,7 @@
   <note>
    <para>
  Resources:
- The extensions and functionality that define resources in PHP are completely unprepared for this kind of environment, as such there's no compatible, and safe way of sharing resources among contexts.
+ The extensions and functionality that define resources in PHP are completely unprepared for this kind of environment; pthreads makes provisions for Resources to be shared among contexts, however, for most types of resource it should be considered unsafe. Extreme caution and care should be used when sharing resources among contexts.
    </para>
   </note>
   <caution>
