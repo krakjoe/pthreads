@@ -29,6 +29,35 @@
   A numeric identity
   </para>
  </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Return the identity of the referenced Thread</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class My extends Thread {
+    public function run() {
+        printf("%s is Thread #%lu\n", __CLASS__, $this->getThreadId());
+    }
+}
+$my = new My();
+$my->start();
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+My is Thread #123456778899
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
 </refentry>
 
 <!-- Keep this comment at the end of the file

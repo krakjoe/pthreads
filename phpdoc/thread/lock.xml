@@ -30,6 +30,37 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Locking Thread Storage</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class My extends Thread {
+    public function run() {
+        var_dump($this->lock());
+        /** nobody can read or write **/
+        var_dump($this->unlock());
+        /** reading / writing resumed for all other contexts */
+    }
+}
+$my = new My();
+$my->start();
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(true)
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
 
 </refentry>
 

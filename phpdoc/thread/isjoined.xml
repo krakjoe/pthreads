@@ -30,7 +30,39 @@
   </para>
  </refsect1>
 
-
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Detect the state of a thread</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class My extends Thread {
+    public function run() {
+        $this->synchronized(function($thread){
+            $thread->wait();
+        }, $this);
+    }
+}
+$my = new My();
+$my->start();
+var_dump($my->isJoined());
+$my->synchronized(function($thread){
+    $thread->notify();
+}, $my);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(false)
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
 </refentry>
 
 <!-- Keep this comment at the end of the file
