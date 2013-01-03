@@ -39,7 +39,42 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Removing Stackables from Workers</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Work extends Stackable {
+    public function run() {
+        
+    }
+}
 
+class My extends Worker {
+    public function run() {
+        /** ... **/
+    }
+}
+$my = new My();
+$work = new Work();
+var_dump($my->stack($work));
+var_dump($my->unstack($work));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+int(1)
+int(0)
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
 </refentry>
 
 <!-- Keep this comment at the end of the file

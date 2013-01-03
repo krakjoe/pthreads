@@ -34,7 +34,7 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Join with a Thread</title>
+    <title>Join with the referenced Thread</title>
     <programlisting role="php">
 <![CDATA[
 <?php

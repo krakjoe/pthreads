@@ -34,7 +34,7 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Detect the state of a thread</title>
+    <title>Detect the state of the referenced Thread</title>
     <programlisting role="php">
 <![CDATA[
 <?php

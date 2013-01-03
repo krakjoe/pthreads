@@ -30,6 +30,31 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Detect the state of a Worker</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class My extends Worker {
+    public function run() {
+        /* ... */
+    }
+}
+$my = new My();
+$my->start();
+/* ... */
+if ($my->isWorking()) {
+    /* ... the Worker is busy executing another object */
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
 
 </refentry>
 

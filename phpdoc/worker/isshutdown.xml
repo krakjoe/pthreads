@@ -31,6 +31,38 @@
  </refsect1>
 
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Detect the state of a Worker</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class My extends Worker {
+    public function run() {
+        /* ... */
+    }
+}
+$my = new My();
+$my->start();
+var_dump($my->isShutdown());
+$my->shutdown();
+var_dump($my->isShutdown());
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(false)
+bool(true)
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
 </refentry>
 
 <!-- Keep this comment at the end of the file

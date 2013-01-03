@@ -30,6 +30,33 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Return the identity of the referenced Worker</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class My extends Worker {
+    public function run() {
+        printf("%s is Worker #%lu\n", __CLASS__, $this->getThreadId());
+    }
+}
+$my = new My();
+$my->start();
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+My is Worker #123456778899
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
 
 </refentry>
 

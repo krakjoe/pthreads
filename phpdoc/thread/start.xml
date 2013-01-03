@@ -34,7 +34,7 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Starting a Thread</title>
+    <title>Starting Threads</title>
     <programlisting role="php">
 <![CDATA[
 <?php
