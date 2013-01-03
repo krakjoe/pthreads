@@ -41,6 +41,40 @@
   <para>A boolean indication of success.</para>
  </refsect1>
 
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>A newly created and optionally locked Mutex handle</para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Mutex Locking and Unlocking</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/** You cannot use the "new" keyword, a Mutex is not a PHP object **/
+$mutex = Mutex::create();
+/** You can now lock the mutex in any context **/
+var_dump(Mutex::lock($mutex));
+/** It is invalid to attempt to destroy a locked Mutex **/
+var_dump(Mutex::unlock($mutex));
+/** Always destroy mutex you have created **/
+Mutex::destroy($mutex);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(true)
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
 
 </refentry>
 

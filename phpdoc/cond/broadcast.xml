@@ -42,7 +42,32 @@
   </para>
  </refsect1>
 
-
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Condition Broadcasting</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/** You cannot use the "new" keyword, a Cond is not a PHP object **/
+$cond = Cond::create();
+/** The caller must lock the associated Mutex before a call to broadcast **/
+var_dump(Cond::broadcast($cond));
+/** Always destroy Cond you have created **/
+Cond::destroy($cond);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
 </refentry>
 
 <!-- Keep this comment at the end of the file
