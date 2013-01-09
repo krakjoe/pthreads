@@ -143,10 +143,27 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				/* copy uternals ! */
 				{
 					zend_uint umethod = 0;
-					void *usources[11] = {
+					void *usources[18] = {
 						candidate->constructor,
 						candidate->destructor,
 						candidate->clone,
+						/**
+						union _zend_function *__get;
+483    union _zend_function *__set;
+484    union _zend_function *__unset;
+485    union _zend_function *__isset;
+486    union _zend_function *__call;
+487    union _zend_function *__callstatic;
+488    union _zend_function *__tostring;
+						**/
+						candidate->__get,
+						candidate->__set,
+						candidate->__unset,
+						candidate->__isset,
+						candidate->__call,
+						candidate->__callstatic,
+						candidate->__tostring,
+
 						candidate->serialize_func,
 						candidate->unserialize_func,
 			
@@ -165,21 +182,29 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 								case 0: zend_hash_update(&prepared->function_table, "__construct", sizeof("__construct"), &candidate->constructor, sizeof(zend_function), (void**) &prepared->constructor); break;
 								case 1: zend_hash_update(&prepared->function_table, "__destruct", sizeof("__destruct"), &candidate->destructor, sizeof(zend_function), (void**) &prepared->destructor); break;
 								case 2: zend_hash_update(&prepared->function_table, "__clone", sizeof("__clone"), &candidate->clone, sizeof(zend_function), (void**) &prepared->clone); break;
-								case 3: zend_hash_update(&prepared->function_table, "__serialize", sizeof("__serialize"), &candidate->serialize_func, sizeof(zend_function), (void**) &prepared->serialize_func); break;
-								case 4: zend_hash_update(&prepared->function_table, "__unserialize", sizeof("__unserialize"), &candidate->unserialize_func, sizeof(zend_function), (void**) &prepared->unserialize_func); break;
+								case 3: zend_hash_update(&prepared->function_table, "__get", sizeof("__get"), &candidate->__get, sizeof(zend_function), (void**) &prepared->__get);
+								case 4: zend_hash_update(&prepared->function_table, "__set", sizeof("__set"), &candidate->__set, sizeof(zend_function), (void**) &prepared->__set);
+								case 5: zend_hash_update(&prepared->function_table, "__unset", sizeof("__unset"), &candidate->__unset, sizeof(zend_function), (void**) &prepared->__unset);
+								case 6: zend_hash_update(&prepared->function_table, "__isset", sizeof("__isset"), &candidate->__isset, sizeof(zend_function), (void**) &prepared->__isset);
+								case 7: zend_hash_update(&prepared->function_table, "__call", sizeof("__call"), &candidate->__call, sizeof(zend_function), (void**) &prepared->__call);
+								case 8: zend_hash_update(&prepared->function_table, "__callstatic", sizeof("__callstatic"), &candidate->__callstatic, sizeof(zend_function), (void**) &prepared->__callstatic);
+								case 9: zend_hash_update(&prepared->function_table, "__tostring", sizeof("__tostring"), &candidate->__tostring, sizeof(zend_function), (void**) &prepared->__tostring);
+								
+								case 10: zend_hash_update(&prepared->function_table, "__serialize", sizeof("__serialize"), &candidate->serialize_func, sizeof(zend_function), (void**) &prepared->serialize_func); break;
+								case 11: zend_hash_update(&prepared->function_table, "__unserialize", sizeof("__unserialize"), &candidate->unserialize_func, sizeof(zend_function), (void**) &prepared->unserialize_func); break;
 								/* handlers */
-								case 5: prepared->create_object = candidate->create_object; break;
-								case 6: prepared->serialize = candidate->serialize; break;
-								case 7: prepared->unserialize = candidate->unserialize; break;
-								case 8: {
+								case 12: prepared->create_object = candidate->create_object; break;
+								case 13: prepared->serialize = candidate->serialize; break;
+								case 14: prepared->unserialize = candidate->unserialize; break;
+								case 15: {
 									prepared->get_iterator = candidate->get_iterator;
 									prepared->iterator_funcs = candidate->iterator_funcs;
 								} break;
-								case 9: prepared->interface_gets_implemented = candidate->interface_gets_implemented; break;
-								case 10: prepared->get_static_method = candidate->get_static_method; break;
+								case 16: prepared->interface_gets_implemented = candidate->interface_gets_implemented; break;
+								case 17: prepared->get_static_method = candidate->get_static_method; break;
 							}
 						}
-					} while(++umethod < 11);
+					} while(++umethod < 18);
 				}
 				
 				/* copy function table */
