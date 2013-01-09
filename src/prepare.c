@@ -56,6 +56,9 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 /* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
 static void pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC); /* }}} */
 
+/* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
+static void pthreads_apply_property_scope(zend_property_info *info, zend_class_entry *scope TSRMLS_DC); /* }}} */
+
 /* {{{ prepared resource destructor */
 static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry); /* }}} */
 
@@ -201,7 +204,6 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				
 				/* copy function table */
 				zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) function_add_ref, &tf, sizeof(zend_function));
-				zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) prepared TSRMLS_CC);
 				
 				/* copy property info structures */
 				zend_hash_copy(&prepared->properties_info, &candidate->properties_info, (copy_ctor_func_t) pthreads_preparation_property_info_ctor, &ti, sizeof(zend_property_info));
@@ -264,11 +266,12 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 #if PHP_VERSION_ID > 50399
 				lcname = (char*)zend_new_interned_string(lcname, prepared->name_length+1, 1 TSRMLS_CC);
 				if (IS_INTERNED(lcname)) {
-					 zend_hash_quick_update(CG(class_table), lcname, prepared->name_length+1, INTERNED_HASH(lcname), &prepared, sizeof(zend_class_entry*), NULL);
-				} else zend_hash_update(CG(class_table), lcname, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), NULL);
+					 zend_hash_quick_update(CG(class_table), lcname, prepared->name_length+1, INTERNED_HASH(lcname), &prepared, sizeof(zend_class_entry*), (void**)&searched);
+				} else zend_hash_update(CG(class_table), lcname, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), (void**)&searched);
 #else
-				zend_hash_update(CG(class_table), lcname, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), NULL);
+				zend_hash_update(CG(class_table), lcname, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), (void**)&searched);
 #endif
+				prepared = *searched;
 			} else {
 				prepared = *searched;
 			}
@@ -377,14 +380,23 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			char *lcname;
 			uint lcnamel;
 			ulong idx;
-			
+			zend_class_entry *prepared;
 			if (zend_hash_get_current_key_ex(table[0], &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
 				if (!zend_hash_exists(table[1], lcname, lcnamel)){
-					if (pthreads_prepared_entry(thread, *entry TSRMLS_CC)==NULL) {
+					if ((prepared=pthreads_prepared_entry(thread, *entry TSRMLS_CC))==NULL) {
 						zend_error_noreturn(
 							E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
 						);
 						break;
+					} else {
+						/*
+						* fix scope in properties
+						*/
+						zend_hash_apply_with_argument(&prepared->properties_info, (apply_func_arg_t) pthreads_apply_property_scope, (void*) prepared TSRMLS_CC);
+						/*
+						* fix scope in methods
+						*/
+						zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) prepared TSRMLS_CC);
 					}
 				}
 			}
@@ -494,6 +506,13 @@ static void pthreads_apply_method_scope(zend_function *function, zend_class_entr
 		if (ops) {
 			ops->scope = scope;
 		}
+	}
+} /* }}} */
+
+/* {{{ fix scope for prepared entry properties, enabling private members in foreign objects to work */
+static void pthreads_apply_property_scope(zend_property_info *info, zend_class_entry *scope TSRMLS_DC) {
+	if (info && scope) {
+		info->ce = scope;
 	}
 } /* }}} */
 
