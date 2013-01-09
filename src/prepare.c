@@ -147,15 +147,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 						candidate->constructor,
 						candidate->destructor,
 						candidate->clone,
-						/**
-						union _zend_function *__get;
-483    union _zend_function *__set;
-484    union _zend_function *__unset;
-485    union _zend_function *__isset;
-486    union _zend_function *__call;
-487    union _zend_function *__callstatic;
-488    union _zend_function *__tostring;
-						**/
+
 						candidate->__get,
 						candidate->__set,
 						candidate->__unset,
