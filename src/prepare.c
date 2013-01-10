@@ -393,6 +393,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 						* fix scope in properties
 						*/
 						zend_hash_apply_with_argument(&prepared->properties_info, (apply_func_arg_t) pthreads_apply_property_scope, (void*) prepared TSRMLS_CC);
+
 						/*
 						* fix scope in methods
 						*/
