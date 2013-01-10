@@ -40,7 +40,7 @@ pthreads_resources pthreads_resources_alloc(TSRMLS_D) {
 zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_entry *entry, pthreads_resource data TSRMLS_DC) {
 	if (resources) {
 		if (zend_ts_hash_update(
-			&resources->keep, entry, sizeof(entry), data, sizeof(*data), NULL
+			&resources->keep, entry, sizeof(*entry), data, sizeof(*data), NULL
 		) == SUCCESS) {
 			return 1;
 		}
@@ -52,7 +52,7 @@ zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_e
 zend_bool pthreads_resources_kept(pthreads_resources resources, zend_rsrc_list_entry *entry TSRMLS_DC) {
 	pthreads_resource data;
 	if (entry) {
-		if (zend_ts_hash_find(&resources->keep, entry, sizeof(entry), (void**) &data)==SUCCESS) {
+		if (zend_ts_hash_find(&resources->keep, entry, sizeof(*entry), (void**) &data)==SUCCESS) {
 			if (EG(scope)!=data->scope || TSRMLS_C != data->ls) {
 				return 1;
 			} else return 0;

@@ -262,7 +262,7 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 /* {{{ zval to string */
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength TSRMLS_DC) {
 	int result = FAILURE;
-	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {	
+	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval)) && (*pstring)) {	
 		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
 		if (psmart) {	
 			php_serialize_data_t vars;
