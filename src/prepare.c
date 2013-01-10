@@ -228,7 +228,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 								pthreads_store_separate(
 									candidate->default_properties_table[i],
 									&prepared->default_properties_table[i],
-									1 TSRMLS_CC
+									1, 1 TSRMLS_CC
 								);
 							} else prepared->default_properties_table[i] = NULL;
 						}
@@ -247,7 +247,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 								pthreads_store_separate(
 									candidate->default_static_members_table[i],
 									&prepared->default_static_members_table[i],
-									1 TSRMLS_CC
+									1, 0 TSRMLS_CC
 								);
 							} else prepared->default_static_members_table[i]=NULL;
 						}

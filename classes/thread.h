@@ -90,7 +90,7 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, isRunning, Thread_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isWaiting, Thread_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
 	PHP_ME(Thread, getCreatorId, Thread_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, synchronized, Thread_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -254,7 +254,9 @@ PHP_METHOD(Thread, join)
 	Will return the identifier of the referenced Thread */
 PHP_METHOD(Thread, getThreadId)
 {
-	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->tid);
+	if (getThis()) {
+		ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->tid);
+	} else ZVAL_LONG(return_value, pthreads_self());
 } /* }}} */
 
 /* {{{ proto long Thread::getCreatorId() 

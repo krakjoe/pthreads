@@ -44,7 +44,7 @@ typedef struct _pthreads_storage {
 } *pthreads_storage;
 
 /* {{{ statics */
-static pthreads_storage pthreads_store_create(zval *pzval TSRMLS_DC);
+static pthreads_storage pthreads_store_create(zval *pzval, zend_bool complex TSRMLS_DC);
 static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_DC);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength TSRMLS_DC);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC);
@@ -155,7 +155,7 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 	int result = FAILURE;
 	zend_bool locked;
 	if (store) {
-		pthreads_storage storage = pthreads_store_create(*write TSRMLS_CC);
+		pthreads_storage storage = pthreads_store_create(*write, 1 TSRMLS_CC);
 		if (storage) {
 			if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 				if (zend_ts_hash_update(&store->table, key, keyl, (void**) &storage, sizeof(pthreads_storage), NULL)==SUCCESS) {
@@ -220,12 +220,12 @@ unlock:
 } /* }}} */
 
 /* {{{ seperate a zval using internals */
-int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate TSRMLS_DC) {
+int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, zend_bool complex TSRMLS_DC) {
 	int result = FAILURE;
 	pthreads_storage storage;
 	
 	if (pzval) {	
-		storage = pthreads_store_create(pzval TSRMLS_CC);
+		storage = pthreads_store_create(pzval, complex TSRMLS_CC);
 		if (storage) {
 			if (allocate) {
 				MAKE_STD_ZVAL(*separated);
@@ -238,11 +238,6 @@ int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate T
 		}
 	}
 	return result;
-} /* }}} */
-
-/* {{{ seperate a zval pointer using internals */
-int pthreads_store_separate_pointer(zval **ppzval, zval **separated, zend_bool allocate TSRMLS_DC) {
-	return FAILURE;
 } /* }}} */
 
 /* {{{ free store storage for a thread */
@@ -320,7 +315,7 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 } /* }}} */
 
 /* {{{ Will storeize the zval into a newly allocated buffer which must be free'd by the caller */
-static pthreads_storage pthreads_store_create(zval *unstore TSRMLS_DC){					
+static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex TSRMLS_DC){					
 	pthreads_storage storage;
 	
 	if (unstore) {
@@ -344,7 +339,9 @@ static pthreads_storage pthreads_store_create(zval *unstore TSRMLS_DC){
 							storage->data, (const void*) Z_STRVAL_P(unstore), storage->length
 						);
 						storage->exists = (storage->length > 0);
-					} else storage->data = NULL;
+					} else {
+						storage->data = NULL;
+					}
 				} break;
 				
 				case IS_BOOL:
@@ -353,14 +350,19 @@ static pthreads_storage pthreads_store_create(zval *unstore TSRMLS_DC){
 				} break;
 
 				case IS_RESOURCE: {
-					pthreads_resource resource = calloc(1, sizeof(*resource));
-					if (resource) {
-						resource->scope = EG(scope);
-						resource->ls = TSRMLS_C;
+					if (complex) {
+						pthreads_resource resource = calloc(1, sizeof(*resource));
+						if (resource) {
+							resource->scope = EG(scope);
+							resource->ls = TSRMLS_C;
 						
-						storage->lval = Z_RESVAL_P(unstore);
-						storage->exists = 1;
-						storage->data = resource;
+							storage->lval = Z_RESVAL_P(unstore);
+							storage->exists = 1;
+							storage->data = resource;
+						}
+					} else {
+						storage->exists = 0;
+						storage->type = IS_NULL;
 					}
 				} break;
 				
@@ -368,11 +370,16 @@ static pthreads_storage pthreads_store_create(zval *unstore TSRMLS_DC){
 				
 				case IS_OBJECT:
 				case IS_ARRAY: {
-					if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length TSRMLS_CC)==SUCCESS) {
-						if (storage->type==IS_ARRAY) {
-							storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
-						} else storage->exists = 1;
-					} else free(storage);
+					if (complex) {
+						if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length TSRMLS_CC)==SUCCESS) {
+							if (storage->type==IS_ARRAY) {
+								storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
+							} else storage->exists = 1;
+						} else free(storage);
+					} else {
+						storage->exists = 0;
+						storage->type = IS_NULL;
+					}
 				} break;
 				
 				default: storage->exists = 0;
