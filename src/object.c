@@ -387,7 +387,6 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 		
 		if (PTHREADS_IS_CONNECTION(base)) {
 			base->tid = pthreads_self();
-			base->tls = tsrm_ls;
 		} else {
 			base->cid = pthreads_self();
 			base->lock = pthreads_lock_alloc(TSRMLS_C);
@@ -617,7 +616,7 @@ static void * pthreads_routine(void *arg) {
 		pthreads_globals_lock(&glocked TSRMLS_CC);
 		
 		/* create new context */
-		tsrm_ls = tsrm_new_interpreter_context();
+		thread->tls = tsrm_ls = tsrm_new_interpreter_context();
 		
 		/* set interpreter context */
 		tsrm_set_interpreter_context(tsrm_ls);
@@ -673,7 +672,7 @@ static void * pthreads_routine(void *arg) {
 					 TSRMLS_CC
 				)
 			);
-
+			
 			/* connect $this */
 			if (pthreads_connect(PTHREADS_ZG(pointer)=thread, PTHREADS_FETCH_FROM(EG(This)) TSRMLS_CC)==SUCCESS) {
 				/* always the same no point recreating this for every execution */
@@ -756,7 +755,6 @@ static void * pthreads_routine(void *arg) {
 		* Shutdown Block Begin
 		**/
 		
-		
 		/* acquire global lock */
 		pthreads_globals_lock(&glocked TSRMLS_CC);
 	
@@ -783,3 +781,4 @@ static void * pthreads_routine(void *arg) {
 /* }}} */
 
 #endif
+
