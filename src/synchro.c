@@ -57,25 +57,18 @@ pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 /* {{{ wait for notification on synchronization object */
 int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
 	int result = FAILURE;
-	struct timeval now;
-	struct timespec until;
-	
+	struct timeval time;
+
 	if (timeout>0L) {
-		if (gettimeofday(&now, NULL)==SUCCESS) {
-			long nsec = timeout * 1000;
-			if (nsec > 1000000000L) {
-				until.tv_sec = now.tv_sec + (nsec / 1000000000L);
-				until.tv_nsec = (now.tv_usec * 1000) + (nsec % 1000000000L);
-			} else {
-				until.tv_sec = now.tv_sec;
-				until.tv_nsec = (now.tv_usec * 1000) + timeout;	
-			}
+		if (gettimeofday(&time, NULL)==SUCCESS) {
+			time.tv_sec += (timeout / 10000000L);
+    		time.tv_usec += (timeout % 10000000L);
 		} else timeout = 0L;
 	}
 	
 	if (sync) {
 		if (timeout > 0L) {
-			result = pthread_cond_timedwait(&sync->notify, &sync->lock->mutex, &until);
+			result = pthread_cond_timedwait(&sync->notify, &sync->lock->mutex, &time);
 		} else { result = pthread_cond_wait(&sync->notify, &sync->lock->mutex); }
 	} else { /* report unknown error */ }
 	

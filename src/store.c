@@ -154,6 +154,7 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC) {
 	int result = FAILURE;
 	zend_bool locked;
+	uint refcount = Z_REFCOUNT_PP(write);
 	if (store) {
 		pthreads_storage storage = pthreads_store_create(*write, 1 TSRMLS_CC);
 		if (storage) {
@@ -289,6 +290,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength 
 /* {{{ string to zval */
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC) {
 	int result = SUCCESS;
+	ulong refcount = Z_REFCOUNT_P(pzval);
 	if (pstring) {
 		const unsigned char* pointer = (const unsigned char*) pstring;
 		if (pointer) {
@@ -304,6 +306,8 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 				}							
 				PHP_VAR_UNSERIALIZE_DESTROY(vars);
 			}
+			if (pzval && refcount)
+				Z_SET_REFCOUNT_P(pzval, refcount);
 		} else result = FAILURE;
 	} else result = FAILURE;
 	
@@ -443,7 +447,7 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 								if (zend_hash_index_update(
 									&EG(regular_list), created, (void*) &create, sizeof(zend_rsrc_list_entry), NULL
 								)==SUCCESS) {
-									ZVAL_RESOURCE(pzval, created);								
+									ZVAL_RESOURCE(pzval, created);							
 									pthreads_resources_keep(
 										object->resources, &create, resource TSRMLS_CC
 									);
