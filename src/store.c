@@ -289,7 +289,6 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength 
 /* {{{ string to zval */
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC) {
 	int result = SUCCESS;
-	ulong refcount = Z_REFCOUNT_P(pzval);
 	if (pstring) {
 		const unsigned char* pointer = (const unsigned char*) pstring;
 		if (pointer) {
@@ -305,9 +304,6 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 				}							
 				PHP_VAR_UNSERIALIZE_DESTROY(vars);
 			}
-			
-			if (pzval && refcount) 
-				Z_SET_REFCOUNT_P(pzval, refcount);
 		} else result = FAILURE;
 	} else result = FAILURE;
 	
@@ -359,6 +355,8 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 							storage->lval = Z_RESVAL_P(unstore);
 							storage->exists = 1;
 							storage->data = resource;
+
+							zend_list_addref(Z_RESVAL_P(unstore));
 						}
 					} else {
 						storage->exists = 0;
@@ -465,12 +463,7 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			} break;
 			
 			default: ZVAL_NULL(pzval);
-		}
-
-		if (Z_TYPE_P(pzval)!=IS_NULL && refcount) {
-			Z_SET_REFCOUNT_P(pzval, refcount);
-		}
-			
+		}	
 	}
 	return result;
 }
