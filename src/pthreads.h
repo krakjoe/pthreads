@@ -30,6 +30,7 @@
 #else
 #include <pthread.h>
 #endif
+#include <stdint.h>
 
 #include <php.h>
 #include <php_globals.h>
