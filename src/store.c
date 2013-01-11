@@ -46,7 +46,7 @@ typedef struct _pthreads_storage {
 /* {{{ statics */
 static pthreads_storage pthreads_store_create(zval *pzval, zend_bool complex TSRMLS_DC);
 static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_DC);
-static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength TSRMLS_DC);
+static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
 static void pthreads_store_event_dtor (pthreads_synchro *element);
@@ -254,12 +254,53 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 	}
 } /* }}} */
 
+void pthreads_remove_obj_arr_ressources(zval **pzval TSRMLS_DC, int num_args, va_list args, zend_hash_key *hash_key) {
+	pthreads_remove_obj_arr_recursive_ressources(pzval TSRMLS_CC);
+}
+
+void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
+	int is_temp;
+
+	HashTable *thash = NULL;
+	switch (Z_TYPE_PP(pzval)) {
+		case IS_ARRAY:
+			thash = Z_ARRVAL_PP(pzval);
+
+		case IS_OBJECT:
+			if (thash == NULL) {
+				zend_object *zobj = Z_OBJ_P(*pzval);
+				if (zobj == 0) { // something that haven't been stored...
+					zend_hash_index_del(&EG(regular_list), zobj);
+					return;
+				}
+				thash = Z_OBJDEBUG_PP(pzval, is_temp);
+			}
+
+			if (thash && ++thash->nApplyCount > 1) {
+				--thash->nApplyCount;
+				return;
+			}
+			if (thash) {
+				zend_hash_apply_with_arguments(thash TSRMLS_CC, (apply_func_args_t)pthreads_remove_obj_arr_ressources, 0);
+			}
+			
+		break;
+
+		case IS_RESOURCE:
+			zend_hash_index_del(&EG(regular_list), Z_RESVAL_PP(pzval));
+		break;
+	}
+}
+
 /* {{{ zval to string */
-static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength TSRMLS_DC) {
+static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {
 	int result = FAILURE;
-	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {	
+	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {
+		if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
+				pthreads_remove_obj_arr_recursive_ressources(&pzval TSRMLS_CC);
+		}
 		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
-		if (psmart) {	
+		if (psmart) {
 			php_serialize_data_t vars;
 			PHP_VAR_SERIALIZE_INIT(vars);
 			php_var_serialize(							
@@ -370,16 +411,11 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 				
 				case IS_OBJECT:
 				case IS_ARRAY: {
-					if (complex) {
-						if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length TSRMLS_CC)==SUCCESS) {
-							if (storage->type==IS_ARRAY) {
-								storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
-							} else storage->exists = 1;
-						} else free(storage);
-					} else {
-						storage->exists = 0;
-						storage->type = IS_NULL;
-					}
+					if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length, complex TSRMLS_CC)==SUCCESS) {
+						if (storage->type==IS_ARRAY) {
+							storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
+						} else storage->exists = 1;
+					} else free(storage);
 				} break;
 				
 				default: storage->exists = 0;
