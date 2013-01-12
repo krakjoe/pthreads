@@ -255,10 +255,15 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 	}
 } /* }}} */
 
-void pthreads_remove_obj_arr_ressources(zval **pzval TSRMLS_DC, int num_args, va_list args, zend_hash_key *hash_key) {
+/* {{{ set ressources to NULL for non-complex types; helper-function for pthreads_remove_obj_arr_recursive_ressources */
+void pthreads_remove_obj_arr_ressources(zval **pzval TSRMLS_DC) {
+	if (Z_TYPE_PP(pzval) == IS_RESOURCE) {
+		Z_TYPE_PP(pzval) = IS_NULL;
+	}
 	pthreads_remove_obj_arr_recursive_ressources(pzval TSRMLS_CC);
-}
+} /* }}} */
 
+/* {{{ set corrupt objects (like mysqli after thread duplication) to NULL and recurse */
 void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
 	int is_temp;
 
@@ -271,7 +276,8 @@ void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
 			if (thash == NULL) {
 				zend_object *zobj = Z_OBJ_P(*pzval);
 				if (zobj == 0) { // something that haven't been stored...
-					zend_hash_index_del(&EG(regular_list), zobj);
+					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
+					Z_TYPE_PP(pzval) = IS_NULL;
 					return;
 				}
 				thash = Z_OBJDEBUG_PP(pzval, is_temp);
@@ -282,16 +288,12 @@ void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
 				return;
 			}
 			if (thash) {
-				zend_hash_apply_with_arguments(thash TSRMLS_CC, (apply_func_args_t)pthreads_remove_obj_arr_ressources, 0);
+				zend_hash_apply(thash, (apply_func_args_t)pthreads_remove_obj_arr_ressources TSRMLS_CC);
 			}
 			
 		break;
-
-		case IS_RESOURCE:
-			zend_hash_index_del(&EG(regular_list), Z_RESVAL_PP(pzval));
-		break;
 	}
-}
+} /* }}} */
 
 /* {{{ zval to string */
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {

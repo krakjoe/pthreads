@@ -9,11 +9,11 @@ class sql {
 
 	public static function __callstatic($method, $args){
 		$tid = Thread::getThreadId();
-		if (self::$connection[$tid]) {
+		if (isset(self::$connection[$tid])) {
 			return call_user_func_array(array(self::$connection[$tid], "_{$method}"), $args);
 		} else {
 			self::$connection[$tid] = new sql();
-			if (self::$connection[$tid])
+			if (isset(self::$connection[$tid]))
 				return call_user_func_array(array(self::$connection[$tid], "_{$method}"), $args);
 		}
 	}
