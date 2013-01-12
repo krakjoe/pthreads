@@ -453,9 +453,18 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 									);
 								} else ZVAL_NULL(pzval);
 							}
-						} else ZVAL_RESOURCE(pzval, existed);
-					} else ZVAL_RESOURCE(pzval, storage->lval);
-				} else ZVAL_RESOURCE(pzval, storage->lval);
+						} else {
+							ZVAL_RESOURCE(pzval, existed);
+							zend_list_addref(Z_RESVAL_P(pzval));
+						}
+					} else {
+						ZVAL_RESOURCE(pzval, storage->lval);
+						zend_list_addref(Z_RESVAL_P(pzval));
+					}
+				} else {
+					ZVAL_RESOURCE(pzval, storage->lval);
+					zend_list_addref(Z_RESVAL_P(pzval));
+				}
 			} break;
 			case IS_ARRAY:
 			case IS_OBJECT: {
