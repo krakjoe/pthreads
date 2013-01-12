@@ -283,10 +283,6 @@ void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
 				thash = Z_OBJDEBUG_PP(pzval, is_temp);
 			}
 
-			if (thash && ++thash->nApplyCount > 1) {
-				--thash->nApplyCount;
-				return;
-			}
 			if (thash) {
 				zend_hash_apply(thash, (apply_func_args_t)pthreads_remove_obj_arr_ressources TSRMLS_CC);
 			}
