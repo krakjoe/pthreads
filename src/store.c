@@ -295,19 +295,22 @@ void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {
 	int result = FAILURE;
 	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {
-		if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
-				pthreads_remove_obj_arr_recursive_ressources(&pzval TSRMLS_CC);
-		}
 		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
 		if (psmart) {
-			php_serialize_data_t vars;
-			PHP_VAR_SERIALIZE_INIT(vars);
-			php_var_serialize(							
-				psmart, 
-				&pzval, 
-				&vars TSRMLS_CC
-			);
-			PHP_VAR_SERIALIZE_DESTROY(vars);
+			if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
+				pthreads_remove_obj_arr_recursive_ressources(&pzval TSRMLS_CC);
+			}
+			
+			{
+				php_serialize_data_t vars;
+				PHP_VAR_SERIALIZE_INIT(vars);
+				php_var_serialize(							
+					psmart, 
+					&pzval, 
+					&vars TSRMLS_CC
+				);
+				PHP_VAR_SERIALIZE_DESTROY(vars);
+			}
 		
 			*slength = psmart->len;
 			if (psmart->len) {
