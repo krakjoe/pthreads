@@ -302,14 +302,17 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 			}
 			
 			{
-				php_serialize_data_t vars;
-				PHP_VAR_SERIALIZE_INIT(vars);
-				php_var_serialize(							
-					psmart, 
-					&pzval, 
-					&vars TSRMLS_CC
-				);
-				PHP_VAR_SERIALIZE_DESTROY(vars);
+				if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
+					(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
+					php_serialize_data_t vars;
+					PHP_VAR_SERIALIZE_INIT(vars);
+					php_var_serialize(						
+						psmart,
+						&pzval, 
+						&vars TSRMLS_CC
+					);
+					PHP_VAR_SERIALIZE_DESTROY(vars);
+				}
 			}
 		
 			*slength = psmart->len;
@@ -418,7 +421,7 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 						if (storage->type==IS_ARRAY) {
 							storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
 						} else storage->exists = 1;
-					} else free(storage);
+					}
 				} break;
 				
 				default: storage->exists = 0;
