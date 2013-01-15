@@ -165,7 +165,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.has_dimension = pthreads_has_dimension;
 	pthreads_handlers.unset_dimension = pthreads_unset_dimension;
 	
-//	pthreads_handlers.get_property_ptr_ptr = NULL;
+	pthreads_handlers.get_property_ptr_ptr = NULL;
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
 
