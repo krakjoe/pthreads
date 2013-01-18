@@ -216,6 +216,11 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 					zend_hash_copy(&prepared->default_static_members, &candidate->default_static_members, (copy_ctor_func_t) pthreads_preparation_default_properties_ctor, &tz, sizeof(zval*));
 					prepared->default_properties.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
 					prepared->default_static_members.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
+					if (candidate->doc_comment) {
+						prepared->doc_comment = estrndup(
+							candidate->doc_comment, candidate->doc_comment_len	
+						);
+					}
 #else
 					if (candidate->default_properties_count) {
 						int i;
@@ -256,6 +261,12 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 					
 					/* copy user info struct */
 					memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
+					if ((candidate->info.user).doc_comment) {
+						(prepared->info.user).doc_comment = estrndup(
+							(candidate->info.user).doc_comment, 
+							(candidate->info.user).doc_comment_len
+						);
+					}
 #endif
 				}
 				

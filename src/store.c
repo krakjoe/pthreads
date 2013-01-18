@@ -275,7 +275,8 @@ void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
 		case IS_OBJECT:
 			if (thash == NULL) {
 				zend_object *zobj = Z_OBJ_P(*pzval);
-				if (zobj == 0) { // something that haven't been stored...
+				if (zobj == 0) { // this causes memory read errors, 
+								 // this needs addressing before this can be included in a release
 					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
 					Z_TYPE_PP(pzval) = IS_NULL;
 					return;
