@@ -220,6 +220,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 						prepared->doc_comment = estrndup(
 							candidate->doc_comment, candidate->doc_comment_len	
 						);
+						prepared->doc_comment_len = candidate->doc_comment_len;
 					}
 #else
 					if (candidate->default_properties_count) {
@@ -263,9 +264,10 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 					memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
 					if ((candidate->info.user).doc_comment) {
 						(prepared->info.user).doc_comment = estrndup(
-							(candidate->info.user).doc_comment, 
+							(candidate->info.user).doc_comment,
 							(candidate->info.user).doc_comment_len
 						);
+						(prepared->info.user).doc_comment_len = (candidate->info.user).doc_comment_len;
 					}
 #endif
 				}
@@ -549,4 +551,5 @@ static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry) {
 } /* }}} */
 
 #endif
+
 
