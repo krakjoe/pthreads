@@ -68,7 +68,9 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 		INIT_PZVAL(mstring);
 		convert_to_string(mstring);
 		member = mstring;
+#if PHP_VERSION_ID > 50399
 		key = NULL;
+#endif
 	}
 
 	if (Z_TYPE_P(member)==IS_STRING) {
@@ -94,7 +96,9 @@ zval * pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthr
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
 	zval *mstring = NULL;
-	
+
+	/* if the member is null here, we must lock the storage, get the next id, turn it into a string, write the property and release the lock */	
+
 	if (Z_TYPE_P(member) != IS_STRING) {
 		ALLOC_ZVAL(mstring);
 		*mstring = *member;
@@ -104,7 +108,9 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		INIT_PZVAL(mstring);
 		convert_to_string(mstring);
 		member = mstring;
+#if PHP_VERSION_ID > 50399
 		key = NULL;
+#endif
 	}
 
 	if (Z_TYPE_P(member)==IS_STRING) {
@@ -155,7 +161,9 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 		INIT_PZVAL(mstring);
 		convert_to_string(mstring);
 		member = mstring;
+#if PHP_VERSION_ID > 50399
 		key = NULL;
+#endif
 	}
 
 	if (!(isset = pthreads_store_isset(
@@ -189,7 +197,9 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		INIT_PZVAL(mstring);
 		convert_to_string(mstring);
 		member = mstring;
+#if PHP_VERSION_ID > 50399
 		key = NULL;
+#endif
 	}
 
 	if (pthreads_store_delete(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
