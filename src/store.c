@@ -48,6 +48,8 @@ static pthreads_storage pthreads_store_create(zval *pzval, zend_bool complex TSR
 static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_DC);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC);
+static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC);
+static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
 static void pthreads_store_event_dtor (pthreads_synchro *element);
 /* }}} */
@@ -255,110 +257,6 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 	}
 } /* }}} */
 
-/* {{{ set ressources to NULL for non-complex types; helper-function for pthreads_remove_obj_arr_recursive_ressources */
-void pthreads_remove_obj_arr_ressources(zval **pzval TSRMLS_DC) {
-	if (Z_TYPE_PP(pzval) == IS_RESOURCE) {
-		Z_TYPE_PP(pzval) = IS_NULL;
-	}
-	pthreads_remove_obj_arr_recursive_ressources(pzval TSRMLS_CC);
-} /* }}} */
-
-/* {{{ set corrupt objects (like mysqli after thread duplication) to NULL and recurse */
-void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
-	int is_temp;
-
-	HashTable *thash = NULL;
-	switch (Z_TYPE_PP(pzval)) {
-		case IS_ARRAY:
-			thash = Z_ARRVAL_PP(pzval);
-
-		case IS_OBJECT:
-			if (thash == NULL) {
-				zend_object *zobj = Z_OBJ_P(*pzval);
-				if (zobj == 0) { // memory errors still ...
-					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
-					Z_TYPE_PP(pzval) = IS_NULL;
-					return;
-				}
-				thash = Z_OBJDEBUG_PP(pzval, is_temp);
-			}
-
-			if (thash) {
-				zend_hash_apply(thash, (apply_func_t)pthreads_remove_obj_arr_ressources TSRMLS_CC);
-			}
-			
-		break;
-	}
-} /* }}} */
-
-/* {{{ zval to string */
-static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {
-	int result = FAILURE;
-	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {
-		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
-		if (psmart) {
-			if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
-				pthreads_remove_obj_arr_recursive_ressources(&pzval TSRMLS_CC);
-			}
-			
-			{
-				if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
-					(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
-					php_serialize_data_t vars;
-					PHP_VAR_SERIALIZE_INIT(vars);
-					php_var_serialize(						
-						psmart,
-						&pzval, 
-						&vars TSRMLS_CC
-					);
-					PHP_VAR_SERIALIZE_DESTROY(vars);
-				}
-			}
-		
-			*slength = psmart->len;
-			if (psmart->len) {
-				*pstring = calloc(1, psmart->len+1);
-				if (*pstring) {
-					memmove(
-						(char*) *pstring, (const void*) psmart->c, psmart->len
-					);
-					result = SUCCESS;
-				}
-			} else *pstring = NULL;
-			smart_str_free(psmart);	
-			free(psmart);
-		}
-	}
-	return result;
-} /* }}} */
-
-/* {{{ string to zval */
-static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC) {
-	int result = SUCCESS;
-	ulong refcount = Z_REFCOUNT_P(pzval);
-	if (pstring) {
-		const unsigned char* pointer = (const unsigned char*) pstring;
-		if (pointer) {
-			/*
-			* Populate PHP storage from pthreads_storage
-			*/
-			{
-				php_unserialize_data_t vars;
-				PHP_VAR_UNSERIALIZE_INIT(vars);
-				if (!php_var_unserialize(&pzval, &pointer, pointer+slength, &vars TSRMLS_CC)) {
-					result = FAILURE;
-					zval_dtor(pzval);
-				}							
-				PHP_VAR_UNSERIALIZE_DESTROY(vars);
-			}
-			if (pzval && refcount)
-				Z_SET_REFCOUNT_P(pzval, refcount);
-		} else result = FAILURE;
-	} else result = FAILURE;
-	
-	return result;
-} /* }}} */
-
 /* {{{ Will storeize the zval into a newly allocated buffer which must be free'd by the caller */
 static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex TSRMLS_DC){					
 	pthreads_storage storage;
@@ -521,6 +419,111 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 	return result;
 }
 /* }}} */
+
+/* {{{ zval to string */
+static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {
+	int result = FAILURE;
+	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {
+		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
+		if (psmart) {
+			if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
+				pthreads_store_remove_resources_recursive(&pzval TSRMLS_CC);
+			}
+			
+			{
+				if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
+					(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
+					php_serialize_data_t vars;
+					PHP_VAR_SERIALIZE_INIT(vars);
+					php_var_serialize(						
+						psmart,
+						&pzval, 
+						&vars TSRMLS_CC
+					);
+					PHP_VAR_SERIALIZE_DESTROY(vars);
+				}
+			}
+		
+			*slength = psmart->len;
+			if (psmart->len) {
+				*pstring = calloc(1, psmart->len+1);
+				if (*pstring) {
+					memmove(
+						(char*) *pstring, (const void*) psmart->c, psmart->len
+					);
+					result = SUCCESS;
+				}
+			} else *pstring = NULL;
+			smart_str_free(psmart);	
+			free(psmart);
+		}
+	}
+	return result;
+} /* }}} */
+
+/* {{{ string to zval */
+static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC) {
+	int result = SUCCESS;
+	ulong refcount = Z_REFCOUNT_P(pzval);
+	if (pstring) {
+		const unsigned char* pointer = (const unsigned char*) pstring;
+		if (pointer) {
+			/*
+			* Populate PHP storage from pthreads_storage
+			*/
+			{
+				php_unserialize_data_t vars;
+				PHP_VAR_UNSERIALIZE_INIT(vars);
+				if (!php_var_unserialize(&pzval, &pointer, pointer+slength, &vars TSRMLS_CC)) {
+					result = FAILURE;
+					zval_dtor(pzval);
+				}							
+				PHP_VAR_UNSERIALIZE_DESTROY(vars);
+			}
+			if (pzval && refcount)
+				Z_SET_REFCOUNT_P(pzval, refcount);
+		} else result = FAILURE;
+	} else result = FAILURE;
+	
+	return result;
+} /* }}} */
+
+/* {{{ set resources to NULL for non-complex types; helper-function for pthreads_store_remove_resources_recursive */
+static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC) {
+	if (Z_TYPE_PP(pzval) == IS_RESOURCE) {
+		Z_TYPE_PP(pzval) = IS_NULL;
+	}
+	return pthreads_store_remove_resources_recursive(pzval TSRMLS_CC);
+} /* }}} */
+
+/* {{{ set corrupt objects (like mysqli after thread duplication) to NULL and recurse */
+static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
+	int is_temp;
+
+	HashTable *thash = NULL;
+	switch (Z_TYPE_PP(pzval)) {
+		case IS_ARRAY:
+			thash = Z_ARRVAL_PP(pzval);
+
+		case IS_OBJECT:
+			if (thash == NULL) {
+				zend_object *zobj = Z_OBJ_P(*pzval);
+				if (zobj == 0) { // memory errors still ...
+					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
+					Z_TYPE_PP(pzval) = IS_NULL;
+					return;
+				}
+				thash = Z_OBJDEBUG_PP(pzval, is_temp);
+			}
+
+			if (thash) {
+				zend_hash_apply(thash, (apply_func_t)pthreads_store_remove_resources TSRMLS_CC);
+			}
+			
+		break;
+	}
+	return ZEND_HASH_APPLY_KEEP;
+} /* }}} */
 
 /* {{{ Will free store element */
 static void pthreads_store_storage_dtor (pthreads_storage *storage){
