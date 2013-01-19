@@ -244,24 +244,6 @@ int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, 
 	return result;
 } /* }}} */
 
-static void* pthreads_store_separate_pointer(pthreads_storage *store) {
-	TSRMLS_FETCH();
-
-	zval *pzval;
-
-	ALLOC_ZVAL(pzval);
-	
-	if (pthreads_store_convert((*store), pzval TSRMLS_CC)==SUCCESS) {
-		zend_print_zval_r(pzval, 0 TSRMLS_CC);
-	}
-
-	zval_ptr_dtor(&pzval);
-
-	FREE_ZVAL(pzval);
-	
-	return NULL;
-}
-
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 
@@ -280,7 +262,7 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 			
 			char *name;
 			uint nlength;
-			uint idx;
+			ulong idx;
 
 			if (zend_hash_get_current_key_ex(stored, &name, &nlength, &idx, 0, &position)==HASH_KEY_IS_STRING) {
 				zval *pzval;
