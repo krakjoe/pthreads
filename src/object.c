@@ -553,9 +553,9 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 				/* add the space for null here, once */
 				threaded->address->length = snprintf(
 					NULL, 0, "%lu", (long) threaded
-				)+1;
+				);
 				if (threaded->address->length) {
-					threaded->address->serial = calloc(1, threaded->address->length);
+					threaded->address->serial = calloc(1, threaded->address->length+1);
 					if (threaded->address->serial) {
 						sprintf(
 							(char*) threaded->address->serial, "%lu", (long) threaded

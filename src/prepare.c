@@ -71,10 +71,11 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 		char *lcname = (char*) emalloc(candidate->name_length+1);
 #else
 		char *lcname = (char*) malloc(candidate->name_length+1);
-#endif
+#endif	
 		if (lcname != NULL) {
 			/* lowercase name for lookup/insertion */
 			zend_str_tolower_copy(lcname, candidate->name, candidate->name_length);
+
 			/* perform lookup for existing class */
 			if (zend_hash_find(CG(class_table), lcname, candidate->name_length+1, (void**)&searched)!=SUCCESS) {
 				zval *tz;
@@ -216,12 +217,9 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 					zend_hash_copy(&prepared->default_static_members, &candidate->default_static_members, (copy_ctor_func_t) pthreads_preparation_default_properties_ctor, &tz, sizeof(zval*));
 					prepared->default_properties.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
 					prepared->default_static_members.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
-					if (candidate->doc_comment) {
-						prepared->doc_comment = estrndup(
-							candidate->doc_comment, candidate->doc_comment_len	
-						);
-						prepared->doc_comment_len = candidate->doc_comment_len;
-					}
+					/** pointless copy **/
+					prepared->doc_comment = NULL;
+					prepared->doc_comment_len = 0;
 #else
 					if (candidate->default_properties_count) {
 						int i;
@@ -262,13 +260,10 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 					
 					/* copy user info struct */
 					memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
-					if ((candidate->info.user).doc_comment) {
-						(prepared->info.user).doc_comment = estrndup(
-							(candidate->info.user).doc_comment,
-							(candidate->info.user).doc_comment_len
-						);
-						(prepared->info.user).doc_comment_len = (candidate->info.user).doc_comment_len;
-					}
+					
+					/* null doc comments, pointless copy */
+					prepared->info.user.doc_comment = NULL;
+					prepared->info.user.doc_comment_len = 0;
 #endif
 				}
 				
@@ -394,25 +389,27 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			uint lcnamel;
 			ulong idx;
 			zend_class_entry *prepared;
+			zend_class_entry **exists;
+			
 			if (zend_hash_get_current_key_ex(table[0], &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
-				if (!zend_hash_exists(table[1], lcname, lcnamel)){
+				if (zend_hash_find(table[1], lcname, lcnamel, (void**)&exists) != SUCCESS){
 					if ((prepared=pthreads_prepared_entry(thread, *entry TSRMLS_CC))==NULL) {
 						zend_error_noreturn(
 							E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
 						);
 						break;
-					} else {
-						/*
-						* fix scope in properties
-						*/
-						zend_hash_apply_with_argument(&prepared->properties_info, (apply_func_arg_t) pthreads_apply_property_scope, (void*) prepared TSRMLS_CC);
-
-						/*
-						* fix scope in methods
-						*/
-						zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) prepared TSRMLS_CC);
 					}
-				}
+				} else prepared = *exists;
+
+				/*
+				* fix scope in properties
+				*/
+				zend_hash_apply_with_argument(&prepared->properties_info, (apply_func_arg_t) pthreads_apply_property_scope, (void*) prepared TSRMLS_CC);
+
+				/*
+				* fix scope in methods
+				*/
+				zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) prepared TSRMLS_CC);
 			}
 		}
 	}

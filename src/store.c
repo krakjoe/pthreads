@@ -275,8 +275,7 @@ void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
 		case IS_OBJECT:
 			if (thash == NULL) {
 				zend_object *zobj = Z_OBJ_P(*pzval);
-				if (zobj == 0) { // this causes memory read errors, 
-								 // this needs addressing before this can be included in a release
+				if (zobj == 0) { // memory errors still ...
 					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
 					Z_TYPE_PP(pzval) = IS_NULL;
 					return;
@@ -299,7 +298,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
 		if (psmart) {
 			if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
-				pthreads_remove_obj_arr_recursive_ressources(&pzval TSRMLS_CC);
+				//pthreads_remove_obj_arr_recursive_ressources(&pzval TSRMLS_CC);
 			}
 			
 			{

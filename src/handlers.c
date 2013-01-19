@@ -79,7 +79,9 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 						"pthreads failed to write member %s::$%s", 
 						Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
 					);
-				} else zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
+				} else {
+					zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
+				}
 			} break;
 			
 			default: zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
