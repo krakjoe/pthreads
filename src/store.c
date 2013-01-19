@@ -511,7 +511,7 @@ static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
 				if (zobj == 0) { // memory errors still ...
 					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
 					Z_TYPE_PP(pzval) = IS_NULL;
-					return;
+					return ZEND_HASH_APPLY_KEEP;
 				}
 				thash = Z_OBJDEBUG_PP(pzval, is_temp);
 			}
