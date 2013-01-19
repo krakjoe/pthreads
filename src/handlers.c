@@ -56,8 +56,21 @@ HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 
 /* {{ reads a property from a thread, wherever it is available */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
-	zval *value = NULL;
+	zval *value = NULL, *mstring = NULL;
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
+	
+	if (Z_TYPE_P(member) != IS_STRING) {
+		ALLOC_ZVAL(mstring);
+		*mstring = *member;
+		zval_copy_ctor(
+			mstring
+		);
+		INIT_PZVAL(mstring);
+		convert_to_string(mstring);
+		member = mstring;
+		key = NULL;
+	}
+
 	if (Z_TYPE_P(member)==IS_STRING) {
 		if (pthreads_store_read(
 			pthreads->store, 
@@ -67,6 +80,11 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 			value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
 		}
 	} else value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+
+	if (mstring != NULL) {
+		zval_ptr_dtor(&mstring);
+	}
+	
 	return value;
 } 
 zval * pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthreads_read_property(PTHREADS_READ_DIMENSION_PASSTHRU_C); }
@@ -75,6 +93,20 @@ zval * pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthr
 /* {{{ writes a property to a thread in the appropriate way */
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
+	zval *mstring = NULL;
+	
+	if (Z_TYPE_P(member) != IS_STRING) {
+		ALLOC_ZVAL(mstring);
+		*mstring = *member;
+		zval_copy_ctor(
+			mstring
+		);
+		INIT_PZVAL(mstring);
+		convert_to_string(mstring);
+		member = mstring;
+		key = NULL;
+	}
+
 	if (Z_TYPE_P(member)==IS_STRING) {
 		switch(Z_TYPE_P(value)){
 			case IS_STRING:
@@ -99,6 +131,10 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 			default: zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
 		}
 	} else zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
+
+	if (mstring != NULL) {
+		zval_ptr_dtor(&mstring);
+	}
 } 
 void pthreads_write_dimension(PTHREADS_WRITE_DIMENSION_PASSTHRU_D) { pthreads_write_property(PTHREADS_WRITE_DIMENSION_PASSTHRU_C); }
 /* }}} */
@@ -106,7 +142,22 @@ void pthreads_write_dimension(PTHREADS_WRITE_DIMENSION_PASSTHRU_D) { pthreads_wr
 /* {{{ check if a thread has a property set, wherever it is available */
 int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	int isset = 0;
+	zval *mstring = NULL;
+
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
+
+	if (Z_TYPE_P(member) != IS_STRING) {
+		ALLOC_ZVAL(mstring);
+		*mstring = *member;
+		zval_copy_ctor(
+			mstring
+		);
+		INIT_PZVAL(mstring);
+		convert_to_string(mstring);
+		member = mstring;
+		key = NULL;
+	}
+
 	if (!(isset = pthreads_store_isset(
 		pthreads->store, 
 		Z_STRVAL_P(member), Z_STRLEN_P(member), 
@@ -114,6 +165,11 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	))) {
 		isset = zend_handlers->has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_C);
 	}
+	
+	if (mstring != NULL) {
+		zval_ptr_dtor(&mstring);
+	}
+
 	return isset;
 } 
 int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D) { return pthreads_has_property(PTHREADS_HAS_DIMENSION_PASSTHRU_C); }
@@ -121,7 +177,21 @@ int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D) { return pthreads_
 
 /* {{{ unset an object property */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
+	zval *mstring = NULL;
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
+
+	if (Z_TYPE_P(member) != IS_STRING) {
+		ALLOC_ZVAL(mstring);
+		*mstring = *member;
+		zval_copy_ctor(
+			mstring
+		);
+		INIT_PZVAL(mstring);
+		convert_to_string(mstring);
+		member = mstring;
+		key = NULL;
+	}
+
 	if (pthreads_store_delete(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
 		zend_error_noreturn(
 			E_WARNING, 
@@ -130,6 +200,10 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		);
 	}
 	zend_handlers->unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_C);
+
+	if (mstring != NULL) {
+		zval_ptr_dtor(&mstring);
+	}
 } 
 void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); }
 /* }}} */
