@@ -43,20 +43,21 @@ typedef struct _pthreads_storage {
 	double		dval;
 } *pthreads_storage;
 
+#ifndef Z_OBJ_P
+#	define Z_OBJ_P(zval_p) ((zend_object*)(EG(objects_store).object_buckets[Z_OBJ_HANDLE_P(zval_p)].bucket.obj.object))
+#endif
+
 /* {{{ statics */
 static pthreads_storage pthreads_store_create(zval *pzval, zend_bool complex TSRMLS_DC);
 static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_DC);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC);
 static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC);
+static int pthreads_store_validate_resource(zval **pzval TSRMLS_DC);
 static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
 static void pthreads_store_event_dtor (pthreads_synchro *element);
 /* }}} */
-
-#ifndef Z_OBJ_P
-#	define Z_OBJ_P(zval_p) ((zend_object*)(EG(objects_store).object_buckets[Z_OBJ_HANDLE_P(zval_p)].bucket.obj.object))
-#endif
 
 /* {{{ allocate storage for an object */
 pthreads_store pthreads_store_alloc(TSRMLS_D) {
@@ -381,11 +382,11 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 								create.ptr = original->ptr;
 								create.refcount = 1;
 								created=zend_hash_next_free_element(&EG(regular_list));
-								
+
 								if (zend_hash_index_update(
 									&EG(regular_list), created, (void*) &create, sizeof(zend_rsrc_list_entry), NULL
 								)==SUCCESS) {
-									ZVAL_RESOURCE(pzval, created);							
+									ZVAL_RESOURCE(pzval, created);
 									pthreads_resources_keep(
 										object->resources, &create, resource TSRMLS_CC
 									);
@@ -496,6 +497,11 @@ static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC) {
 	return pthreads_store_remove_resources_recursive(pzval TSRMLS_CC);
 } /* }}} */
 
+/* {{{ check a handle is valid before reading it */
+static int pthreads_store_validate_resource(zval **pzval TSRMLS_DC) {	
+	return (EG(objects_store).top > Z_OBJ_HANDLE_PP(pzval));
+} /* }}} */
+
 /* {{{ set corrupt objects (like mysqli after thread duplication) to NULL and recurse */
 static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
 	int is_temp;
@@ -507,8 +513,7 @@ static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
 
 		case IS_OBJECT:
 			if (thash == NULL) {
-				zend_object *zobj = Z_OBJ_P(*pzval);
-				if (zobj == 0) { // memory errors still ...
+				if (!pthreads_store_validate_resource(pzval TSRMLS_CC) || !Z_OBJ_P(*pzval)) {
 					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
 					Z_TYPE_PP(pzval) = IS_NULL;
 					return ZEND_HASH_APPLY_KEEP;
