@@ -298,7 +298,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
 		if (psmart) {
 			if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
-				//pthreads_remove_obj_arr_recursive_ressources(&pzval TSRMLS_CC);
+				pthreads_remove_obj_arr_recursive_ressources(&pzval TSRMLS_CC);
 			}
 			
 			{
