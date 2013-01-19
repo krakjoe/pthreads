@@ -151,6 +151,8 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_handlers = zend_get_std_object_handlers();
 	
 	memcpy(&pthreads_handlers, zend_handlers, sizeof(zend_object_handlers));
+
+	pthreads_handlers.get_debug_info = pthreads_read_debug;	
 	
 	pthreads_handlers.get_method = pthreads_get_method;
 	pthreads_handlers.call_method = pthreads_call_method;

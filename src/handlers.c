@@ -42,6 +42,18 @@
 #	include <src/globals.h>
 #endif
 
+/* {{{ reads properties from storage for debug only */
+HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
+	HashTable *table = emalloc(sizeof(HashTable));
+	zend_hash_init(table, 8, NULL, ZVAL_PTR_DTOR, 0);
+	*is_temp = 1;
+	pthreads_store_tohash(
+		(PTHREADS_FETCH_FROM(object))->store, 
+		table TSRMLS_CC
+	);
+	return table;
+} /* }}} */
+
 /* {{ reads a property from a thread, wherever it is available */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	zval *value = NULL;

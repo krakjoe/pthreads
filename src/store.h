@@ -72,6 +72,9 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 /* {{{ separate a zval using internals */
 int pthreads_store_separate(zval * pzval, zval **seperated, zend_bool allocate, zend_bool complex TSRMLS_DC); /* }}} */
 
+/* {{{ copy store to hashtable */
+void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC); /* }}} */
+
 /* {{{ free buffers */
 void pthreads_store_free(pthreads_store store TSRMLS_DC); /* }}} */
 #endif

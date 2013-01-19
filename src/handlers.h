@@ -32,6 +32,8 @@
 
 /* {{{ these resolve differences in 5.3 and 5.4 object handling API */
 #if PHP_VERSION_ID > 50399
+#	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
+#	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type, const struct _zend_literal *key TSRMLS_DC
 #	define PTHREADS_READ_DIMENSION_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type, key TSRMLS_CC
@@ -57,6 +59,8 @@
 #	define PTHREADS_CALL_METHOD_PASSTHRU_D const char *method, INTERNAL_FUNCTION_PARAMETERS
 #	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
 #else
+#	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
+#	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
 #	define PTHREADS_READ_DIMENSION_PASSTHRU_D PTHREADS_READ_PROPERTY_PASSTHRU_D
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type TSRMLS_CC
@@ -82,6 +86,9 @@
 #	define PTHREADS_CALL_METHOD_PASSTHRU_D char *method, INTERNAL_FUNCTION_PARAMETERS
 #	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
 #endif /* }}} */
+
+/* {{{ read proeprties from storage */
+HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D); /* }}} */
 
 /* {{{ read a property from the referenced thread */
 zval * pthreads_read_property(PTHREADS_READ_PROPERTY_PASSTHRU_D); 

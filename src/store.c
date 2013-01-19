@@ -244,6 +244,61 @@ int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, 
 	return result;
 } /* }}} */
 
+static void* pthreads_store_separate_pointer(pthreads_storage *store) {
+	TSRMLS_FETCH();
+
+	zval *pzval;
+
+	ALLOC_ZVAL(pzval);
+	
+	if (pthreads_store_convert((*store), pzval TSRMLS_CC)==SUCCESS) {
+		zend_print_zval_r(pzval, 0 TSRMLS_CC);
+	}
+
+	zval_ptr_dtor(&pzval);
+
+	FREE_ZVAL(pzval);
+	
+	return NULL;
+}
+
+/* {{{ copy store to hashtable */
+void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
+
+	zend_bool locked;
+	TsHashTable *safe = &store->table;
+
+	if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
+
+		HashTable *stored = TS_HASH(safe);
+		HashPosition position;
+		pthreads_storage *storage;
+
+		for (zend_hash_internal_pointer_reset_ex(stored, &position);
+			zend_hash_get_current_data_ex(stored, (void**) &storage, &position)==SUCCESS;
+			zend_hash_move_forward_ex(stored, &position)) {	
+			
+			char *name;
+			uint nlength;
+			uint idx;
+
+			if (zend_hash_get_current_key_ex(stored, &name, &nlength, &idx, 0, &position)==HASH_KEY_IS_STRING) {
+				zval *pzval;
+
+				MAKE_STD_ZVAL(pzval);
+
+				if (pthreads_store_convert((*storage), pzval TSRMLS_CC)!=SUCCESS) {
+					ZVAL_NULL(pzval);
+				} 
+
+				zend_hash_update(hash, name, nlength+1, &pzval, sizeof(zval), NULL);
+			}
+		}
+		pthreads_lock_release(store->lock, locked TSRMLS_CC);
+	}
+	
+} /* }}} */
+
 /* {{{ free store storage for a thread */
 void pthreads_store_free(pthreads_store store TSRMLS_DC){
 	if (store) {
