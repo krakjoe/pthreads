@@ -54,10 +54,10 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 #endif
 
 /* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
-static void pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC); /* }}} */
+static int pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC); /* }}} */
 
 /* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
-static void pthreads_apply_property_scope(zend_property_info *info, zend_class_entry *scope TSRMLS_DC); /* }}} */
+static int pthreads_apply_property_scope(zend_property_info *info, zend_class_entry *scope TSRMLS_DC); /* }}} */
 
 /* {{{ prepared resource destructor */
 static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry); /* }}} */
@@ -511,20 +511,22 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 #endif
 
 /* {{{ fix method scope for prepared entries, enabling self:: and parent:: to work */
-static void pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC) {
+static int pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC) {
 	if (function && scope) {
 		zend_op_array *ops = (zend_op_array*) function;
 		if (ops) {
 			ops->scope = scope;
 		}
 	}
+	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
 
 /* {{{ fix scope for prepared entry properties, enabling private members in foreign objects to work */
-static void pthreads_apply_property_scope(zend_property_info *info, zend_class_entry *scope TSRMLS_DC) {
+static int pthreads_apply_property_scope(zend_property_info *info, zend_class_entry *scope TSRMLS_DC) {
 	if (info && scope) {
 		info->ce = scope;
 	}
+	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
 
 /* {{{ destroy a resource, if we created it ( ie. it is not being kept by another thread ) */
