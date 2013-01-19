@@ -284,7 +284,7 @@ void pthreads_remove_obj_arr_recursive_ressources(zval **pzval TSRMLS_DC) {
 			}
 
 			if (thash) {
-				zend_hash_apply(thash, (apply_func_args_t)pthreads_remove_obj_arr_ressources TSRMLS_CC);
+				zend_hash_apply(thash, (apply_func_t)pthreads_remove_obj_arr_ressources TSRMLS_CC);
 			}
 			
 		break;
