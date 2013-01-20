@@ -96,10 +96,25 @@ zval * pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthr
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
 	zval *mstring = NULL;
+	zval *array_counter = NULL;
+	uint null_member = 0;
 
 	if (member == NULL) {
-		zend_error(E_WARNING, "pthreads cannot write an anonymous index, identify the member explicitly");
-		return;
+		null_member = 1;
+		pthreads_store_lock(object TSRMLS_CC);
+		MAKE_STD_ZVAL(member);
+		ZVAL_STRING(member, "__array_counter", 0);
+		if(pthreads_store_isset(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), 1 TSRMLS_CC)) {
+			pthreads_store_read(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &array_counter TSRMLS_CC);
+		} else {
+			MAKE_STD_ZVAL(array_counter);
+			ZVAL_LONG(array_counter, 0);
+		}
+		Z_LVAL_P(array_counter) ++;
+		pthreads_store_write(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &array_counter TSRMLS_CC);
+		ZVAL_LONG(member, Z_LVAL_P(array_counter)-1);
+		FREE_ZVAL(array_counter);
+		pthreads_store_unlock(object TSRMLS_CC);
 	}
 
 	if (Z_TYPE_P(member) != IS_STRING) {
@@ -110,6 +125,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		);
 		INIT_PZVAL(mstring);
 		convert_to_string(mstring);
+		if(null_member) FREE_ZVAL(member);
 		member = mstring;
 #if PHP_VERSION_ID > 50399
 		key = NULL;
