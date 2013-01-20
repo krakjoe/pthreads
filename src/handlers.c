@@ -97,7 +97,10 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
 	zval *mstring = NULL;
 
-	/* if the member is null here, we must lock the storage, get the next id, turn it into a string, write the property and release the lock */	
+	if (member == NULL) {
+		zend_error(E_WARNING, "pthreads cannot write an anonymous index, identify the member explicitly");
+		return;
+	}
 
 	if (Z_TYPE_P(member) != IS_STRING) {
 		ALLOC_ZVAL(mstring);

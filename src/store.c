@@ -157,7 +157,7 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC) {
 	int result = FAILURE;
 	zend_bool locked;
-	uint refcount = Z_REFCOUNT_PP(write);
+
 	if (store) {
 		pthreads_storage storage = pthreads_store_create(*write, 1 TSRMLS_CC);
 		if (storage) {
@@ -272,6 +272,11 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 				if (pthreads_store_convert((*storage), pzval TSRMLS_CC)!=SUCCESS) {
 					ZVAL_NULL(pzval);
 				} 
+				
+				/* who knows why this happens ... no one */
+				if (name[nlength] != '\0') {
+					name[nlength]='\0';
+				}
 
 				zend_hash_update(hash, name, nlength+1, &pzval, sizeof(zval), NULL);
 			}
