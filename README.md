@@ -37,7 +37,11 @@ pthreads should compile and work in any version of PHP from 5.3.0 to the latest 
 
 ### Windows Support
 
-Yes !! Windows support is offered thanks to the pthread-w32 library. Pre-built binary downloads are available on the github downloads page for Windows users.
+Yes !! Windows support is offered thanks to the pthread-w32 library.
+
+Releases for Windows can be found: http://windows.php.net/downloads/pecl/releases/pthreads/
+
+Snapshots for Windows can (sometimes) be found: http://pthreads.org/snapshots/
 
 ### Mac OSX Support
 
