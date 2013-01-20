@@ -121,9 +121,7 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 			);
 			counted = stack->count;
 			
-			stackable->delref = work;
-			
-			Z_ADDREF_P(work);
+			Z_OBJ_HT_P(work)->add_ref(work TSRMLS_CC);
 		}
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
@@ -154,7 +152,7 @@ burst:
 				* Allocate a $that
 				*/
 				MAKE_STD_ZVAL(that_ptr);
-				
+
 				/*
 				* Initialize it with the new entry
 				*/
@@ -187,9 +185,9 @@ burst:
 						if (stackable) {
 							current->tid = thread->tid;
 							current->tls = thread->tls;
-							stackable->delref = that_ptr;
-
+							
 							pthreads_connect(current, stackable TSRMLS_CC);
+							
 							if (zend_hash_update(
 								Z_OBJPROP_P(that_ptr), "worker", sizeof("worker"), 
 								(void**) &getThis(), sizeof(zval*), NULL
@@ -575,6 +573,9 @@ static void * pthreads_routine(void *arg) {
 		
 		/* $this original pointer */
 		zval *this_ptr;		
+		
+		/* executor globals */
+		zend_executor_globals *ZEG = NULL;
 
 		/**
 		* Startup Block Begin
@@ -615,6 +616,7 @@ static void * pthreads_routine(void *arg) {
 		/**
 		* Startup Block End
 		**/
+		ZEG = PTHREADS_EG_ALL(TSRMLS_C);
 		
 		/**
 		* Thread Block Begin
@@ -631,22 +633,22 @@ static void * pthreads_routine(void *arg) {
 			MAKE_STD_ZVAL(this_ptr);
 
 			/* EG setup */
-			EG(in_execution) = 1;							
-			EG(current_execute_data)=NULL;					
-			EG(current_module)=&pthreads_module_entry;
+			ZEG->in_execution = 1;							
+			ZEG->current_execute_data=NULL;					
+			ZEG->current_module=&pthreads_module_entry;
 			
 			/* init $this */
 			object_init_ex
 			(
-				EG(This)=getThis(), 
-				EG(scope)=pthreads_prepared_entry(
+				ZEG->This = getThis(), 
+				ZEG->scope = pthreads_prepared_entry(
 					thread, thread->std.ce
 					 TSRMLS_CC
 				)
 			);
 			
 			/* connect $this */
-			if (pthreads_connect(PTHREADS_ZG(pointer)=thread, PTHREADS_FETCH_FROM(EG(This)) TSRMLS_CC)==SUCCESS) {
+			if (pthreads_connect(PTHREADS_ZG(pointer)=thread, PTHREADS_FETCH_FROM(ZEG->This) TSRMLS_CC)==SUCCESS) {
 				/* always the same no point recreating this for every execution */
 				zval zmethod;
 				
@@ -656,17 +658,18 @@ static void * pthreads_routine(void *arg) {
 				do {	
 					zend_function *zrun;
 					/* find zrun method */
-					if (zend_hash_find(&EG(scope)->function_table, "run", sizeof("run"), (void**) &zrun)==SUCCESS) {
+					if (zend_hash_find(&(ZEG->scope->function_table), "run", sizeof("run"), (void**) &zrun)==SUCCESS) {
 						zval *zresult;
 						zend_fcall_info info;
 						zend_fcall_info_cache cache;
-						PTHREAD current = PTHREADS_FETCH_FROM(EG(This));
+
+						PTHREAD current = PTHREADS_FETCH_FROM(ZEG->This);
 						
 						/* populate a cache and call the run method */
 						{
 							/* initialize info object */
 							info.size = sizeof(info);
-							info.object_ptr = EG(This);
+							info.object_ptr = ZEG->This;
 							info.function_name = &zmethod;
 							info.retval_ptr_ptr = &zresult;
 							info.no_separation = 1;
@@ -677,9 +680,9 @@ static void * pthreads_routine(void *arg) {
 							/* initialize cache object */
 							cache.initialized = 1;
 							cache.function_handler = zrun;
-							cache.calling_scope = EG(scope);
-							cache.called_scope = EG(called_scope);
-							cache.object_ptr = EG(This);
+							cache.calling_scope = ZEG->scope;
+							cache.called_scope = ZEG->called_scope;
+							cache.object_ptr = ZEG->This;
 																																																																					
 							/* call the function */
 							pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
@@ -712,10 +715,7 @@ static void * pthreads_routine(void *arg) {
 							
 							/* deal with references to stackable */
 							if (inwork) {
-								if (Z_REFCOUNT_P(EG(This))>1) {
-									zval_ptr_dtor(&EG(This));
-								}
-								FREE_ZVAL(EG(This));
+								FREE_ZVAL(ZEG->This);
 							} else inwork = 1;
 						}
 					} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
@@ -725,12 +725,9 @@ static void * pthreads_routine(void *arg) {
 			FREE_ZVAL(this_ptr);
 		} zend_catch {
 			/* do something, it's all gone wrong */
-			if (EG(This) != this_ptr) {
+			if (ZEG->This != this_ptr) {
 				if (inwork) {
-					if (Z_REFCOUNT_P(EG(This))>1) {
-						zval_ptr_dtor(&EG(This));
-					}
-					FREE_ZVAL(EG(This));
+					FREE_ZVAL(ZEG->This);
 				}
 			}
 			FREE_ZVAL(this_ptr);

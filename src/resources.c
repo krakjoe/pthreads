@@ -39,8 +39,9 @@ pthreads_resources pthreads_resources_alloc(TSRMLS_D) {
 /* {{{ mark a resource for keeping */
 zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_entry *entry, pthreads_resource data TSRMLS_DC) {
 	if (resources) {
+		char *key = (char*) entry;
 		if (zend_ts_hash_update(
-			&resources->keep, entry, sizeof(*entry), (void**) &data, sizeof(pthreads_resource), NULL
+			&resources->keep, key, sizeof(key), (void**) &data, sizeof(pthreads_resource), NULL
 		) == SUCCESS) {
 			return 1;
 		}
@@ -51,9 +52,12 @@ zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_e
 /* {{{ tells if a resource is being kept */
 zend_bool pthreads_resources_kept(pthreads_resources resources, zend_rsrc_list_entry *entry TSRMLS_DC) {
 	pthreads_resource *data;
-	if (entry) {
-		if (zend_ts_hash_find(&resources->keep, entry, sizeof(pthreads_resource), (void**) &data)==SUCCESS) {
-			if (EG(scope)!=(*data)->scope || TSRMLS_C != (*data)->ls) {
+	if (entry) {	
+		char *key = (char*) entry;
+		if (zend_ts_hash_find(&resources->keep, key, sizeof(key), (void**) &data)==SUCCESS) {	
+			pthreads_resource resource = *data;
+
+			if ((EG(scope)!= resource->scope) || (TSRMLS_C != resource->ls)) {
 				return 1;
 			} 
 		}

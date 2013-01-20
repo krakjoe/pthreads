@@ -48,10 +48,10 @@ typedef struct _pthreads_store {
 /* {{{ allocate and initialize buffers */
 pthreads_store pthreads_store_alloc(TSRMLS_D); /* }}} */
 
-/* {{{ lock storage */
+/* {{{ lock storage, userland only */
 zend_bool pthreads_store_lock(zval *this_ptr TSRMLS_DC); /* }}} */
 
-/* {{{ unlock storage */
+/* {{{ unlock storage, userland only */
 zend_bool pthreads_store_unlock(zval *this_ptr TSRMLS_DC); /* }}} */
 
 /* {{{ delete a value from the buffer */

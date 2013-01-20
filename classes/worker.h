@@ -203,6 +203,10 @@ PHP_METHOD(Worker, shutdown)
 	* Check that we are in the correct context
 	*/
 	if (PTHREADS_IN_CREATOR(thread)) {
+		/* not sure about this */
+		while (pthreads_stack_length(thread TSRMLS_CC)>0) {
+			pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
+		}
 		RETURN_BOOL((pthreads_join(thread TSRMLS_CC)==SUCCESS));
 	} else {
 		zend_error(E_WARNING, "pthreads has detected an attempt to shutdown from an incorrect context, only the creating context may shutdown %s (%lu)", PTHREADS_FRIENDLY_NAME);

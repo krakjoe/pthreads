@@ -98,10 +98,9 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	zval *mstring = NULL;
 	zval *array_counter = NULL;
 	uint null_member = 0;
-
-	if (member == NULL) {
-		null_member = 1;
-		pthreads_store_lock(object TSRMLS_CC);
+	zend_bool locked;
+	
+	if (member == NULL && pthreads_lock_acquire(pthreads->store->lock, &locked TSRMLS_CC)) {
 		MAKE_STD_ZVAL(member);
 		ZVAL_STRING(member, "$", 0);
 		if(pthreads_store_isset(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), 1 TSRMLS_CC)) {
@@ -114,7 +113,8 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		pthreads_store_write(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &array_counter TSRMLS_CC);
 		ZVAL_LONG(member, Z_LVAL_P(array_counter)-1);
 		FREE_ZVAL(array_counter);
-		pthreads_store_unlock(object TSRMLS_CC);
+		null_member = 1;
+		pthreads_lock_release(pthreads->store->lock, locked TSRMLS_CC);
 	}
 
 	if (Z_TYPE_P(member) != IS_STRING) {

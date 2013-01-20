@@ -78,7 +78,7 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	return NULL;
 } /* }}} */
 
-/* {{{ lock storage */
+/* {{{ lock storage, userland only */
 zend_bool pthreads_store_lock(zval *this_ptr TSRMLS_DC) {	
 	PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());
 	if (pobject) {
@@ -89,7 +89,7 @@ zend_bool pthreads_store_lock(zval *this_ptr TSRMLS_DC) {
 	} else return 0;
 } /* }}} */
 
-/* {{{ unlock storage */
+/* {{{ unlock storage, userland only */
 zend_bool pthreads_store_unlock(zval *this_ptr TSRMLS_DC) {
 	PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());
 	if (pobject) {
