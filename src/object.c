@@ -571,7 +571,7 @@ static void * pthreads_routine(void *arg) {
 		
 		zend_bool  glocked = 0, /* global lock indicator */
                    worker = 0,  /* worker indicator */
-                   inwork = 0;; /* working indicator */
+                   inwork = 0;  /* working indicator */
 		
 		/* $this original pointer */
 		zval *this_ptr;		
