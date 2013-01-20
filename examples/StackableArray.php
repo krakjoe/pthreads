@@ -24,8 +24,6 @@ $hammers = 500;
 *		because these arrays are meant to provide efficiency using the ArrayAccess interface is unsuitable.
 */
 class StackableArray extends Stackable {
-	public $counter = 0;
-
 	/*
 	* Always think about caching these types of objects, don't waste the run method or your workers
 	*/
@@ -44,13 +42,13 @@ class T extends Thread {
 		*		then don't protect these instructions
 		*		you will incurr additional unecessary locking
 		*/
-		$this->test[++$this->test->counter]=rand(0, 10);
+		$this->test[]=rand(0, 10);
 	}
 }
 /* create the array here for passing */
 $s = new StackableArray();
 /* set a pointless value */
-$s[++$s->counter]="h";
+$s[]="h";
 /* show it was set */
 print_r($s);
 $ts = array();
@@ -61,6 +59,8 @@ while(@$i++ < $hammers){
 /* we want all threads to complete */
 foreach($ts as $t)
 	$t->join();
+
+$s[510] = "test";
 /* show it was all set without corruption */
 print_r($s);
 ?>
