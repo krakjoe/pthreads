@@ -24,6 +24,8 @@ $hammers = 500;
 *		because these arrays are meant to provide efficiency using the ArrayAccess interface is unsuitable.
 */
 class StackableArray extends Stackable {
+	public $counter = 0;
+
 	/*
 	* Always think about caching these types of objects, don't waste the run method or your workers
 	*/
@@ -59,8 +61,6 @@ while(@$i++ < $hammers){
 /* we want all threads to complete */
 foreach($ts as $t)
 	$t->join();
-
-$s[510] = "test";
 /* show it was all set without corruption */
 print_r($s);
 ?>

@@ -126,6 +126,11 @@ typedef struct _pthread_construct {
 	* Store Hold
 	*/
 	zend_bool hold;
+	
+	/*
+	* Pointer to decrement reference count of
+	*/
+	zval *delref;
 } *PTHREAD;
 
 /* {{{ comparison function */

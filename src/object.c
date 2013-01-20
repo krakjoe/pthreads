@@ -53,46 +53,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC); /* }
 /* {{{ pthreads routine */
 static void * pthreads_routine(void *arg); /* }}} */
 
-/* {{{ object caching */
-pthreads_objects pthreads_objects_alloc(TSRMLS_D) {
-	pthreads_objects pobjects = (pthreads_objects) calloc(1, sizeof(*pobjects));
-	if (pobjects) {
-		zend_llist_init(
-			&pobjects->cache, sizeof(zval**), 
-			(llist_dtor_func_t) pthreads_objects_cache_dtor, 1
-		);
-	}
-	return pobjects;
-}
-
-zval * pthreads_objects_create(pthreads_objects pobjects TSRMLS_DC) {
-	zval * pobject;
-	MAKE_STD_ZVAL(pobject);
-	if (pobject) {
-		zend_llist_add_element(
-			&pobjects->cache, &pobject
-		);
-	}
-	return pobject;
-}
-
-void pthreads_objects_free(pthreads_objects pobjects TSRMLS_DC) { 
-	if (pobjects) {
-		zend_llist_destroy(&pobjects->cache); 
-		free(pobjects);
-	}
-}
-
-void pthreads_objects_cache_dtor(zval **ppobject) { 
-	if (ppobject) {
-		zval *pobject = *ppobject;
-		if (pobject) {
-			zval_ptr_dtor(&pobject);
-		}
-	}
-}
-/* }}} */
-
 /* {{{ set state bits on a thread, timeout where appropriate/required */
 zend_bool pthreads_set_state_ex(PTHREAD thread, int mask, long timeout TSRMLS_DC) {
 	zend_bool locked, dowait, result;
@@ -148,17 +108,22 @@ size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ push an item onto the work buffer */
-size_t pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
+size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 	zend_bool locked;
+	PTHREAD stackable = PTHREADS_FETCH_FROM(work);
 	size_t counted = 0L;
 	
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
 		zend_llist *stack = &thread->stack->objects;
 		if (stack) {
 			zend_llist_add_element(
-				stack, &work
+				stack, &stackable
 			);
 			counted = stack->count;
+			
+			stackable->delref = work;
+			
+			Z_ADDREF_P(work);
 		}
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
@@ -173,7 +138,7 @@ size_t pthreads_stack_push(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ pop the next item from the work buffer */
-size_t pthreads_stack_next(PTHREAD thread, pthreads_objects pobjects, zval *this_ptr TSRMLS_DC) {
+size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	PTHREAD *work = NULL, current = NULL;
 	zend_bool locked;
 	size_t bubble = 0;
@@ -188,7 +153,7 @@ burst:
 				/*
 				* Allocate a $that
 				*/
-				that_ptr = pthreads_objects_create(pobjects TSRMLS_CC);
+				MAKE_STD_ZVAL(that_ptr);
 				
 				/*
 				* Initialize it with the new entry
@@ -222,6 +187,8 @@ burst:
 						if (stackable) {
 							current->tid = thread->tid;
 							current->tls = thread->tls;
+							stackable->delref = that_ptr;
+
 							pthreads_connect(current, stackable TSRMLS_CC);
 							if (zend_hash_update(
 								Z_OBJPROP_P(that_ptr), "worker", sizeof("worker"), 
@@ -359,7 +326,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 		destination->modifiers = source->modifiers;
 		destination->store = source->store;
 		destination->stack = source->stack;
-		
+
 		return SUCCESS;
 	} else return FAILURE;
 } /* }}} */
@@ -602,12 +569,13 @@ static void * pthreads_routine(void *arg) {
 		/* TSRM */
 		void ***tsrm_ls = NULL;
 		
-		/* pthreads object cache */
-		pthreads_objects pobjects = NULL;
+		zend_bool  glocked = 0, /* global lock indicator */
+                   worker = 0,  /* worker indicator */
+                   inwork = 0;; /* working indicator */
 		
-		/* global lock inidicator */
-		zend_bool glocked = 0;
-		
+		/* $this original pointer */
+		zval *this_ptr;		
+
 		/**
 		* Startup Block Begin
 		**/
@@ -648,16 +616,20 @@ static void * pthreads_routine(void *arg) {
 		* Startup Block End
 		**/
 		
-		/* initialize object cache */
-		pobjects = pthreads_objects_alloc(TSRMLS_C);
-		
 		/**
 		* Thread Block Begin
 		**/
 		zend_first_try {
-			/* create pointer to this */
-			zval * this_ptr = pthreads_objects_create(pobjects TSRMLS_CC);
-			
+			/*
+			* Set worker indicator
+			*/
+			worker = PTHREADS_IS_WORKER(thread);
+
+			/*
+			* Allocate original $this
+			*/
+			MAKE_STD_ZVAL(this_ptr);
+
 			/* EG setup */
 			EG(in_execution) = 1;							
 			EG(current_execute_data)=NULL;					
@@ -678,8 +650,8 @@ static void * pthreads_routine(void *arg) {
 				/* always the same no point recreating this for every execution */
 				zval zmethod;
 				
-				ZVAL_STRINGL(&zmethod, "run", sizeof("run"), 0);
-				
+				ZVAL_STRINGL(&zmethod, "run", sizeof("run"), 0);				
+								
 				/* execute $this */
 				do {	
 					zend_function *zrun;
@@ -688,6 +660,7 @@ static void * pthreads_routine(void *arg) {
 						zval *zresult;
 						zend_fcall_info info;
 						zend_fcall_info_cache cache;
+						PTHREAD current = PTHREADS_FETCH_FROM(EG(This));
 						
 						/* populate a cache and call the run method */
 						{
@@ -709,7 +682,7 @@ static void * pthreads_routine(void *arg) {
 							cache.object_ptr = EG(This);
 																																																																					
 							/* call the function */
-							pthreads_state_set((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+							pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							{
 								zend_try {
 									zend_call_function(&info, &cache TSRMLS_CC);
@@ -718,7 +691,7 @@ static void * pthreads_routine(void *arg) {
 									break;
 								} zend_end_try();
 							}
-							pthreads_state_unset((PTHREADS_FETCH_FROM(EG(This)))->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+							pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							
 #if PHP_VERSION_ID > 50399
 							{
@@ -736,20 +709,36 @@ static void * pthreads_routine(void *arg) {
 							if (zresult) {
 								zval_ptr_dtor(&zresult);
 							}
+							
+							/* deal with references to stackable */
+							if (inwork) {
+								if (Z_REFCOUNT_P(EG(This))>1) {
+									zval_ptr_dtor(&EG(This));
+								}
+								FREE_ZVAL(EG(This));
+							} else inwork = 1;
 						}
 					} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
-				} while(PTHREADS_IS_WORKER(thread) && pthreads_stack_next(thread, pobjects, getThis() TSRMLS_CC));
+				} while(worker && pthreads_stack_next(thread, this_ptr TSRMLS_CC));
 			}
+			
+			FREE_ZVAL(this_ptr);
 		} zend_catch {
 			/* do something, it's all gone wrong */
+			if (EG(This) != this_ptr) {
+				if (inwork) {
+					if (Z_REFCOUNT_P(EG(This))>1) {
+						zval_ptr_dtor(&EG(This));
+					}
+					FREE_ZVAL(EG(This));
+				}
+			}
+			FREE_ZVAL(this_ptr);
 		} zend_end_try();
 		
 		/**
 		* Thread Block End
 		**/
-		
-		/* kill all humans ... I mean free all objects */
-		pthreads_objects_free(pobjects TSRMLS_CC);
 		
 		/**
 		* Shutdown Block Begin

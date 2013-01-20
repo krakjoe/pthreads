@@ -120,15 +120,11 @@ PHP_METHOD(Worker, stack)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	zval 	*work;
-	int		size;
 	
 	if (thread) {
 		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
 			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
-				size = pthreads_stack_push(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC);
-				if (size) {
-					RETURN_LONG(size);
-				}
+				RETURN_LONG(pthreads_stack_push(thread, work TSRMLS_CC));
 			}
 		} else zend_error(E_ERROR, "pthreads has detected an attempt to stack onto %s (%lu) which has already been shutdown", PTHREADS_FRIENDLY_NAME);
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while stacking onto %s (%lu) and cannot continue", PTHREADS_FRIENDLY_NAME);

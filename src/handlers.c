@@ -103,7 +103,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		null_member = 1;
 		pthreads_store_lock(object TSRMLS_CC);
 		MAKE_STD_ZVAL(member);
-		ZVAL_STRING(member, "__array_counter", 0);
+		ZVAL_STRING(member, "$", 0);
 		if(pthreads_store_isset(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), 1 TSRMLS_CC)) {
 			pthreads_store_read(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &array_counter TSRMLS_CC);
 		} else {
