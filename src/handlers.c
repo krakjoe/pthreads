@@ -96,24 +96,32 @@ zval * pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthr
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
 	zval *mstring = NULL;
-	zval *array_counter = NULL;
-	uint null_member = 0;
+	zend_bool nulled = 0;
 	zend_bool locked;
 	
-	if (member == NULL && pthreads_lock_acquire(pthreads->store->lock, &locked TSRMLS_CC)) {
-		MAKE_STD_ZVAL(member);
-		ZVAL_STRING(member, "$", 0);
-		if(pthreads_store_isset(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), 1 TSRMLS_CC)) {
-			pthreads_store_read(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &array_counter TSRMLS_CC);
-		} else {
-			MAKE_STD_ZVAL(array_counter);
-			ZVAL_LONG(array_counter, 0);
+	if (member == NULL) {
+		pthreads_lock_acquire(pthreads->store->lock, &locked TSRMLS_CC);
+		{
+			zval *pcounter;
+			
+			MAKE_STD_ZVAL(member);
+			
+			if(pthreads_store_isset(pthreads->store, "$\0", 2, 1 TSRMLS_CC)) {
+				pthreads_store_read(pthreads->store, "$\0", 2, &pcounter TSRMLS_CC);
+			} else {
+				MAKE_STD_ZVAL(pcounter);
+				
+				ZVAL_LONG(pcounter, 0);
+			}
+
+			++Z_LVAL_P(pcounter);
+			pthreads_store_write(pthreads->store, "$\0", 2, &pcounter TSRMLS_CC);
+			ZVAL_LONG(member, Z_LVAL_P(pcounter)-1);
+
+			FREE_ZVAL(pcounter);
+
+			nulled = 1;
 		}
-		Z_LVAL_P(array_counter) ++;
-		pthreads_store_write(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &array_counter TSRMLS_CC);
-		ZVAL_LONG(member, Z_LVAL_P(array_counter)-1);
-		FREE_ZVAL(array_counter);
-		null_member = 1;
 		pthreads_lock_release(pthreads->store->lock, locked TSRMLS_CC);
 	}
 
@@ -125,7 +133,8 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		);
 		INIT_PZVAL(mstring);
 		convert_to_string(mstring);
-		if(null_member) FREE_ZVAL(member);
+		if(nulled) 
+			FREE_ZVAL(member);
 		member = mstring;
 #if PHP_VERSION_ID > 50399
 		key = NULL;
@@ -148,8 +157,6 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 						"pthreads failed to write member %s::$%s", 
 						Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
 					);
-				} else {
-					zend_handlers->write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_C);
 				}
 			} break;
 			

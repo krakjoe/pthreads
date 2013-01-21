@@ -58,6 +58,7 @@ $ts = array();
 while(@$i++ < $hammers){
 	$ts[]=new T($s);
 }
+printf("GOT %d T's\n", count($ts));
 /* we want all threads to complete */
 foreach($ts as $t)
 	$t->join();

@@ -124,8 +124,8 @@ zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int ha
 	zend_bool locked = 0, isset = 0;
 	if (store) {
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
-			pthreads_storage *storage;
-			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS) {
+			pthreads_storage *storage = NULL;
+			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
 				isset=((*storage)->exists);
 			}
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
@@ -143,7 +143,7 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 			pthreads_storage *storage = NULL;
 			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
 				MAKE_STD_ZVAL(*read);
-				if ((result = pthreads_store_convert(*storage, *read TSRMLS_CC))!=SUCCESS) {
+				if ((result = pthreads_store_convert((*storage), *read TSRMLS_CC))!=SUCCESS) {
 					FREE_ZVAL(*read);
 				} else Z_SET_REFCOUNT_PP(read, 0);
 			}
@@ -157,12 +157,12 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC) {
 	int result = FAILURE;
 	zend_bool locked;
-
+	
 	if (store) {
 		pthreads_storage storage = pthreads_store_create(*write, 1 TSRMLS_CC);
-		if (storage) {
+		if (storage) {	
 			if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
-				if (zend_ts_hash_update(&store->table, key, keyl, (void**) &storage, sizeof(pthreads_storage), NULL)==SUCCESS) {
+				if (zend_ts_hash_update(&store->table, key, keyl, (void**) &storage, sizeof(storage), NULL)==SUCCESS) {
 					if (zend_ts_hash_exists(&store->event, key, keyl)) {
 						pthreads_synchro *psync;
 						if (zend_ts_hash_find(&store->event, key, keyl, (void**)&psync)==SUCCESS) {
@@ -249,7 +249,7 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 
 	zend_bool locked;
 	TsHashTable *safe = &store->table;
-
+	
 	if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 
 		HashTable *stored = TS_HASH(safe);
@@ -265,25 +265,25 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 			ulong idx;
 
 			if (zend_hash_get_current_key_ex(stored, &name, &nlength, &idx, 0, &position)==HASH_KEY_IS_STRING) {
-				zval *pzval;
+				if (name[0] != '$') { /* do not copy internal counter */
+					char *rename = estrndup(name, nlength);
+					{
+						zval *pzval;
 
-				MAKE_STD_ZVAL(pzval);
-
-				if (pthreads_store_convert((*storage), pzval TSRMLS_CC)!=SUCCESS) {
-					ZVAL_NULL(pzval);
-				} 
-				
-				/* who knows why this happens ... no one */
-				if (name[nlength] != '\0') {
-					name[nlength]='\0';
+						MAKE_STD_ZVAL(pzval);
+					
+						if (pthreads_store_convert((*storage), pzval TSRMLS_CC)!=SUCCESS) {
+							ZVAL_NULL(pzval);
+						} 
+											
+						zend_hash_update(hash, rename, nlength+1, &pzval, sizeof(zval), NULL);
+					}
+					efree(rename);
 				}
-
-				zend_hash_update(hash, name, nlength+1, &pzval, sizeof(zval), NULL);
 			}
 		}
 		pthreads_lock_release(store->lock, locked TSRMLS_CC);
 	}
-	
 } /* }}} */
 
 /* {{{ free store storage for a thread */
