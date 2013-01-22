@@ -325,14 +325,21 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 /* {{{ pthreads base constructor */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {
 	if (base) {
-		/* {{{ this results in faster objects for pthreads */
-		base->std.ce = entry;
-		base->std.properties = NULL;
-		base->std.guards = NULL;	
-#if PHP_VERSION_ID > 50399
-		base->std.properties_table = NULL;
+		zend_object_std_init(&base->std, entry TSRMLS_CC);
+#if PHP_VERSION_ID < 50400
+		{
+			zval *temp;
+
+			zend_hash_copy(															
+				base->std.properties,
+				&entry->default_properties,
+				(copy_ctor_func_t) zval_add_ref,
+				&temp, sizeof(zval*)
+			);
+		}
+#else
+		object_properties_init(&(base->std), entry);
 #endif	
-		/* }}} */
 
 		base->cls = tsrm_ls;
 		base->address = NULL;
@@ -391,6 +398,29 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 			free(base->address);
 		}
 	}
+
+#if PHP_VERSION_ID > 50399
+	{
+		zend_object *object = &base->std;
+
+		if (object->properties_table) {
+			int i;
+			for (i = 0; i < object->ce->default_properties_count; i++) {
+				if (object->properties_table[i]) {
+					zval_ptr_dtor(&object->properties_table[i]);
+				}
+			}
+			efree(object->properties_table);
+		}
+
+		if (object->properties) {
+			zend_hash_destroy(object->properties);
+			FREE_HASHTABLE(object->properties);
+		}
+	}
+#else
+	zend_object_std_dtor(&(base->std) TSRMLS_CC);
+#endif
 } /* }}} */
 
 /* {{{ free object */
@@ -671,30 +701,30 @@ static void * pthreads_routine(void *arg) {
 								}
 							}
 #endif
+							/* deal with references to stackable */
+							if (inwork) {
+								zval_ptr_dtor(&ZEG->This);
+							} else inwork = 1;
+
 							/* deal with zresult (ignored) */
 							if (zresult) {
 								zval_ptr_dtor(&zresult);
 							}
-							
-							/* deal with references to stackable */
-							if (inwork) {
-								FREE_ZVAL(ZEG->This);
-							} else inwork = 1;
 						}
 					} else zend_error(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
 				} while(worker && pthreads_stack_next(thread, this_ptr TSRMLS_CC));
 			}
-			
-			FREE_ZVAL(this_ptr);
 		} zend_catch {
 			/* do something, it's all gone wrong */
-			if (ZEG->This != this_ptr) {
-				if (inwork) {
-					FREE_ZVAL(ZEG->This);
-				}
-			}
-			FREE_ZVAL(this_ptr);
 		} zend_end_try();
+
+		if (ZEG->This != this_ptr) {
+			if (inwork) {
+				zval_ptr_dtor(&ZEG->This);
+			}
+		}
+
+		FREE_ZVAL(this_ptr);
 		
 		/**
 		* Thread Block End
