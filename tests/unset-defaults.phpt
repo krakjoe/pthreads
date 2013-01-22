@@ -14,4 +14,3 @@ $thread = new TestThread();
 $thread->start();
 ?>
 --EXPECT--
-NULL
