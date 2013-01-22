@@ -79,10 +79,24 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 			Z_STRVAL_P(member), Z_STRLEN_P(member), 
 			&value TSRMLS_CC
 		)!=SUCCESS) {	
-			/** we fall back on standard handlers here because they handle the undefined members gracefully */
-			value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+			MAKE_STD_ZVAL(value);
+			if (value != NULL) {
+				value = EG(
+					uninitialized_zval_ptr
+				);
+				Z_ADDREF_P(value);
+			}
 		}
-	} else value = zend_handlers->read_property(PTHREADS_READ_PROPERTY_PASSTHRU_C);
+	} else {
+		zend_error(E_WARNING, "pthreads detected an attempt to use an unsupported kind of key in %s", Z_OBJCE_P(object)->name);
+		MAKE_STD_ZVAL(value);
+		if (value != NULL) {
+			value = EG(
+				uninitialized_zval_ptr
+			);
+			Z_ADDREF_P(value);
+		}
+	}
 
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
@@ -164,12 +178,16 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 			default: {
 				zend_error(
 					E_WARNING, 
-					"pthreads detected an attempt to use an unsupported kind of key in %s", 
-					Z_OBJCE_P(object)->name
+					"pthreads detected an attempt to use an unsupported kind of data for %s::$%s", 
+					Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
 				);
 			}
 		}
-	} 
+	} else zend_error(
+		E_WARNING,
+		"pthreads detected an attempt to use an unsupported kind of key in %s", 
+		Z_OBJCE_P(object)->name
+	);
 
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
@@ -199,11 +217,13 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 #endif
 	}
 
-	isset = pthreads_store_isset(
-		pthreads->store, 
-		Z_STRVAL_P(member), Z_STRLEN_P(member), 
-		has_set_exists TSRMLS_CC
-	);
+	if (Z_TYPE_P(member) == IS_STRING) {
+		isset = pthreads_store_isset(
+			pthreads->store, 
+			Z_STRVAL_P(member), Z_STRLEN_P(member), 
+			has_set_exists TSRMLS_CC
+		);
+	} else zend_error(E_WARNING, "pthreads has detected an attempt to use an unsupported kind of key in %s", Z_OBJCE_P(object)->name);
 
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
@@ -233,13 +253,15 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 #endif
 	}
 
-	if (pthreads_store_delete(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
-		zend_error(
-			E_WARNING, 
-			"pthreads has experienced an internal error while deleting %s::$%s", 
-			Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
-		);
-	}
+	if (Z_TYPE_P(member) == IS_STRING) {
+		if (pthreads_store_delete(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
+			zend_error(
+				E_WARNING, 
+				"pthreads has experienced an internal error while deleting %s::$%s", 
+				Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
+			);
+		}
+	} else zend_error(E_WARNING, "pthreads detected an attempt to use an unsupported kind of key in %s", Z_OBJCE_P(object)->name);
 	
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
