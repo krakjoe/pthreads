@@ -718,7 +718,7 @@ static void * pthreads_routine(void *arg) {
 								FREE_ZVAL(ZEG->This);
 							} else inwork = 1;
 						}
-					} else zend_error_noreturn(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
+					} else zend_error(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
 				} while(worker && pthreads_stack_next(thread, this_ptr TSRMLS_CC));
 			}
 			

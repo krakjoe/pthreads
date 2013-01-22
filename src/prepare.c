@@ -394,10 +394,10 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			if (zend_hash_get_current_key_ex(table[0], &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
 				if (zend_hash_find(table[1], lcname, lcnamel, (void**)&exists) != SUCCESS){
 					if ((prepared=pthreads_prepared_entry(thread, *entry TSRMLS_CC))==NULL) {
-						zend_error_noreturn(
+						zend_error(
 							E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
 						);
-						break;
+						return;
 					}
 				} else prepared = *exists;
 

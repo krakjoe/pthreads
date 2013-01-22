@@ -59,7 +59,7 @@ zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_D
 				break;
 				
 				default: {
-					zend_error_noreturn(
+					zend_error(
 						E_ERROR, "pthreads has experienced an internal error while acquiring lock @ %p and cannot continue", lock
 					);
 					locked = (((*acquired)=0)==1);
@@ -90,7 +90,7 @@ zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC
 				break;
 				
 				default: {
-					zend_error_noreturn(
+					zend_error(
 						E_ERROR, 
 						"pthreads has experienced an internal error while releasing lock @ %p and cannot continue", 
 						lock

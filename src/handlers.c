@@ -152,7 +152,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 			case IS_RESOURCE:
 			case IS_BOOL: {
 				if (pthreads_store_write(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS){
-					zend_error_noreturn(
+					zend_error(
 						E_WARNING, 
 						"pthreads failed to write member %s::$%s", 
 						Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
@@ -229,7 +229,7 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	}
 
 	if (pthreads_store_delete(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
-		zend_error_noreturn(
+		zend_error(
 			E_WARNING, 
 			"pthreads has experienced an internal error while deleting %s::$%s", 
 			Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
@@ -309,7 +309,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 					* Stop invalid private method calls
 					*/
 					if (access == ZEND_ACC_PRIVATE && !PTHREADS_IN_THREAD(thread)) {
-						zend_error_noreturn(
+						zend_error(
 							E_ERROR, 
 							"pthreads detected an attempt to call private method %s::%s from outside the threading context", 
 							scope->name,
@@ -359,13 +359,14 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 									cache.object_ptr = getThis();
 									
 									if ((called=zend_call_function(&info, &cache TSRMLS_CC))!=SUCCESS) {
-										zend_error_noreturn(
+										zend_error(
 											E_ERROR, 
 											"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
 											(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
 											scope->name,
 											method
 										);
+										called = FAILURE;
 									} else {
 #if PHP_VERSION_ID > 50399
 										{
@@ -390,7 +391,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 										pthreads_modifiers_unprotect(thread->modifiers, method, unprotect TSRMLS_CC);
 									}
 								} else {
-									zend_error_noreturn(
+									zend_error(
 										E_ERROR, 
 										"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
 										(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
@@ -401,7 +402,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 								}
 							}
 						} else {
-							zend_error_noreturn(
+							zend_error(
 								E_ERROR, 
 								"pthreads has experienced an internal error while finding %s method %s::%s and cannot continue", 
 								(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
