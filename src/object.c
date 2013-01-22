@@ -333,20 +333,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {
 	if (base) {
 		zend_object_std_init(&base->std, entry TSRMLS_CC);
-#if PHP_VERSION_ID < 50400
-		{
-			zval *temp;
 
-			zend_hash_copy(															
-				base->std.properties,
-				&entry->default_properties,
-				(copy_ctor_func_t) zval_add_ref,
-				&temp, sizeof(zval*)
-			);
-		}
-#else
-		object_properties_init(&(base->std), entry);
-#endif	
 		base->cls = tsrm_ls;
 		base->address = NULL;
 		
@@ -418,11 +405,6 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 				}
 			}
 			efree(object->properties_table);
-		}
-		
-		if (object->properties) {
-			zend_hash_destroy(object->properties);
-			FREE_HASHTABLE(object->properties);
 		}
 	}
 #else

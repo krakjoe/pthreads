@@ -142,7 +142,7 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			pthreads_storage *storage = NULL;
 			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
-				MAKE_STD_ZVAL(*read);
+				ALLOC_INIT_ZVAL(*read);
 				if ((result = pthreads_store_convert((*storage), *read TSRMLS_CC))!=SUCCESS) {
 					FREE_ZVAL(*read);
 				} else Z_SET_REFCOUNT_PP(read, 0);
