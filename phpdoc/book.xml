@@ -27,7 +27,7 @@
   </para>
   <para>
  A Stackable Object:
- A Stackable Object can read/write and execute the Worker ( $this->worker ) during the execution of it's run method. 
+ A Stackable Object can read/write and execute the Worker during execution, simply provide the stackable a reference to the appropriate object before runtime. 
  Additionally, any context with a reference to the Stackable can read, write and execute it's methods before during and after execution.
   </para>
   <para>

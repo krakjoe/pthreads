@@ -187,13 +187,6 @@ burst:
 							current->tls = thread->tls;
 							
 							pthreads_connect(current, stackable TSRMLS_CC);
-							
-							if (zend_hash_update(
-								Z_OBJPROP_P(that_ptr), "worker", sizeof("worker"), 
-								(void**) &getThis(), sizeof(zval*), NULL
-								)==SUCCESS) {
-								Z_ADDREF_P(getThis());
-							}
 						}
 					}
 					
@@ -332,7 +325,14 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 /* {{{ pthreads base constructor */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {
 	if (base) {
-		zend_object_std_init(&base->std, entry TSRMLS_CC);
+		/* {{{ this results in faster objects for pthreads */
+		base->std.ce = entry;
+		base->std.properties = NULL;
+		base->std.guards = NULL;	
+#if PHP_VERSION_ID > 50399
+		base->std.properties_table = NULL;
+#endif	
+		/* }}} */
 
 		base->cls = tsrm_ls;
 		base->address = NULL;
@@ -355,7 +355,6 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 					zend_llist_init(&base->stack->objects, sizeof(void**), NULL, 1);
 			}
 		}
-	
 	}
 } /* }}} */
 
@@ -392,24 +391,6 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 			free(base->address);
 		}
 	}
-	
-#if PHP_VERSION_ID > 50399
-	{
-		zend_object *object = &base->std;
-		
-		if (object->properties_table) {
-			int i;
-			for (i = 0; i < object->ce->default_properties_count; i++) {
-				if (object->properties_table[i]) {
-					zval_ptr_dtor(&object->properties_table[i]);
-				}
-			}
-			efree(object->properties_table);
-		}
-	}
-#else
-	zend_object_std_dtor(&(base->std) TSRMLS_CC);
-#endif
 } /* }}} */
 
 /* {{{ free object */
