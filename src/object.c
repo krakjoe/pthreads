@@ -680,14 +680,10 @@ static void * pthreads_routine(void *arg) {
 							/* call the function */
 							pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							{
-								zend_try {
-									zend_call_function(&info, &cache TSRMLS_CC);
-								} zend_catch {
-									zval_ptr_dtor(&getThis());
-									break;
-								} zend_end_try();
+								zend_call_function(&info, &cache TSRMLS_CC);
 							}
-							pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+							if (current)
+								pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							
 #if PHP_VERSION_ID > 50399
 							{
@@ -711,19 +707,16 @@ static void * pthreads_routine(void *arg) {
 								zval_ptr_dtor(&zresult);
 							}
 						}
-					} else zend_error(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", EG(scope)->name);
+					} else zend_error(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", ZEG->scope->name);
 				} while(worker && pthreads_stack_next(thread, this_ptr TSRMLS_CC));
 			}
 		} zend_catch {
 			/* do something, it's all gone wrong */
 		} zend_end_try();
 
-		if (ZEG->This != this_ptr) {
-			if (inwork) {
-				zval_ptr_dtor(&ZEG->This);
-			}
-		}
-
+		/*
+		* Free original reference to $this
+		*/
 		FREE_ZVAL(this_ptr);
 		
 		/**
