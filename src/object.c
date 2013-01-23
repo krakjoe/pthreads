@@ -187,6 +187,12 @@ burst:
 							current->tls = thread->tls;
 							
 							pthreads_connect(current, stackable TSRMLS_CC);
+
+							pthreads_store_write(
+								stackable->store, "worker", sizeof("worker")-1, &this_ptr TSRMLS_CC
+							);
+	
+							Z_ADDREF_P(this_ptr);
 						}
 					}
 					

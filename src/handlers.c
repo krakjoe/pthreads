@@ -74,14 +74,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	}
 
 	if (Z_TYPE_P(member)==IS_STRING) {
-		if (pthreads_store_read(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS) {	
-			if (value != NULL) {
-				value = EG(
-					uninitialized_zval_ptr
-				);
-				Z_ADDREF_P(value);
-			}
-		}
+		pthreads_store_read(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC);
 	} else {
 		zend_error(E_WARNING, "pthreads detected an attempt to use an unsupported kind of key in %s", Z_OBJCE_P(object)->name);
 		if (value != NULL) {

@@ -139,18 +139,27 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 	zend_bool locked = 0;
 	int result = FAILURE;
 	if (store) {
+		MAKE_STD_ZVAL(*read);
+
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			pthreads_storage *storage = NULL;
 			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
-				MAKE_STD_ZVAL(*read);
-				if ((result = pthreads_store_convert((*storage), *read TSRMLS_CC))!=SUCCESS) {
-					FREE_ZVAL(*read);
-				} else Z_SET_REFCOUNT_PP(read, 0);
-			} else MAKE_STD_ZVAL(*read);
+				result = pthreads_store_convert((*storage), *read TSRMLS_CC);
+			}
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
+
+		if (result == SUCCESS) {
+			Z_SET_REFCOUNT_PP(read, 0);
+		} else {
+			FREE_ZVAL(*read);
+			*read = EG(
+				uninitialized_zval_ptr
+			);
+			Z_ADDREF_P(*read);
+		}
 	}
-	return result;
+	return SUCCESS;
 } /* }}} */
 
 /* {{{ write a value to store */

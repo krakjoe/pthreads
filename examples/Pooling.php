@@ -20,9 +20,6 @@ class ExampleWork extends Stackable {
 	public function __construct($data) {
 		$this->local = $data;
 	}	
-	public function setWorker($worker){
-		$this->worker = $worker;
-	}
 	public function run() {
 		$this->worker->addAttempt();
 		$this->worker->addData(
@@ -67,13 +64,13 @@ class Pool {
 			$id = count($this->workers);
 			$this->workers[$id] = new ExampleWorker(sprintf("Worker [%d]", $id));
 			$this->workers[$id]->start();
-			$stackable->setWorker($this->workers[$id]);
+
 			if ($this->workers[$id]->stack($stackable)) {
 				return $stackable;
 			} else trigger_error(sprintf("failed to push Stackable onto %s", $this->workers[$id]->getName()), E_USER_WARNING);
 		}
 		if (($select = $this->workers[array_rand($this->workers)])) {
-			$stackable->setWorker($select);			
+
 			if ($select->stack($stackable)) {
 				return $stackable;
 			} else trigger_error(sprintf("failed to stack onto selected worker %s", $select->getName()), E_USER_WARNING);
