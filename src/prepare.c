@@ -34,6 +34,10 @@
 #	include <src/globals.h>
 #endif
 
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
+#endif
+
 /* {{{ prepared property info ctor */
 static void pthreads_preparation_property_info_ctor(zend_property_info *pi); /* }}} */
 /* {{{ prepared property info dtor */
@@ -213,10 +217,43 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 				/* copy statics and defaults */
 				{
 #if PHP_VERSION_ID < 50400
-					zend_hash_copy(&prepared->default_properties, &candidate->default_properties, (copy_ctor_func_t) pthreads_preparation_default_properties_ctor, &tz, sizeof(zval*));
-					zend_hash_copy(&prepared->default_static_members, &candidate->default_static_members, (copy_ctor_func_t) pthreads_preparation_default_properties_ctor, &tz, sizeof(zval*));
-					prepared->default_properties.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
-					prepared->default_static_members.pDestructor = (dtor_func_t) pthreads_preparation_default_properties_dtor;
+					{
+						HashPosition position;
+						zval **property;
+						
+						for (zend_hash_internal_pointer_reset_ex(&candidate->default_properties, &position);
+							zend_hash_get_current_data_ex(&candidate->default_properties, (void**) &property, &position)==SUCCESS;
+							zend_hash_move_forward_ex(&candidate->default_properties, &position)) {
+
+							char *n;
+							ulong i;
+							uint l;
+							zval *separated;
+
+							if (zend_hash_get_current_key_ex(&candidate->default_properties, &n, &l, &i, 0, &position)) {
+								if (pthreads_store_separate(*property, &separated, 1, 1 TSRMLS_CC)==SUCCESS) {
+									zend_hash_update(&prepared->default_properties, n, l, (void**) &separated, sizeof(zval*), NULL);
+								}
+							}
+						}
+
+						for (zend_hash_internal_pointer_reset_ex(&candidate->default_static_members, &position);
+							zend_hash_get_current_data_ex(&candidate->default_static_members, (void**) &property, &position)==SUCCESS;
+							zend_hash_move_forward_ex(&candidate->default_static_members, &position)) {
+
+							char *n;
+							ulong i;
+							uint l;
+							zval *separated;
+
+							if (zend_hash_get_current_key_ex(&candidate->default_static_members, &n, &l, &i, 0, &position)) {
+								if (pthreads_store_separate(*property, &separated, 1, 0 TSRMLS_CC)==SUCCESS) {
+									zend_hash_update(&prepared->default_static_members, n, l, (void**) &separated, sizeof(zval*), NULL);
+								}
+							}
+						}
+					}
+
 					/** pointless copy **/
 					prepared->doc_comment = NULL;
 					prepared->doc_comment_len = 0;
@@ -439,14 +476,14 @@ static void pthreads_preparation_property_info_ctor(zend_property_info *pi) {} /
 static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /* }}} */
 
 #if PHP_VERSION_ID < 50400
-/* {{{ default property dtor for 5.3 */
+/* {{{ default property ctor for 5.3 */
 static void pthreads_preparation_default_properties_ctor(zval **property) {
-	
+
 } /* }}} */
 
 /* {{{ default property dtor for 5.3 */
 static void pthreads_preparation_default_properties_dtor(zval *property) {
-	zval_ptr_dtor(&property);
+	zval_dtor(property);
 } /* }}} */
 #else
 /* {{{ trail alias copy for 5.4 */
