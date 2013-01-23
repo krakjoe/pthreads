@@ -601,6 +601,9 @@ static void * pthreads_routine(void *arg) {
 		
 		/* request startup */
 		php_request_startup(TSRMLS_C);
+
+		/* fix php-fpm compatibility */
+		SG(sapi_started)=0;		
 		
 		/* do not send headers again */
 		SG(headers_sent)=1;
