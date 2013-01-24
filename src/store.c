@@ -187,51 +187,6 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 	return result;
 } /* }}} */
 
-/* {{{ wait for a value to be set on buffer */
-zend_bool pthreads_store_wait(pthreads_store store, char *key, int keyl, ulong timeout TSRMLS_DC) {
-	zend_bool isset = 0, locked;
-	
-	if (store) {
-		pthreads_synchro event = NULL, *pevent = NULL;
-		
-		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
-			if (!zend_ts_hash_exists(&store->event, key, keyl)) {
-				event = pthreads_synchro_alloc(TSRMLS_C);
-				if (event) {
-					if (zend_ts_hash_update(
-						&store->event, 
-						key, keyl, 
-						(void**)&event, sizeof(pthreads_synchro*), NULL
-					)!=SUCCESS) {
-						pthreads_synchro_free(
-							event TSRMLS_CC
-						);
-						event = NULL;
-						
-						goto unlock;
-					}
-				}
-			} else {
-				if (zend_ts_hash_find(&store->event, key, keyl, (void**)&pevent)==SUCCESS) {
-					event = *pevent;
-				}
-			}
-unlock:
-			pthreads_lock_release(store->lock, locked TSRMLS_CC);
-		}
-		
-		if (event) {
-			if (!(isset=pthreads_store_isset(store, key, keyl, 2 TSRMLS_CC))) {
-				pthreads_synchro_wait_ex(event, timeout TSRMLS_CC);
-			} else isset = 1;
-			if (isset)
-				pthreads_synchro_notify(event TSRMLS_CC);
-			isset = pthreads_store_isset(store, key, keyl, 2 TSRMLS_CC);
-		} else zend_error(E_ERROR, "event not created, pthreads bailing ...");
-	}
-	return isset;
-} /* }}} */
-
 /* {{{ seperate a zval using internals */
 int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, zend_bool complex TSRMLS_DC) {
 	int result = FAILURE;

@@ -63,9 +63,6 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 /* {{{ see if a value isset in buffer */
 zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int has_set_exists TSRMLS_DC); /* }}} */
 
-/* {{{ wait for a value to be set on buffer */
-zend_bool pthreads_store_wait(pthreads_store store, char *key, int keyl, ulong timeout TSRMLS_DC); /* }}} */
-
 /* {{{ write value to buffer */
 int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC); /* }}} */
 

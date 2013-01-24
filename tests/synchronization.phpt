@@ -1,7 +1,7 @@
 --TEST--
-Test member sync ( 10 second test )
+Test synchronized blocks
 --DESCRIPTION--
-This test verifies that syncronization on a member is working
+This test verifies that syncronization is working
 --FILE--
 <?php
 class T extends Thread {
@@ -9,6 +9,7 @@ class T extends Thread {
         public function run() {
             $this->synchronized(function(){
 				$this->data = true;
+				$this->notify();
 			});               
         }
 }
@@ -16,7 +17,9 @@ $t = new T;
 $t->start();
 /* will return boolean false the data should not yet be set ( the timeout was reached ) */
 $t->synchronized(function($thread){
-	var_dump($thread->wait("data"));
+	if (!$thread->data) {
+		var_dump($thread->wait());
+	} else var_dump($thread->data);
 }, $t);
 ?>
 --EXPECT--

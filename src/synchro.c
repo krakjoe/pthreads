@@ -110,16 +110,20 @@ void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_in
 		
 		/* acquire synchronization lock and execute function synchronized */
 		{
-			PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());
-			if (pobject) {	
-				pthreads_synchro_lock(pobject->synchro TSRMLS_CC);				
-				/* call the closure */
-				zend_call_function(
-					info, 
-					cache 
-					TSRMLS_CC
-				);
-				pthreads_synchro_unlock(pobject->synchro TSRMLS_CC);
+			PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());	
+			if (pobject) {
+				/* synchronized block execution */
+				{
+					pthreads_synchro_lock(pobject->synchro TSRMLS_CC);		
+					/* call the closure */
+					zend_call_function(
+						info, 
+						cache 
+						TSRMLS_CC
+					);
+					pthreads_synchro_unlock(pobject->synchro TSRMLS_CC);
+				}
+				/* end synchronization */
 			}
 		}
 		
