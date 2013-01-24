@@ -41,6 +41,32 @@
 /* {{{ pthreads module entry */
 extern zend_module_entry pthreads_module_entry; /* }}} */
 
+static inline pthreads_address pthreads_address_alloc(PTHREAD object) {
+	pthreads_address address = (pthreads_address) calloc(1, sizeof(*address));
+	if (address) {
+		/* add the space for null here, once */
+		address->length = snprintf(
+			NULL, 0, "%lu", (long) object
+		);
+		if (address->length) {
+			address->serial = calloc(1, address->length+1);
+			if (address->serial) {
+				sprintf(
+					(char*) address->serial, "%lu", (long) object
+				);
+			}
+		}
+	}
+	return address;
+}
+
+static inline void pthreads_address_free(pthreads_address address) {
+	if (address->serial) {
+		free(address->serial);
+	}
+	free(address);
+}
+
 /* {{{ base ctor/clone/dtor/free */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC);
 static void pthreads_base_dtor(void *arg TSRMLS_DC); 
@@ -142,6 +168,7 @@ size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	size_t bubble = 0;
 	zval *that_ptr;
 	zend_function *run;
+	zend_class_entry *popped;
 burst:
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
 		zend_llist *stack = &thread->stack->objects;
@@ -164,17 +191,18 @@ burst:
 						current->std.ce TSRMLS_CC
 					)
 				);
-				
+				popped = Z_OBJCE_P(that_ptr);
+
 				/*
 				* Switch scope to the next stackable
 				*/
-				if (zend_hash_find(&Z_OBJCE_P(that_ptr)->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
+				if (zend_hash_find(&popped->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
 					/*
 					* Setup Executor
 					*/
-					EG(This)=that_ptr;
-					EG(scope)=Z_OBJCE_P(that_ptr);
-					EG(called_scope)=Z_OBJCE_P(that_ptr);
+					EG(This) = that_ptr;
+					EG(scope) = popped;
+					EG(called_scope) = popped;
 					
 					/*
 					* Setup stackable for runtime
@@ -294,7 +322,8 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 			pthreads_store_free(destination->store TSRMLS_CC);
 			pthreads_synchro_free(destination->synchro TSRMLS_CC);
 			pthreads_resources_free(destination->resources TSRMLS_CC);
-			
+			pthreads_address_free(destination->address);
+
 			if (PTHREADS_IS_WORKER(destination)) {
 				zend_llist_destroy(
 					&destination->stack->objects
@@ -348,7 +377,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 #endif	
 
 		base->cls = tsrm_ls;
-		base->address = NULL;
+		base->address = pthreads_address_alloc(base);
 		
 		if (PTHREADS_IS_CONNECTION(base)) {
 			base->tid = pthreads_self();
@@ -389,19 +418,13 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		pthreads_store_free(base->store TSRMLS_CC);
 		pthreads_synchro_free(base->synchro TSRMLS_CC);
 		pthreads_resources_free(base->resources TSRMLS_CC);
+		pthreads_address_free(base->address);
 
 		if (PTHREADS_IS_WORKER(base)) {
 			zend_llist_destroy(
 				&base->stack->objects
 			);
 			free(base->stack);
-		}
-		
-		if (base->address) {
-			if (base->address->serial) {
-				free(base->address->serial);
-			}
-			free(base->address);
 		}
 	}
 
@@ -511,25 +534,10 @@ zend_bool pthreads_wait_member(PTHREAD thread, zval *member TSRMLS_DC) {
 int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *blength, zend_serialize_data *data TSRMLS_DC) {
 	PTHREAD threaded = PTHREADS_FETCH_FROM(object);
 	if (threaded) {
-		if (!threaded->address) {
-			threaded->address = (pthreads_address) calloc(1, sizeof(*(threaded->address)));
-			if (threaded->address) {
-				/* add the space for null here, once */
-				threaded->address->length = snprintf(
-					NULL, 0, "%lu", (long) threaded
-				);
-				if (threaded->address->length) {
-					threaded->address->serial = calloc(1, threaded->address->length+1);
-					if (threaded->address->serial) {
-						sprintf(
-							(char*) threaded->address->serial, "%lu", (long) threaded
-						);
-					} else return FAILURE;
-				}
-			} else return FAILURE;
-		}
-		
-		(*buffer) = (unsigned char*) estrndup((char*)threaded->address->serial, threaded->address->length);
+		(*buffer) = (unsigned char*) estrndup(
+			(char*)threaded->address->serial, 
+			threaded->address->length
+		);
 		(*blength) = threaded->address->length;
 		
 		return SUCCESS;
