@@ -50,7 +50,7 @@ class MyThread extends Thread {
 	public $storage;
 	public $worker;
 	
-	public function __construct($storage, $worker) {
+	public function __construct($storage, $worker = null) {
 		$this->storage = $storage;
 		$this->worker = $worker;
 		$this->stored = 0;
@@ -72,7 +72,8 @@ class MyThread extends Thread {
 			if ($this->worker) {
 				printf("%s (%lu) WORKER AVAILABLE\n", __METHOD__, $this->getThreadId());
 				if (!$this->worker->isShutdown()){
-					$this->worker->stack(new MyWork($this->storage, $this->worker));
+					$work = new MyWork($this->storage);
+					$this->worker->stack($work);
 					print_r($work);
 				} else printf("%s (%lu) WORKER SHUTDOWN\n", __METHOD__, $this->getThreadId());
 			} else printf("NO WORKER !!\n");
@@ -107,12 +108,10 @@ class MyWork extends Stackable {
 	public $thread;
 	public $storage;
 	public $tstored;
-	public $worker;
-
-	public function __construct($storage, $worker) {
+	
+	public function __construct($storage) {
 		$this->storage = $storage;
 		$this->tstored = null;
-		$this->worker = $worker;
 	}
 	
 	public function run(){
@@ -151,14 +150,19 @@ $storage = new GlobalStorage();
 $worker = new GlobalWorker($storage);
 $worker->start();
 
+/* in the real world where you're executing the storage: */
+/* $worker->stack($storage); */
+/* while(!$storage->isReady()) */
+/*	$storage->wait(); */
 
 /* random array of work to populate some storage from the worker */
 $work = array();
 while(++$o<10) {
 	/* items stacked could be using resources available in worker */
-	$worker->stack(new MyWork($storage, $worker));
+	$work[]=new MyWork($storage);
 }
-	
+foreach($work as $w)
+	$worker->stack($w);
 /*
 	In this example your application would now be loaded, with access to a runnng background worker
 	and all the other goodies we just created/initiated/whatever
