@@ -15,7 +15,6 @@ class T extends Thread {
 }
 $t = new T;
 $t->start();
-/* will return boolean false the data should not yet be set ( the timeout was reached ) */
 $t->synchronized(function($thread){
 	if (!$thread->data) {
 		var_dump($thread->wait());

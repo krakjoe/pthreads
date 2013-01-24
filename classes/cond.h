@@ -152,35 +152,34 @@ PHP_METHOD(Cond, wait)
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &condition, &mutex, &timeout)==SUCCESS && condition && mutex) {
 		if (timeout > 0L) {
-			struct timeval now;
-			if (gettimeofday(&now, NULL)==SUCCESS) {
-				struct timespec until;
-				long	nsec = timeout * 1000;
-				if (nsec > 1000000000L) {
-					until.tv_sec = now.tv_sec + (nsec / 1000000000L);
-					until.tv_nsec = (now.tv_usec * 1000) + (nsec % 1000000000L);
-				} else {
-					until.tv_sec = now.tv_sec;
-					until.tv_nsec = (now.tv_usec * 1000) + timeout;	
+			struct timeval time;				
+			struct timespec spec;
+
+			if (timeout>0L) {
+				if (gettimeofday(&time, NULL)==SUCCESS) {
+					time.tv_sec += (timeout / 10000000L);
+					time.tv_usec += (timeout % 10000000L);
+				} else timeout = 0L;
+
+				if (timeout > 0L) {
+					spec.tv_sec = time.tv_sec;
+					spec.tv_nsec = time.tv_usec * 1000;
 				}
+			}
+
+			switch(pthread_cond_timedwait(condition, mutex, &spec)){
+				case SUCCESS: RETURN_TRUE; break;
+				case EINVAL: 
+					zend_error(E_WARNING, "pthreads has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
+					RETURN_FALSE;
+				break;
 				
-				switch(pthread_cond_timedwait(condition, mutex, &until)){
-					case SUCCESS: RETURN_TRUE; break;
-					case EINVAL: 
-						zend_error(E_WARNING, "pthreads has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
-						RETURN_FALSE;
-					break;
-					
-					case ETIMEDOUT: 
-						zend_error(E_WARNING, "pthreads detected a timeout while waiting for condition"); 
-						RETURN_FALSE;
-					break;
-					
-					default: RETURN_FALSE;
-				}
-			} else {
-				zend_error(E_ERROR, "pthreads has detected a failure while attempting to get the time from the system");
-				RETURN_FALSE;
+				case ETIMEDOUT: 
+					zend_error(E_WARNING, "pthreads detected a timeout while waiting for condition"); 
+					RETURN_FALSE;
+				break;
+				
+				default: RETURN_FALSE;
 			}
 		} else {
 			switch (pthread_cond_wait(condition, mutex)) {
