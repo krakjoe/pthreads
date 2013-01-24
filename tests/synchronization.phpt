@@ -7,10 +7,10 @@ This test verifies that syncronization is working
 class T extends Thread {
         public $data;
         public function run() {
-            $this->synchronized(function(){
-				$this->data = true;
-				$this->notify();
-			});               
+            $this->synchronized(function($thread){
+				$thread->data = true;
+				$thread->notify();
+			}, $this);               
         }
 }
 $t = new T;
