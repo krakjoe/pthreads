@@ -58,17 +58,23 @@ pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
 	int result = FAILURE;
 	struct timeval time;
-
+	struct timespec spec;
+	
 	if (timeout>0L) {
 		if (gettimeofday(&time, NULL)==SUCCESS) {
 			time.tv_sec += (timeout / 10000000L);
     		time.tv_usec += (timeout % 10000000L);
 		} else timeout = 0L;
+
+		if (timeout > 0L) {
+			spec.tv_sec = time.tv_sec;
+			spec.tv_nsec = time.tv_usec * 1000;
+		}
 	}
 	
 	if (sync) {
 		if (timeout > 0L) {
-			result = pthread_cond_timedwait(&sync->notify, &sync->lock->mutex, &time);
+			result = pthread_cond_timedwait(&sync->notify, &sync->lock->mutex, &spec);
 		} else { result = pthread_cond_wait(&sync->notify, &sync->lock->mutex); }
 	} else { /* report unknown error */ }
 	
