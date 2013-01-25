@@ -142,8 +142,7 @@ PHP_METHOD(Cond, broadcast)
 
 /* {{{ proto boolean Cond::wait(long condition, long mutex, [long timeout]) 
 		This will wait for a signal or broadcast on condition, you must have mutex locked by the calling thread
-		Timeout should be expressed in microseconds ( millionths ) 
-		@NOTE timeouts dodgy in windows because of a lack of proper gettimeofday implementation, dispite it being defined, somewhere ... */
+		Timeout should be expressed in microseconds ( millionths ) */
 PHP_METHOD(Cond, wait)
 {
 	pthread_cond_t *condition;

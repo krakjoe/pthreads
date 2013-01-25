@@ -109,7 +109,10 @@ zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC
 void pthreads_lock_free(pthreads_lock lock TSRMLS_DC) {
 	if (lock) {
 		pthread_mutex_destroy(&lock->mutex);
+		
 		free(lock);
+
+		lock = NULL;
 	}
 } /* }}} */
 #endif

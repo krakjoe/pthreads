@@ -212,41 +212,41 @@ int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, 
 void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 
 	zend_bool locked;
-	TsHashTable *safe = &store->table;
-	
-	if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
+	if (store) {
+		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
+			TsHashTable *safe = &store->table;
+			HashTable *stored = TS_HASH(safe);
+			HashPosition position;
+			pthreads_storage *storage;
 
-		HashTable *stored = TS_HASH(safe);
-		HashPosition position;
-		pthreads_storage *storage;
-
-		for (zend_hash_internal_pointer_reset_ex(stored, &position);
-			zend_hash_get_current_data_ex(stored, (void**) &storage, &position)==SUCCESS;
-			zend_hash_move_forward_ex(stored, &position)) {	
+			for (zend_hash_internal_pointer_reset_ex(stored, &position);
+				zend_hash_get_current_data_ex(stored, (void**) &storage, &position)==SUCCESS;
+				zend_hash_move_forward_ex(stored, &position)) {	
 			
-			char *name;
-			uint nlength;
-			ulong idx;
+				char *name;
+				uint nlength;
+				ulong idx;
 
-			if (zend_hash_get_current_key_ex(stored, &name, &nlength, &idx, 0, &position)==HASH_KEY_IS_STRING) {
-				if (name[0] != '$') { /* do not copy internal counter */
-					char *rename = estrndup(name, nlength);
-					{
-						zval *pzval;
+				if (zend_hash_get_current_key_ex(stored, &name, &nlength, &idx, 0, &position)==HASH_KEY_IS_STRING) {
+					if (name[0] != '$') { /* do not copy internal counter */
+						char *rename = estrndup(name, nlength);
+						{
+							zval *pzval;
 
-						MAKE_STD_ZVAL(pzval);
+							MAKE_STD_ZVAL(pzval);
 					
-						if (pthreads_store_convert((*storage), pzval TSRMLS_CC)!=SUCCESS) {
-							ZVAL_NULL(pzval);
-						} 
+							if (pthreads_store_convert((*storage), pzval TSRMLS_CC)!=SUCCESS) {
+								ZVAL_NULL(pzval);
+							} 
 											
-						zend_hash_update(hash, rename, nlength+1, &pzval, sizeof(zval), NULL);
+							zend_hash_update(hash, rename, nlength+1, &pzval, sizeof(zval), NULL);
+						}
+						efree(rename);
 					}
-					efree(rename);
 				}
 			}
+			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
-		pthreads_lock_release(store->lock, locked TSRMLS_CC);
 	}
 } /* }}} */
 
@@ -254,6 +254,7 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 void pthreads_store_free(pthreads_store store TSRMLS_DC){
 	if (store) {
 		zend_bool locked;
+
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			zend_ts_hash_destroy(&store->table);
 			zend_ts_hash_destroy(&store->event);
@@ -261,6 +262,8 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 		}
 		pthreads_lock_free(store->lock TSRMLS_CC);
 		free(store);
+		
+		store = NULL;
 	}
 } /* }}} */
 
