@@ -45,6 +45,7 @@
 #include <Zend/zend_extensions.h>
 #include <Zend/zend_globals.h>
 #include <Zend/zend_hash.h>
+#include <Zend/zend_ts_hash.h>
 #include <Zend/zend_interfaces.h>
 #include <Zend/zend_list.h>
 #include <Zend/zend_object_handlers.h>

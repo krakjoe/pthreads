@@ -328,7 +328,12 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 					if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length, complex TSRMLS_CC)==SUCCESS) {
 						if (storage->type==IS_ARRAY) {
 							storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
-						} else storage->exists = 1;
+						} else {
+							if (Z_OBJ_HT_P(unstore)->add_ref) {
+								Z_OBJ_HT_P(unstore)->add_ref(unstore TSRMLS_CC);
+							}
+							storage->exists = 1;
+						}
 					}
 				} break;
 				
@@ -344,7 +349,6 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 /* {{{ Will unstoreize data into the allocated zval passed */
 static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_DC){
 	int result = SUCCESS;
-	ulong refcount = Z_REFCOUNT_P(pzval);
 	
 	if (storage) {
 		switch(storage->type) {

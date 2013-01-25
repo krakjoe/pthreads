@@ -30,10 +30,6 @@
 #	include <src/lock.h>
 #endif
 
-#ifndef ZEND_TS_HASH_H
-#	include <Zend/zend_ts_hash.h>
-#endif
-
 #define PTHREADS_STORE_OK 0
 #define PTHREADS_STORE_PASS 1
 #define PTHREADS_STORE_EMPTY 2

@@ -315,6 +315,7 @@ zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 /* {{{ connect pthread objects */
 static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 	if (source && destination) {
+
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
 			pthreads_lock_free(destination->lock TSRMLS_CC);
 			pthreads_state_free(destination->state  TSRMLS_CC);
@@ -411,7 +412,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 				pthreads_join(base TSRMLS_CC);
 			}
 		}
-		
+	
 		pthreads_lock_free(base->lock TSRMLS_CC);
 		pthreads_state_free(base->state  TSRMLS_CC);
 		pthreads_modifiers_free(base->modifiers TSRMLS_CC);
