@@ -9,7 +9,6 @@ class O extends Stackable {
 }
 
 class T extends Thread {
-    
 	public function __construct() {
 		$this->t = new O();
 	}

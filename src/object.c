@@ -699,10 +699,10 @@ static void * pthreads_routine(void *arg) {
 							pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							{
 								zend_call_function(&info, &cache TSRMLS_CC);
+								
+								if (current)
+									pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							}
-							if (current)
-								pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-							
 #if PHP_VERSION_ID > 50399
 							{
 								zend_op_array *ops = &zrun->op_array;

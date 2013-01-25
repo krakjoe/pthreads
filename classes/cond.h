@@ -156,8 +156,8 @@ PHP_METHOD(Cond, wait)
 
 			if (timeout>0L) {
 				if (gettimeofday(&time, NULL)==SUCCESS) {
-					time.tv_sec += (timeout / 10000000L);
-					time.tv_usec += (timeout % 10000000L);
+					time.tv_sec += (timeout / 1000000L);
+					time.tv_usec += (timeout % 1000000L);
 				} else timeout = 0L;
 
 				if (timeout > 0L) {
