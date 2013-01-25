@@ -32,7 +32,7 @@
   </para>
   <para>
  Synchronization:
- All of the objects that pthreads creates have built in synchronization in the form of ::wait and ::notify. 
+ All of the objects that pthreads creates have built in synchronization in the ( familiar to java programmers ) form of ::wait and ::notify. 
  Calling ::wait on an object will cause the context to wait for another context to call ::notify on the same object. 
  This allows for powerful synchronization between Threaded Objects in PHP.
   </para>
@@ -56,6 +56,15 @@
  With the exception of Threaded Objects any reference used to set a member of a Threaded Object is separated from the reference in the Threaded Object; 
  the same data can be read directly from the Threaded Object at any time by any context with a reference to the Threaded Object.
   </para>
+  <para>
+ Static Members:
+ When a new context is created ( Thread or Worker ), only the simple members of static classes are copied, no resources or objects are copied into the threading context from static class members. This allows them to function as a kind of thread local storage. For example, upon starting the context, a class whose static members include connection information for a database server, and the connection itself, will only have the simple connection information copied, not the connection. Allowing the new context to initiate a connection in the same way as the context that created it, storing the connection in the same place without affecting the original context.
+  </para>
+  <caution>
+  <para>
+ When print_r, var_dump and other object debug functions are executed, they do not include recursion protection.
+  </para>
+  </caution>
   <note>
    <para>
  Resources:
