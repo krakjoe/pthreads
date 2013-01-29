@@ -37,7 +37,6 @@
 /* {{{ buffer structure */
 typedef struct _pthreads_store {
 	TsHashTable table;
-	TsHashTable event;
 	pthreads_lock lock;
 } *pthreads_store; /* }}} */
 

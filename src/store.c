@@ -56,7 +56,6 @@ static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC);
 static int pthreads_store_validate_resource(zval **pzval TSRMLS_DC);
 static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
-static void pthreads_store_event_dtor (pthreads_synchro *element);
 /* }}} */
 
 /* {{{ allocate storage for an object */
@@ -65,11 +64,8 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	
 	if (store) {
 		if (zend_ts_hash_init(&store->table, 8, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){
-			if (zend_ts_hash_init(&store->event, 8, NULL, (dtor_func_t) pthreads_store_event_dtor, 1)==SUCCESS) {
-				if ((store->lock = pthreads_lock_alloc(TSRMLS_C))) {
-					return store;
-				}
-				zend_ts_hash_destroy(&store->event);
+			if ((store->lock = pthreads_lock_alloc(TSRMLS_C))) {
+				return store;
 			}
 			zend_ts_hash_destroy(&store->table);
 		}
@@ -172,12 +168,6 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 		if (storage) {	
 			if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 				if (zend_ts_hash_update(&store->table, key, keyl, (void**) &storage, sizeof(storage), NULL)==SUCCESS) {
-					if (zend_ts_hash_exists(&store->event, key, keyl)) {
-						pthreads_synchro *psync;
-						if (zend_ts_hash_find(&store->event, key, keyl, (void**)&psync)==SUCCESS) {
-							pthreads_synchro_notify(*psync TSRMLS_CC);
-						}
-					}
 					result = SUCCESS;
 				} else free(store);
 				pthreads_lock_release(store->lock, locked TSRMLS_CC);
@@ -257,7 +247,6 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			zend_ts_hash_destroy(&store->table);
-			zend_ts_hash_destroy(&store->event);
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 		pthreads_lock_free(store->lock TSRMLS_CC);
@@ -558,14 +547,6 @@ static void pthreads_store_storage_dtor (pthreads_storage *storage){
 		}
 		
 		free((*storage));
-	}
-} /* }}} */
-
-/* {{{ Will free store event */
-static void pthreads_store_event_dtor (pthreads_synchro *psync){
-	TSRMLS_FETCH();
-	if (psync && (*psync)) {
-		pthreads_synchro_free(*psync TSRMLS_CC);
 	}
 } /* }}} */
 
