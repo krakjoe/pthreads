@@ -34,6 +34,8 @@
 #if PHP_VERSION_ID > 50399
 #	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
+#	define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object TSRMLS_DC
+#	define PTHREADS_READ_PROPERTIES_PASSTHRU_C object TSRMLS_CC
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type, const struct _zend_literal *key TSRMLS_DC
 #	define PTHREADS_READ_DIMENSION_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type, key TSRMLS_CC
@@ -61,6 +63,8 @@
 #else
 #	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
+#	define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object TSRMLS_DC
+#	define PTHREADS_READ_PROPERTIES_PASSTHRU_C object TSRMLS_CC
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
 #	define PTHREADS_READ_DIMENSION_PASSTHRU_D PTHREADS_READ_PROPERTY_PASSTHRU_D
 #	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type TSRMLS_CC
@@ -89,6 +93,9 @@
 
 /* {{{ read proeprties from storage */
 HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D); /* }}} */
+
+/* {{{ read proeprties from storage */
+HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D); /* }}} */
 
 /* {{{ read a property from the referenced thread */
 zval * pthreads_read_property(PTHREADS_READ_PROPERTY_PASSTHRU_D); 

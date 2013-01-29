@@ -48,10 +48,25 @@ HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 	zend_hash_init(table, 8, NULL, ZVAL_PTR_DTOR, 0);
 	*is_temp = 1;
 	pthreads_store_tohash(
-		(PTHREADS_FETCH_FROM(object))->store, 
+		(PTHREADS_FETCH_FROM(object))->store,
 		table TSRMLS_CC
 	);
 	return table;
+} /* }}} */
+
+/* {{{ reads properties from storage */
+HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
+	PTHREAD pobject = PTHREADS_FETCH_FROM(object);
+	if (pobject) {
+		rebuild_object_properties(&pobject->std);
+		{
+			pthreads_store_tohash(
+				pobject->store, 
+				pobject->std.properties TSRMLS_CC
+			);
+		}
+	}
+	return pobject->std.properties;
 } /* }}} */
 
 /* {{ reads a property from a thread, wherever it is available */
