@@ -293,7 +293,9 @@ int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D) {
             result = 0;
         }
         zval_ptr_dtor(&member);
-    } else return pthreads_has_property(PTHREADS_HAS_DIMENSION_PASSTHRU_C); 
+    } else result = pthreads_has_property(PTHREADS_HAS_DIMENSION_PASSTHRU_C); 
+
+	return result;
 }
 /* }}} */
 
@@ -330,7 +332,14 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		zval_ptr_dtor(&mstring);
 	}
 } 
-void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); }
+void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) {
+	zend_class_entry *ce = Z_OBJCE_P(object);
+    if (instanceof_function_ex(ce, zend_ce_arrayaccess, 1 TSRMLS_CC)) {
+        SEPARATE_ARG_IF_REF(member);
+        zend_call_method_with_1_params(&object, ce, NULL, "offsetunset", NULL, member);
+        zval_ptr_dtor(&member);
+    } else pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); 
+}
 /* }}} */
 
 /* {{{ pthreads_get_method will attempt to apply pthreads specific modifiers */
