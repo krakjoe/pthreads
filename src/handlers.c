@@ -224,7 +224,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
 	}
-} 
+}
 void pthreads_write_dimension(PTHREADS_WRITE_DIMENSION_PASSTHRU_D) {
 	zend_class_entry *ce = Z_OBJCE_P(object);
  

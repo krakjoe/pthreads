@@ -1,7 +1,7 @@
 --TEST--
 Test ArrayAccess compatibility
 --DESCRIPTION--
-This test verifies that array access compatible is maintained for pthreads objects
+This test verifies that ArrayAccess is executed for pthreads objects
 --FILE--
 <?php
 class T extends Thread implements ArrayAccess {
