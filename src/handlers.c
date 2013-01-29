@@ -112,30 +112,27 @@ zval* pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) {
 	zval *retval;
 	
 	if (instanceof_function_ex(ce, zend_ce_arrayaccess, 1 TSRMLS_CC)) {
-        if(member == NULL) {
-            /* [] construct */
-            ALLOC_INIT_ZVAL(member);
-        } else {
-            SEPARATE_ARG_IF_REF(member);
-        }
+		if(member == NULL) {
+			ALLOC_INIT_ZVAL(member);
+		} else {
+			SEPARATE_ARG_IF_REF(member);
+		}
 
-        zend_call_method_with_1_params(&object, ce, NULL, "offsetget", &retval, member);
+		zend_call_method_with_1_params(&object, ce, NULL, "offsetget", &retval, member);
 
-        zval_ptr_dtor(&member);
+		zval_ptr_dtor(&member);
 
-        if (!retval) {
-            if (!EG(exception)) {
-                zend_error(E_ERROR, "Undefined offset for object of type %s used as array", ce->name);
-            }
-            return 0;
-        }
+		if (!retval) {
+			if (!EG(exception)) {
+				zend_error(E_ERROR, "Undefined offset for object of type %s used as array", ce->name);
+			}
+			return 0;
+		}
 
-        /* Undo PZVAL_LOCK() */
-        Z_DELREF_P(retval);
+		Z_DELREF_P(retval);
 
-        return retval;
+		return retval;
     } else return pthreads_read_property(PTHREADS_READ_DIMENSION_PASSTHRU_C); 
-	
 }
 /* }}} */
 
@@ -227,16 +224,15 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 }
 void pthreads_write_dimension(PTHREADS_WRITE_DIMENSION_PASSTHRU_D) {
 	zend_class_entry *ce = Z_OBJCE_P(object);
- 
 	if (instanceof_function_ex(ce, zend_ce_arrayaccess, 1 TSRMLS_CC)) {
-        if (!member) {
-            ALLOC_INIT_ZVAL(member);
+		if (!member) {
+			ALLOC_INIT_ZVAL(member);
         } else {
-            SEPARATE_ARG_IF_REF(member);
+			SEPARATE_ARG_IF_REF(member);
         }
-        zend_call_method_with_2_params(&object, ce, NULL, "offsetset", NULL, member, value);
-        zval_ptr_dtor(&member);
-    } else pthreads_write_property(PTHREADS_WRITE_DIMENSION_PASSTHRU_C);
+		zend_call_method_with_2_params(&object, ce, NULL, "offsetset", NULL, member, value);
+		zval_ptr_dtor(&member);
+	} else pthreads_write_property(PTHREADS_WRITE_DIMENSION_PASSTHRU_C);
 }
 /* }}} */
 
@@ -274,25 +270,25 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D) { 
 	zend_class_entry *ce = Z_OBJCE_P(object);
 	zval *retval;
-    int result;
+	int result;
 
 	if (instanceof_function_ex(ce, zend_ce_arrayaccess, 1 TSRMLS_CC)) {
-        SEPARATE_ARG_IF_REF(member);
-        zend_call_method_with_1_params(&object, ce, NULL, "offsetexists", &retval, member);
-        if (retval) {
-            result = i_zend_is_true(retval);
-            zval_ptr_dtor(&retval);
-            if (has_set_exists && result && !EG(exception)) {
-                zend_call_method_with_1_params(&object, ce, NULL, "offsetget", &retval, member);
-                if (retval) {
-                    result = i_zend_is_true(retval);
-                    zval_ptr_dtor(&retval);
-                }
-            }
-        } else {
-            result = 0;
+		SEPARATE_ARG_IF_REF(member);
+		zend_call_method_with_1_params(&object, ce, NULL, "offsetexists", &retval, member);
+		if (retval) {
+			result = i_zend_is_true(retval);
+			zval_ptr_dtor(&retval);
+			if (has_set_exists && result && !EG(exception)) {
+				zend_call_method_with_1_params(&object, ce, NULL, "offsetget", &retval, member);
+				if (retval) {
+					result = i_zend_is_true(retval);
+					zval_ptr_dtor(&retval);
+				}
+			}
+		} else {
+			result = 0;
         }
-        zval_ptr_dtor(&member);
+		zval_ptr_dtor(&member);
     } else result = pthreads_has_property(PTHREADS_HAS_DIMENSION_PASSTHRU_C); 
 
 	return result;
@@ -335,9 +331,9 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) {
 	zend_class_entry *ce = Z_OBJCE_P(object);
     if (instanceof_function_ex(ce, zend_ce_arrayaccess, 1 TSRMLS_CC)) {
-        SEPARATE_ARG_IF_REF(member);
-        zend_call_method_with_1_params(&object, ce, NULL, "offsetunset", NULL, member);
-        zval_ptr_dtor(&member);
+		SEPARATE_ARG_IF_REF(member);
+		zend_call_method_with_1_params(&object, ce, NULL, "offsetunset", NULL, member);
+		zval_ptr_dtor(&member);
     } else pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); 
 }
 /* }}} */
