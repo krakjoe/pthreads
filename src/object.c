@@ -333,6 +333,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 			}
 			
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
+			
 			return pthreads_connect
 			(
 				source,
@@ -353,7 +354,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 		destination->modifiers = source->modifiers;
 		destination->store = source->store;
 		destination->stack = source->stack;
-
+		
 		return SUCCESS;
 	} else return FAILURE;
 } /* }}} */
@@ -457,8 +458,10 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 static void pthreads_base_free(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 	if (base) {
-		free(base);
-	}
+		free(
+			base
+		);
+	}	
 } /* }}} */
 
 /* {{{ clone object */
@@ -550,7 +553,7 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC) {
 	PTHREAD address = NULL;
 	if (sscanf((const char*)buffer, "%lu", &address)) {
-		if (address) {
+		if (address && address->address) {
 			if (object_init_ex(
 				*object, pthreads_prepared_entry(address, ce TSRMLS_CC)
 			)==SUCCESS) {
