@@ -30,10 +30,6 @@
 #	include <src/lock.h>
 #endif
 
-#define PTHREADS_STORE_OK 0
-#define PTHREADS_STORE_PASS 1
-#define PTHREADS_STORE_EMPTY 2
-
 /* {{{ buffer structure */
 typedef struct _pthreads_store {
 	TsHashTable table;
