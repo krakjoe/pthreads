@@ -14,8 +14,6 @@ class T extends Thread {
 	public $o;
 
 	public function run() {
-		/* this is created without intent of sharing */
-		/* with any context created before this one */
 		$this->o = new O();	
 	}
 }
@@ -23,9 +21,11 @@ class T extends Thread {
 $t = new T();
 $t->start();
 $t->join();
-/* we expect nothing */
+
 var_dump($t->o);
 ?>
---EXPECT--
-NULL
+--EXPECTF--
+object(O)#%d (%d) {
+}
+
 

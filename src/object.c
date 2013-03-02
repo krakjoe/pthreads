@@ -701,7 +701,12 @@ static void * pthreads_routine(void *arg) {
 							/* call the function */
 							pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							{
-								zend_call_function(&info, &cache TSRMLS_CC);
+								/* graceful fatalities */
+								zend_try {
+									zend_call_function(&info, &cache TSRMLS_CC);
+								} zend_catch {
+									/* catch errors */
+								} zend_end_try();
 								
 								if (current)
 									pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
