@@ -63,7 +63,7 @@ HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 #endif
 		{
 			pthreads_store_tohash(
-				pobject->store, 
+				pobject->store,
 				pobject->std.properties TSRMLS_CC
 			);
 		}
@@ -75,7 +75,7 @@ HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	zval *value = NULL, *mstring = NULL;
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
-	
+
 	if (Z_TYPE_P(member) != IS_STRING) {
 		ALLOC_ZVAL(mstring);
 		*mstring = *member;
@@ -89,7 +89,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 		key = NULL;
 #endif
 	}
-	
+
 	if (Z_TYPE_P(member)==IS_STRING) {
 		pthreads_store_read(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC);
 	} else {
@@ -105,9 +105,9 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
 	}
-	
+
 	return value;
-} 
+}
 
 zval* pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthreads_read_property(PTHREADS_READ_DIMENSION_PASSTHRU_C); }
 /* }}} */
@@ -118,19 +118,19 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	zval *mstring = NULL;
 	zend_bool nulled = 0;
 	zend_bool locked;
-	
+
 	if (member == NULL) {
 		pthreads_lock_acquire(pthreads->store->lock, &locked TSRMLS_CC);
 		{
 			zval *pcounter;
-			
+
 			MAKE_STD_ZVAL(member);
-			
+
 			if(pthreads_store_isset(pthreads->store, "$\0", 2, 1 TSRMLS_CC)) {
 				pthreads_store_read(pthreads->store, "$\0", 2, &pcounter TSRMLS_CC);
 			} else {
 				MAKE_STD_ZVAL(pcounter);
-				
+
 				ZVAL_LONG(pcounter, 0);
 			}
 
@@ -153,7 +153,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		);
 		INIT_PZVAL(mstring);
 		convert_to_string(mstring);
-		if(nulled) 
+		if(nulled)
 			FREE_ZVAL(member);
 		member = mstring;
 #if PHP_VERSION_ID > 50399
@@ -170,27 +170,27 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 			case IS_NULL:
 			case IS_DOUBLE:
 			case IS_RESOURCE:
-			case IS_BOOL: {	
+			case IS_BOOL: {
 				if (pthreads_store_write(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS){
 					zend_error(
-						E_WARNING, 
-						"pthreads failed to write member %s::$%s", 
+						E_WARNING,
+						"pthreads failed to write member %s::$%s",
 						Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
 					);
 				}
 			} break;
-			
+
 			default: {
 				zend_error(
-					E_WARNING, 
-					"pthreads detected an attempt to use an unsupported kind of data for %s::$%s", 
+					E_WARNING,
+					"pthreads detected an attempt to use an unsupported kind of data for %s::$%s",
 					Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
 				);
 			}
 		}
 	} else zend_error(
 		E_WARNING,
-		"pthreads detected an attempt to use an unsupported kind of key in %s", 
+		"pthreads detected an attempt to use an unsupported kind of key in %s",
 		Z_OBJCE_P(object)->name
 	);
 
@@ -258,17 +258,17 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	if (Z_TYPE_P(member) == IS_STRING) {
 		if (pthreads_store_delete(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
 			zend_error(
-				E_WARNING, 
-				"pthreads has experienced an internal error while deleting %s::$%s", 
+				E_WARNING,
+				"pthreads has experienced an internal error while deleting %s::$%s",
 				Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
 			);
 		}
 	} else zend_error(E_WARNING, "pthreads detected an attempt to use an unsupported kind of key in %s", Z_OBJCE_P(object)->name);
-	
+
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
 	}
-} 
+}
 void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); }
 /* }}} */
 
@@ -276,13 +276,12 @@ void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_un
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 	zend_class_entry *scope;
 	zend_function *call;
-	zend_function *callable;
-	char *lcname;
-	int access = 0;
 	PTHREAD thread = PTHREADS_FETCH_FROM(*pobject);
-	
+
 	if (thread) {
-		switch((access=pthreads_modifiers_get(thread->modifiers, method TSRMLS_CC))){
+		zend_function *callable;
+		char *lcname;
+		switch(pthreads_modifiers_get(thread->modifiers, method TSRMLS_CC)){
 			case ZEND_ACC_PRIVATE:
 			case ZEND_ACC_PROTECTED:
 				scope = Z_OBJCE_PP(pobject);
@@ -304,12 +303,12 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 				}
 				free(lcname);
 			return callable;
-			
+
 			default: call = zend_handlers->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
 		}
-		
+
 	} else call = zend_handlers->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
-	
+
 	return call;
 } /* }}} */
 
@@ -324,7 +323,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 	int 					called = -1, argc = ZEND_NUM_ARGS(), access = ZEND_ACC_PUBLIC, mlength = 0;
 	char					*lcname;
 	zend_bool				unprotect;
-	
+
 	if (getThis()) {
 		PTHREAD thread = PTHREADS_FETCH;
 		if (thread) {
@@ -332,35 +331,35 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 				case ZEND_ACC_PRIVATE:
 				case ZEND_ACC_PROTECTED: {
 					scope = Z_OBJCE_P(getThis());
-					
+
 					/*
 					* Stop invalid private method calls
 					*/
 					if (access == ZEND_ACC_PRIVATE && !PTHREADS_IN_THREAD(thread)) {
 						zend_error(
-							E_ERROR, 
-							"pthreads detected an attempt to call private method %s::%s from outside the threading context", 
+							E_ERROR,
+							"pthreads detected an attempt to call private method %s::%s from outside the threading context",
 							scope->name,
 							method
 						);
 						return FAILURE;
 					}
-					
+
 					/*
 					* Get arguments from stack
 					*/
-					if (ZEND_NUM_ARGS()) 
+					if (ZEND_NUM_ARGS())
 					{
 						argv = safe_emalloc(sizeof(zval **), argc, 0);
 						if (argv) {
 							zend_get_parameters_array_ex(argc, argv);
 						}
 					}
-							
+
 					mlength = strlen(method);
 					lcname =  calloc(1, mlength+1);
 					zend_str_tolower_copy(lcname, method, mlength);
-					
+
 					if (zend_hash_find(&scope->function_table, lcname, mlength+1, (void**)&call)==SUCCESS) {
 						if (call) {
 							/*
@@ -368,9 +367,9 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 							*/
 							{
 								if (access != ZEND_ACC_PROTECTED || pthreads_modifiers_protect(thread->modifiers, method, &unprotect TSRMLS_CC)) {
-								
+
 									ZVAL_STRINGL(&zmethod, method, strlen(method), 0);
-									
+
 									info.size = sizeof(info);
 									info.object_ptr = getThis();
 									info.function_name = &zmethod;
@@ -379,17 +378,17 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 									info.symbol_table = NULL;
 									info.param_count = argc;
 									info.params = argv;
-									
+
 									cache.initialized = 1;
 									cache.function_handler = call;
 									cache.calling_scope = EG(scope);
 									cache.called_scope = scope;
 									cache.object_ptr = getThis();
-									
+
 									if ((called=zend_call_function(&info, &cache TSRMLS_CC))!=SUCCESS) {
 										zend_error(
-											E_ERROR, 
-											"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
+											E_ERROR,
+											"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue",
 											(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
 											scope->name,
 											method
@@ -399,7 +398,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 #if PHP_VERSION_ID > 50399
 										{
 											zend_op_array *ops = (zend_op_array*) call;
-										
+
 											if (ops) {
 												if (ops->run_time_cache) {
 													efree(ops->run_time_cache);
@@ -414,14 +413,14 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 											ZVAL_ZVAL(return_value, zresult, 1, 1);
 										}
 									}
-									
+
 									if (access == ZEND_ACC_PROTECTED) {
 										pthreads_modifiers_unprotect(thread->modifiers, method, unprotect TSRMLS_CC);
 									}
 								} else {
 									zend_error(
-										E_ERROR, 
-										"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
+										E_ERROR,
+										"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue",
 										(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
 										scope->name,
 										method
@@ -431,8 +430,8 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 							}
 						} else {
 							zend_error(
-								E_ERROR, 
-								"pthreads has experienced an internal error while finding %s method %s::%s and cannot continue", 
+								E_ERROR,
+								"pthreads has experienced an internal error while finding %s method %s::%s and cannot continue",
 								(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
 								scope->name,
 								method
@@ -452,14 +451,14 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 			}
 		}
 	}
-	
+
 	switch (called) {
-		case -1: 
+		case -1:
 			return zend_handlers->call_method(PTHREADS_CALL_METHOD_PASSTHRU_C);
-			
+
 		default: return called;
 	}
-	
+
 } /* }}} */
 
 #endif
