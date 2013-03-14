@@ -171,6 +171,13 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.get_property_ptr_ptr = NULL;
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
+	
+#if PHP_VERSION_ID > 50399
+    /* when the gc runs, it will fetch properties, every time */
+    /* so we pass in a dummy function to control memory usage */
+    /* properties copied will be destroyed with the object */
+    pthreads_handlers.get_gc = NULL;
+#endif
 
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 
