@@ -19,7 +19,6 @@ config.status
 config.sub
 configure
 configure.in
-drd.out
 install-sh
 libtool
 ltmain.sh
@@ -38,5 +37,3 @@ src/object.lo
 src/prepare.lo
 src/resources.lo
 src/state.lo
-test.php
-valgrind.out
