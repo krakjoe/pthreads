@@ -22,7 +22,7 @@ class ExampleThread extends Thread {
 	/*
 	* This protected method can only be called by one thread at a time
 	*/
-	protected function synchronized($arg = null){
+	protected function exclusive($arg = null){
 		printf("IN->%s: %s\n", __METHOD__, microtime(true));
 		if ($arg)
 			$result = sprintf("%s: got \"%s\"", __METHOD__, $arg);
@@ -43,7 +43,7 @@ class ExampleThread extends Thread {
 	
 	public function run(){
 		printf("IN->%s: %s\n", __METHOD__, microtime(true));
-		printf("%s: %s\n", __METHOD__, $this->synchronized(strrev($this->data)));
+		printf("%s: %s\n", __METHOD__, $this->exclusive(strrev($this->data)));
 		printf("%s: %s\n", __METHOD__, microtime(true));
 		printf("%s: %s\n", __METHOD__, $this->noaccess());
 		printf("OUT->%s: %s\n", __METHOD__, microtime(true));
@@ -59,7 +59,7 @@ $thread->start();
 /*
 * You can see that this call is blocked until the threading context returns from the method
 */
-printf("Process: %s\n", $thread->synchronized());
+printf("Process: %s\n", $thread->exclusive());
 
 /*
 * Passing an argument on the command line will show you what happens when you call a private method from here
