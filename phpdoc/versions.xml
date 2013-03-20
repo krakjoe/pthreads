@@ -15,6 +15,7 @@
  <function name='thread::isrunning' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::isjoined' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::iswaiting' from='PECL pthreads &gt;= 0.34'/>
+ <function name='thread::isterminated' from='PECL pthreads &gt;= 0.43'/>
  <function name='thread::getthreadid' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::getcreatorid' from='PECL pthreads &gt;= 0.36'/>
  <function name='thread::synchronized' from='PECL pthreads &gt;= 0.40'/>
@@ -35,6 +36,7 @@
  <function name='stackable::notify' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::isrunning' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::iswaiting' from='PECL pthreads &gt;= 0.36'/>
+ <function name='stackable::isterminated' from='PECL pthreads &gt;= 0.43'/>
  <function name='stackable::synchronized' from='PECL pthreads &gt;= 0.40'/>
  <function name='stackable::lock' from='PECL pthreads &gt;= 0.40'/>
  <function name='stackable::unlock' from='PECL pthreads &gt;= 0.40'/>

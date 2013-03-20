@@ -21,6 +21,7 @@ PHP_METHOD(Stackable, wait);
 PHP_METHOD(Stackable, notify);
 PHP_METHOD(Stackable, isRunning);
 PHP_METHOD(Stackable, isWaiting);
+PHP_METHOD(Stackable, isTerminated);
 PHP_METHOD(Stackable, synchronized);
 PHP_METHOD(Stackable, lock);
 PHP_METHOD(Stackable, unlock);
@@ -36,6 +37,8 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Stackable_isRunning, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Stackable_isWaiting, 0, 0, 0)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(Stackable_isTerminated, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Stackable_synchronized, 0, 0, 1)
@@ -58,6 +61,7 @@ zend_function_entry pthreads_stackable_methods[] = {
 	PHP_ME(Stackable, notify, Stackable_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, isRunning, Stackable_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, isWaiting, Stackable_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Stackable, isTerminated, Stackable_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, synchronized, Stackable_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, lock, Stackable_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, unlock, Stackable_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -110,6 +114,17 @@ PHP_METHOD(Stackable, isWaiting)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+} /* }}} */
+
+/* {{{ proto boolean Stackable::isTerminated() 
+	Will return true if the referenced Stackable suffered fatal errors or uncaught exceptions */
+PHP_METHOD(Stackable, isTerminated)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC));
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
 } /* }}} */
 

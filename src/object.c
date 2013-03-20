@@ -701,15 +701,26 @@ static void * pthreads_routine(void *arg) {
 							/* call the function */
 							pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 							{
+							    zend_bool terminated = 0;
 								/* graceful fatalities */
 								zend_try {
+								    /* ::run */
 									zend_call_function(&info, &cache TSRMLS_CC);
 								} zend_catch {
-									/* catch errors */
+								    /* catches fatal errors and uncaught exceptions */
+									terminated = 1;
 								} zend_end_try();
 								
-								if (current)
-									pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+								if (current) {
+								    /* set terminated state */
+								    if (terminated) {
+								        pthreads_state_set(
+									        current->state, PTHREADS_ST_ERROR TSRMLS_CC);
+								    }
+								    
+								    /* unset running for waiters */
+								    pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+								}
 							}
 #if PHP_VERSION_ID > 50399
 							{

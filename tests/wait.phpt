@@ -14,7 +14,13 @@ class ThreadTest extends Thread {
 	protected function isSent($flag = null) {
 		if ($flag === null) {
 			return $this->sent;
-		} else return ($this->sent = $this->notify());
+		} else {
+		    $this->sent = $flag;
+		    $this->synchronized(function($me){
+		         $me->notify();
+		    }, $this);
+		    return $flag;
+		}
 	}
 }
 $thread = new ThreadTest();
@@ -22,9 +28,11 @@ if($thread->start()) {
 	/* 
 		you only ever wait FOR something !
 	*/
-	if (!$thread->isSent()) {
-		var_dump($thread->wait());
-	} else printf("bool(true)\n");
+	$thread->synchronized(function($me){
+	    if (!$me->isSent()) {
+		    var_dump($me->wait());
+	    } else printf("bool(true)\n");
+	}, $thread);
 	
 	/* note that: this works because of protection */
 	/* without protection, notify in the other thread can cause the process to continue */

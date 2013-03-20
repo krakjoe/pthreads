@@ -22,6 +22,7 @@
 #define PTHREADS_ST_RUNNING 2
 #define PTHREADS_ST_WAITING	4
 #define PTHREADS_ST_JOINED	8
+#define PTHREADS_ST_ERROR   16
 
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
