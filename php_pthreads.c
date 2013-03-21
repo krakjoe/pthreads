@@ -58,15 +58,6 @@
 #	include <src/globals.h>
 #endif
 
-#ifdef HAVE_SPL
-# include "ext/spl/spl_array.h"
-# define PTHREADS_INTERFACE_DECL(ce) do{\
-    zend_class_implements(ce TSRMLS_CC, 1, spl_ce_Countable);\
-} while (0)
-#else
-# define PTHREADS_INTERFACE_DECL(ce)
-#endif
-
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,

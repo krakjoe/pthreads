@@ -43,7 +43,7 @@
 #endif
 
 /* {{{ counts properties of object */
-int pthreads_count_properties(zval* object, long* count TSRMLS_DC) {
+int pthreads_count_properties(PTHREADS_COUNT_PASSTHRU_D) {
     return pthreads_store_count(PTHREADS_COUNT_PASSTHRU_C);
 } /* }}} */
 
