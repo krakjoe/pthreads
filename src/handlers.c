@@ -119,7 +119,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	zend_bool nulled = 0;
 	zend_bool locked;
 	
-	if (member == NULL) {
+	if (member == NULL || Z_TYPE_P(member) == IS_NULL) {
 		pthreads_lock_acquire(pthreads->store->lock, &locked TSRMLS_CC);
 		{
 			zval *pcounter;
