@@ -65,6 +65,8 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	if (store) {
 		if (zend_ts_hash_init(&store->table, 8, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){
 			if ((store->lock = pthreads_lock_alloc(TSRMLS_C))) {
+			    store->next = 0L;
+			    
 				return store;
 			}
 			zend_ts_hash_destroy(&store->table);
@@ -196,6 +198,23 @@ int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, 
 		}
 	}
 	return result;
+} /* }}} */
+
+/* {{{ count properties */
+int pthreads_store_count(zval *object, long *count TSRMLS_DC) {
+   PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
+   
+   if (pthreads) {
+    zend_bool locked;
+    if (pthreads_store_lock(object TSRMLS_CC)) {
+        (*count) = zend_hash_num_elements(
+            TS_HASH((&pthreads->store->table))
+        );
+        pthreads_store_unlock(object TSRMLS_CC);
+    } else (*count) = 0L;
+   } else (*count) = 0L;
+   
+   return SUCCESS;
 } /* }}} */
 
 /* {{{ copy store to hashtable */

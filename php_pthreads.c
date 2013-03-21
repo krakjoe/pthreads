@@ -58,6 +58,15 @@
 #	include <src/globals.h>
 #endif
 
+#ifdef HAVE_SPL
+# include "ext/spl/spl_array.h"
+# define PTHREADS_INTERFACE_DECL(ce) do{\
+    zend_class_implements(ce TSRMLS_CC, 1, spl_ce_Countable);\
+} while (0)
+#else
+# define PTHREADS_INTERFACE_DECL(ce)
+#endif
+
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,
@@ -151,6 +160,8 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_handlers = zend_get_std_object_handlers();
 	
 	memcpy(&pthreads_handlers, zend_handlers, sizeof(zend_object_handlers));
+
+    pthreads_handlers.count_elements = pthreads_count_properties;
 
 	pthreads_handlers.get_debug_info = pthreads_read_debug;	
 	pthreads_handlers.get_properties = pthreads_read_properties;

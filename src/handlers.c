@@ -42,6 +42,11 @@
 #	include <src/globals.h>
 #endif
 
+/* {{{ counts properties of object */
+int pthreads_count_properties(zval* object, long* count TSRMLS_DC) {
+    return pthreads_store_count(PTHREADS_COUNT_PASSTHRU_C);
+} /* }}} */
+
 /* {{{ reads properties from storage for debug only */
 HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 	HashTable *table = emalloc(sizeof(HashTable));
@@ -120,27 +125,18 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	zend_bool locked;
 	
 	if (member == NULL || Z_TYPE_P(member) == IS_NULL) {
+	    /* for anonymous members, 
+	        we acquire the lock and increment a counter
+	        we do not store any additional information or perform any lookups */
 		pthreads_lock_acquire(pthreads->store->lock, &locked TSRMLS_CC);
 		{
-			zval *pcounter;
-			
-			MAKE_STD_ZVAL(member);
-			
-			if(pthreads_store_isset(pthreads->store, "$\0", 2, 1 TSRMLS_CC)) {
-				pthreads_store_read(pthreads->store, "$\0", 2, &pcounter TSRMLS_CC);
-			} else {
-				MAKE_STD_ZVAL(pcounter);
-				
-				ZVAL_LONG(pcounter, 0);
+			if (member == NULL) {
+			    MAKE_STD_ZVAL(member);
+			    
+			    nulled = 1;
 			}
-
-			++Z_LVAL_P(pcounter);
-			pthreads_store_write(pthreads->store, "$\0", 2, &pcounter TSRMLS_CC);
-			ZVAL_LONG(member, Z_LVAL_P(pcounter)-1);
-
-			FREE_ZVAL(pcounter);
-
-			nulled = 1;
+			
+			ZVAL_LONG(member, pthreads->store->next++);
 		}
 		pthreads_lock_release(pthreads->store->lock, locked TSRMLS_CC);
 	}

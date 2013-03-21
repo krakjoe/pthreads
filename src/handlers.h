@@ -32,6 +32,8 @@
 
 /* {{{ these resolve differences in 5.3 and 5.4 object handling API */
 #if PHP_VERSION_ID > 50399
+#   define PTRHEADS_COUNT_PASSTHRU_D zval *object, long *count TSRMLS_DC
+#   define PTHREADS_COUNT_PASSTHRU_C object, count TSRMLS_CC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
 #	define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object TSRMLS_DC
@@ -61,6 +63,8 @@
 #	define PTHREADS_CALL_METHOD_PASSTHRU_D const char *method, INTERNAL_FUNCTION_PARAMETERS
 #	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
 #else
+#   define PTRHEADS_COUNT_PASSTHRU_D zval *object, long *count TSRMLS_DC
+#   define PTHREADS_COUNT_PASSTHRU_C object, count TSRMLS_CC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
 #	define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object TSRMLS_DC
@@ -112,6 +116,9 @@ int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D); /* }}} */
 /* {{{ unset a property in the referenced thread */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D); 
 void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D); /* }}} */
+
+/* {{{ count properties in storage */
+int pthreads_count_properties(PTHREADS_COUNT_PASSTHRU_D); /* }}} */
 
 /* {{{ fetch a pthreads friendly method */
 zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D); /* }}} */

@@ -34,6 +34,7 @@
 typedef struct _pthreads_store {
 	TsHashTable table;
 	pthreads_lock lock;
+	zend_ulong    next; /* idx of next anonymous member */
 } *pthreads_store; /* }}} */
 
 /* {{{ allocate and initialize buffers */
@@ -62,6 +63,9 @@ int pthreads_store_separate(zval * pzval, zval **seperated, zend_bool allocate, 
 
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC); /* }}} */
+
+/* {{{ count properties */
+int pthreads_store_count(zval *object, long *count TSRMLS_DC); /* }}} */
 
 /* {{{ free buffers */
 void pthreads_store_free(pthreads_store store TSRMLS_DC); /* }}} */
