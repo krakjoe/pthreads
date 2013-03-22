@@ -264,7 +264,7 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
 	}
-} 
+}
 void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); }
 /* }}} */
 

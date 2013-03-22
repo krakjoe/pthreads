@@ -335,14 +335,18 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 				case IS_ARRAY: {
 					if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length, complex TSRMLS_CC)==SUCCESS) {
 						if (storage->type==IS_ARRAY) {
-							storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
+							storage->exists = zend_hash_num_elements(
+							    Z_ARRVAL_P(unstore));
 						} else {
 							storage->exists = 1;
+							Z_OBJ_HT_P(unstore)->add_ref(
+							    unstore TSRMLS_CC);
 						}
 					}
 				} break;
 				
-				default: storage->exists = 0;
+				default:
+				    storage->exists = 0;
 			}
 		}
 	}
