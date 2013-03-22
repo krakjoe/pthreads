@@ -1,7 +1,7 @@
 --TEST--
 Testing normalizing members
 --DESCRIPTION--
-This test works that normalizing members works without effort
+This tests that normalizing members works without effort
 --FILE--
 <?php
 class Test extends Stackable {
