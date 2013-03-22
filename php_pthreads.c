@@ -152,8 +152,9 @@ PHP_MINIT_FUNCTION(pthreads)
 	
 	memcpy(&pthreads_handlers, zend_handlers, sizeof(zend_object_handlers));
 
+    pthreads_handlers.cast_object = pthreads_cast_object;
     pthreads_handlers.count_elements = pthreads_count_properties;
-
+    
 	pthreads_handlers.get_debug_info = pthreads_read_debug;	
 	pthreads_handlers.get_properties = pthreads_read_properties;
 	

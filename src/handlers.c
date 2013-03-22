@@ -458,4 +458,21 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 	
 } /* }}} */
 
+/* {{{ pthreads_cast_object */
+int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D) {
+    switch (type) {
+        case IS_ARRAY: {
+            pthreads_store_tohash(
+                (PTHREADS_FETCH_FROM(from))->store, Z_ARRVAL_P(to) TSRMLS_CC
+            );
+            return SUCCESS;
+        } break;
+        
+        default:
+            return FAILURE;
+    }
+    
+    return SUCCESS;
+} /* }}} */
+
 #endif

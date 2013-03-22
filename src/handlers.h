@@ -17,7 +17,7 @@
  */
 
 /*
-* These handlers provide thread-safe read/write/call for pthreads objects
+* These handlers provide thread-safe read/write/call/count/cast for pthreads objects
 */
 #ifndef HAVE_PTHREADS_HANDLERS_H
 #define HAVE_PTHREADS_HANDLERS_H
@@ -30,10 +30,13 @@
 #	include <src/store.h>
 #endif
 
+#define PTHREADS_CAST_PASSTHRU_D zval *from, zval *to, int type TSRMLS_DC
+#define PTHREADS_CAST_PASSTHRU_C from, to, type TSRMLS_CC
+#define PTHREADS_COUNT_PASSTHRU_D zval *object, long *count TSRMLS_DC
+#define PTHREADS_COUNT_PASSTHRU_C object, count TSRMLS_CC
+
 /* {{{ these resolve differences in 5.3 and 5.4 object handling API */
 #if PHP_VERSION_ID > 50399
-#   define PTHREADS_COUNT_PASSTHRU_D zval *object, long *count TSRMLS_DC
-#   define PTHREADS_COUNT_PASSTHRU_C object, count TSRMLS_CC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
 #	define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object TSRMLS_DC
@@ -63,8 +66,6 @@
 #	define PTHREADS_CALL_METHOD_PASSTHRU_D const char *method, INTERNAL_FUNCTION_PARAMETERS
 #	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
 #else
-#   define PTHREADS_COUNT_PASSTHRU_D zval *object, long *count TSRMLS_DC
-#   define PTHREADS_COUNT_PASSTHRU_C object, count TSRMLS_CC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
 #	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
 #	define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object TSRMLS_DC
@@ -125,4 +126,7 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D); /* }}} */
 
 /* {{{ make a pthreads method call */
 int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D); /* }}} */
+
+/* {{{ cast an object to a normal array helper */
+int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D); /* }}} */
 #endif
