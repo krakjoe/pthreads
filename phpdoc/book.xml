@@ -81,6 +81,7 @@
  </preface>
 
  &reference.pthreads.setup;
+ &reference.pthreads.constants;
  &reference.pthreads.thread;
  &reference.pthreads.worker;
  &reference.pthreads.stackable;
