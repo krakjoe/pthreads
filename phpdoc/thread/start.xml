@@ -11,7 +11,7 @@
   &reftitle.description;
   <methodsynopsis>
    <modifier>final</modifier> <modifier>public</modifier> <type>boolean</type><methodname>Thread::start</methodname>
-   <void/>
+   <methodparam choice="opt"><type>long</type><parameter>options</parameter></methodparam>
   </methodsynopsis>
   <para>
   Will start a new Thread to execute the implemented run method
@@ -20,7 +20,16 @@
 
  <refsect1 role="parameters">
   &reftitle.parameters;
-  &no.function.parameters;
+  <variablelist>
+   <varlistentry>
+    <term><parameter>options</parameter></term>
+    <listitem>
+     <para>
+  An optional mask of inheritance constants, by default PTHREADS_INHERIT_ALL
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
  </refsect1>
 
  <refsect1 role="returnvalues">
