@@ -56,4 +56,15 @@ expect:
 <?php
 $test = new Selective();
 $test->start(PTHREADS_INHERIT_INI | PTHREADS_INHERIT_CONSTANTS);
+$test->join();
+?>
+=======================================
+expect:
+    bool(true)
+    bool(true)
+    bool(true)
+<?php
+$test = new Selective();
+$test->start();
+$test->join();
 ?>
