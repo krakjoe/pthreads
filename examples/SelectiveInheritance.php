@@ -1,12 +1,14 @@
 <?php
 /*
-* In a large application, the overhead of each thread having to copy the entire context
-* may become undesireable.
+* This is for advanced users ONLY !!
+*
+* In a large application, the overhead of each thread having to copy the entire context may become undesireable.
 * Selective Inheritance serves as a way to choose which parts of the environment are available in threading contexts
 * Following is some code that demonstrates the use of this feature
 *
 * Note: if a member of a pthreads object, is an object itself of a user defined type, and the class table is not inherited
 *   you are asking for trouble !!
+* Note: the included_files table is only populated where PTHREADS_INHERIT_INCLUDES is set
 */
 
 class my_class {}
