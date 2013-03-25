@@ -166,7 +166,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 			case IS_NULL:
 			case IS_DOUBLE:
 			case IS_RESOURCE:
-			case IS_BOOL: {	
+			case IS_BOOL: {
 				if (pthreads_store_write(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS){
 					zend_error(
 						E_WARNING, 

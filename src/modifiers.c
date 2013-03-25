@@ -42,8 +42,8 @@ pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D) {
 		/*
 		* Initialize modifiers
 		*/
-		zend_hash_init(&modifiers->modified, 32, NULL, (dtor_func_t) pthreads_modifiers_modifiers_dtor, 0);
-		zend_hash_init(&modifiers->protection, 32, NULL, (dtor_func_t) pthreads_modifiers_protection_dtor, 0);
+		zend_hash_init(&modifiers->modified, 32, NULL, (dtor_func_t) pthreads_modifiers_modifiers_dtor, 1);
+		zend_hash_init(&modifiers->protection, 32, NULL, (dtor_func_t) pthreads_modifiers_protection_dtor, 1);
 	}
 	
 	return modifiers;

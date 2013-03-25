@@ -29,6 +29,7 @@ PHP_METHOD(Worker, getThreadId);
 PHP_METHOD(Worker, getCreatorId);
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
+    ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -77,8 +78,9 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
-/* {{{ proto boolean Worker::start()
-		Starts a new Worker Thread, executing the Workers implementation of Worker::run and then waiting for Stackables */
+/* {{{ proto boolean Worker::start([long $options = PTHREADS_INHERIT_ALL])
+		Starts a new Worker Thread, executing the Workers implementation of Worker::run and then waiting for Stackables
+		$options should be a mask of inheritance constants */
 PHP_METHOD(Worker, start)
 {
 	PTHREAD thread = PTHREADS_FETCH;

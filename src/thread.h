@@ -126,6 +126,11 @@ typedef struct _pthread_construct {
 	* Store Hold
 	*/
 	zend_bool hold;
+	
+	/*
+	* Options
+	*/
+	zend_ulong options;
 } *PTHREAD;
 
 /* {{{ comparison function */
@@ -142,6 +147,14 @@ static inline int pthreads_equal_func(void **first, void **second){
 		return pthreads_equal((PTHREAD)*first, (PTHREAD)*second);
 	return 0;
 } /* }}} */
+
+/* {{{ option constants */
+#define PTHREADS_INHERIT_NONE 0
+#define PTHREADS_INHERIT_INI 1
+#define PTHREADS_INHERIT_CONSTANTS 2
+#define PTHREADS_INHERIT_FUNCTIONS 4
+#define PTHREADS_INHERIT_CLASSES 8
+#define PTHREADS_INHERIT_ALL (PTHREADS_INHERIT_INI|PTHREADS_INHERIT_CONSTANTS|PTHREADS_INHERIT_FUNCTIONS|PTHREADS_INHERIT_CLASSES) /* }}} */
 
 /* {{{ scope constants */
 #define PTHREADS_SCOPE_UNKNOWN 0

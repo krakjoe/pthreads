@@ -337,7 +337,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	HashPosition position;
 	
 	/* inherit ini entries from parent ... */
-	{
+	if (thread->options & PTHREADS_INHERIT_INI) {
 		zend_ini_entry *entry[2];
 		HashTable *table[2] = {PTHREADS_EG(thread->cls, ini_directives), EG(ini_directives)};
 
@@ -364,7 +364,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	}
 	
 	/* copy constants */
-	{
+	if (thread->options & PTHREADS_INHERIT_CONSTANTS) {
 		zend_constant *zconstant;
 		HashTable *table[2] = {PTHREADS_EG(thread->cls, zend_constants), EG(zend_constants)};
 		
@@ -404,7 +404,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	}
 	
 	/* inherit function table from parent ... */
-	{
+	if (thread->options & PTHREADS_INHERIT_FUNCTIONS) {
 		zend_function function;
 		zend_hash_merge(
 			EG(function_table), 
@@ -415,7 +415,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	}
 	
 	/* inherit class table from parent ... */
-	{
+	if (thread->options & PTHREADS_INHERIT_CLASSES) {
 		zend_class_entry **entry;
 		HashTable *table[2] = {PTHREADS_CG(thread->cls, class_table), CG(class_table)};
 

@@ -34,6 +34,7 @@ PHP_METHOD(Thread, lock);
 PHP_METHOD(Thread, unlock);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
+    ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
@@ -102,12 +103,24 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, unlock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
-/* {{{ proto boolean Thread::start()
-		Starts executing the implementations run method in a thread, will return a boolean indication of success */
+/* {{{ proto boolean Thread::start([long $options = PTHREADS_INHERIT_ALL])
+		Starts executing the implementations run method in a thread, will return a boolean indication of success
+		$options should be a mask of inheritance constants */
 PHP_METHOD(Thread, start)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	int result = FAILURE;
+	long options = PTHREADS_INHERIT_ALL;
+	
+	/* get options */
+	if (ZEND_NUM_ARGS()) {
+	    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &options) != SUCCESS) {
+	        return;
+	    }
+	    
+	    /* set thread options */
+	    thread->options = options;
+	}
 	
 	/*
 	* See if there are any limits in this environment
