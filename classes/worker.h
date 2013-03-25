@@ -85,6 +85,17 @@ PHP_METHOD(Worker, start)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	int result = FAILURE;
+	long options = PTHREADS_INHERIT_ALL;
+	
+	/* get options */
+	if (ZEND_NUM_ARGS()) {
+	    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &options) != SUCCESS) {
+	        return;
+	    }
+	    
+	    /* set thread options */
+	    thread->options = options;
+	}
 	
 	/*
 	* See if there are any limits in this environment
