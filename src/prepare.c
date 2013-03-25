@@ -451,8 +451,8 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 		}
 	}
 	
-	/* merge included files with parent, more compatible than copying ( think apc ) */
-	{
+	/* merge included files with parent */
+	if (thread->options & PTHREADS_INHERIT_INCLUDES){
 		int included;
 		zend_hash_merge(
 			&EG(included_files), 
