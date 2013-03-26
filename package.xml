@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package packagerversion="1.9.4" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+ <name>pthreads</name>
+ <channel>pecl.php.net</channel>
+ <summary>Threading API</summary>
+ <description>A compatible Threading API for PHP5.3+</description>
+ <lead>
+  <name>Joe Watkins</name>
+  <user>krakjoe</user>
+  <email>pthreads@pthreads.org</email>
+  <active>yes</active>
+ </lead>
+ <date>2013-03-26</date>
+ <time>11:30:00</time>
+ <version>
+  <release>0.0.43</release>
+  <api>0.0.43</api>
+ </version>
+ <stability>
+  <release>beta</release>
+  <api>beta</api>
+ </stability>
+ <license uri="http://www.php.net/license">PHP License</license>
+ <notes>
+ ::isTerminated to detect fatal errors and uncaught exceptions
+ cast pthreads objects to array
+ implement count on pthreads object
+ implement selective inheritance (control what is available in the threaded context)
+ fix crash when undefined dimension is accessed
+ fix state detection when crash encountered
+ </notes>
+ <contents>
+  <dir name="/">
+   <file name="examples/AdvancedSynchronization.php" role="doc" />
+   <file name="examples/CallAnyFunction.php" role="doc" />
+   <file name="examples/Fetch.php" role="doc" />
+   <file name="examples/Mutexes.php" role="doc" />
+   <file name="examples/NewSynchronization.php" role="doc" />
+   <file name="examples/Notifications.php" role="doc" />
+   <file name="examples/ObjectsAsParameters.php" role="doc" />
+   <file name="examples/Objects.php" role="doc" />
+   <file name="examples/Pooling.php" role="doc" />
+   <file name="examples/Scope.php" role="doc" />
+   <file name="examples/SelectiveInheritance.php" role="doc" />
+   <file name="examples/SharingResources.php" role="doc" />
+   <file name="examples/SimpleWebRequest.php" role="doc" />
+   <file name="examples/Singleton.php" role="doc" />
+   <file name="examples/SocketServer.php" role="doc" />
+   <file name="examples/SQLWorker.php" role="doc" />
+   <file name="examples/StackableArray.php" role="doc" />
+   <file name="examples/Stacking.php" role="doc" />
+   <file name="tests/binding.phpt" role="test" />
+   <file name="tests/callstatic-etc.phpt" role="test" />
+   <file name="tests/complex-statics.phpt" role="test" />
+   <file name="tests/complex-statics-set-null.phpt" role="test" />
+   <file name="tests/conditions.phpt" role="test" />
+   <file name="tests/constants.phpt" role="test" />
+   <file name="tests/corrupted-resources.phpt" role="test" />
+   <file name="tests/counting-members.phpt" role="test" />
+   <file name="tests/foreign-private-members.phpt" role="test" />
+   <file name="tests/functions.phpt" role="test" />
+   <file name="tests/global-constants.phpt" role="test" />
+   <file name="tests/gone.phpt" role="test" />
+   <file name="tests/graceful-fatalities.phpt" role="test" />
+   <file name="tests/included-files.phpt" role="test" />
+   <file name="tests/ini.phpt" role="test" />
+   <file name="tests/interface.phpt" role="test" />
+   <file name="tests/mutex.phpt" role="test" />
+   <file name="tests/norefs.phpt" role="test" />
+   <file name="tests/normalize-members.phpt" role="test" />
+   <file name="tests/normal-reads.phpt" role="test" />
+   <file name="tests/null-member-crash.phpt" role="test" />
+   <file name="tests/oomethods.phpt" role="test" />
+   <file name="tests/selective-inheritance.phpt" role="test" />
+   <file name="tests/stateful-fatalities.phpt" role="test" />
+   <file name="tests/staticmethods.phpt" role="test" />
+   <file name="tests/statics.phpt" role="test" />
+   <file name="tests/synchronization.phpt" role="test" />
+   <file name="tests/thread.phpt" role="test" />
+   <file name="tests/unset-defaults.phpt" role="test" />
+   <file name="tests/waiting-timeouts.phpt" role="test" />
+   <file name="tests/wait.phpt" role="test" />
+   <file name="src/pthreads.h" role="src" />
+   <file name="src/globals.c" role="src" />
+   <file name="src/globals.h" role="src" />
+   <file name="src/handlers.c" role="src" />
+   <file name="src/handlers.h" role="src" />
+   <file name="src/lock.c" role="src" />
+   <file name="src/lock.h" role="src" />
+   <file name="src/modifiers.c" role="src" />
+   <file name="src/modifiers.h" role="src" />
+   <file name="src/object.c" role="src" />
+   <file name="src/object.h" role="src" />
+   <file name="src/prepare.c" role="src" />
+   <file name="src/prepare.h" role="src" />
+   <file name="src/resources.c" role="src" />
+   <file name="src/resources.h" role="src" />
+   <file name="src/store.c" role="src" />
+   <file name="src/store.h" role="src" />
+   <file name="src/state.c" role="src" />
+   <file name="src/state.h" role="src" />
+   <file name="src/synchro.c" role="src" />
+   <file name="src/synchro.h" role="src" />
+   <file name="src/thread.h" role="src" />
+   <file name="classes/thread.h" role="src" />
+   <file name="classes/worker.h" role="src" />
+   <file name="classes/stackable.h" role="src" />
+   <file name="classes/mutex.h" role="src" />
+   <file name="classes/cond.h" role="src" />
+   <file name="config.m4" role="src" />
+   <file name="config.w32" role="src" />
+   <file name="LICENSE" role="src" />
+   <file name="php_pthreads.c" role="src" />
+   <file name="php_pthreads.h" role="src" />
+   <file name="README.md" role="src" />
+  </dir>
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>5.3.0</min>
+   </php>
+   <pearinstaller>
+    <min>1.4.0b1</min>
+   </pearinstaller>
+  </required>
+ </dependencies>
+ <providesextension>pthreads</providesextension>
+ <extsrcrelease />
+</package>
