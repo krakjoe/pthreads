@@ -494,14 +494,14 @@ static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, 
 		copy->alias = estrndup(alias->alias, alias->alias_len);
 		copy->alias_len = alias->alias_len;
 		copy->modifiers = alias->modifiers;
-#if PHP_VERSION_ID < 50600
+#if PHP_VERSION_ID < 50500
 		copy->function = alias->function;
 #endif
 	}
 	return copy;
 } /* }}} */
 
-/* {{{ trait precendence for 5.4 */
+/* {{{ trait precendence for 5.4+ */
 static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREAD thread, zend_trait_precedence *precedence TSRMLS_DC) {
 	zend_trait_precedence *copy = emalloc(sizeof(zend_trait_precedence));
 	if (copy) {
@@ -517,7 +517,7 @@ static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREA
 			}
 			precedence->exclude_from_classes[exclude]=NULL;
 		}
-#if PHP_VERSION_ID < 50600
+#if PHP_VERSION_ID < 50500
 		copy->function = precedence->function;
 #endif
 	}
