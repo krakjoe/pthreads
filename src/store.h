@@ -46,6 +46,9 @@ zend_bool pthreads_store_lock(zval *this_ptr TSRMLS_DC); /* }}} */
 /* {{{ unlock storage, userland only */
 zend_bool pthreads_store_unlock(zval *this_ptr TSRMLS_DC); /* }}} */
 
+/* {{{ merges the properties/elements of from into destination */
+int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRMLS_DC); /* }}} */
+
 /* {{{ delete a value from the buffer */
 int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC); /* }}} */
 

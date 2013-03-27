@@ -27,6 +27,7 @@ PHP_METHOD(Worker, unstack);
 PHP_METHOD(Worker, getStacked);
 PHP_METHOD(Worker, getThreadId);
 PHP_METHOD(Worker, getCreatorId);
+PHP_METHOD(Worker, merge);
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -57,6 +58,11 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Worker_merge, 0, 0, 1)
+	ZEND_ARG_INFO(0, from)
+	ZEND_ARG_INFO(0, overwrite)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_worker_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_WORKER
@@ -76,6 +82,8 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, isShutdown, Worker_isShutdown, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, isStarted, Worker_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	
+	PHP_ME(Worker, merge, Worker_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Worker::start([long $options = PTHREADS_INHERIT_ALL])
@@ -222,6 +230,7 @@ PHP_METHOD(Worker, shutdown)
 		RETURN_FALSE;
 	}
 } /* }}} */
+
 /* {{{ proto long Worker::getThreadId()
 	Will return the identifier of the referenced Worker */
 PHP_METHOD(Worker, getThreadId)
@@ -236,6 +245,19 @@ PHP_METHOD(Worker, getCreatorId)
 	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->cid);
 } /* }}} */
 
+/* {{{ proto boolean Worker::merge(mixed $data, [boolean $overwrite = true])
+	Will merge data with the referenced Worker */
+PHP_METHOD(Worker, merge) 
+{
+    zval *from;
+    zend_bool overwrite = 1;
+    
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|b", &from, &overwrite) != SUCCESS) {
+        return;
+    }
+    
+	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
+} /* }}} */
 #	endif
 #endif
 

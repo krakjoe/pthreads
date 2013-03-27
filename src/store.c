@@ -35,12 +35,14 @@
 #endif
 
 typedef struct _pthreads_storage {
-	void		*data;
-	size_t 		length;
 	zend_uchar 	type;
+	size_t 		length;
 	zend_bool 	exists;
-	long		lval;
-	double		dval;
+	union {
+	    long    lval;
+	    double  dval;
+	} simple;
+	void    *data;
 } *pthreads_storage;
 
 #ifndef Z_OBJ_P
@@ -286,12 +288,11 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 		storage = (pthreads_storage) calloc(1, sizeof(*storage));
 		if (storage) {
 			storage->length = 0;
+			storage->exists = 0;
+			storage->data = NULL;
 			
 			switch((storage->type = Z_TYPE_P(unstore))){
-				case IS_NULL:
-					storage->data = NULL;
-					storage->exists = 0;
-				break;
+				case IS_NULL: { /* nothing to do */ } break;
 				
 				case IS_STRING: {
 					if ((storage->length = Z_STRLEN_P(unstore))) {
@@ -299,15 +300,12 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 						memmove(
 							storage->data, (const void*) Z_STRVAL_P(unstore), storage->length
 						);
-						storage->exists = (storage->length > 0);
-					} else {
-						storage->data = NULL;
 					}
 				} break;
 				
 				case IS_BOOL:
 				case IS_LONG: {
-					storage->exists = ((storage->lval=Z_LVAL_P(unstore)) > 0L);
+					storage->simple.lval = Z_LVAL_P(unstore);
 				} break;
 
 				case IS_RESOURCE: {
@@ -317,19 +315,19 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 							resource->scope = EG(scope);
 							resource->ls = TSRMLS_C;
 						
-							storage->lval = Z_RESVAL_P(unstore);
-							storage->exists = 1;
+							storage->simple.lval = Z_RESVAL_P(unstore);
 							storage->data = resource;
-
+                            
 							zend_list_addref(Z_RESVAL_P(unstore));
 						}
 					} else {
-						storage->exists = 0;
 						storage->type = IS_NULL;
 					}
 				} break;
 				
-				case IS_DOUBLE: storage->exists = ((storage->dval=Z_DVAL_P(unstore)) > 0.0); break;
+				case IS_DOUBLE: 
+				    storage->simple.dval = Z_DVAL_P(unstore);
+				break;
 				
 				case IS_OBJECT:
 				case IS_ARRAY: {
@@ -338,15 +336,15 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex T
 							storage->exists = zend_hash_num_elements(
 							    Z_ARRVAL_P(unstore));
 						} else {
-							storage->exists = 1;
 							Z_OBJ_HT_P(unstore)->add_ref(
 							    unstore TSRMLS_CC);
 						}
 					}
 				} break;
 				
-				default:
+				default: {
 				    storage->exists = 0;
+				}
 			}
 		}
 	}
@@ -368,15 +366,15 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 			break;
 			
 			case IS_NULL: ZVAL_NULL(pzval); break;
-			case IS_BOOL: ZVAL_BOOL(pzval, storage->lval); break;
-			case IS_LONG: ZVAL_LONG(pzval, storage->lval); break;
-			case IS_DOUBLE: ZVAL_DOUBLE(pzval, storage->dval); break;
+			case IS_BOOL: ZVAL_BOOL(pzval, storage->simple.lval); break;
+			case IS_LONG: ZVAL_LONG(pzval, storage->simple.lval); break;
+			case IS_DOUBLE: ZVAL_DOUBLE(pzval, storage->simple.dval); break;
 			case IS_RESOURCE: {	
 				pthreads_resource resource = (pthreads_resource) storage->data;
 				if (EG(scope) != resource->scope) {
 					zend_rsrc_list_entry *original;
-					if (resource->ls != TSRMLS_C && zend_hash_index_find(&PTHREADS_EG(resource->ls, regular_list), storage->lval, (void**)&original)==SUCCESS) {
-							
+					if (resource->ls != TSRMLS_C && zend_hash_index_find(&PTHREADS_EG(resource->ls, regular_list), storage->simple.lval, (void**)&original)==SUCCESS) {
+					
 						zend_bool found = 0;
 						int existed = 0;
 						{
@@ -419,11 +417,11 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 							zend_list_addref(Z_RESVAL_P(pzval));
 						}
 					} else {
-						ZVAL_RESOURCE(pzval, storage->lval);
+						ZVAL_RESOURCE(pzval, storage->simple.lval);
 						zend_list_addref(Z_RESVAL_P(pzval));
 					}
 				} else {
-					ZVAL_RESOURCE(pzval, storage->lval);
+					ZVAL_RESOURCE(pzval, storage->simple.lval);
 					zend_list_addref(Z_RESVAL_P(pzval));
 				}
 			} break;
@@ -509,6 +507,111 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 	} else result = FAILURE;
 	
 	return result;
+} /* }}} */
+
+/* {{{ import membes from one object into another */
+int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRMLS_DC) {
+    switch (Z_TYPE_P(from)) {
+        case IS_OBJECT: {
+            /* check for a suitable pthreads object */
+            if (instanceof_function(Z_OBJCE_P(from), pthreads_thread_entry TSRMLS_CC) ||
+                instanceof_function(Z_OBJCE_P(from), pthreads_worker_entry TSRMLS_CC) ||
+                instanceof_function(Z_OBJCE_P(from), pthreads_stackable_entry TSRMLS_CC) ) {
+                
+                zend_bool locked[2] = {0, 0};
+                PTHREAD pobjects[2] = {PTHREADS_FETCH_FROM(destination), PTHREADS_FETCH_FROM(from)};
+                
+                /* acquire destination lock */
+                if (pthreads_lock_acquire(pobjects[0]->store->lock, &locked[0] TSRMLS_CC)) {
+                    
+                    /* acquire other lock */
+                    if (pthreads_lock_acquire(pobjects[1]->store->lock, &locked[1] TSRMLS_CC)) {
+                        
+                        /* free to do what we want, everything locked */
+                        
+                        HashPosition position;
+                        pthreads_storage *storage;
+                        HashTable *tables[2] = {TS_HASH((&pobjects[0]->store->table)), TS_HASH((&pobjects[1]->store->table))};
+                        
+                        for (zend_hash_internal_pointer_reset_ex(tables[1], &position);
+                             zend_hash_get_current_data_ex(tables[1], (void**)&storage, &position) == SUCCESS;
+                             zend_hash_move_forward_ex(tables[1], &position)) {
+                             
+                             char *key = NULL;
+                             zend_uint klen = 0;
+                             zend_ulong idx = 0L;
+                         
+                            if (zend_hash_get_current_key_ex(tables[1], &key, &klen, &idx, 0, &position) == HASH_KEY_IS_STRING) {
+                                
+                                /* skip if not overwriting where the 
+                                        entry exists in destination table */
+                                if (!overwrite && zend_hash_exists(tables[0], key, klen)) {
+                                    continue;
+                                }
+                                
+                                /* skip resources */
+                                if ((*storage)->type != IS_RESOURCE) {
+                                
+                                    /* copy storage */
+                                    pthreads_storage copy = calloc(1, sizeof(*copy));
+                                 
+                                    switch ((copy->type = (*storage)->type)) {
+                                        case IS_NULL: {
+                                            copy->exists = 1;
+                                        } break;
+                                        
+                                        case IS_STRING: {
+                                            if ((copy->length = (*storage)->length)) {
+                                                copy->data = (char*) calloc(1, copy->length+1);
+                                                memmove(
+                                                    copy->data, (const void*) (*storage)->data, copy->length
+                                                );
+                                            }
+                                        } break;
+                                        
+                                        case IS_BOOL:
+                                        case IS_LONG: { copy->simple.lval = (*storage)->simple.lval; } break;
+                                        
+                                        case IS_DOUBLE: { copy->simple.dval = (*storage)->simple.dval; } break;
+                                        
+                                        case IS_OBJECT:
+				                        case IS_ARRAY: {
+				                            if ((copy->length = (*storage)->length)) {
+                                                copy->data = (char*) calloc(1, copy->length+1);
+                                                memmove(
+                                                    copy->data, (const void*) (*storage)->data, copy->length
+                                                );
+                                                
+                                                if (copy->type == IS_ARRAY)
+                                                    copy->exists = (*storage)->exists;
+                                            }
+				                        } break;
+				                        
+				                        default: { /* nothing to do here */ }
+                                    }
+                                    
+                                    zend_hash_update(tables[0], key, klen, &copy, sizeof(pthreads_storage), NULL);
+                                }
+                            }
+                        }
+                        
+                        pthreads_lock_release(pobjects[1]->store->lock, locked[1] TSRMLS_CC);
+                    }
+                    
+                    pthreads_lock_release(pobjects[0]->store->lock, locked[0] TSRMLS_CC);
+                }
+            } else {
+                zend_error(E_WARNING, "pthreads detected an attempt to import an unsupported object");
+                return FAILURE;
+            }
+        } break;
+        
+        case IS_ARRAY: {
+            
+        } break;
+    }
+    
+    return SUCCESS;
 } /* }}} */
 
 /* {{{ set resources to NULL for non-complex types; helper-function for pthreads_store_remove_resources_recursive */

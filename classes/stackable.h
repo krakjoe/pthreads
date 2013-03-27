@@ -25,6 +25,7 @@ PHP_METHOD(Stackable, isTerminated);
 PHP_METHOD(Stackable, synchronized);
 PHP_METHOD(Stackable, lock);
 PHP_METHOD(Stackable, unlock);
+PHP_METHOD(Stackable, merge);
 
 ZEND_BEGIN_ARG_INFO_EX(Stackable_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -51,6 +52,11 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Stackable_unlock, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Stackable_merge, 0, 0, 1)
+    ZEND_ARG_INFO(0, from)
+    ZEND_ARG_INFO(0, overwrite)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_stackable_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_STACKABLE
@@ -65,6 +71,7 @@ zend_function_entry pthreads_stackable_methods[] = {
 	PHP_ME(Stackable, synchronized, Stackable_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, lock, Stackable_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, unlock, Stackable_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Stackable, merge, Stackable_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Stackable::wait([long timeout]) 
@@ -161,6 +168,20 @@ PHP_METHOD(Stackable, lock)
 PHP_METHOD(Stackable, unlock) 
 {
 	ZVAL_BOOL(return_value, pthreads_store_unlock(getThis() TSRMLS_CC));
+} /* }}} */
+
+/* {{{ proto boolean Stackable::merge(mixed $data, [boolean $overwrite = true])
+	Will merge data with the referenced Stackable */
+PHP_METHOD(Stackable, merge) 
+{
+    zval *from;
+    zend_bool overwrite = 1;
+    
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|b", &from, &overwrite) != SUCCESS) {
+        return;
+    }
+    
+	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
 } /* }}} */
 #	endif
 #endif

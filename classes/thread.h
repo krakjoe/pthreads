@@ -33,6 +33,8 @@ PHP_METHOD(Thread, synchronized);
 PHP_METHOD(Thread, lock);
 PHP_METHOD(Thread, unlock);
 
+PHP_METHOD(Thread, merge);
+
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
@@ -81,6 +83,11 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_unlock, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_merge, 0, 0, 1)
+    ZEND_ARG_INFO(0, from)
+    ZEND_ARG_INFO(0, overwrite)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_thread_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREAD
@@ -101,6 +108,7 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, synchronized, Thread_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, unlock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, merge, Thread_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Thread::start([long $options = PTHREADS_INHERIT_ALL])
@@ -304,6 +312,20 @@ PHP_METHOD(Thread, lock)
 PHP_METHOD(Thread, unlock) 
 {
 	ZVAL_BOOL(return_value, pthreads_store_unlock(getThis() TSRMLS_CC));
+} /* }}} */
+
+/* {{{ proto boolean Thread::merge(mixed $data, [boolean $overwrite = true])
+	Will merge data with the referenced Thread */
+PHP_METHOD(Thread, merge) 
+{
+    zval *from;
+    zend_bool overwrite = 1;
+    
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|b", &from, &overwrite) != SUCCESS) {
+        return;
+    }
+    
+	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
 } /* }}} */
 #	endif
 #endif
