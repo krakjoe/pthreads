@@ -509,8 +509,13 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 	return result;
 } /* }}} */
 
-/* {{{ import membes from one object into another */
+/* {{{ import members from one object (or array) into a pthreads object */
 int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRMLS_DC) {
+    if (Z_TYPE_P(from) != IS_ARRAY && 
+        Z_TYPE_P(from) != IS_OBJECT) {
+        return FAILURE;
+    }
+    
     switch (Z_TYPE_P(from)) {
         case IS_OBJECT: {
             /* check for a suitable pthreads object */
@@ -599,14 +604,16 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                     }
                     
                     pthreads_lock_release(pobjects[0]->store->lock, locked[0] TSRMLS_CC);
-                }
-            } else {
-                zend_error(E_WARNING, "pthreads detected an attempt to import an unsupported object");
-                return FAILURE;
+                    
+                    return SUCCESS;
+                    
+                } else return FAILURE;
             }
-        } break;
+        }
         
-        case IS_ARRAY: {
+        /* fall through on purpose to handle normal objects and arrays */
+        
+        default: {
            zend_bool locked = 0;
            PTHREAD pobject = PTHREADS_FETCH_FROM(destination);
            
@@ -614,16 +621,21 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                HashPosition position;
                zval **pzval;
                zend_uint index = 0;
+               HashTable *table = (Z_TYPE_P(from) == IS_ARRAY) ? Z_ARRVAL_P(from) : Z_OBJPROP_P(from);
                
-               for (zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(from), &position);
-                    zend_hash_get_current_data_ex(Z_ARRVAL_P(from), (void**)&pzval, &position) == SUCCESS;
-                    zend_hash_move_forward_ex(Z_ARRVAL_P(from), &position)) {
+               for (zend_hash_internal_pointer_reset_ex(table, &position);
+                    zend_hash_get_current_data_ex(table, (void**)&pzval, &position) == SUCCESS;
+                    zend_hash_move_forward_ex(table, &position)) {
                     char *key;
                     zend_uint klen;
                     zend_ulong idx;
                     
-                    switch (zend_hash_get_current_key_ex(Z_ARRVAL_P(from), &key, &klen, &idx, 0, &position)) {
+                    switch (zend_hash_get_current_key_ex(table, &key, &klen, &idx, 0, &position)) {
                         case HASH_KEY_IS_STRING: {
+                            if (!overwrite && zend_hash_exists(table, key, klen)) {
+                                goto next;
+                            }
+                                
                             pthreads_store_write(
                                 pobject->store, key, klen, pzval TSRMLS_CC);
                         } break;
@@ -635,6 +647,11 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             
                             convert_to_string(&zkey);
                             
+                            if (!overwrite && zend_hash_exists(table, Z_STRVAL(zkey), Z_STRLEN(zkey))) {
+                                zval_dtor(&zkey);
+                                goto next;
+                            }
+                            
                             pthreads_store_write(
                                 pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey), pzval TSRMLS_CC);
                             
@@ -645,7 +662,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             zend_error(E_WARNING, "pthreads detected an unsupported key type for merging, ignoring data at %lu", index);
                         }
                     }
-                    
+next:
                     index++;
                }
                
