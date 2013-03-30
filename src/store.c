@@ -613,6 +613,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
            if (pthreads_lock_acquire(pobject->store->lock, &locked TSRMLS_CC)) {
                HashPosition position;
                zval **pzval;
+               zend_uint index = 0;
                
                for (zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(from), &position);
                     zend_hash_get_current_data_ex(Z_ARRVAL_P(from), (void**)&pzval, &position) == SUCCESS;
@@ -627,7 +628,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                                 pobject->store, key, klen, pzval TSRMLS_CC);
                         } break;
                         
-                        default: {
+                        case HASH_KEY_IS_LONG: {
                             zval zkey;
                             
                             ZVAL_LONG(&zkey, idx);
@@ -639,7 +640,13 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             
                             zval_dtor(&zkey);
                         }
+                        
+                        default: {
+                            zend_error(E_WARNING, "pthreads detected an unsupported key type for merging, ignoring data at %lu", index);
+                        }
                     }
+                    
+                    index++;
                }
                
                pthreads_lock_release(pobject->store->lock, locked TSRMLS_CC);
