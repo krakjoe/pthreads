@@ -607,7 +607,43 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
         } break;
         
         case IS_ARRAY: {
-            
+           zend_bool locked = 0;
+           PTHREAD pobject = PTHREADS_FETCH_FROM(destination);
+           
+           if (pthreads_lock_acquire(pobject->store->lock, &locked TSRMLS_CC)) {
+               HashPosition position;
+               zval **pzval;
+               
+               for (zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(from), &position);
+                    zend_hash_get_current_data_ex(Z_ARRVAL_P(from), (void**)&pzval, &position) == SUCCESS;
+                    zend_hash_move_forward_ex(Z_ARRVAL_P(from), &position)) {
+                    char *key;
+                    zend_uint klen;
+                    zend_ulong idx;
+                    
+                    switch (zend_hash_get_current_key_ex(Z_ARRVAL_P(from), &key, &klen, &idx, 0, &position)) {
+                        case HASH_KEY_IS_STRING: {
+                            pthreads_store_write(
+                                pobject->store, key, klen, pzval TSRMLS_CC);
+                        } break;
+                        
+                        default: {
+                            zval zkey;
+                            
+                            ZVAL_LONG(&zkey, idx);
+                            
+                            convert_to_string(&zkey);
+                            
+                            pthreads_store_write(
+                                pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey), pzval TSRMLS_CC);
+                            
+                            zval_dtor(&zkey);
+                        }
+                    }
+               }
+               
+               pthreads_lock_release(pobject->store->lock, locked TSRMLS_CC);
+           }
         } break;
     }
     
