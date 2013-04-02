@@ -14,7 +14,7 @@
    <void />
   </methodsynopsis>
   <para>
-  Tell if the referenced Thread suffered fatal errors or uncaught exceptions during execution
+  Tell if the referenced Thread exited, suffered fatal errors, or threw uncaught exceptions during execution
   </para>
  </refsect1>
 

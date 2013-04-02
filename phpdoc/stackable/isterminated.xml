@@ -14,7 +14,7 @@
    <void />
   </methodsynopsis>
   <para>
-  Tell if the referenced Stackable suffered uncaught exceptions or fatal errors during execution
+   Tell if the referenced Stackable exited, suffered fatal errors, or threw uncaught exceptions during execution
   </para>
  </refsect1>
 
