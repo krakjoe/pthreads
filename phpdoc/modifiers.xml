@@ -21,14 +21,14 @@ class ExampleThread extends Thread {
 		}
 	}
 	
-	protected function synchronized() {
+	protected function exclusive() {
 		/* synchronized method */
 	}
 }
 
 $thread = new ExampleThread();
 if ($thread->start()) {
-	$thread->synchronized();
+	$thread->exclusive();
 }
 ?>
 ]]>
