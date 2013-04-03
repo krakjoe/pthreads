@@ -31,7 +31,6 @@
  </notes>
  <contents>
   <dir name="/">
-   <file name="examples/AdvancedSynchronization.php" role="doc" />
    <file name="examples/CallAnyFunction.php" role="doc" />
    <file name="examples/Fetch.php" role="doc" />
    <file name="examples/Mutexes.php" role="doc" />
