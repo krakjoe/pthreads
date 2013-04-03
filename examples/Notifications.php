@@ -1,27 +1,61 @@
 <?php
 /*
-* Note: in 5.4 series the output is handled differently from multiple threads on the command line, sometimes giving the idea that this sort of thing is executing the opposite to how it should...
-* It isn't, but there's not much to be done about the new output handling in 5.4 ... we'll just have to live with it ...
+* In this example, you will see how to make a process and thread synchronize with each other
 */
+
+/* this is just so reading the logic makes sense */
+function do_some_work($m) { usleep($m); }
+
+
 class ExampleThread extends Thread {
-        public function run(){
-			printf("I'm in the thread and you're waiting for me ...\n");
-			printf("Allowing process to continue ...\n");
-			printf("Thread Notifying Process 1: %d\n", $this->notify());
-			printf("Process Waiting ...\n");
-			printf("Thread Notifying Process 2: %b\n", $this->notify());
-			$this->wait();		
-			printf("Thread exiting ...");
+    
+    /*
+    * always set defaults for threaded objects in constructors
+    * note: using entry level defaults (at the class declaration)
+    *   does not work as expected in pthreads, this is because
+    *   handlers are not invoked to set defaults at the class level
+    */
+    public function __construct() {
+        
+    }
+    
+    public function run(){
+        while (!$this->isWaiting()) {
+            /* the process is not yet waiting */
+            /* in the real world, this would indicate
+                that the process is still working */
+            /* in the real world, you might have work to do here */
+            echo ".";
         }
+        echo "\n";
+        
+        /* always synchronize before calling notify/wait */
+        $this->synchronized(function($me){
+            /* there's no harm in notifying when no one is waiting */
+            /* better that you notify no one than deadlock in any case */
+            $me->notify();
+        }, $this);
+    }
 }
 
+/* construct the new thread */
 $t = new ExampleThread();
 
-if ($t->start(true)) {
-        printf("Process Working  ... then ...\n");
-        printf("Process Waited: %d\n", $t->wait());
-        printf("Now doing some work while thread is waiting ...\n");
-		usleep(1000000);
-		printf("And notify thread: %d\n", $t->notify());
+/* start the new thread */
+if ($t->start()) {
+    printf("\nProcess Working ...\n");
+    do_some_work(1000);
+      
+    /* synchronize in order to call wait */
+    $t->synchronized(function($me){
+        /*
+        * note: do not stay synchronized for longer than you must
+        *   this is to reduce contention for the lock 
+        *   associated with the threads internal state
+        */
+        printf("\nProcess Waiting ...\n");
+        $me->wait();
+        printf("Process Done ...\n");
+    }, $t);
 }
 ?>
