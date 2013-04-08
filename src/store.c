@@ -656,7 +656,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                                 pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey), pzval TSRMLS_CC);
                             
                             zval_dtor(&zkey);
-                        }
+                        } break;
                         
                         default: {
                             zend_error(E_WARNING, "pthreads detected an unsupported key type for merging, ignoring data at %lu", index);
