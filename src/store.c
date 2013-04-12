@@ -391,27 +391,26 @@ static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_D
 							}
 						}
 						
-						if (!found) {
+						if (!found && EG(This)) {
 							PTHREAD object = PTHREADS_FETCH_FROM(EG(This));
+						    zend_rsrc_list_entry create;
+						    {
+							    int created;
 							
-							zend_rsrc_list_entry create;
-							{
-								int created;
-								
-								create.type = original->type;
-								create.ptr = original->ptr;
-								create.refcount = 1;
-								created=zend_hash_next_free_element(&EG(regular_list));
+							    create.type = original->type;
+							    create.ptr = original->ptr;
+							    create.refcount = 1;
+							    created=zend_hash_next_free_element(&EG(regular_list));
 
-								if (zend_hash_index_update(
-									&EG(regular_list), created, (void*) &create, sizeof(zend_rsrc_list_entry), NULL
-								)==SUCCESS) {
-									ZVAL_RESOURCE(pzval, created);
-									pthreads_resources_keep(
-										object->resources, &create, resource TSRMLS_CC
-									);
-								} else ZVAL_NULL(pzval);
-							}
+							    if (zend_hash_index_update(
+								    &EG(regular_list), created, (void*) &create, sizeof(zend_rsrc_list_entry), NULL
+							    )==SUCCESS) {
+								    ZVAL_RESOURCE(pzval, created);
+								    pthreads_resources_keep(
+									    object->resources, &create, resource TSRMLS_CC
+								    );
+							    } else ZVAL_NULL(pzval);
+						    }
 						} else {
 							ZVAL_RESOURCE(pzval, existed);
 							zend_list_addref(Z_RESVAL_P(pzval));

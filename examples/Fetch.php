@@ -43,21 +43,24 @@ class Fetching extends Thread {
 		/*
 		* tell the waiting process we have created symbols and fetch will succeed
 		*/
-		$this->notify();
+		$this->synchronized(function(){
+		    $this->notify();
+		});
+		
+		/* wait for the process to be finished with the stream */
+		$this->synchronized(function(){
+		    $this->wait();
+		});
 	}
 }
 
 $thread = new Fetching();
 
-/*
-* You cannot start synchronized, because the run method will attempt to acquire the thread lock in order to manipulate members
-*/
 $thread->start();
 
-/*
-* Wait for the thread to tell us the members are ready
-*/
-$thread->wait();
+$thread->synchronized(function($me){
+    $me->wait();
+}, $thread);
 
 /*
 * we just got notified that there are symbols waiting
@@ -79,4 +82,9 @@ foreach(array("sym", "arr", "obj", "objs", "res") as $symbol){
 	}
 	printf("\n");
 }
+
+/* notify the thread so it can destroy resource */
+$thread->synchronized(function($me){
+    $me->notify();
+}, $thread);
 ?>
