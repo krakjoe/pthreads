@@ -549,7 +549,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                                 
                                 /* skip if not overwriting where the 
                                         entry exists in destination table */
-                                if (!overwrite && zend_hash_exists(tables[0], key, klen)) {
+                                if (!overwrite && zend_hash_exists(tables[0], key, klen+1)) {
                                     continue;
                                 }
                                 
@@ -594,7 +594,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
 				                        default: { /* nothing to do here */ }
                                     }
                                     
-                                    zend_hash_update(tables[0], key, klen, &copy, sizeof(pthreads_storage), NULL);
+                                    zend_hash_update(tables[0], key, klen+1, &copy, sizeof(pthreads_storage), NULL);
                                 }
                             }
                         }
@@ -631,7 +631,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                     
                     switch (zend_hash_get_current_key_ex(table, &key, &klen, &idx, 0, &position)) {
                         case HASH_KEY_IS_STRING: {
-                            if (!overwrite && zend_hash_exists(table, key, klen)) {
+                            if (!overwrite && zend_hash_exists(table, key, klen+1)) {
                                 goto next;
                             }
                                 
@@ -646,7 +646,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             
                             convert_to_string(&zkey);
                             
-                            if (!overwrite && zend_hash_exists(table, Z_STRVAL(zkey), Z_STRLEN(zkey))) {
+                            if (!overwrite && zend_hash_exists(table, Z_STRVAL(zkey), Z_STRLEN(zkey)+1)) {
                                 zval_dtor(&zkey);
                                 goto next;
                             }
