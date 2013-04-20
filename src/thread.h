@@ -186,6 +186,41 @@ static inline ulong pthreads_self() {
 #endif
 } /* }}} */
 
+/* {{{ mode enumeration for string length function */
+typedef enum {
+    PTHREADS_STRLEN_T,
+    PTHREADS_STRLEN_NT
+} pthreads_strlen_mode_t; /* }}} */
+
+/* {{{ calculate/ascertain or request length of null terminated or not null terminated string */
+static inline size_t pthreads_strlen(const char* str, size_t length, pthreads_strlen_mode_t mode) {
+    switch (mode) {
+        case PTHREADS_STRLEN_T: switch (str[length+1]) {
+            case '\0':
+                php_printf("(2)found null at %d, return %d\n", length, length+1);
+                return length+1;
+                
+            default: switch (str[length]) {
+                case '\0': 
+                    php_printf("(3)found null at %d+1, return %d\n", length, length+1);
+                    return length;
+                    
+                default: return strlen(str) + 1;
+            }
+        } break;
+        
+        case PTHREADS_STRLEN_NT: {
+            
+        } break;
+    }
+} /* }}} */
+
+/* {{{ get null terminated string length */
+#define PTHREADS_STRLEN(s, l) \
+    (((s)[(l)] == '\0') ? (l) : \
+        ((s)[(l)-1] == '\0') ? ((l)+1) : \
+            (strlen((s)))) /* }}} */
+
 /* {{{ tell if the calling thread created referenced PTHREAD */
 #define PTHREADS_IN_CREATOR(t)	(t->cls == tsrm_ls) /* }}} */
 

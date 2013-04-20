@@ -169,7 +169,7 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 	
 	if (store) {
 		pthreads_storage storage = pthreads_store_create(*write, 1 TSRMLS_CC);
-		if (storage) {	
+		if (storage) {
 			if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 				if (zend_ts_hash_update(&store->table, key, keyl, (void**) &storage, sizeof(storage), NULL)==SUCCESS) {
 					result = SUCCESS;
@@ -249,7 +249,7 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 							if (pthreads_store_convert((*storage), pzval TSRMLS_CC)!=SUCCESS) {
 								ZVAL_NULL(pzval);
 							} 
-											
+							
 							zend_hash_update(hash, rename, nlength+1, &pzval, sizeof(zval), NULL);
 						}
 						efree(rename);
@@ -549,7 +549,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                                 
                                 /* skip if not overwriting where the 
                                         entry exists in destination table */
-                                if (!overwrite && zend_hash_exists(tables[0], key, klen+1)) {
+                                if (!overwrite && zend_hash_exists(tables[0], key, klen)) {
                                     continue;
                                 }
                                 
@@ -594,7 +594,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
 				                        default: { /* nothing to do here */ }
                                     }
                                     
-                                    zend_hash_update(tables[0], key, klen+1, &copy, sizeof(pthreads_storage), NULL);
+                                    zend_hash_update(tables[0], key, klen, &copy, sizeof(pthreads_storage), NULL);
                                 }
                             }
                         }
@@ -636,7 +636,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             }
                                 
                             pthreads_store_write(
-                                pobject->store, key, klen, pzval TSRMLS_CC);
+                                pobject->store, key, klen+1, pzval TSRMLS_CC);
                         } break;
                         
                         case HASH_KEY_IS_LONG: {
@@ -652,7 +652,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             }
                             
                             pthreads_store_write(
-                                pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey), pzval TSRMLS_CC);
+                                pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey)+1, pzval TSRMLS_CC);
                             
                             zval_dtor(&zkey);
                         } break;

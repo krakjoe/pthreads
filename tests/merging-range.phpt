@@ -12,8 +12,8 @@ $storage = new Storage();
 $storage->merge(range("0", "3"));
 var_dump($storage);
 ?>
---EXPECT--
-object(Storage)#1 (4) {
+--EXPECTF--
+object(Storage)#%d (%d) {
   ["0"]=>
   int(0)
   ["1"]=>
@@ -23,3 +23,4 @@ object(Storage)#1 (4) {
   ["3"]=>
   int(3)
 }
+
