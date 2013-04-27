@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>pthreads by krakjoe</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>pthreads</h1>
+          <h2>Threading for PHP</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/krakjoe/pthreads/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/krakjoe/pthreads/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/krakjoe/pthreads" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>Share Nothing, Do Everything :)</h1>
+
+<p>This project provides multi-threading that is compatible with PHP based on Posix Threads.</p>
+
+<h2>Highlights</h2>
+
+<ul>
+<li>An easy to use, quick to learn Threading API for PHP5.3+</li>
+<li>Execute any and all predefined and user declared methods and functions asynchronously</li>
+<li>Ready made synchronization included, geared towards the PHP environment</li>
+<li>Seemless operation in multi-threaded SAPI environments</li>
+<li>A world of possibilities ...</li>
+</ul><h2>Technical Features</h2>
+
+<ul>
+<li>Posix Threads</li>
+<li>Synchronization</li>
+<li>Worker Threads</li>
+<li>Synchronized Methods</li>
+<li>Complete Support for OO - ie. traits, interfaces, inheritance</li>
+<li>Full read/write/execute support for threaded objects</li>
+<li>Mutex ( direct, subset )</li>
+<li>Conditions ( direct, subset )</li>
+</ul><p>pthreads was written with simplicity, compatibiilty and efficiency in mind, it's performance beggars belief !!</p>
+
+<h2>Requirements</h2>
+
+<ul>
+<li>PHP5.3+ on x64 or x86</li>
+<li>ZTS Enabled ( Thread Safety )</li>
+<li>Posix Threads implementation that PHP will compile with</li>
+</ul><p>Testing has been carried out both on x86 and x64 architechtures with varying hardware, this code may work in untested environments, keep me updated ...</p>
+
+<h3>Supported PHP Versions</h3>
+
+<p>pthreads should compile and work in any version of PHP from 5.3.0 to the latest release.</p>
+
+<h3>Windows Support</h3>
+
+<p>Yes !! Windows support is offered thanks to the pthread-w32 library.</p>
+
+<p>Releases for Windows can be found: <a href="http://windows.php.net/downloads/pecl/releases/pthreads/">http://windows.php.net/downloads/pecl/releases/pthreads/</a></p>
+
+<p>Snapshots for Windows can (sometimes) be found: <a href="http://pthreads.org/snapshots/">http://pthreads.org/snapshots/</a></p>
+
+<h3>Mac OSX Support</h3>
+
+<p>Yes !! Users of Mac will be glad to hear that pthreads is now tested on OSX as part of the development process.</p>
+
+<h3>Hello World</h3>
+
+<p>As is customary in our line of work:</p>
+
+<div class="highlight"><pre><span class="o">&lt;?</span><span class="nx">php</span>
+<span class="k">class</span> <span class="nc">AsyncOperation</span> <span class="k">extends</span> <span class="nx">Thread</span> <span class="p">{</span>
+  <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">(</span><span class="nv">$arg</span><span class="p">){</span>
+    <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">arg</span> <span class="o">=</span> <span class="nv">$arg</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">public</span> <span class="k">function</span> <span class="nf">run</span><span class="p">(){</span>
+    <span class="k">if</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">arg</span><span class="p">){</span>
+      <span class="nb">printf</span><span class="p">(</span><span class="s2">"Hello %s</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">arg</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="nv">$thread</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">AsyncOperation</span><span class="p">(</span><span class="s2">"World"</span><span class="p">);</span>
+<span class="k">if</span><span class="p">(</span><span class="nv">$thread</span><span class="o">-&gt;</span><span class="na">start</span><span class="p">())</span>
+  <span class="nv">$thread</span><span class="o">-&gt;</span><span class="na">join</span><span class="p">();</span>
+<span class="cp">?&gt;</span><span class="x"></span>
+</pre></div>
+
+<h3>Are you serious ?</h3>
+
+<p>Absolutely, this is not a hack, we <em>don't</em> use forking or any other such nonsense, what you create are honest to goodness posix threads that are completely compatible with PHP and safe ... this is true multi-threading :)</p>
+
+<p>PHP is awesomely powerful, but the simple fact of the matter is, the number of extensions or features a language has doesn't matter one bit. What matters is how many features or extensions you can utilize in your latest and greatest project.
+We only have about one or two seconds to send a page to a user, in practice we end up picking and choosing which of PHP's features we will use because time is always a factor. Enterprising applications usually have to look to Java or the .NET
+framework if they are designed to do heavy lifting, aggregation, mathematics or the like. </p>
+
+<p>No man is an island: today's websites have to interact with several sources of data - from reference databases, to social networking API's and content feeds ... and everything inbetween ... they have to use and reuse caches, update those caches and then, log all about it, they have to do this several hundred million times a week, if your startup is successful. 
+PHP excells at all of those tasks; but having to execute them synchronously will often mean that when you do start getting the traffic you want to your new project, things are a bit shaky, and from that moment on you're looking to replace the perfectly good code that you "made it" with, or even worse you're looking for features to remove ! 
+Bringing threads to PHP stretches your two seconds as far as it will go; and I believe allow you to design your applications to do more than you would if Threads were not available; and allow you to develop much faster than
+you can in Java or .NET, or any other language ( perhaps ), and as a result, you will be a happier human being, as will your boss, and your projects have virtually no limits ...</p>
+
+<h3>SAPI Support</h3>
+
+<p>No restrictions here, you should have no problem running pthreads in your chosen SAPI.</p>
+
+<h3>Documentation</h3>
+
+<p>Documentation can be found in the PHP manual: <a href="http://docs.php.net/manual/en/book.pthreads.php">http://docs.php.net/manual/en/book.pthreads.php</a>, and some examples can be found in the "examples" folder in the master repository.</p>
+
+<p>Further insights and occasional announcements can be read at the <a href="http://pthreads.org">http://pthreads.org</a> site where pthreads is developed and tested in the real world.</p>
+
+<p>If you have had the time to put any cool demo's together and would like them showcased on pthreads.org please get in touch.</p>
+
+<h3>Feedback</h3>
+
+<p>Please submit issues, and send your feedback and suggestions as often as you have them.</p>
+
+<h3>Developers</h3>
+
+<p>There is no defined API for you to create your own threads in your extensions, this project aims to provide Userland threading, it does not aim to provide a threading API for extension developers. I suggest you allow users to decide what they thread and keep your own extension focused on your functionality.</p>
+        </section>
+
+        <footer>
+          pthreads is maintained by <a href="https://github.com/krakjoe">krakjoe</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
