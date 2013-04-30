@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2013-03-26</date>
- <time>11:30:00</time>
+ <date>2013-04-30</date>
+ <time>08:30:00</time>
  <version>
-  <release>0.0.43</release>
-  <api>0.0.43</api>
+  <release>0.0.44</release>
+  <api>0.0.44</api>
  </version>
  <stability>
   <release>beta</release>
@@ -22,12 +22,11 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- ::isTerminated to detect fatal errors and uncaught exceptions
- cast pthreads objects to array
- implement count on pthreads object
- implement selective inheritance (control what is available in the threaded context)
- fix crash when undefined dimension is accessed
- fix state detection when crash encountered
+ fix ::merge duplicate keys (#97, #98)
+ improvements from weltling for config.w32
+ corrections to some examples
+ fix #99 resources crash
+ fix tests - missing include and format incorrect in expect section
  </notes>
  <contents>
   <dir name="/">
