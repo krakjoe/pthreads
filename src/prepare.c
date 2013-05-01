@@ -182,13 +182,13 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 								case 0: zend_hash_update(&prepared->function_table, "__construct", sizeof("__construct"), &candidate->constructor, sizeof(zend_function), (void**) &prepared->constructor); break;
 								case 1: zend_hash_update(&prepared->function_table, "__destruct", sizeof("__destruct"), &candidate->destructor, sizeof(zend_function), (void**) &prepared->destructor); break;
 								case 2: zend_hash_update(&prepared->function_table, "__clone", sizeof("__clone"), &candidate->clone, sizeof(zend_function), (void**) &prepared->clone); break;
-								case 3: zend_hash_update(&prepared->function_table, "__get", sizeof("__get"), &candidate->__get, sizeof(zend_function), (void**) &prepared->__get);
-								case 4: zend_hash_update(&prepared->function_table, "__set", sizeof("__set"), &candidate->__set, sizeof(zend_function), (void**) &prepared->__set);
-								case 5: zend_hash_update(&prepared->function_table, "__unset", sizeof("__unset"), &candidate->__unset, sizeof(zend_function), (void**) &prepared->__unset);
-								case 6: zend_hash_update(&prepared->function_table, "__isset", sizeof("__isset"), &candidate->__isset, sizeof(zend_function), (void**) &prepared->__isset);
-								case 7: zend_hash_update(&prepared->function_table, "__call", sizeof("__call"), &candidate->__call, sizeof(zend_function), (void**) &prepared->__call);
-								case 8: zend_hash_update(&prepared->function_table, "__callstatic", sizeof("__callstatic"), &candidate->__callstatic, sizeof(zend_function), (void**) &prepared->__callstatic);
-								case 9: zend_hash_update(&prepared->function_table, "__tostring", sizeof("__tostring"), &candidate->__tostring, sizeof(zend_function), (void**) &prepared->__tostring);
+								case 3: zend_hash_update(&prepared->function_table, "__get", sizeof("__get"), &candidate->__get, sizeof(zend_function), (void**) &prepared->__get); break;
+								case 4: zend_hash_update(&prepared->function_table, "__set", sizeof("__set"), &candidate->__set, sizeof(zend_function), (void**) &prepared->__set); break;
+								case 5: zend_hash_update(&prepared->function_table, "__unset", sizeof("__unset"), &candidate->__unset, sizeof(zend_function), (void**) &prepared->__unset); break;
+								case 6: zend_hash_update(&prepared->function_table, "__isset", sizeof("__isset"), &candidate->__isset, sizeof(zend_function), (void**) &prepared->__isset); break;
+								case 7: zend_hash_update(&prepared->function_table, "__call", sizeof("__call"), &candidate->__call, sizeof(zend_function), (void**) &prepared->__call); break;
+								case 8: zend_hash_update(&prepared->function_table, "__callstatic", sizeof("__callstatic"), &candidate->__callstatic, sizeof(zend_function), (void**) &prepared->__callstatic); break;
+								case 9: zend_hash_update(&prepared->function_table, "__tostring", sizeof("__tostring"), &candidate->__tostring, sizeof(zend_function), (void**) &prepared->__tostring); break;
 								
 								case 10: zend_hash_update(&prepared->function_table, "__serialize", sizeof("__serialize"), &candidate->serialize_func, sizeof(zend_function), (void**) &prepared->serialize_func); break;
 								case 11: zend_hash_update(&prepared->function_table, "__unserialize", sizeof("__unserialize"), &candidate->unserialize_func, sizeof(zend_function), (void**) &prepared->unserialize_func); break;
