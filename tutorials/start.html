@@ -125,50 +125,7 @@
                 }
                 </pre>
                 <p>The example above makes much more efficient use of Multi-Threading, omitted is the logic that takes care of parsing the data down into a useable (more importantly, shareable) form.</p>
-                <h2>Recycling Contexts</h2>
-                <p>Worker threads provide a way to recycle a context - use it more than one time for multiple tasks. Tasks are implemented by descending from Stackable.</p>
-                <pre class="brush: php">
-                class WebWorker extends Worker {
-                    public function run(){}
-                }
                 
-                class WebRequest extends Stackable {
-                    public $url;
-                    public $data;
-                    
-                    public function __construct($url) {
-                        $this->url = $url;
-                    }
-                    
-                    public function run() {
-                        $response = file_get_contents($this->url);
-                        
-                        if ($response) {
-                            /* process response */
-                            
-                            $this->data = array($response);
-                        }
-                    }
-                }
-                
-                $worker = new WebWorker();
-                $worker->start();
-                
-                $work = array();
-                
-                foreach (range(0, 10) as $index) {
-                    $work[$index] = new WebRequest(
-                        "http://pthreads.org/?query={$index}");
-                    $worker->stack($work[$index]);
-                }
-                
-                $worker->shutdown();
-                
-                foreach ($work as $task) {
-                    var_dump ($task->data);
-                }
-                </pre>
-                <p>In the example above, many requests are processed by the same context. The aim should be to always use Workers and Stackables wherever possible, it is much more efficient to create one context (Worker), rather than many contexts (Threads).</p>
 				<!-- page footer -->
 				<div class="footer">
 					<p>Published on <time datetime="2013-05-12" pubdate>May 12th, 2013</time></p>
