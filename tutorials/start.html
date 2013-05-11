@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]> <html lang="en" class="ie6"> <![endif]-->
+<!--[if IE 7 ]>    <html lang="en" class="ie7"> <![endif]-->
+<!--[if IE 8 ]>    <html lang="en" class="ie8"> <![endif]-->
+<!--[if IE 9 ]>    <html lang="en" class="ie9"> <![endif]-->
+<!--[if (gt IE 9)|!(IE)]><!--> <html lang="en" > <!--<![endif]-->
+<head>
+<meta charset="utf-8">
+<meta property="og:title" content="pthreads - Share Nothing, Do Everything :)" />
+<meta property="og:url" content="http://pthreads.org" />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="../images/pthreads-logo.png" />
+<title>Share Nothing, Do Everything :) - Getting Started</title>	
+<meta name="robots" content="index, follow"> 
+<link href='http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz' rel='stylesheet' type='text/css'>
+<link href="../css/reset.css" rel="stylesheet">
+<link href="../css/stylesheet.css" rel="stylesheet">
+<script type="text/javascript" src="../js/shCore.js"></script>
+<script type="text/javascript" src="../js/shBrushPhp.js"></script>
+<link type="text/css" rel="stylesheet" href="../css/shCoreDefault.css"/>
+<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]--> 
+<!--[if lt IE 7 ]>
+	<script src="../js/dd_belatedpng.js"></script>
+	<script> DD_belatedPNG.fix('img, .png_bg'); //fix any <img> or .png_bg background-images </script>
+<![endif]-->
+<meta name="description" content="pthreads.org - Share Nothing, Do Everything :)" />
+<meta name="keywords" content="thread php, multi thread php, php workers, asynchronous php, pthreads tutorial" />
+<link rel="canonical" href="http://pthreads.org/" />
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-34980052-1']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+  SyntaxHighlighter.all();
+</script>
+</head> 
+<body id="index" >
+	<!-- site header -->
+	<header>
+		<div class="header">
+			<div class="wrapper"> 
+				<!-- logo/sitename -->
+				<a href="http://pthreads.org/" id="logo" ><img src="../images/pthreads-logo.png" alt="pthreads.org" border="0px"/></a>
+				
+			</div>
+		</div>
+  </header>	
+	<div class="wrapper clearfix">
+		<!-- page content -->
+		<article>
+			<section>
+				<!-- title and content -->
+				<h1>Getting Started</h1>
+				<p>First thing is first, here's a mantra, repeat it:</p>
+                <pre>Efficient Multi-Threading is about using minimum threads to do maximum work.</pre>
+                <p>When setting out in the world of multi-threading, one might be tempted to just throw threads at something and expect that it will perform better. This is rarely the case in the real world. Efficient use of Multi-Threading relies on your ability to minimize on resources in order to maximize on your hardware. In this tutorial, I take a mundane task and tutor on the best ways to multi-thread that task in the real world.</p>
+                <h2>The Simplest of All Worlds</h2>
+                <p>In the simplest of all worlds, we create a Thread in order to fetch content asynchronously.</p>
+                <pre class="brush: php">
+                class WebRequest extends Thread {
+                    public $url;
+                    public $response;
+                    
+                    public function __construct($url){
+                        $this->url = $url;
+                    }
+                    
+                    public function run() {
+                        $this->response = file_get_contents($this->url);
+                    }
+                }
+                
+                $request = new WebRequest("http://pthreads.org");
+                
+                if ($request->start()) {
+                    
+                    /* do some work */
+                    
+                    /* ensure we have data */
+                    $request->join();
+                    
+                    /* we can now manipulate the response */
+                    var_dump($request->response);
+                }
+                </pre>
+                <p>The problem with the above implementation is that the process is left to deal with the data, which is a big waste of resources. Can you see why ?</p>
+                <h2>The Best of Both Worlds</h2>
+                <p>A savvy designer will notice that the WebRequest Thread could and should perform manipulation of the data, such that the processing of the response can also be performed asynchronously, not just the download of data.</p>
+                <pre class="brush: php">
+                class WebRequest extends Thread {
+                    public $url;
+                    public $data;
+                    
+                    public function __construct($url){
+                        $this->url = $url;
+                    }
+                    
+                    public function run() {
+                        $response = file_get_contents($this->url);
+                        if ($response) {
+                            /* process response into useable data */
+                            
+                            $this->data = array($response);
+                        }
+                    }
+                }
+                
+                $request = new WebRequest("http://pthreads.org");
+                
+                if ($request->start()) {
+                    
+                    /* do some work */
+                    
+                    /* ensure we have data */
+                    $request->join();
+                    
+                    /* we can now manipulate the response */
+                    var_dump($request->data);
+                }  
+                </pre>
+                <p>The example above makes much more efficient use of Multi-Threading, omitted is the logic that takes care of parsing the data down into a useable (more importantly, shareable) form.</p>
+                <p>For information on how and what to share, keep working through tutorials and examples included with pthreads.</p>
+				<!-- page footer -->
+				<div class="footer">
+					<p>Published on <time datetime="2013-05-12" pubdate>May 12th, 2013</time></p>
+				</div>
+			</section>
+			
+		</article>
+		
+		<!-- include the sidebar template -->
+<aside id="sidebar">
+	<!-- wrap each sidebar section like this -->
+	<div class="section">
+		<h2>Highlights</h2>
+<ul> 
+<li>Easy to use Threading API for PHP5.3+</li> 
+<li>Execute <span style="font-weight: bold;">anything</span> asynchronously</li> 
+<li>Easy Synchronization Included</li> 
+<li>SAPI Support</li> 
+<li>A world of possibilities ...</li> 
+</ul>
+<h2>Technical Features</h2>
+<ul>
+<li>Posix Threading</li>
+<li>Synchronization</li>
+<li>Worker Threads</li>
+<li>Mutex</li>
+<li>Condition Variables</li>
+</ul>
+<h2>Requirements</h2>
+<ul>
+<li>PHP5.3+ on x64 or x86</li>
+<li>ZTS Enabled ( Thread Safety )</li>
+<li>Posix Threads implementation<span style="font-weight:bold;">*</span></li>
+<li style="list-style-type:none;">
+<small><span style="font-weight:bold;">*</span>Windows support thanks to <a href="http://sources.redhat.com/pthreads-win32">pthread-w32</a></small>
+</li>
+</ul>
+<h2>Documentation</h2>
+<ul>
+  <li><a href="http://docs.php.net/manual/en/book.pthreads">See the PHP Manual</a></li>
+</ul>
+<h2>Implementation</h2>
+<ul>
+  <li><a href="tutorials/start.html">Getting Started</a></li>
+</ul>
+<h2>Downloads</h2>
+<ul>
+ <li><a href="http://pecl.php.net/package/pthreads" target="_blank">PECL</a></li>
+ <li><a href="https://github.com/krakjoe/pthreads" target="_blank">Github</a></li>
+ <li><a href="http://windows.php.net/downloads/pecl/releases/pthreads/" target="_blank">Windows Binaries</a></li>
+</ul>	
+</div>
+</aside>	
+</div>
+
+<!-- include the footer template -->
+
+	<!-- site footer -->
+	<footer class="clearfix" >
+		
+			 	<div class="wrapper">
+			<div class="left"><a href="http://pthreads.org/" >pthreads.org</a>&nbsp;&copy;&nbsp;2013</div>
+			<div class="right"><a href="http://php.net/"><img src="../images/php-powered.png" alt="PHP5 Powered" target="_blank"></a></div>
+		</div>
+	</footer>
+	
+</body>
+</html>

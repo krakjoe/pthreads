@@ -10,11 +10,14 @@
 <meta property="og:url" content="http://pthreads.org" />
 <meta property="og:type" content="website" />
 <meta property="og:image" content="images/pthreads-logo.png" />
-<title>Share Nothing, Do Everything :) - Share Nothing, Do Everything :)</title>	
+<title>Share Nothing, Do Everything :)</title>	
 <meta name="robots" content="index, follow"> 
 <link href='http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz' rel='stylesheet' type='text/css'>
 <link href="css/reset.css" rel="stylesheet">
 <link href="css/stylesheet.css" rel="stylesheet">
+<script type="text/javascript" src="js/shCore.js"></script>
+<script type="text/javascript" src="js/shBrushJScript.js"></script>
+<link type="text/css" rel="stylesheet" href="css/shCoreDefault.css"/>
 <!--[if lt IE 9]>
 	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
 <![endif]--> 
@@ -34,6 +37,7 @@
     ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
     var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
   })();
+  SyntaxHighlighter.all();
 </script>
 </head> 
 <body id="index" >
@@ -43,27 +47,13 @@
 			<div class="wrapper"> 
 				<!-- logo/sitename -->
 				<a href="http://pthreads.org/" id="logo" ><img src="images/pthreads-logo.png" alt="pthreads.org" border="0px"/></a>
-				
-				<!-- main navigation -->
-				<nav id="main-nav">
-					<ul>
-											</ul>
-				</nav>
 			</div>
 		</div>
-		
-		<!-- breadcrumbs: only show when NOT on homepage -->
-		<!-- <p class="breadcrumbs" >
-			<span class="wrapper">
-				<a href="http://pthreads.org/">Home</a> &nbsp;&nbsp;&#149;&nbsp;&nbsp;  <b>Share Nothing, Do Everything :)</b>
-			</span>
-		</p> -->
   </header>	
 	<div class="wrapper clearfix">
 		<!-- page content -->
 		<article>
 			<section>
-				
 				<!-- title and content -->
 				<h1><span style="text-decoration: line-through;">Share Nothing</span>, Do Everything :)</h1>
 				<p>
@@ -155,6 +145,10 @@
 <h2>Documentation</h2>
 <ul>
   <li><a href="http://docs.php.net/manual/en/book.pthreads">See the PHP Manual</a></li>
+</ul>
+<h2>Implementation</h2>
+<ul>
+  <li><a href="tutorials/start.html">Getting Started</a></li>
 </ul>
 <h2>Downloads</h2>
 <ul>
