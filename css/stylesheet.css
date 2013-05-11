@@ -1,0 +1,367 @@
+/* GENERAL */
+body {
+	background:#EFEFEF;
+}
+.wrapper {
+	width:950px;
+	margin:0 auto;
+	position:relative;
+	display:block;
+}
+a:link, a:visited {
+	color:#316594;
+	text-decoration:underline;
+}
+a:hover, a:focus {
+	color:#222;
+	text-decoration:underline;
+}	
+
+
+/* HEADER */
+.header {
+	background: #6B94B4;
+	background: -moz-linear-gradient(top, #8190C6 0%, #424060 100%);
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#8190C6), color-stop(100%,#424060)); 
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#8190C6', endColorstr='#424060',GradientType=0 );
+	height:80px;
+	border-bottom:#9999cc 8px solid;
+}
+
+/* HEADER: breadcrumbs */
+header .breadcrumbs {
+	text-shadow: 1px 1px 0px rgba(255,255,255,.5);
+	border-top:#FFF 1px solid;
+	border-bottom:#ccc 1px solid;
+	font-size:11px;
+	height:25px;
+	line-height:25px;
+	overflow:hidden;
+	color:#666;
+	text-transform:uppercase;
+	width:100%;
+	background: #eee;
+	background: -moz-linear-gradient(top, #EDEDED 0%, #D5D5D5 100%);
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#EDEDED), color-stop(100%,#D5D5D5));
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#EDEDED', endColorstr='#D5D5D5',GradientType=0 ); 
+}
+header .breadcrumbs a:link, 
+header .breadcrumbs a:visited {
+	color:#666;
+	text-decoration:underline;
+}
+header .breadcrumbs a:focus, 
+header .breadcrumbs a:hover {
+	color:#666699;
+	text-decoration:underline;
+}
+#index header .breadcrumbs {
+	display:none; /* no reason to have breadcrumbs on homepage */
+} 
+
+/* HEADER: logo */
+header #logo {
+	position:absolute;
+	top:3px;
+	left:0px;
+	font-size:35px;
+	white-space:nowrap;
+	color:#fff;
+	font-family: 'Yanone Kaffeesatz', arial, helvetica, sans-serif;
+	text-transform:uppercase; 
+	text-shadow: 1px 1px 0px rgba(0,0,0, .4);
+}
+header #logo:link, 
+header #logo:visited, 
+header #logo:hover, 
+header #logo:focus {
+	text-decoration:none;
+}
+/* HEADER: navigation */
+header nav {
+	position:absolute;
+	top:30px;
+	right:0;
+	text-shadow: 1px 1px 0px rgba(0,0,0, .3);
+}
+header nav ul {
+	list-style:none;	
+	float:right;
+}	
+header nav li {
+	display:block;
+	float:left;
+	margin:0 0 0 10px;
+}
+header nav li a {
+	display:block;
+	font-size:13px;
+	padding:5px 15px;
+	text-transform:uppercase;
+	font-weight:bold;
+	background:#7096B6;
+	background:rgba(255,255,255,.2);
+	border-radius:40px;
+	-moz-border-radius:40px;
+	-khtml-border-radius:40px;
+	-webkit-border-radius:40px;
+}
+header nav li a:link, 
+header nav li a:visited {
+	color:#eee;
+	text-decoration:none;
+}	
+header nav li a:hover, 
+header nav li a:focus {
+	color:#FFF;
+	text-decoration:none;
+}
+header nav li.current a {
+	color:#FFF;
+	background:#7096B6;
+	background:rgba(255,255,255,.2);
+	text-decoration:none;
+	border-radius:40px;
+	-moz-border-radius:40px;
+	-khtml-border-radius:40px;
+	-webkit-border-radius:40px;
+}
+
+
+/* BODY CONTENT */
+article {
+	float:left;
+	width:688px;
+	min-height:500px;
+	background:#fff;
+	border-bottom:1px solid #c8c8c8;
+	border-left:1px solid #e4e4e4;
+	border-right:1px solid #c8c8c8;
+	-moz-box-shadow: 2px 1px 10px rgba(0,0,0, .07);
+	-webkit-box-shadow: 2px 1px 10px rgba(0,0,0, .07);
+	box-shadow: 2px 1px 10px rgba(0,0,0, .07);
+}
+article h1 {
+	font-family: 'Yanone Kaffeesatz', arial, helvetica, sans-serif;
+	margin:0 0 30px 0;
+	color: #275176;
+	font-size:37px;
+}
+article h2 {
+	font-family: 'Yanone Kaffeesatz', arial, helvetica, sans-serif;
+	margin:0 0 10px 0;
+	color: #222222;
+	font-size:30px;
+}
+article h3 {
+	font-family: 'Yanone Kaffeesatz', arial, helvetica, sans-serif;
+	margin:0 0 15px 0;
+	color: #275176;
+	font-size:25px;
+}
+article h4 {
+	font-family: 'Yanone Kaffeesatz', arial, helvetica, sans-serif;
+	margin:0 0 10px 0;
+	color: #555;
+	font-size:20px;
+	font-weight:100;
+}
+article h5 {
+	font-family: arial, serif;
+	margin:0 0 10px 0;
+	color: #333;
+	font-size:15px;
+}
+article h6 {
+	font-family: arial, serif;
+	margin:0 0 10px 0;
+	color: #666;
+	font-size:14px;
+}
+article section {
+	padding:40px;
+	line-height:22px;
+	font-size:14px;
+	color:#333;	
+}
+article section p {margin:0 0 25px 0;}
+article section ul, 
+article section ol {
+	margin:0 0 25px 30px;
+}
+article section ul ul, 
+article section ol ol,
+article section ul ol, 
+article section ol ul {
+	margin:0 0 0 25px;
+}
+article section code {
+	border:1px solid #ccc;
+	background:#f6f6f6;
+	font-size:12px;
+	padding:1px;
+}
+article section pre {
+	border:1px solid #ccc;
+	background:#f6f6f6;
+	padding:15px;
+	margin:0 0 25px 0;
+	line-height:16px;
+	font-size:13px;
+	color:#555;
+	text-shadow: 1px 1px 0px #fff;
+	border-radius:0 4px 4px 0;
+	-moz-border-radius:0 4px 4px 0;
+	-khtml-border-radius:0 4px 4px 0;
+	-webkit-border-radius:0 4px 4px 0;
+}
+article section pre code {
+	border:none;
+	background:none;
+	padding:none;
+}
+article section blockquote {
+	margin:0 0 25px 20px;
+	color:#555;
+	line-height:20px;
+	font-family:georgia, garamond, serif;
+	font-style:italic;
+	padding:0 0 0 15px;
+	border-left:1px solid #ccc;
+}
+article section .footer {
+	color:#888;
+	font-size:11px;
+	margin-top:40px;
+	border-top:1px dotted #ccc;
+	padding-top:15px;
+}
+article section .footer p {
+	margin:0 0 10px 0;
+}
+
+
+/* SIDEBAR */
+aside {
+	float:right;
+	width:260px;
+	margin:40px 0 0 0;
+}
+aside .section {
+	padding:0 0 0 30px;	
+}
+aside .section {
+	margin:0 0 40px 0;
+	font-size:11px;
+	line-height:16px;
+	color:#555;
+	text-shadow: 1px 1px 0px #fff;
+}
+aside .section p {
+	margin:0 0 15px 0;
+}
+aside .section ul, 
+aside .section ol {
+	margin:0 0 15px 20px;
+}
+aside .section h2 {
+	background:#333;
+	border-top:1px solid rgba(255,255,255,.4);
+	text-shadow: 1px 1px 0px rgba(0,0,0,.5);
+	text-transform:uppercase;
+	background: -moz-linear-gradient(top, #9999cc 0%, #424060 100%);
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#9999cc), color-stop(100%,#424060));
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#444444', endColorstr='#424060',GradientType=0 ); 
+	font-family: 'Yanone Kaffeesatz', arial, helvetica, sans-serif;
+	font-weight:100;
+	color:#fff;
+	font-size:19px;
+	line-height:19px;
+	margin:0 0 20px -31px;
+	padding:5px 0 7px 25px;
+	border-radius:0 4px 4px 0;
+	-moz-border-radius:0 4px 4px 0;
+	-khtml-border-radius:0 4px 4px 0;
+	-webkit-border-radius:0 4px 4px 0;
+}
+
+/* SIDEBAR: socialmedia */
+aside #socialmedia {
+	position:relative;
+}
+aside #socialmedia h2 {
+	width:65px;
+	background: #666699;
+	background: -moz-linear-gradient(top, #666699 0%, #2C5983 100%); 
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#666699), color-stop(100%,#2C5983));
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#666699', endColorstr='#2C5983',GradientType=0 ); 
+}
+aside #socialmedia .icons {
+	position:absolute;
+	top:3px;
+	right:0px;	
+}
+
+
+/* FOOTER */
+footer {
+	padding:20px 0;
+	text-shadow: 1px 1px 0px rgba(255,255,255,.8);
+	color:#888;
+	font-size:11px;
+}
+footer .left {
+	float:left;
+	width:40%;
+	text-align:left;
+}
+footer .right {
+	/* float:right; */
+	margin-left: 120px;
+	width:60%;
+	text-align:right;
+}
+footer a:link, footer a:visited, footer a, footer a:hover {
+	color:#888;
+	text-decoration:none;
+}
+
+/* GIT */
+div.git-gazers {
+	width: 100%;
+	padding: 5px;
+}
+div.git-gazers img {
+	width: 80px;
+	height: 80px;
+	background: #6B94B4;
+	background: -moz-linear-gradient(top, #8190C6 0%, #424060 100%);
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#8190C6), color-stop(100%,#424060)); 
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#8190C6', endColorstr='#424060',GradientType=0 );
+	padding: 10px;
+}
+div.git-gazers .git-gazer {
+	float: left;
+	padding: 10px;
+}
+div.git-gazers .git-gazer .git-gazer-login {
+	position: relative;
+	padding: 3px;
+	background: #6B94B4;
+	background: -moz-linear-gradient(top, #8190C6 0%, #424060 100%);
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#8190C6), color-stop(100%,#424060)); 
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#8190C6', endColorstr='#424060',GradientType=0 );
+	width: 93px;
+	text-align: center;
+	font-family: 'Yanone Kaffeesatz', arial, helvetica, sans-serif;
+	font-size: 13pt;
+	font-weight:100;
+	color:#fff;
+}
+
+div.git-gazers .git-gazer .git-gazer-login a:active,
+div.git-gazers .git-gazer .git-gazer-login a:visited,
+div.git-gazers .git-gazer .git-gazer-login a:link {
+	text-decoration: none;
+	color:#fff;
+}
