@@ -10,7 +10,7 @@
 <meta property="og:url" content="http://pthreads.org" />
 <meta property="og:type" content="website" />
 <meta property="og:image" content="../images/pthreads-logo.png" />
-<title>Share Nothing, Do Everything :) - Getting Started</title>	
+<title>Share Nothing, Do Everything :) - Recycling Contexts</title>	
 <meta name="robots" content="index, follow"> 
 <link href='http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz' rel='stylesheet' type='text/css'>
 <link href="../css/reset.css" rel="stylesheet">
@@ -56,77 +56,11 @@
 		<article>
 			<section>
 				<!-- title and content -->
-				<h1>Getting Started</h1>
-				<p>First thing is first, here's a mantra, repeat it:</p>
-                <pre>Efficient Multi-Threading is about using minimum threads to do maximum work.</pre>
-                <p>When setting out in the world of multi-threading, one might be tempted to just throw threads at something and expect that it will perform better. This is rarely the case in the real world. Efficient use of Multi-Threading relies on your ability to minimize on resources in order to maximize on your hardware. In this tutorial, I take a mundane task - fetching an external web page - and tutor on the best ways to multi-thread that task in the real world.</p>
-                <h2>The Simplest of All Worlds</h2>
-                <p>In the simplest of all worlds, we create a Thread in order to fetch content asynchronously.</p>
-                <pre class="brush: php">
-                class WebRequest extends Thread {
-                    public $url;
-                    public $response;
-                    
-                    public function __construct($url){
-                        $this->url = $url;
-                    }
-                    
-                    public function run() {
-                        $this->response = file_get_contents($this->url);
-                    }
-                }
-                
-                $request = new WebRequest("http://pthreads.org");
-                
-                if ($request->start()) {
-                    
-                    /* do some work */
-                    
-                    /* ensure we have data */
-                    $request->join();
-                    
-                    /* we can now manipulate the response */
-                    var_dump($request->response);
-                }
-                </pre>
-                <p>The problem with the above implementation is that the process is left to deal with the data, which is a big waste of resources. Can you see why ?</p>
-                <h2>The Best of Both Worlds</h2>
-                <p>A savvy designer will notice that the WebRequest Thread could and should perform manipulation of the data, such that the processing of the response can also be performed asynchronously, not just the download of data.</p>
-                <pre class="brush: php">
-                class WebRequest extends Thread {
-                    public $url;
-                    public $data;
-                    
-                    public function __construct($url){
-                        $this->url = $url;
-                    }
-                    
-                    public function run() {
-                        $response = file_get_contents($this->url);
-                        if ($response) {
-                            /* process response into useable data */
-                            
-                            $this->data = array($response);
-                        }
-                    }
-                }
-                
-                $request = new WebRequest("http://pthreads.org");
-                
-                if ($request->start()) {
-                    
-                    /* do some work */
-                    
-                    /* ensure we have data */
-                    $request->join();
-                    
-                    /* we can now manipulate the response */
-                    var_dump($request->data);
-                }
-                </pre>
-                <p>The example above makes much more efficient use of Multi-Threading, omitted is the logic that takes care of parsing the data down into a useable (more importantly, shareable) form.</p>
-                <h2>Recycling Contexts</h2>
-                <p>Worker threads provide a way to recycle a context - use it more than one time for multiple tasks. Tasks are implemented by descending from Stackable.</p>
+				<h1>Recycling Contexts</h1>
+				<p>In line with our mantra, always consider employing the Worker and Stackable model of execution.</p>
+				<p>The Worker model allows a context (Thread) to be reused, so if many tasks need to be executed asynchronously to the process (or creating Thread), but those tasks themselves are suitable to be executed synchronously then using a single context rather than many is a huge win.</p>
+                <h2>Worker and Stackable Brief</h2>
+                <p>The patterns used to create Workers and Stackable are much the same as those used to create Threads. </p>
                 <pre class="brush: php">
                 class WebWorker extends Worker {
                     public function run(){}
@@ -156,12 +90,18 @@
                 
                 $work = array();
                 
+                /* create some random work */
                 foreach (range(0, 10) as $index) {
+                    /* retain reference to the work */
                     $work[$index] = new WebRequest(
                         "http://pthreads.org/?query={$index}");
+                        
+                    /* stack the work for execution */
                     $worker->stack($work[$index]);
                 }
                 
+                /* shutting down waits for the execution of 
+                    anything previously stacked, then joins the Worker */
                 $worker->shutdown();
                 
                 foreach ($work as $task) {
@@ -169,6 +109,56 @@
                 }
                 </pre>
                 <p>In the example above, many requests are processed by the same context. The aim should be to always use Workers and Stackables wherever possible, it is much more efficient to create one context (Worker), rather than many contexts (Threads).</p>
+                <h2>Asynchronous Logging</h2>
+                <p>A good example of using Workers in the real world might be an implementation of asynchronous logging.</p>
+                <p>In the real world, an asynchronous logger would be much more complex than the following example, for the purposes of a tutorial we will just write logs to standard output.</p>
+                <pre class="brush: php">
+                class LogEntry extends Stackable {
+                    public $message;
+                    public $args;
+                    
+                    public function __construct($message, $args = null) {
+                        $this->message = $message;
+                        $this->args = $args;
+                    }
+                    
+                    public function run() {
+                        /* for simplicity */
+                        vprintf(
+                            "{$this->message}\n", $this->args);
+                    }
+                }
+
+                class Logger extends Worker {
+                    static $instance = null;
+                    
+                    public function __construct() {
+                        $this->start();
+                    }
+                    
+                    public static function log($message, $args = null) {
+                        if (self::$instance == null) {
+                            self::$instance = new Logger();
+                        }
+                        
+                        $args = func_get_args();
+                        if ($args) {
+                            self::$instance->stack(
+                                new LogEntry(
+                                    array_shift($args),
+                                    $args
+                                )
+                            );
+                        }
+                    }
+                    
+                    public function run() {}
+                }
+
+                Logger::log("Hello %s", "World");
+                Logger::log("Bye :)");
+                </pre>
+                <p>In the example above, it is the Worker that actually performs the writing of logs - however that is performed.</p>
 				<!-- page footer -->
 				<div class="footer">
 					<p>Published on <time datetime="2013-05-12" pubdate>May 12th, 2013</time></p>
