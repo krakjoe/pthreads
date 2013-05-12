@@ -30,6 +30,7 @@
  <function name='worker::unstack' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::isshutdown' from='PECL pthreads &gt;= 0.37'/>
  <function name='worker::isworking' from='PECL pthreads &gt;= 0.37'/>
+ <function name='worker::isterminated' from='PECL pthreads &gt;= 0.45'/>
  <function name='worker::getstacked' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::run' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::wait' from='PECL pthreads &gt;= 0.36'/>
