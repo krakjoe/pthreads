@@ -22,6 +22,7 @@ PHP_METHOD(Worker, shutdown);
 PHP_METHOD(Worker, isStarted);
 PHP_METHOD(Worker, isShutdown);
 PHP_METHOD(Worker, isWorking);
+PHP_METHOD(Worker, isTerminated);
 PHP_METHOD(Worker, stack);
 PHP_METHOD(Worker, unstack);
 PHP_METHOD(Worker, getStacked);
@@ -47,6 +48,9 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_isShutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_isWorking, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Worker_isTerminated, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_stack, 0, 0, 1)
@@ -82,6 +86,7 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, isShutdown, Worker_isShutdown, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, isStarted, Worker_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Worker, isTerminated, Worker_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	
 	PHP_ME(Worker, merge, Worker_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
@@ -211,6 +216,17 @@ PHP_METHOD(Worker, isWorking)
 	
 	if (thread) {
 		RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+} /* }}} */
+
+/* {{{ proto boolean Worker::isTerminated() 
+	Will return true if the referenced thread suffered fatal errors or uncaught exceptions */
+PHP_METHOD(Worker, isTerminated)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC));
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
 } /* }}} */
 
