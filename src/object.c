@@ -160,8 +160,7 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 		    zend_hash_next_index_insert(
 		        stack, (void**) &stackable, sizeof(struct _pthread_construct), NULL
 		    );
-			counted = zend_hash_num_elements(
-			    stack);
+			counted = zend_hash_num_elements(stack);
 		}
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
@@ -255,10 +254,8 @@ burst:
 					goto burst;
 				}
 			} else return 0;
-		} else if (bubble == 1) {
-		    
 		}
-	} else php_printf("cannot lock %lu\n", thread->tid);
+	}
 	
 	return bubble;
 } /* }}} */

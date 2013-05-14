@@ -10,17 +10,7 @@ class Storage extends Stackable {
 
 $storage = new Storage();
 $storage->merge(range("0", "3"));
-var_dump($storage);
+var_dump(count($storage));
 ?>
 --EXPECTF--
-object(Storage)#%d (%d) {
-  ["0"]=>
-  int(0)
-  ["1"]=>
-  int(1)
-  ["2"]=>
-  int(2)
-  ["3"]=>
-  int(3)
-}
-
+int(4)
