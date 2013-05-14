@@ -43,15 +43,15 @@ typedef struct _pthreads_storage {
 	    double  dval;
 	} simple;
 	void    *data;
-} *pthreads_storage;
+} pthreads_storage;
 
 #ifndef Z_OBJ_P
 #	define Z_OBJ_P(zval_p) ((zend_object*)(EG(objects_store).object_buckets[Z_OBJ_HANDLE_P(zval_p)].bucket.obj.object))
 #endif
 
 /* {{{ statics */
-static pthreads_storage pthreads_store_create(zval *pzval, zend_bool complex TSRMLS_DC);
-static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_DC);
+static void pthreads_store_create(pthreads_storage *storage, zval *pzval, zend_bool complex TSRMLS_DC);
+static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_DC);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC);
 static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC);
@@ -65,13 +65,13 @@ pthreads_store pthreads_store_alloc(TSRMLS_D) {
 	pthreads_store store = calloc(1, sizeof(*store));
 	
 	if (store) {
-		if (zend_ts_hash_init(&store->table, 8, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){
+		if (zend_hash_init(&store->table, 8, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){
 			if ((store->lock = pthreads_lock_alloc(TSRMLS_C))) {
 			    store->next = 0L;
 			    
 				return store;
 			}
-			zend_ts_hash_destroy(&store->table);
+			zend_hash_destroy(&store->table);
 		}
 		free(store);
 	}
@@ -107,8 +107,8 @@ int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC) {
 	
 	if (store) {
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
-			if (zend_ts_hash_exists(&store->table, key, keyl)) {
-				if (zend_ts_hash_del(&store->table, key, keyl)!=SUCCESS) {
+			if (zend_hash_exists(&store->table, key, keyl)) {
+				if (zend_hash_del(&store->table, key, keyl)!=SUCCESS) {
 					result = FAILURE;
 				} else result = SUCCESS;
 			} else result = SUCCESS;
@@ -125,8 +125,9 @@ zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int ha
 	if (store) {
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			pthreads_storage *storage = NULL;
-			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
-				isset=((*storage)->exists);
+			if (zend_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS) {
+				if (storage)
+				    isset=(storage->exists);
 			}
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
@@ -143,8 +144,9 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			pthreads_storage *storage = NULL;
-			if (zend_ts_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
-				result = pthreads_store_convert((*storage), *read TSRMLS_CC);
+			if (zend_hash_find(&store->table, key, keyl, (void**)&storage)==SUCCESS && storage) {
+				result = pthreads_store_convert(
+				    storage, *read TSRMLS_CC);
 			}
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
@@ -168,14 +170,17 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 	zend_bool locked;
 	
 	if (store) {
-		pthreads_storage storage = pthreads_store_create(*write, 1 TSRMLS_CC);
-		if (storage) {
-			if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
-				if (zend_ts_hash_update(&store->table, key, keyl, (void**) &storage, sizeof(storage), NULL)==SUCCESS) {
-					result = SUCCESS;
-				} else free(store);
-				pthreads_lock_release(store->lock, locked TSRMLS_CC);
-			}
+		pthreads_storage storage;
+		
+		pthreads_store_create(
+		    &storage, *write, 1 TSRMLS_CC);
+		
+		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
+			if (zend_hash_update(
+			    &store->table, key, keyl, (void**) &storage, sizeof(pthreads_storage), NULL)==SUCCESS) {
+				result = SUCCESS;
+			} else free(store);
+			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 	}
 	return result;
@@ -186,18 +191,18 @@ int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, 
 	int result = FAILURE;
 	pthreads_storage storage;
 	
-	if (pzval) {	
-		storage = pthreads_store_create(pzval, complex TSRMLS_CC);
-		if (storage) {
-			if (allocate) {
-				MAKE_STD_ZVAL(*separated);
-			}
-
-			result = pthreads_store_convert(storage, *separated TSRMLS_CC);
-
-			if (result == SUCCESS)
-				pthreads_store_storage_dtor(&storage);
+	if (pzval) {
+        pthreads_store_create(&storage, pzval, complex TSRMLS_CC);
+		    		
+		if (allocate) {
+			MAKE_STD_ZVAL(*separated);
 		}
+
+		result = pthreads_store_convert(
+		    &storage, *separated TSRMLS_CC);
+
+		if (result == SUCCESS)
+			pthreads_store_storage_dtor(&storage);
 	}
 	return result;
 } /* }}} */
@@ -210,8 +215,7 @@ int pthreads_store_count(zval *object, long *count TSRMLS_DC) {
     zend_bool locked;
     if (pthreads_store_lock(object TSRMLS_CC)) {
         (*count) = zend_hash_num_elements(
-            TS_HASH((&pthreads->store->table))
-        );
+            &pthreads->store->table);
         pthreads_store_unlock(object TSRMLS_CC);
     } else (*count) = 0L;
    } else (*count) = 0L;
@@ -225,8 +229,7 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 	zend_bool locked;
 	if (store) {
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
-			TsHashTable *safe = &store->table;
-			HashTable *stored = TS_HASH(safe);
+			HashTable *stored = &store->table;
 			HashPosition position;
 			pthreads_storage *storage;
 
@@ -246,7 +249,7 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 
 							MAKE_STD_ZVAL(pzval);
 					
-							if (pthreads_store_convert((*storage), pzval TSRMLS_CC)!=SUCCESS) {
+							if (pthreads_store_convert(storage, pzval TSRMLS_CC)!=SUCCESS) {
 								ZVAL_NULL(pzval);
 							} 
 							
@@ -267,7 +270,7 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 		zend_bool locked;
 
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
-			zend_ts_hash_destroy(&store->table);
+			zend_hash_destroy(&store->table);
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 		pthreads_lock_free(store->lock TSRMLS_CC);
@@ -278,83 +281,77 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 } /* }}} */
 
 /* {{{ Will storeize the zval into a newly allocated buffer which must be free'd by the caller */
-static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex TSRMLS_DC){					
-	pthreads_storage storage;
+static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend_bool complex TSRMLS_DC){					
 	
 	if (unstore) {
 		/*
 		* Make an exact copy of the store data for internal storage
 		*/
-		storage = (pthreads_storage) calloc(1, sizeof(*storage));
-		if (storage) {
-			storage->length = 0;
-			storage->exists = 0;
-			storage->data = NULL;
+		storage->length = 0;
+		storage->exists = 0;
+		storage->data = NULL;
+		
+		switch((storage->type = Z_TYPE_P(unstore))){
+			case IS_NULL: { /* nothing to do */ } break;
 			
-			switch((storage->type = Z_TYPE_P(unstore))){
-				case IS_NULL: { /* nothing to do */ } break;
-				
-				case IS_STRING: {
-					if ((storage->length = Z_STRLEN_P(unstore))) {
-						storage->data = (char*) calloc(1, storage->length+1);
-						memmove(
-							storage->data, (const void*) Z_STRVAL_P(unstore), storage->length
-						);
-					}
-				} break;
-				
-				case IS_BOOL:
-				case IS_LONG: {
-					storage->simple.lval = Z_LVAL_P(unstore);
-				} break;
-
-				case IS_RESOURCE: {
-					if (complex) {
-						pthreads_resource resource = calloc(1, sizeof(*resource));
-						if (resource) {
-							resource->scope = EG(scope);
-							resource->ls = TSRMLS_C;
-						
-							storage->simple.lval = Z_RESVAL_P(unstore);
-							storage->data = resource;
-                            
-							zend_list_addref(Z_RESVAL_P(unstore));
-						}
-					} else {
-						storage->type = IS_NULL;
-					}
-				} break;
-				
-				case IS_DOUBLE: 
-				    storage->simple.dval = Z_DVAL_P(unstore);
-				break;
-				
-				case IS_OBJECT:
-				case IS_ARRAY: {
-					if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length, complex TSRMLS_CC)==SUCCESS) {
-						if (storage->type==IS_ARRAY) {
-							storage->exists = zend_hash_num_elements(
-							    Z_ARRVAL_P(unstore));
-						} else {
-							Z_OBJ_HT_P(unstore)->add_ref(
-							    unstore TSRMLS_CC);
-						}
-					}
-				} break;
-				
-				default: {
-				    storage->exists = 0;
+			case IS_STRING: {
+				if ((storage->length = Z_STRLEN_P(unstore))) {
+					storage->data = (char*) calloc(1, storage->length+1);
+					memmove(
+						storage->data, (const void*) Z_STRVAL_P(unstore), storage->length
+					);
 				}
+			} break;
+			
+			case IS_BOOL:
+			case IS_LONG: {
+				storage->simple.lval = Z_LVAL_P(unstore);
+			} break;
+
+			case IS_RESOURCE: {
+				if (complex) {
+					pthreads_resource resource = calloc(1, sizeof(*resource));
+					if (resource) {
+						resource->scope = EG(scope);
+						resource->ls = TSRMLS_C;
+					
+						storage->simple.lval = Z_RESVAL_P(unstore);
+						storage->data = resource;
+                        
+						zend_list_addref(Z_RESVAL_P(unstore));
+					}
+				} else {
+					storage->type = IS_NULL;
+				}
+			} break;
+			
+			case IS_DOUBLE: 
+			    storage->simple.dval = Z_DVAL_P(unstore);
+			break;
+			
+			case IS_OBJECT:
+			case IS_ARRAY: {
+				if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length, complex TSRMLS_CC)==SUCCESS) {
+					if (storage->type==IS_ARRAY) {
+						storage->exists = zend_hash_num_elements(
+						    Z_ARRVAL_P(unstore));
+					} else {
+						Z_OBJ_HT_P(unstore)->add_ref(
+						    unstore TSRMLS_CC);
+					}
+				}
+			} break;
+			
+			default: {
+			    storage->exists = 0;
 			}
 		}
-	}
-	
-	return storage;														
+	}													
 }
 /* }}} */
 
 /* {{{ Will unstoreize data into the allocated zval passed */
-static int pthreads_store_convert(pthreads_storage storage, zval *pzval TSRMLS_DC){
+static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_DC){
 	int result = SUCCESS;
 	
 	if (storage) {
@@ -535,7 +532,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                         
                         HashPosition position;
                         pthreads_storage *storage;
-                        HashTable *tables[2] = {TS_HASH((&pobjects[0]->store->table)), TS_HASH((&pobjects[1]->store->table))};
+                        HashTable *tables[2] = {&pobjects[0]->store->table, &pobjects[1]->store->table};
                         
                         for (zend_hash_internal_pointer_reset_ex(tables[1], &position);
                              zend_hash_get_current_data_ex(tables[1], (void**)&storage, &position) == SUCCESS;
@@ -554,47 +551,47 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                                 }
                                 
                                 /* skip resources */
-                                if ((*storage)->type != IS_RESOURCE) {
+                                if (storage->type != IS_RESOURCE) {
                                 
                                     /* copy storage */
-                                    pthreads_storage copy = calloc(1, sizeof(*copy));
-                                 
-                                    switch ((copy->type = (*storage)->type)) {
+                                    pthreads_storage copy;
+                                    
+                                    switch ((copy.type = storage->type)) {
                                         case IS_NULL: {
-                                            copy->exists = 1;
+                                            copy.exists = 1;
                                         } break;
                                         
                                         case IS_STRING: {
-                                            if ((copy->length = (*storage)->length)) {
-                                                copy->data = (char*) calloc(1, copy->length+1);
+                                            if ((copy.length = storage->length)) {
+                                                copy.data = (char*) calloc(1, copy.length+1);
                                                 memmove(
-                                                    copy->data, (const void*) (*storage)->data, copy->length
+                                                    copy.data, (const void*) storage->data, copy.length
                                                 );
                                             }
                                         } break;
                                         
                                         case IS_BOOL:
-                                        case IS_LONG: { copy->simple.lval = (*storage)->simple.lval; } break;
+                                        case IS_LONG: { copy.simple.lval = storage->simple.lval; } break;
                                         
-                                        case IS_DOUBLE: { copy->simple.dval = (*storage)->simple.dval; } break;
+                                        case IS_DOUBLE: { copy.simple.dval = storage->simple.dval; } break;
                                         
                                         case IS_OBJECT:
 				                        case IS_ARRAY: {
-				                            if ((copy->length = (*storage)->length)) {
-                                                copy->data = (char*) calloc(1, copy->length+1);
+				                            if ((copy.length = storage->length)) {
+                                                copy.data = (char*) calloc(1, copy.length+1);
                                                 memmove(
-                                                    copy->data, (const void*) (*storage)->data, copy->length
+                                                    copy.data, (const void*) storage->data, copy.length
                                                 );
                                                 
-                                                if (copy->type == IS_ARRAY)
-                                                    copy->exists = (*storage)->exists;
+                                                if (copy.type == IS_ARRAY)
+                                                    copy.exists = storage->exists;
                                             }
 				                        } break;
 				                        
-				                        default: { /* nothing to do here */ }
+				                        default: {  }
                                     }
                                     
-                                    zend_hash_update(tables[0], key, klen, &copy, sizeof(pthreads_storage), NULL);
+                                    zend_hash_update(tables[0], key, klen, (void**) &copy, sizeof(pthreads_storage), NULL);
                                 }
                             }
                         }
@@ -716,19 +713,17 @@ static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
 
 /* {{{ Will free store element */
 static void pthreads_store_storage_dtor (pthreads_storage *storage){
-	if (storage && (*storage)) {
-		switch ((*storage)->type) {
+	if (storage) {
+		switch (storage->type) {
 			case IS_OBJECT:
 			case IS_STRING:
 			case IS_ARRAY:
 			case IS_RESOURCE:
-				if ((*storage)->data) {
-					free((*storage)->data);
+				if (storage->data) {
+					free(storage->data);
 				}
 			break;
 		}
-		
-		free((*storage));
 	}
 } /* }}} */
 

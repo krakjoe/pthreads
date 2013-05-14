@@ -32,7 +32,7 @@
 
 /* {{{ buffer structure */
 typedef struct _pthreads_store {
-	TsHashTable   table;
+	HashTable     table;
 	pthreads_lock lock;
 	zend_ulong    next; /* idx of next anonymous member */
 } *pthreads_store; /* }}} */
