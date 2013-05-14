@@ -44,7 +44,8 @@
 
 /* {{{ stack structure */
 typedef struct _pthreads_stack {
-	zend_llist objects;
+	HashTable    objects;
+	ulong        position;
 } *pthreads_stack; /* }}} */
 
 /* {{{ address structure */
@@ -136,7 +137,8 @@ typedef struct _pthread_construct {
 /* {{{ comparison function */
 static inline int pthreads_equal(PTHREAD first, PTHREAD second) {
 	if (first && second) {
-		return (first == second);
+		if ((first == second))
+		    return 1;
 	}
 	return 0;
 } /* }}} */

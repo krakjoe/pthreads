@@ -123,11 +123,20 @@ size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 	int remain = 0;
 	
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
-		zend_llist *stack = &thread->stack->objects;
+		HashTable *stack = &thread->stack->objects;
 		if (work) {
-			zend_llist_del_element(stack, &work, (int (*)(void *, void *)) pthreads_equal_func);
-		} else zend_llist_destroy(stack);
-		remain = stack->count;
+		    HashPosition position;
+		    PTHREAD search = NULL;
+		    
+		    for (zend_hash_internal_pointer_reset_ex(stack, &position);
+		        zend_hash_get_current_data_ex(stack, (void**)&search, &position) == SUCCESS;
+		        zend_hash_move_forward_ex(stack, &position)) {
+		        if (work->std.ce == search->std.ce) {
+		            php_printf("found ...%p\n", search);
+		        }
+		    }
+		} else zend_hash_destroy(stack);
+		remain = zend_hash_num_elements(stack);
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 	} else remain = -1;
 	return remain;
@@ -140,14 +149,13 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 	size_t counted = 0L;
 	
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
-		zend_llist *stack = &thread->stack->objects;
+		HashTable *stack = &thread->stack->objects;
 		if (stack) {
-			zend_llist_add_element(
-				stack, &stackable
-			);
-			counted = stack->count;
+		    zend_hash_next_index_insert(
+		        stack, (void**) &stackable, sizeof(struct _pthread_construct), NULL
+		    );
+			counted = zend_hash_num_elements(stack);
 			
-			Z_OBJ_HT_P(work)->add_ref(work TSRMLS_CC);
 		}
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
@@ -163,18 +171,22 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 
 /* {{{ pop the next item from the work buffer */
 size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
-	PTHREAD *work = NULL, current = NULL;
+	PTHREAD *work, current = NULL;
 	zend_bool locked;
 	size_t bubble = 0;
 	zval *that_ptr;
 	zend_function *run;
 	zend_class_entry *popped;
+	ulong key = 0L;
+	
 burst:
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
-		zend_llist *stack = &thread->stack->objects;
-		if ((bubble=stack->count) > 0) {
-			work = zend_llist_get_first(stack);
-			if (work && (current = *work) && current) {
+		if ((bubble=zend_hash_num_elements((HashTable*) thread->stack)) > 0) {
+			zend_hash_index_find(
+			    (HashTable*) thread->stack,
+			     thread->stack->position, (void**) &work
+			);
+			if (current = *work) {
 				/*
 				* Allocate a $that
 				*/
@@ -223,13 +235,10 @@ burst:
 							Z_ADDREF_P(this_ptr);
 						}
 					}
-					
-					/*
-					* Cleanup List
-					*/
-					zend_llist_del_element(stack, work, (int (*)(void *, void *)) pthreads_equal_func);
 				}
 			}
+			
+			zend_hash_index_del((HashTable*) thread->stack, thread->stack->position++);
 		}
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
@@ -250,9 +259,8 @@ size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
 	zend_bool locked;
 	size_t counted = 0;
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
-		zend_llist *stack = &thread->stack->objects;
-		if (stack)
-			counted = stack->count;
+		counted = zend_hash_num_elements(
+		    &thread->stack->objects);
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 	}
 	return counted;
@@ -326,8 +334,8 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 			pthreads_address_free(destination->address);
 
 			if (PTHREADS_IS_WORKER(destination)) {
-				zend_llist_destroy(
-					&destination->stack->objects
+				zend_hash_destroy(
+				    &destination->stack->objects
 				);
 				free(destination->stack);
 			}
@@ -358,6 +366,10 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 		return SUCCESS;
 	} else return FAILURE;
 } /* }}} */
+
+static inline void pthreads_stack_free(PTHREAD base TSRMLS_DC) {
+    free(base);
+}
 
 /* {{{ pthreads base constructor */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {
@@ -396,8 +408,11 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
 				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
-				if (base->stack)
-					zend_llist_init(&base->stack->objects, sizeof(void**), NULL, 1);
+				if (base->stack) {
+				    zend_hash_init(
+				        &base->stack->objects, 8, NULL, NULL, 1);
+                    base->stack->position = 0L;
+				}	
 			}
 		}
 	}
@@ -424,7 +439,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		pthreads_address_free(base->address);
 
 		if (PTHREADS_IS_WORKER(base)) {
-			zend_llist_destroy(
+			zend_hash_destroy(
 				&base->stack->objects
 			);
 			free(base->stack);
