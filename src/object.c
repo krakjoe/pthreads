@@ -151,18 +151,23 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
 		HashTable *stack = &thread->stack->objects;
 		if (stack) {
+	        if (!zend_hash_num_elements(stack)) {
+	            zend_hash_clean(
+	                stack);
+	            thread->stack->position = 0L;
+	        }
+	        
 		    zend_hash_next_index_insert(
 		        stack, (void**) &stackable, sizeof(struct _pthread_construct), NULL
 		    );
-			counted = zend_hash_num_elements(stack);
-			
+			counted = zend_hash_num_elements(
+			    stack);
 		}
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
 		if (counted > 0L) {
-			if (pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC)) {
-				pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC);
-			}
+			pthreads_unset_state(
+			    thread, PTHREADS_ST_WAITING TSRMLS_CC);
 		}
 	}
 	
@@ -238,7 +243,9 @@ burst:
 				}
 			}
 			
-			zend_hash_index_del((HashTable*) thread->stack, thread->stack->position++);
+			zend_hash_index_del(
+			    (HashTable*) thread->stack, thread->stack->position++);
+
 		}
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
@@ -248,8 +255,10 @@ burst:
 					goto burst;
 				}
 			} else return 0;
+		} else if (bubble == 1) {
+		    
 		}
-	}
+	} else php_printf("cannot lock %lu\n", thread->tid);
 	
 	return bubble;
 } /* }}} */
