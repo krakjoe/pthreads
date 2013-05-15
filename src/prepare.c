@@ -82,6 +82,9 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	/* initialize class data */
 	zend_initialize_class_data(prepared, 1 TSRMLS_CC);
 	
+	if (candidate->parent)
+	    prepared->parent = pthreads_prepared_entry(thread, candidate->parent TSRMLS_CC);
+	
 	/* declare interfaces */
 	if (candidate->num_interfaces) {
 		uint interface;
