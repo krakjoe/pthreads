@@ -275,8 +275,6 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 		}
 		pthreads_lock_free(store->lock TSRMLS_CC);
 		free(store);
-		
-		store = NULL;
 	}
 } /* }}} */
 

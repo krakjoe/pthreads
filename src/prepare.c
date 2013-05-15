@@ -82,10 +82,6 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	/* initialize class data */
 	zend_initialize_class_data(prepared, 1 TSRMLS_CC);
 	
-	/* perform inheritance */
-	if (candidate->parent)
-		prepared->parent = pthreads_prepared_entry(thread, candidate->parent TSRMLS_CC);
-
 	/* declare interfaces */
 	if (candidate->num_interfaces) {
 		uint interface;
@@ -447,12 +443,12 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 				/*
 				* fix scope in properties
 				*/
-				zend_hash_apply_with_argument(&prepared->properties_info, (apply_func_arg_t) pthreads_apply_property_scope, (void*) prepared TSRMLS_CC);
+				//zend_hash_apply_with_argument(&prepared->properties_info, (apply_func_arg_t) pthreads_apply_property_scope, (void*) prepared TSRMLS_CC);
 
 				/*
 				* fix scope in methods
 				*/
-				zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) prepared TSRMLS_CC);
+				//zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) prepared TSRMLS_CC);
 			}
 		}
 	}

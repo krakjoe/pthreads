@@ -131,9 +131,7 @@ size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 		    for (zend_hash_internal_pointer_reset_ex(stack, &position);
 		        zend_hash_get_current_data_ex(stack, (void**)&search, &position) == SUCCESS;
 		        zend_hash_move_forward_ex(stack, &position)) {
-		        if (work->std.ce == search->std.ce) {
-		            php_printf("found ...%p\n", search);
-		        }
+		        /* arghhh */
 		    }
 		} else zend_hash_destroy(stack);
 		remain = zend_hash_num_elements(stack);
@@ -372,10 +370,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 		return SUCCESS;
 	} else return FAILURE;
 } /* }}} */
-
-static inline void pthreads_stack_free(PTHREAD base TSRMLS_DC) {
-    free(base);
-}
 
 /* {{{ pthreads base constructor */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {

@@ -47,9 +47,11 @@ pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 
 /* {{{ free state object */
 void pthreads_state_free(pthreads_state state TSRMLS_DC) {
-	pthreads_lock_free(state->lock TSRMLS_CC);
-	pthreads_synchro_free(state->synchro TSRMLS_CC);
-	free(state);
+	if (state) {
+	    pthreads_lock_free(state->lock TSRMLS_CC);
+	    pthreads_synchro_free(state->synchro TSRMLS_CC);
+	    free(state);
+	}
 } /* }}} */
 
 /* {{{ lock state */

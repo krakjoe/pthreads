@@ -32,9 +32,9 @@
 
 /* {{{ buffer structure */
 typedef struct _pthreads_store {
-	HashTable     table;
-	pthreads_lock lock;
-	zend_ulong    next; /* idx of next anonymous member */
+	HashTable         table;
+	pthreads_lock     lock;
+	zend_ulong        next; /* idx of next anonymous member */
 } *pthreads_store; /* }}} */
 
 /* {{{ allocate and initialize buffers */

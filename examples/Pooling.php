@@ -63,7 +63,7 @@ class Pool {
 		if (count($this->workers)<$this->size) {
 			$id = count($this->workers);
 			$this->workers[$id] = new ExampleWorker(sprintf("Worker [%d]", $id));
-			$this->workers[$id]->start();
+			$this->workers[$id]->start(PTHREADS_INHERIT_NONE);
 
 			if ($this->workers[$id]->stack($stackable)) {
 				return $stackable;

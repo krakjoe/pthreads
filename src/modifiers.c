@@ -133,9 +133,11 @@ zend_bool pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char 
 
 /* {{{ free modifiers */
 void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC) {
-	zend_hash_destroy(&modifiers->modified);
-	zend_hash_destroy(&modifiers->protection);
-	free(modifiers);
+	if (modifiers) {
+	    zend_hash_destroy(&modifiers->modified);
+	    zend_hash_destroy(&modifiers->protection);
+	    free(modifiers);
+	}
 } /* }}} */
 
 /* {{{ destructor callback for modifiers (definition) hash table */
