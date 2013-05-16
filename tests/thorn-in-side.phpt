@@ -1,7 +1,7 @@
 --TEST--
 Testing thorn in my side hasn't returned
 --DESCRIPTION--
-This test verifies my nemisis has not returned
+This test verifies my nemisis has not returned (bug #48)
 --FILE--
 <?php
 class parentClass {
