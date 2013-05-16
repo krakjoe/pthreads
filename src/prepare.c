@@ -58,10 +58,10 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 #endif
 
 /* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
-static int pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC); /* }}} */
+static int pthreads_apply_method_scope(zend_function *function, PTHREAD thread TSRMLS_DC); /* }}} */
 
 /* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
-static int pthreads_apply_property_scope(zend_property_info *info, zend_class_entry *scope TSRMLS_DC); /* }}} */
+static int pthreads_apply_property_scope(zend_property_info *info, PTHREAD thread TSRMLS_DC); /* }}} */
 
 /* {{{ prepared resource destructor */
 static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry); /* }}} */
@@ -196,7 +196,9 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) function_add_ref, &tf, sizeof(zend_function));
 	
 	/* copy property info structures */
-	zend_hash_copy(&prepared->properties_info, &candidate->properties_info, (copy_ctor_func_t) pthreads_preparation_property_info_ctor, &ti, sizeof(zend_property_info));
+	zend_hash_copy(
+	    &prepared->properties_info, 
+	    &candidate->properties_info, (copy_ctor_func_t) pthreads_preparation_property_info_ctor, &ti, sizeof(zend_property_info));
 	prepared->properties_info.pDestructor = (dtor_func_t) pthreads_preparation_property_info_dtor;
 	
 	/* copy statics and defaults */
@@ -446,12 +448,12 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 				/*
 				* fix scope in properties
 				*/
-				zend_hash_apply_with_argument(&prepared->properties_info, (apply_func_arg_t) pthreads_apply_property_scope, (void*) prepared TSRMLS_CC);
+				zend_hash_apply_with_argument(&prepared->properties_info, (apply_func_arg_t) pthreads_apply_property_scope, (void*) thread TSRMLS_CC);
 
 				/*
 				* fix scope in methods
 				*/
-				zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) prepared TSRMLS_CC);
+				zend_hash_apply_with_argument(&prepared->function_table, (apply_func_arg_t) pthreads_apply_method_scope, (void*) thread TSRMLS_CC);
 			}
 		}
 	}
@@ -553,20 +555,24 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 #endif
 
 /* {{{ fix method scope for prepared entries, enabling self:: and parent:: to work */
-static int pthreads_apply_method_scope(zend_function *function, zend_class_entry *scope TSRMLS_DC) {
-	if (function && scope) {
+static int pthreads_apply_method_scope(zend_function *function, PTHREAD thread TSRMLS_DC) {
+	if (function && thread) {
 		zend_op_array *ops = (zend_op_array*) function;
 		if (ops) {
-			ops->scope = scope;
+			ops->scope = pthreads_prepared_entry(
+	            thread,  ops->scope TSRMLS_CC);
 		}
 	}
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
 
 /* {{{ fix scope for prepared entry properties, enabling private members in foreign objects to work */
-static int pthreads_apply_property_scope(zend_property_info *info, zend_class_entry *scope TSRMLS_DC) {
-	if (info && scope) {
-		info->ce = scope;
+static int pthreads_apply_property_scope(zend_property_info *info, PTHREAD thread TSRMLS_DC) {
+	if (thread && info) {
+	    if (info->ce->type == ZEND_USER_CLASS) {
+	        info->ce = pthreads_prepared_entry(
+	            thread, info->ce TSRMLS_CC);
+	    }
 	}
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */

@@ -390,6 +390,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 		object_properties_init(&(base->std), entry);
 #endif	
 
+
 		base->cls = tsrm_ls;
 		base->address = pthreads_address_alloc(base);
 		base->options = PTHREADS_INHERIT_ALL;
