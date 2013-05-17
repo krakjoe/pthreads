@@ -69,7 +69,7 @@ typedef struct _pthread_construct {
 	/*
 	* Thread Scope
 	*/
-	int scope;
+	uint scope;
 	
 	/*
 	* Thread Identity and LS
@@ -82,6 +82,16 @@ typedef struct _pthread_construct {
 	*/
 	ulong cid;
 	void ***cls;
+	
+	/*
+	* Store Hold
+	*/
+	zend_bool hold;
+	
+	/*
+	* Options
+	*/
+	zend_ulong options;
 	
 	/*
 	*  Thread Lock
@@ -122,16 +132,6 @@ typedef struct _pthread_construct {
 	* Shared Resources
 	**/
 	pthreads_resources resources;
-
-	/*
-	* Store Hold
-	*/
-	zend_bool hold;
-	
-	/*
-	* Options
-	*/
-	zend_ulong options;
 } *PTHREAD;
 
 /* {{{ comparison function */

@@ -478,6 +478,7 @@ static void pthreads_base_free(void *arg TSRMLS_DC) {
 		free(
 			base
 		);
+		base = NULL;
 	}	
 } /* }}} */
 
@@ -559,7 +560,7 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 			(char*)threaded->address->serial, 
 			threaded->address->length
 		);
-		(*blength) = threaded->address->length;
+		(*blength) = threaded->address->length+1;
 		
 		return SUCCESS;
 	}
