@@ -63,6 +63,7 @@
    <file name="tests/included-files.phpt" role="test" />
    <file name="tests/ini.phpt" role="test" />
    <file name="tests/interface.phpt" role="test" />
+   <file name="tests/isset-unset.phpt" role="test" />
    <file name="tests/mutex.phpt" role="test" />
    <file name="tests/norefs.phpt" role="test" />
    <file name="tests/normalize-members.phpt" role="test" />
