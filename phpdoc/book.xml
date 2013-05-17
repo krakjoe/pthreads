@@ -60,11 +60,19 @@
  Static Members:
  When a new context is created ( Thread or Worker ), only the simple members of static classes are copied, no resources or objects are copied into the threading context from static class members. This allows them to function as a kind of thread local storage. For example, upon starting the context, a class whose static members include connection information for a database server, and the connection itself, will only have the simple connection information copied, not the connection. Allowing the new context to initiate a connection in the same way as the context that created it, storing the connection in the same place without affecting the original context.
   </para>
+  
+  <caution>
+   <para>
+    Class entry default do not call handlers to set values, because handlers are for objects in particular, not classes. So when you set defaults at the entry level they are not set in the object store. Set defaults in constructors.
+   </para>
+  </caution>
+  
   <caution>
   <para>
  When print_r, var_dump and other object debug functions are executed, they do not include recursion protection.
   </para>
   </caution>
+  
   <note>
    <para>
  Resources:
