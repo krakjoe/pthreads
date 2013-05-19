@@ -41,7 +41,10 @@ Yes !! Windows support is offered thanks to the pthread-w32 library.
 
 Releases for Windows can be found: http://windows.php.net/downloads/pecl/releases/pthreads/
 
-_Note: pthreadVC2.dll (included with the Windows releases) must be in the same directory as php.exe_
+##### Simple Windows Installation
+
+* Add `pthreadVC2.dll` (included with the Windows releases) to the same directory as `php.exe` eg. `C:\xampp\php`
+* Add `php_pthreads.dll` to PHP extention folder eg. `C:\xampp\php\ext`
 
 ### Mac OSX Support
 
