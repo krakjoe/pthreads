@@ -41,7 +41,7 @@ Yes !! Windows support is offered thanks to the pthread-w32 library.
 
 Releases for Windows can be found: http://windows.php.net/downloads/pecl/releases/pthreads/
 
-Snapshots for Windows can (sometimes) be found: http://pthreads.org/snapshots/
+_Note: pthreadVC2.dll (included with the Windows releases) must be in the same directory as php.exe_
 
 ### Mac OSX Support
 
