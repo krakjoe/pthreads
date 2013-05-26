@@ -3,9 +3,8 @@
 * NOTES:
 *	You can and should use a Stackable as a base object for all arrays you wish to pass to other threads
 *	Members of arrays that are themselves an array should also be a derivative of Stackable ( or another threaded object ), though it's not strictly necessary.
-*	Annonymous members are unsupported ([]=""), keeping a counter in the array object solves the problem and is completely safe
+*	Annonymous members are supported ([] assignments)
 *	Even if 100(0) threads are accessing the array, nothing bad will happen
-*	Code that attempts to write an anonymous member will generate an E_WARNING, no member will be set
 *	Can anyone think of anything else ?
 */
 
@@ -24,7 +23,6 @@ $hammers = 500;
 *		because these arrays are meant to provide efficiency using the ArrayAccess interface is unsuitable.
 */
 class StackableArray extends Stackable {
-	public $counter = 0;
 
 	/*
 	* Always think about caching these types of objects, don't waste the run method or your workers
