@@ -71,6 +71,7 @@
    <file name="tests/null-member-crash.phpt" role="test" />
    <file name="tests/oomethods.phpt" role="test" />
    <file name="tests/selective-inheritance.phpt" role="test" />
+   <file name="tests/shift-pop.phpt" role="test" />
    <file name="tests/stateful-fatalities.phpt" role="test" />
    <file name="tests/staticmethods.phpt" role="test" />
    <file name="tests/statics.phpt" role="test" />

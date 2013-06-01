@@ -34,6 +34,8 @@ PHP_METHOD(Thread, lock);
 PHP_METHOD(Thread, unlock);
 
 PHP_METHOD(Thread, merge);
+PHP_METHOD(Thread, shift);
+PHP_METHOD(Thread, pop);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -88,6 +90,12 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_merge, 0, 0, 1)
     ZEND_ARG_INFO(0, overwrite)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_shift, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_pop, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_thread_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREAD
@@ -109,6 +117,8 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, unlock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, merge, Thread_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, shift, Thread_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, pop, Thread_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Thread::start([long $options = PTHREADS_INHERIT_ALL])
@@ -326,6 +336,28 @@ PHP_METHOD(Thread, merge)
     }
     
 	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
+} /* }}} */
+
+/* {{{ proto mixed Thread::shift()
+	Will shift the first member from the object */
+PHP_METHOD(Thread, shift) 
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+    
+    pthreads_store_shift(getThis(), &return_value TSRMLS_CC);
+} /* }}} */
+
+/* {{{ proto mixed Thread::pop()
+	Will pop the last member from the object */
+PHP_METHOD(Thread, pop) 
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+    
+    pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif

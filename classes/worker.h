@@ -29,6 +29,8 @@ PHP_METHOD(Worker, getStacked);
 PHP_METHOD(Worker, getThreadId);
 PHP_METHOD(Worker, getCreatorId);
 PHP_METHOD(Worker, merge);
+PHP_METHOD(Worker, shift);
+PHP_METHOD(Worker, pop);
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -67,6 +69,12 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_merge, 0, 0, 1)
 	ZEND_ARG_INFO(0, overwrite)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Worker_shift, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Worker_pop, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_worker_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_WORKER
@@ -89,6 +97,9 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, isTerminated, Worker_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	
 	PHP_ME(Worker, merge, Worker_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	
+	PHP_ME(Worker, shift, Worker_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Worker, pop, Worker_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Worker::start([long $options = PTHREADS_INHERIT_ALL])
@@ -273,6 +284,28 @@ PHP_METHOD(Worker, merge)
     }
     
 	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
+} /* }}} */
+
+/* {{{ proto mixed Worker::shift()
+	Will shift the first member from the object */
+PHP_METHOD(Worker, shift) 
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+    
+    pthreads_store_shift(getThis(), &return_value TSRMLS_CC);
+} /* }}} */
+
+/* {{{ proto mixed Worker::pop()
+	Will pop the last member from the object */
+PHP_METHOD(Worker, pop) 
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+    
+    pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif

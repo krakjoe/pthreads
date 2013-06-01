@@ -26,6 +26,8 @@ PHP_METHOD(Stackable, synchronized);
 PHP_METHOD(Stackable, lock);
 PHP_METHOD(Stackable, unlock);
 PHP_METHOD(Stackable, merge);
+PHP_METHOD(Stackable, shift);
+PHP_METHOD(Stackable, pop);
 
 ZEND_BEGIN_ARG_INFO_EX(Stackable_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -57,6 +59,12 @@ ZEND_BEGIN_ARG_INFO_EX(Stackable_merge, 0, 0, 1)
     ZEND_ARG_INFO(0, overwrite)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Stackable_shift, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Stackable_pop, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_stackable_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_STACKABLE
@@ -72,6 +80,8 @@ zend_function_entry pthreads_stackable_methods[] = {
 	PHP_ME(Stackable, lock, Stackable_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, unlock, Stackable_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, merge, Stackable_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Stackable, shift, Stackable_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Stackable, pop, Stackable_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Stackable::wait([long timeout]) 
@@ -182,6 +192,28 @@ PHP_METHOD(Stackable, merge)
     }
     
 	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
+} /* }}} */
+
+/* {{{ proto mixed Stackable::shift()
+	Will shift the first member from the object */
+PHP_METHOD(Stackable, shift) 
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+    
+    pthreads_store_shift(getThis(), &return_value TSRMLS_CC);
+} /* }}} */
+
+/* {{{ proto mixed Stackable::pop()
+	Will pop the last member from the object */
+PHP_METHOD(Stackable, pop) 
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+    
+    pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif

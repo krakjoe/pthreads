@@ -67,6 +67,12 @@ int pthreads_store_separate(zval * pzval, zval **seperated, zend_bool allocate, 
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC); /* }}} */
 
+/* {{{ store shift */
+int pthreads_store_shift(zval *object, zval **member TSRMLS_DC); /* }}} */
+
+/* {{{ store pop */
+int pthreads_store_pop(zval *object, zval **member TSRMLS_DC); /* }}} */
+
 /* {{{ count properties */
 int pthreads_store_count(zval *object, long *count TSRMLS_DC); /* }}} */
 

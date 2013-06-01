@@ -221,6 +221,76 @@ int pthreads_store_count(zval *object, long *count TSRMLS_DC) {
    return SUCCESS;
 } /* }}} */
 
+/* {{{ shift member */
+int pthreads_store_shift(zval *object, zval **member TSRMLS_DC) {
+   PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
+   
+   if (pthreads) {
+    if (pthreads_store_lock(object TSRMLS_CC)) {
+        pthreads_storage *storage;
+        HashPosition position;
+        HashTable *table = &pthreads->store->table;
+        
+        zend_hash_internal_pointer_reset_ex(table, &position);
+        
+        if (zend_hash_get_current_data_ex(table, (void**) &storage, &position) == SUCCESS) {
+            char *key;
+            uint klen;
+            ulong idx;
+            
+            pthreads_store_convert(storage, *member TSRMLS_CC);
+            
+            zend_hash_del_key_or_index(
+                table, key, klen, idx, zend_hash_get_current_key_ex(
+                    table, &key, &klen, &idx, 0, &position
+                ) == HASH_KEY_IS_STRING ? HASH_DEL_KEY : HASH_DEL_INDEX);
+            
+        } else ZVAL_NULL(*member);
+        
+        pthreads_store_unlock(object TSRMLS_CC);
+        
+        return SUCCESS;
+    }
+   }
+   
+   return FAILURE;
+} /* }}} */
+
+/* {{{ pop member */
+int pthreads_store_pop(zval *object, zval **member TSRMLS_DC) {
+   PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
+   
+   if (pthreads) {
+    if (pthreads_store_lock(object TSRMLS_CC)) {
+        pthreads_storage *storage;
+        HashPosition position;
+        HashTable *table = &pthreads->store->table;
+        
+        zend_hash_internal_pointer_end_ex(table, &position);
+        
+        if (zend_hash_get_current_data_ex(table, (void**) &storage, &position) == SUCCESS) {
+            char *key;
+            uint klen;
+            ulong idx;
+            
+            pthreads_store_convert(storage, *member TSRMLS_CC);
+            
+            zend_hash_del_key_or_index(
+                table, key, klen, idx, zend_hash_get_current_key_ex(
+                    table, &key, &klen, &idx, 0, &position
+                ) == HASH_KEY_IS_STRING ? HASH_DEL_KEY : HASH_DEL_INDEX);
+            
+        } else ZVAL_NULL(*member);
+        
+        pthreads_store_unlock(object TSRMLS_CC);
+        
+        return SUCCESS;
+    }
+   }
+   
+   return FAILURE;
+} /* }}} */
+
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 
