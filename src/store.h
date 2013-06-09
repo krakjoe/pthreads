@@ -70,6 +70,9 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC); /* 
 /* {{{ store shift */
 int pthreads_store_shift(zval *object, zval **member TSRMLS_DC); /* }}} */
 
+/* {{{ store chunk */
+int pthreads_store_chunk(zval *object, long size, zval **chunk TSRMLS_DC); /* }}} */
+
 /* {{{ store pop */
 int pthreads_store_pop(zval *object, zval **member TSRMLS_DC); /* }}} */
 

@@ -36,6 +36,7 @@ PHP_METHOD(Thread, unlock);
 PHP_METHOD(Thread, merge);
 PHP_METHOD(Thread, shift);
 PHP_METHOD(Thread, pop);
+PHP_METHOD(Thread, chunk);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -96,6 +97,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_pop, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_chunk, 0, 0, 1)
+    ZEND_ARG_INFO(0, size)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_thread_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREAD
@@ -119,6 +124,7 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, merge, Thread_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, shift, Thread_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, pop, Thread_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, chunk, Thread_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Thread::start([long $options = PTHREADS_INHERIT_ALL])
@@ -358,6 +364,19 @@ PHP_METHOD(Thread, pop)
     }
     
     pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
+} /* }}} */
+
+/* {{{ proto mixed Thread::chunk(integer $size)
+	Will shift the first member from the object */
+PHP_METHOD(Thread, chunk) 
+{
+    long size;
+    
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &size) != SUCCESS) {
+        return;
+    }
+    
+    pthreads_store_chunk(getThis(), size, &return_value TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif

@@ -256,6 +256,52 @@ int pthreads_store_shift(zval *object, zval **member TSRMLS_DC) {
    return FAILURE;
 } /* }}} */
 
+/* {{{ store chunk */
+int pthreads_store_chunk(zval *object, long size, zval **chunk TSRMLS_DC) {
+   PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
+   
+   if (pthreads) {
+    if (pthreads_store_lock(object TSRMLS_CC)) {
+        pthreads_storage *storage;
+        HashPosition position;
+        HashTable *table = &pthreads->store->table;
+        
+        zend_hash_internal_pointer_reset_ex(table, &position);
+        
+        array_init(*chunk);
+        
+        while ((zend_hash_num_elements(Z_ARRVAL_PP(chunk)) < size) &&
+               (zend_hash_get_current_data_ex(table, (void**) &storage, &position) == SUCCESS)) {
+            char *key;
+            uint klen;
+            ulong idx;
+            zval *member;
+            
+            ALLOC_INIT_ZVAL(member);
+            
+            pthreads_store_convert(storage, member TSRMLS_CC);
+            
+            zend_hash_del_key_or_index(
+                table, key, klen, idx, zend_hash_get_current_key_ex(
+                    table, &key, &klen, &idx, 0, &position
+                ) == HASH_KEY_IS_STRING ? HASH_DEL_KEY : HASH_DEL_INDEX);
+            
+            zend_hash_next_index_insert(
+                Z_ARRVAL_PP(chunk), (void**)&member, sizeof(zval), NULL);
+            
+            zend_hash_move_forward_ex(table, &position);
+            
+        }
+        
+        pthreads_store_unlock(object TSRMLS_CC);
+        
+        return SUCCESS;
+    }
+   }
+   
+   return FAILURE;
+} /* }}} */
+
 /* {{{ pop member */
 int pthreads_store_pop(zval *object, zval **member TSRMLS_DC) {
    PTHREAD pthreads = PTHREADS_FETCH_FROM(object);

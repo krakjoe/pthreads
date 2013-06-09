@@ -31,6 +31,7 @@ PHP_METHOD(Worker, getCreatorId);
 PHP_METHOD(Worker, merge);
 PHP_METHOD(Worker, shift);
 PHP_METHOD(Worker, pop);
+PHP_METHOD(Worker, chunk);
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -75,6 +76,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_pop, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Worker_chunk, 0, 0, 1)
+    ZEND_ARG_INFO(0, size)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_worker_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_WORKER
@@ -100,6 +105,7 @@ zend_function_entry pthreads_worker_methods[] = {
 	
 	PHP_ME(Worker, shift, Worker_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, pop, Worker_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Worker, chunk, Worker_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Worker::start([long $options = PTHREADS_INHERIT_ALL])
@@ -306,6 +312,19 @@ PHP_METHOD(Worker, pop)
     }
     
     pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
+} /* }}} */
+
+/* {{{ proto mixed Worker::chunk(integer $size)
+	Will shift the first member from the object */
+PHP_METHOD(Worker, chunk) 
+{
+    long size;
+    
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &size) != SUCCESS) {
+        return;
+    }
+    
+    pthreads_store_chunk(getThis(), size, &return_value TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif
