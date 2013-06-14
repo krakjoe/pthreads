@@ -91,7 +91,7 @@ static inline void pthreads_object_iterator_current_data(zend_object_iterator* i
     }
 }
 
-#if PHP_VERSION_ID > 50500
+#if PHP_VERSION_ID >= 50500
 static inline void pthreads_object_iterator_current_key(zend_object_iterator* iterator, zval* key TSRMLS_DC) {
     pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
     char *skey = NULL;
@@ -101,7 +101,7 @@ static inline void pthreads_object_iterator_current_key(zend_object_iterator* it
     switch (zend_hash_get_current_key_ex(
         &intern->properties, &skey, &sklen, &ukey, 0, &intern->position)) {
         case HASH_KEY_IS_STRING: {
-            ZVAL_STRINGL(key, skey, sklen, 1);
+            ZVAL_STRINGL(key, skey, sklen - 1, 1);
         } break;
             
         case HASH_KEY_IS_LONG: {
