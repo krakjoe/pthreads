@@ -25,7 +25,7 @@
 static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator TSRMLS_DC);
 static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator TSRMLS_DC);
 static inline void pthreads_object_iterator_current_data(zend_object_iterator* iterator, zval ***data TSRMLS_DC);
-#if PHP_VERSION_ID > 50500
+#if PHP_VERSION_ID >= 50500
 static inline void pthreads_object_iterator_current_key(zend_object_iterator* iterator, zval *key TSRMLS_DC);
 #else
 static inline int pthreads_object_iterator_current_key(zend_object_iterator* iterator, char **key, uint *klen, ulong *ukey TSRMLS_DC);
