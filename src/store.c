@@ -257,7 +257,7 @@ int pthreads_store_shift(zval *object, zval **member TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ store chunk */
-int pthreads_store_chunk(zval *object, long size, zval **chunk TSRMLS_DC) {
+int pthreads_store_chunk(zval *object, long size, zend_bool preserve, zval **chunk TSRMLS_DC) {
    PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
    
    if (pthreads) {
@@ -274,20 +274,31 @@ int pthreads_store_chunk(zval *object, long size, zval **chunk TSRMLS_DC) {
                (zend_hash_get_current_data_ex(table, (void**) &storage, &position) == SUCCESS)) {
             char *key;
             uint klen;
-            ulong idx;
+            ulong idx = 0L;
             zval *member;
+            int ktype = 0;
             
             ALLOC_INIT_ZVAL(member);
             
             pthreads_store_convert(storage, member TSRMLS_CC);
             
             zend_hash_del_key_or_index(
-                table, key, klen, idx, zend_hash_get_current_key_ex(
+                table, key, klen, idx, (ktype = zend_hash_get_current_key_ex(
                     table, &key, &klen, &idx, 0, &position
-                ) == HASH_KEY_IS_STRING ? HASH_DEL_KEY : HASH_DEL_INDEX);
+                )) == HASH_KEY_IS_STRING ? HASH_DEL_KEY : HASH_DEL_INDEX);
             
-            zend_hash_next_index_insert(
-                Z_ARRVAL_PP(chunk), (void**)&member, sizeof(zval), NULL);
+            if (!preserve) {
+                zend_hash_next_index_insert(
+                    Z_ARRVAL_PP(chunk), (void**)&member, sizeof(zval), NULL);
+            } else {
+                if (ktype == HASH_KEY_IS_STRING) {
+                    zend_hash_update(
+                        Z_ARRVAL_PP(chunk), key, klen, (void**) &member, sizeof(zval), NULL
+                    );
+                } else zend_hash_index_insert(
+                    Z_ARRVAL_PP(chunk), idx, (void**)&member, sizeof(zval), NULL
+                );
+            }
             
             zend_hash_move_forward_ex(table, &position);
             

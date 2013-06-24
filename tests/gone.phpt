@@ -24,8 +24,6 @@ $t->join();
 
 var_dump($t->o);
 ?>
---EXPECTF--
-object(O)#%d (%d) {
-}
+--EXPECT--
 
 

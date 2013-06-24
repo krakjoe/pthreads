@@ -314,17 +314,18 @@ PHP_METHOD(Worker, pop)
     pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
 } /* }}} */
 
-/* {{{ proto mixed Worker::chunk(integer $size)
+/* {{{ proto mixed Worker::chunk(integer $size [, boolean $preserve])
 	Will shift the first member from the object */
 PHP_METHOD(Worker, chunk) 
 {
     long size;
+    zend_bool preserve = 0;
     
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &size) != SUCCESS) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|b", &size, &preserve) != SUCCESS) {
         return;
     }
     
-    pthreads_store_chunk(getThis(), size, &return_value TSRMLS_CC);
+    pthreads_store_chunk(getThis(), size, preserve, &return_value TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif
