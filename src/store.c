@@ -295,7 +295,7 @@ int pthreads_store_chunk(zval *object, long size, zend_bool preserve, zval **chu
                     zend_hash_update(
                         Z_ARRVAL_PP(chunk), key, klen, (void**) &member, sizeof(zval), NULL
                     );
-                } else zend_hash_index_insert(
+                } else zend_hash_index_update(
                     Z_ARRVAL_PP(chunk), idx, (void**)&member, sizeof(zval), NULL
                 );
             }
