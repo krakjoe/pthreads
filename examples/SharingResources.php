@@ -4,7 +4,7 @@
 *
 * Some helpful notes ...
 *	If some logic crashes, try:
-		introduce a mutex  
+		introduce a mutex
 		free results explicitly in the thread that queried for them
 		try another database driver
 		try another database server
@@ -21,36 +21,49 @@
 *	Please remember that the resources as defined in C were never meant to be shared, they are designed with this in mind, and most
 *	types of resource WILL have problems.
 */
-class MyShared extends Thread {
-	public function __construct($mysql, $mutex = null){
-		$this->mysql = $mysql;
-		$this->mutex = $mutex;
-	}
+class MyShared extends Thread
+{
+    public function __construct($mysql, $mutex = null)
+    {
+        $this->mysql = $mysql;
+        $this->mutex = $mutex;
+    }
 
-	public function run(){
-		if ($this->mutex)
-			printf("LOCK(%d): %d\n", $this->getThreadId(), Mutex::lock($this->mutex));
-
-		if (($result = mysqli_query($this->mysql, "SHOW PROCESSLIST;"))) {
-			while(($row = mysqli_fetch_assoc($result))) {
-				print_r($row);
-			}
-		}
-
-		if ($this->mutex)
-			printf("UNLOCK(%d): %d\n", $this->getThreadId(), Mutex::unlock($this->mutex));
-	}
+    /**
+     * {@inheritdoc}
+     * @see Thread::run()
+     */
+    public function run()
+    {
+        if ($this->mutex) {
+            printf("LOCK(%d): %d\n", $this->getThreadId(), Mutex::lock($this->mutex));
+        }
+        if (($result = mysqli_query($this->mysql, "SHOW PROCESSLIST;"))) {
+            while (($row = mysqli_fetch_assoc($result))) {
+                print_r($row);
+            }
+        }
+        if ($this->mutex){
+            printf("UNLOCK(%d): %d\n", $this->getThreadId(), Mutex::unlock($this->mutex));
+        }
+    }
 }
-
 
 $mysql = mysqli_connect("127.0.0.1", "root", "");
 if ($mysql) {
-	$mutex = Mutex::create();
-	$instances = array(new MyShared($mysql, $mutex), new MyShared($mysql, $mutex), new MyShared($mysql, $mutex));
-	foreach($instances as $instance)
-		$instance->start();
-	foreach($instances as $instance)
-		$instance->join();
-	Mutex::destroy($mutex);
+    $mutex = Mutex::create();
+
+    $instances = array(
+        new MyShared($mysql, $mutex),
+        new MyShared($mysql, $mutex),
+        new MyShared($mysql, $mutex)
+    );
+
+    foreach ($instances as $instance)
+        $instance->start();
+
+    foreach ($instances as $instance)
+        $instance->join();
+
+    Mutex::destroy($mutex);
 }
-?>
