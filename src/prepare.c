@@ -77,10 +77,12 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	prepared->name = estrndup(candidate->name, candidate->name_length);
 	prepared->name_length = candidate->name_length;
 	prepared->type = candidate->type;
-	prepared->ce_flags = candidate->ce_flags;
 	
 	/* initialize class data */
 	zend_initialize_class_data(prepared, 1 TSRMLS_CC);
+	
+	/* set ce flags (reset by initialize) */
+	prepared->ce_flags |= candidate->ce_flags;
 	
 	if (candidate->parent)
 	    prepared->parent = pthreads_prepared_entry(thread, candidate->parent TSRMLS_CC);
@@ -308,12 +310,14 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 #else
 		char *lcname = (char*) malloc(candidate->name_length+1);
 #endif	
+        
 		if (lcname != NULL) {
 			/* lowercase name for lookup/insertion */
 			zend_str_tolower_copy(lcname, candidate->name, candidate->name_length);
 
 			/* perform lookup for existing class */
 			if (zend_hash_find(CG(class_table), lcname, candidate->name_length+1, (void**)&searched)!=SUCCESS) {
+
 			    /* create a new user class for this context */
 	            prepared = pthreads_copy_entry(
 	                thread, candidate TSRMLS_CC);
