@@ -18,6 +18,7 @@ class UserThread extends Thread {
 
 $thread = new UserThread;
 $thread->start();
+?>
 --EXPECT--
 string(11) "called_func"
 array(1) {
