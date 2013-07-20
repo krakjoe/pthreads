@@ -341,7 +341,7 @@ PHP_METHOD(Thread, merge)
         return;
     }
     
-	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
+	RETURN_BOOL((pthreads_store_merge(PTHREADS_FETCH_FROM(getThis()), getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
 } /* }}} */
 
 /* {{{ proto mixed Thread::shift()
