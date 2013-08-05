@@ -6,11 +6,11 @@ class MyWorkerThread extends Thread {
 		$this->limit = $limit;
 		$this->mutex = $mutex;
 	}
-	
+
 	public function run(){
 		if($this->mutex)
 			$locked=Mutex::lock($this->mutex);
-		printf("%s#%lu:<-", $locked?"Y":"N", $this->getThreadId());
+		printf("%s#%lu:<-", !empty($locked)?"Y":"N", $this->getThreadId());
 		$i=0;
 		while($i++<$this->limit){
 			echo ".";
@@ -27,7 +27,7 @@ $timer = microtime(true);
 $mutex = Mutex::create(true);
 /* create workers */
 $workers = array();
-for($i=0;$i<50;$i++){ 
+for($i=0;$i<50;$i++){
 	$workers[$i]=new MyWorkerThread(rand(30, 100), $mutex);
 	/* they cannot go anywhere, I have the mutex */
 	$workers[$i]->start();
