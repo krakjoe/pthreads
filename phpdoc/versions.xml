@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
+<!-- $Revision: 330432 $ -->
 <!--
   Do NOT translate this file
 -->
 
 <versions>
-  <!-- Methods -->
+ <!-- Methods -->
+
+ <function name='thread' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::start' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::run' from='PECL pthreads &gt;= 0.34'/>
  <function name='thread::wait' from='PECL pthreads &gt;= 0.34'/>
@@ -21,6 +23,12 @@
  <function name='thread::synchronized' from='PECL pthreads &gt;= 0.40'/>
  <function name='thread::lock' from='PECL pthreads &gt;= 0.40'/>
  <function name='thread::unlock' from='PECL pthreads &gt;= 0.40'/>
+ <function name='thread::shift' from='PECL pthreads &gt;= 0.45'/>
+ <function name='thread::pop' from='PECL pthreads &gt;= 0.45'/>
+ <function name='thread::merge' from='PECL pthreads &gt;= 0.45'/>
+ <function name='thread::chunk' from='PECL pthreads &gt;= 0.45'/>
+
+ <function name='worker' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::start' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::run' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::shutdown' from='PECL pthreads &gt;= 0.37'/>
@@ -30,8 +38,13 @@
  <function name='worker::unstack' from='PECL pthreads &gt;= 0.36'/>
  <function name='worker::isshutdown' from='PECL pthreads &gt;= 0.37'/>
  <function name='worker::isworking' from='PECL pthreads &gt;= 0.37'/>
- <function name='worker::isterminated' from='PECL pthreads &gt;= 0.45'/>
  <function name='worker::getstacked' from='PECL pthreads &gt;= 0.36'/>
+ <function name='worker::shift' from='PECL pthreads &gt;= 0.45'/>
+ <function name='worker::pop' from='PECL pthreads &gt;= 0.45'/>
+ <function name='worker::merge' from='PECL pthreads &gt;= 0.45'/>
+ <function name='worker::chunk' from='PECL pthreads &gt;= 0.45'/>
+
+ <function name='stackable' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::run' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::wait' from='PECL pthreads &gt;= 0.36'/>
  <function name='stackable::notify' from='PECL pthreads &gt;= 0.36'/>
@@ -41,11 +54,19 @@
  <function name='stackable::synchronized' from='PECL pthreads &gt;= 0.40'/>
  <function name='stackable::lock' from='PECL pthreads &gt;= 0.40'/>
  <function name='stackable::unlock' from='PECL pthreads &gt;= 0.40'/>
+ <function name='stackable::shift' from='PECL pthreads &gt;= 0.45'/>
+ <function name='stackable::pop' from='PECL pthreads &gt;= 0.45'/>
+ <function name='stackable::merge' from='PECL pthreads &gt;= 0.45'/>
+ <function name='stackable::chunk' from='PECL pthreads &gt;= 0.45'/>
+ 
+ <function name='mutex' from='PECL pthreads &gt;= 0.34'/>
  <function name='mutex::create' from='PECL pthreads &gt;= 0.34'/>
  <function name='mutex::lock' from='PECL pthreads &gt;= 0.34'/>
  <function name='mutex::trylock' from='PECL pthreads &gt;= 0.34'/>
  <function name='mutex::unlock' from='PECL pthreads &gt;= 0.34'/>
  <function name='mutex::destroy' from='PECL pthreads &gt;= 0.34'/>
+
+ <function name='cond' from='PECL pthreads &gt;= 0.34'/>
  <function name='cond::create' from='PECL pthreads &gt;= 0.34'/>
  <function name='cond::signal' from='PECL pthreads &gt;= 0.34'/>
  <function name='cond::wait' from='PECL pthreads &gt;= 0.34'/>

@@ -211,7 +211,7 @@ PHP_METHOD(Stackable, shift)
     pthreads_store_shift(getThis(), &return_value TSRMLS_CC);
 } /* }}} */
 
-/* {{{ proto mixed Stackable::chunk(integer $size [, boolean $preserve])
+/* {{{ proto mixed Stackable::chunk(integer $size [, boolean $preserve = false])
 	Will shift the first member from the object */
 PHP_METHOD(Stackable, chunk) 
 {
