@@ -55,12 +55,14 @@ typedef struct _pthreads_address {
 } *pthreads_address; /* }}} */
 
 /* {{{ error structure */
-typedef struct _pthreads_error {
-    unsigned char *file;
-    unsigned char *clazz;
-    unsigned char *method;
-    uint           line;
-} *pthreads_error; /* }}} */
+typedef struct _pthreads_error *pthreads_error;
+struct _pthreads_error {
+    unsigned char           *file;
+    unsigned char           *clazz;
+    unsigned char           *method;
+    uint                    line;
+    struct _pthreads_error  *next;
+}; /* }}} */
 
 /* {{{ thread structure */
 typedef struct _pthread_construct {
@@ -140,6 +142,11 @@ typedef struct _pthread_construct {
 	* Threading Error
 	*/
     pthreads_error error;
+    
+    /*
+    * Debug Flag
+    */
+    zend_bool debug;
 
 	/**
 	* Shared Resources

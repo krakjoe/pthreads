@@ -791,9 +791,6 @@ static void * pthreads_routine(void *arg) {
 									        current->state, PTHREADS_ST_ERROR TSRMLS_CC);
 									    /* save error information */
 									    pthreads_error_save(current TSRMLS_CC);
-									    
-									    php_printf("Thread Exited %s::%s in %s on line %lu\n",
-									        current->error->clazz, current->error->method, current->error->file, current->error->line);
 								    }
 								    
 								    /* unset running for waiters */
