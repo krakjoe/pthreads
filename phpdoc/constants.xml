@@ -72,7 +72,7 @@
     </simpara>
    </listitem>
   </varlistentry>
-  <varlistentry xml:id="constant.pthreads_inherit_all">
+  <varlistentry xml:id="constant.pthreads_inherit_none">
    <term>
     <constant>PTHREADS_INHERIT_NONE</constant>
     (<type>integer</type>)

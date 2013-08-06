@@ -22,6 +22,7 @@ PHP_METHOD(Stackable, notify);
 PHP_METHOD(Stackable, isRunning);
 PHP_METHOD(Stackable, isWaiting);
 PHP_METHOD(Stackable, isTerminated);
+PHP_METHOD(Stackable, getTerminationInfo);
 PHP_METHOD(Stackable, synchronized);
 PHP_METHOD(Stackable, lock);
 PHP_METHOD(Stackable, unlock);
@@ -43,6 +44,8 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Stackable_isWaiting, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Stackable_isTerminated, 0, 0, 0)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(Stackable_getTerminationInfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Stackable_synchronized, 0, 0, 1)
@@ -81,6 +84,7 @@ zend_function_entry pthreads_stackable_methods[] = {
 	PHP_ME(Stackable, isRunning, Stackable_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, isWaiting, Stackable_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, isTerminated, Stackable_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Stackable, getTerminationInfo, Stackable_getTerminationInfo, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, synchronized, Stackable_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, lock, Stackable_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, unlock, Stackable_unlock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -148,6 +152,37 @@ PHP_METHOD(Stackable, isTerminated)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC));
+	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+} /* }}} */
+
+/* {{{ proto boolean Stackable::getTerminationInfo() 
+	Will return information concerning the location of the termination to aid debugging */
+PHP_METHOD(Stackable, getTerminationInfo)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+	
+	if (thread) {
+		if (pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC)) {
+		    array_init(return_value);
+		    
+		    if (thread->error->clazz) {
+		        add_assoc_string(
+		            return_value, "scope", thread->error->clazz, 1);       
+		    }
+		    
+		    if (thread->error->method) {
+		        add_assoc_string(
+		            return_value, "function", thread->error->method, 1);
+		    }
+		    
+		    if (thread->error->file) {
+		        add_assoc_string(
+		            return_value, "file", thread->error->file, 1);
+		        add_assoc_long(return_value, "line", thread->error->line);
+		    }
+		} else {
+		    RETURN_FALSE;
+		}
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
 } /* }}} */
 

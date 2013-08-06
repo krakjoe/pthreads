@@ -54,6 +54,14 @@ typedef struct _pthreads_address {
 	size_t length;
 } *pthreads_address; /* }}} */
 
+/* {{{ error structure */
+typedef struct _pthreads_error {
+    unsigned char *file;
+    unsigned char *clazz;
+    unsigned char *method;
+    uint           line;
+} *pthreads_error; /* }}} */
+
 /* {{{ thread structure */
 typedef struct _pthread_construct {
 	/*
@@ -127,6 +135,11 @@ typedef struct _pthread_construct {
 	* Thread Address
 	*/
 	pthreads_address address;
+	
+	/*
+	* Threading Error
+	*/
+    pthreads_error error;
 
 	/**
 	* Shared Resources
