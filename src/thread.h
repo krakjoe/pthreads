@@ -61,7 +61,6 @@ struct _pthreads_error {
     unsigned char           *clazz;
     unsigned char           *method;
     uint                    line;
-    struct _pthreads_error  *next;
 }; /* }}} */
 
 /* {{{ thread structure */
@@ -142,11 +141,6 @@ typedef struct _pthread_construct {
 	* Threading Error
 	*/
     pthreads_error error;
-    
-    /*
-    * Debug Flag
-    */
-    zend_bool debug;
 
 	/**
 	* Shared Resources

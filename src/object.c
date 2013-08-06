@@ -120,10 +120,10 @@ zend_bool pthreads_unset_state(PTHREAD thread, int mask TSRMLS_DC){
 /* {{{ save the current error for object */
 static inline void pthreads_error_save(PTHREAD thread TSRMLS_DC) {
     if (EG(active_op_array)) {
-        /* deal with scope stuff */
-        {
-            zend_function *active = (zend_function*) EG(active_op_array);
+        zend_function *active = (zend_function*) EG(active_op_array);
         
+        /* deal with scope stuff */
+        if (active) {
             if (active->common.scope) {
                 thread->error->clazz = strndup(active->common.scope->name, strlen(active->common.scope->name));
             } else thread->error->clazz = NULL;
