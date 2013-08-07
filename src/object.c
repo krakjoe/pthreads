@@ -118,19 +118,19 @@ zend_bool pthreads_unset_state(PTHREAD thread, int mask TSRMLS_DC){
 } /* }}} */
 
 /* {{{ save the current error for object */
-static inline void pthreads_error_save(PTHREAD thread TSRMLS_DC) {
+static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
     if (EG(active_op_array)) {
         zend_function *active = (zend_function*) EG(active_op_array);
         
         /* deal with scope stuff */
         if (active) {
             if (active->common.scope) {
-                thread->error->clazz = strndup(active->common.scope->name, strlen(active->common.scope->name));
-            } else thread->error->clazz = NULL;
+                error->clazz = strndup(active->common.scope->name, strlen(active->common.scope->name));
+            } else error->clazz = NULL;
             
             if (active->common.function_name) {
-                thread->error->method = strndup(active->common.function_name, strlen(active->common.function_name));
-            } else thread->error->method = NULL;
+                error->method = strndup(active->common.function_name, strlen(active->common.function_name));
+            } else error->method = NULL;
         }
         
         /* deal with file stuff */
@@ -139,31 +139,40 @@ static inline void pthreads_error_save(PTHREAD thread TSRMLS_DC) {
             
             tmp = zend_get_executed_filename(TSRMLS_C);
             if (tmp)
-                thread->error->file = strndup(tmp, strlen(tmp));
+                error->file = strndup(tmp, strlen(tmp));
             
-            thread->error->line = zend_get_executed_lineno(TSRMLS_C);
+           error->line = zend_get_executed_lineno(TSRMLS_C);
         }
     }
 } /* }}} */
 
 /* {{{ allocate error structure */
-static inline void pthreads_error_alloc(PTHREAD object) {
-    object->error = calloc(1, sizeof(*object->error));
+static inline pthreads_error pthreads_error_alloc(TSRMLS_C) {
+    pthreads_error error = calloc(1, sizeof(*error));
+    
+    error->clazz = NULL;
+    error->method = NULL;
+    error->file = NULL;
+    
+    return error;
 } /* }}} */
 
 /* {{{ free the error saved for object */
-static inline void pthreads_error_free(PTHREAD thread TSRMLS_DC) {
-    if (thread->error) {
-        if (thread->error->clazz)
-            free(thread->error->clazz);
+static inline void pthreads_error_free(pthreads_error error TSRMLS_DC) {
+    if (error) {
+        if (error->clazz)
+            free(error->clazz);
             
-        if (thread->error->method)
-            free(thread->error->method);
+        if (error->method)
+            free(error->method);
             
-        if (thread->error->file)
-            free(thread->error->file);
+        if (error->file)
+            free(error->file);
             
-        free(thread->error);
+        free(
+            error);
+        
+        error = NULL;
     }
 } /* }}} */
 
@@ -386,7 +395,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 			pthreads_synchro_free(destination->synchro TSRMLS_CC);
 			pthreads_resources_free(destination->resources TSRMLS_CC);
 			pthreads_address_free(destination->address);
-            pthreads_error_free(destination TSRMLS_CC);
+            pthreads_error_free(destination->error TSRMLS_CC);
             
 			if (PTHREADS_IS_WORKER(destination)) {
 				zend_hash_destroy(
@@ -456,6 +465,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
 			base->store = pthreads_store_alloc(TSRMLS_C);
 			base->resources = pthreads_resources_alloc(TSRMLS_C);
+            base->error = pthreads_error_alloc(TSRMLS_C);
             
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
@@ -467,7 +477,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 				}	
 			}
 			
-			pthreads_error_alloc(base);
+
 		}
 	}
 } /* }}} */
@@ -491,6 +501,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		pthreads_synchro_free(base->synchro TSRMLS_CC);
 		pthreads_resources_free(base->resources TSRMLS_CC);
 		pthreads_address_free(base->address);
+        pthreads_error_free(base->error TSRMLS_CC);
         
 		if (PTHREADS_IS_WORKER(base)) {
 			zend_hash_destroy(
@@ -500,7 +511,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 		}
 	}
     
-    pthreads_error_free(base TSRMLS_CC);
+    
 
 #if PHP_VERSION_ID > 50399
 	{
@@ -790,7 +801,7 @@ static void * pthreads_routine(void *arg) {
 								        pthreads_state_set(
 									        current->state, PTHREADS_ST_ERROR TSRMLS_CC);
 									    /* save error information */
-									    pthreads_error_save(current TSRMLS_CC);
+									    pthreads_error_save(current->error TSRMLS_CC);
 								    }
 								    
 								    /* unset running for waiters */
