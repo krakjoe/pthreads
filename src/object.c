@@ -125,11 +125,13 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
         /* deal with scope stuff */
         if (active) {
             if (active->common.scope) {
-                error->clazz = strndup(active->common.scope->name, strlen(active->common.scope->name));
+                error->clazz = strdup(
+                    active->common.scope->name);
             } else error->clazz = NULL;
             
             if (active->common.function_name) {
-                error->method = strndup(active->common.function_name, strlen(active->common.function_name));
+                error->method = strdup(
+                    active->common.function_name);
             } else error->method = NULL;
         }
         
@@ -139,7 +141,7 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
             
             tmp = zend_get_executed_filename(TSRMLS_C);
             if (tmp)
-                error->file = strndup(tmp, strlen(tmp));
+                error->file = strdup(tmp);
             
            error->line = zend_get_executed_lineno(TSRMLS_C);
         }
