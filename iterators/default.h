@@ -77,7 +77,11 @@ static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator 
 }
 
 static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator TSRMLS_DC) {
-   return (((pobject_iterator_t*)iterator)->end) ? FAILURE : SUCCESS;
+   pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
+   
+   if (zend_hash_num_elements(&intern->properties)) {
+       return (((pobject_iterator_t*)iterator)->end) ? FAILURE : SUCCESS;
+   } else return FAILURE;
 }
 
 static inline void pthreads_object_iterator_current_data(zend_object_iterator* iterator, zval ***data TSRMLS_DC) {
