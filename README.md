@@ -21,7 +21,7 @@ This project provides multi-threading that is compatible with PHP based on Posix
 * Mutex ( direct, subset )
 * Conditions ( direct, subset )
 
-pthreads was written with simplicity, compatibiilty and efficiency in mind, it's performance beggars belief !!
+pthreads was written with simplicity, compatibility and efficiency in mind, it's performance beggars belief !!
 
 ## Requirements
 
