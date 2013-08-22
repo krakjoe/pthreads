@@ -37,6 +37,10 @@ typedef struct _pthreads_store {
 	zend_ulong        next; /* idx of next anonymous member */
 } *pthreads_store; /* }}} */
 
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include <src/thread.h>
+#endif
+
 /* {{{ allocate and initialize buffers */
 pthreads_store pthreads_store_alloc(TSRMLS_D); /* }}} */
 
@@ -47,7 +51,7 @@ zend_bool pthreads_store_lock(zval *this_ptr TSRMLS_DC); /* }}} */
 zend_bool pthreads_store_unlock(zval *this_ptr TSRMLS_DC); /* }}} */
 
 /* {{{ merges the properties/elements of from into destination */
-int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRMLS_DC); /* }}} */
+int pthreads_store_merge(PTHREAD thread, zval *destination, zval *from, zend_bool overwrite TSRMLS_DC); /* }}} */
 
 /* {{{ delete a value from the buffer */
 int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC); /* }}} */
@@ -59,10 +63,10 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int has_set_exists TSRMLS_DC); /* }}} */
 
 /* {{{ write value to buffer */
-int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC); /* }}} */
+int pthreads_store_write(PTHREAD thread, pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC); /* }}} */
 
 /* {{{ separate a zval using internals */
-int pthreads_store_separate(zval * pzval, zval **seperated, zend_bool allocate, zend_bool complex TSRMLS_DC); /* }}} */
+int pthreads_store_separate(PTHREAD thread, zval * pzval, zval **seperated, zend_bool allocate, zend_bool complex TSRMLS_DC); /* }}} */
 
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC); /* }}} */

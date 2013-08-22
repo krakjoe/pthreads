@@ -18,6 +18,8 @@
 #ifndef HAVE_PTHREADS_RESOURCES_H
 #define HAVE_PTHREADS_RESOURCES_H
 
+typedef struct _pthreads_resources *pthreads_resources;
+
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
 #endif
@@ -26,9 +28,9 @@
 #	include <src/store.h>
 #endif
 
-typedef struct {
+struct _pthreads_resources {
 	TsHashTable keep;
-} *pthreads_resources;
+};
 
 typedef struct {
 	void 				***ls;

@@ -22,10 +22,6 @@
 #	include <src/store.h>
 #endif
 
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
-#endif
-
 #ifndef HAVE_PTHREADS_OBJECT_H
 #	include <src/object.h>
 #endif
@@ -50,13 +46,13 @@ typedef struct _pthreads_storage {
 #endif
 
 /* {{{ statics */
-static void pthreads_store_create(pthreads_storage *storage, zval *pzval, zend_bool complex TSRMLS_DC);
+static void pthreads_store_create(PTHREAD thread, pthreads_storage *storage, zval *pzval, zend_bool complex TSRMLS_DC);
 static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_DC);
-static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC);
+static int pthreads_store_tostring(PTHREAD thread, zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC);
-static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC);
-static int pthreads_store_validate_resource(zval **pzval TSRMLS_DC);
-static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC);
+static int pthreads_store_remove_resources_recursive(PTHREAD thread, zval **pzval TSRMLS_DC);
+static int pthreads_store_validate_resource(PTHREAD thread, zval **pzval TSRMLS_DC);
+static int pthreads_store_remove_resources(zval **pzval, PTHREAD thread TSRMLS_DC);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
 /* }}} */
 
@@ -163,7 +159,7 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 } /* }}} */
 
 /* {{{ write a value to store */
-int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC) {
+int pthreads_store_write(PTHREAD thread, pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC) {
 	int result = FAILURE;
 	zend_bool locked;
 	
@@ -171,7 +167,7 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 		pthreads_storage storage;
 		
 		pthreads_store_create(
-		    &storage, *write, 1 TSRMLS_CC);
+		    thread, &storage, *write, 1 TSRMLS_CC);
 		
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			if (zend_hash_update(
@@ -185,12 +181,12 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 } /* }}} */
 
 /* {{{ seperate a zval using internals */
-int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, zend_bool complex TSRMLS_DC) {
+int pthreads_store_separate(PTHREAD thread, zval * pzval, zval **separated, zend_bool allocate, zend_bool complex TSRMLS_DC) {
 	int result = FAILURE;
 	pthreads_storage storage;
 	
 	if (pzval) {
-        pthreads_store_create(&storage, pzval, complex TSRMLS_CC);
+        pthreads_store_create(thread, &storage, pzval, complex TSRMLS_CC);
 		    		
 		if (allocate) {
 			MAKE_STD_ZVAL(*separated);
@@ -404,8 +400,8 @@ void pthreads_store_free(pthreads_store store TSRMLS_DC){
 } /* }}} */
 
 /* {{{ Will storeize the zval into a newly allocated buffer which must be free'd by the caller */
-static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend_bool complex TSRMLS_DC){					
-	
+static void pthreads_store_create(PTHREAD thread, pthreads_storage *storage, zval *unstore, zend_bool complex TSRMLS_DC){
+
 	if (unstore) {
 		/*
 		* Make an exact copy of the store data for internal storage
@@ -454,7 +450,7 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 			
 			case IS_OBJECT:
 			case IS_ARRAY: {
-				if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length, complex TSRMLS_CC)==SUCCESS) {
+				if (pthreads_store_tostring(thread, unstore, (char**) &storage->data, &storage->length, complex TSRMLS_CC)==SUCCESS) {
 					if (storage->type==IS_ARRAY) {
 						storage->exists = zend_hash_num_elements(
 						    Z_ARRVAL_P(unstore));
@@ -469,7 +465,7 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 			    storage->exists = 0;
 			}
 		}
-	}													
+	}
 }
 /* }}} */
 
@@ -561,18 +557,18 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 /* }}} */
 
 /* {{{ zval to string */
-static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {
+static int pthreads_store_tostring(PTHREAD thread, zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {
 	int result = FAILURE;
 	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {
 		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
 		if (psmart) {
 			if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
-				pthreads_store_remove_resources_recursive(&pzval TSRMLS_CC);
+				pthreads_store_remove_resources_recursive(thread, &pzval TSRMLS_CC);
 			}
 			
 			{
 				if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
-					(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
+					((complex || pthreads_store_validate_resource(thread, &pzval TSRMLS_CC) != 1) && Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
 					php_serialize_data_t vars;
 					PHP_VAR_SERIALIZE_INIT(vars);
 					php_var_serialize(						
@@ -629,7 +625,7 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 } /* }}} */
 
 /* {{{ import members from one object (or array) into a pthreads object */
-int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRMLS_DC) {
+int pthreads_store_merge(PTHREAD thread, zval *destination, zval *from, zend_bool overwrite TSRMLS_DC) {
     if (Z_TYPE_P(from) != IS_ARRAY && 
         Z_TYPE_P(from) != IS_OBJECT) {
         return FAILURE;
@@ -756,7 +752,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             }
                                 
                             pthreads_store_write(
-                                pobject->store, key, klen, pzval TSRMLS_CC);
+                                thread, pobject->store, key, klen, pzval TSRMLS_CC);
                         } break;
                         
                         case HASH_KEY_IS_LONG: {
@@ -772,13 +768,13 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             }
                             
                             pthreads_store_write(
-                                pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey), pzval TSRMLS_CC);
+                                thread, pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey), pzval TSRMLS_CC);
                             
                             zval_dtor(&zkey);
                         } break;
                         
                         default: {
-                            zend_error(E_WARNING, "pthreads detected an unsupported key type for merging, ignoring data at %lu", index);
+                            zend_error(E_WARNING, "pthreads detected an unsupported key type for merging, ignoring data at %u", index);
                         }
                     }
 next:
@@ -794,20 +790,20 @@ next:
 } /* }}} */
 
 /* {{{ set resources to NULL for non-complex types; helper-function for pthreads_store_remove_resources_recursive */
-static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC) {
+static int pthreads_store_remove_resources(zval **pzval, PTHREAD thread TSRMLS_DC) {
 	if (Z_TYPE_PP(pzval) == IS_RESOURCE) {
 		Z_TYPE_PP(pzval) = IS_NULL;
 	}
-	return pthreads_store_remove_resources_recursive(pzval TSRMLS_CC);
+	return pthreads_store_remove_resources_recursive(thread, pzval TSRMLS_CC);
 } /* }}} */
 
-/* {{{ check a handle is valid before reading it */
-static int pthreads_store_validate_resource(zval **pzval TSRMLS_DC) {	
-	return (EG(objects_store).top > Z_OBJ_HANDLE_PP(pzval));
+/* {{{ check a handle is or will be valid before reading it */
+static int pthreads_store_validate_resource(PTHREAD thread, zval **pzval TSRMLS_DC) {
+	return (PTHREADS_EG(thread->cls, objects_store).top > Z_OBJ_HANDLE_PP(pzval) && Z_OBJ_P(*pzval))?(EG(objects_store).top > Z_OBJ_HANDLE_PP(pzval))?0:1:2;
 } /* }}} */
 
 /* {{{ set corrupt objects (like mysqli after thread duplication) to NULL and recurse */
-static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
+static int pthreads_store_remove_resources_recursive(PTHREAD thread, zval **pzval TSRMLS_DC) {
 	int is_temp;
 
 	HashTable *thash = NULL;
@@ -817,18 +813,21 @@ static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
 
 		case IS_OBJECT:
 			if (thash == NULL) {
-				if (!pthreads_store_validate_resource(pzval TSRMLS_CC) || !Z_OBJ_P(*pzval)) {
-					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
-					Z_TYPE_PP(pzval) = IS_NULL;
-					return ZEND_HASH_APPLY_KEEP;
+				switch (pthreads_store_validate_resource(thread, pzval TSRMLS_CC)) {
+					case 2:
+						GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
+						Z_TYPE_PP(pzval) = IS_NULL;
+						/* intenionally left break; out */
+					case 1:
+						return ZEND_HASH_APPLY_KEEP;
 				}
 				thash = Z_OBJDEBUG_PP(pzval, is_temp);
 			}
 
 			if (thash) {
-				zend_hash_apply(thash, (apply_func_t)pthreads_store_remove_resources TSRMLS_CC);
+				zend_hash_apply_with_argument(thash, (apply_func_arg_t)pthreads_store_remove_resources, thread TSRMLS_CC);
 			}
-			
+
 		break;
 	}
 	return ZEND_HASH_APPLY_KEEP;

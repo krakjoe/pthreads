@@ -18,6 +18,8 @@
 #ifndef HAVE_PTHREADS_THREAD_H
 #define HAVE_PTHREADS_THREAD_H
 
+typedef struct _pthread_construct *PTHREAD;
+
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
 #endif
@@ -34,12 +36,12 @@
 #	include <src/modifiers.h>
 #endif
 
-#ifndef HAVE_PTHREADS_STORE_H
-#	include <src/store.h>
-#endif
-
 #ifndef HAVE_PTHREADS_RESOURCES_H
 #	include <src/resources.h>
+#endif
+
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
 #endif
 
 /* {{{ stack structure */
@@ -64,7 +66,7 @@ struct _pthreads_error {
 }; /* }}} */
 
 /* {{{ thread structure */
-typedef struct _pthread_construct {
+struct _pthread_construct {
 	/*
 	* Standard Entry
 	*/
@@ -146,12 +148,12 @@ typedef struct _pthread_construct {
 	* Shared Resources
 	**/
 	pthreads_resources resources;
-} *PTHREAD;
+};
 
 /* {{{ comparison function */
 static inline int pthreads_equal(PTHREAD first, PTHREAD second) {
 	if (first && second) {
-		if ((first == second))
+		if (first == second)
 		    return 1;
 	}
 	return 0;
@@ -213,12 +215,12 @@ static inline size_t pthreads_strlen(const char* str, size_t length, pthreads_st
     switch (mode) {
         case PTHREADS_STRLEN_T: switch (str[length+1]) {
             case '\0':
-                php_printf("(2)found null at %d, return %d\n", length, length+1);
+                php_printf("(2)found null at %ld, return %ld\n", length, length+1);
                 return length+1;
                 
             default: switch (str[length]) {
                 case '\0': 
-                    php_printf("(3)found null at %d+1, return %d\n", length, length+1);
+                    php_printf("(3)found null at %ld+1, return %ld\n", length, length+1);
                     return length;
                     
                 default: return strlen(str) + 1;
@@ -229,6 +231,7 @@ static inline size_t pthreads_strlen(const char* str, size_t length, pthreads_st
             
         } break;
     }
+    return 0;
 } /* }}} */
 
 /* {{{ get null terminated string length */

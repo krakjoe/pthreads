@@ -251,7 +251,7 @@ burst:
 			    (HashTable*) thread->stack,
 			     thread->stack->position, (void**) &work
 			);
-			if (current = *work) {
+			if ((current = *work)) {
 				/*
 				* Allocate a $that
 				*/
@@ -294,7 +294,7 @@ burst:
 							pthreads_connect(current, stackable TSRMLS_CC);
 
 							pthreads_store_write(
-								stackable->store, "worker", sizeof("worker")-1, &this_ptr TSRMLS_CC
+								thread, stackable->store, "worker", sizeof("worker")-1, &this_ptr TSRMLS_CC
 							);
 	
 							Z_ADDREF_P(this_ptr);
@@ -642,7 +642,7 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 /* {{{ connects to an instance of a threaded object */
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC) {
 	PTHREAD address = NULL;
-	if (sscanf((const char*)buffer, "%lu", &address)) {
+	if (sscanf((const char*)buffer, "%lu", (unsigned long *)&address)) {
 		if (address && address->address) {
 			if (object_init_ex(
 				*object, pthreads_prepared_entry(address, ce TSRMLS_CC)
