@@ -34,9 +34,6 @@
 #	include <src/thread.h>
 #endif
 
-static int pthreads_synchro_lock(pthreads_synchro sync TSRMLS_DC);
-static int pthreads_synchro_unlock(pthreads_synchro sync TSRMLS_DC);
-
 /* {{{ allocate (and initialize) a synchronization object */
 pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 	pthreads_synchro sync = (pthreads_synchro) calloc(1, sizeof(*sync));
@@ -143,12 +140,12 @@ void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ acquire lock internally for userland synchronization */
-static int pthreads_synchro_lock(pthreads_synchro sync TSRMLS_DC) {
+int pthreads_synchro_lock(pthreads_synchro sync TSRMLS_DC) {
 	return pthread_mutex_lock(&sync->lock->mutex);
 } /* }}} */
 
 /* {{{ release lock internally for userland synchronization */
-static int pthreads_synchro_unlock(pthreads_synchro sync TSRMLS_DC) {
+int pthreads_synchro_unlock(pthreads_synchro sync TSRMLS_DC) {
 	return pthread_mutex_unlock(&sync->lock->mutex);
 } /* }}} */
 

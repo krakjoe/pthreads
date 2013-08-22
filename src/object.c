@@ -224,8 +224,10 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 		
 		if (counted > 0L) {
+		    pthreads_synchro_lock(thread->synchro TSRMLS_CC);
 			pthreads_unset_state(
 			    thread, PTHREADS_ST_WAITING TSRMLS_CC);
+			pthreads_synchro_unlock(thread->synchro TSRMLS_CC);
 		}
 	}
 	
@@ -309,9 +311,11 @@ burst:
 		
 		if (!bubble) {
 			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
+			    pthreads_synchro_lock(thread->synchro TSRMLS_CC);
 				if (pthreads_set_state(thread, PTHREADS_ST_WAITING TSRMLS_CC)) {
+				    pthreads_synchro_unlock(thread->synchro TSRMLS_CC);
 					goto burst;
-				}
+				} else pthreads_synchro_unlock(thread->synchro TSRMLS_CC);
 			} else return 0;
 		}
 	}

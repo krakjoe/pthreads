@@ -35,6 +35,12 @@ typedef struct _pthreads_synchro {
 /* {{{ allocate synchronization object */
 pthreads_synchro pthreads_synchro_alloc(TSRMLS_D); /* }}} */
 
+/* {{{ lock synchronzation object */ 
+int pthreads_synchro_lock(pthreads_synchro sync TSRMLS_DC); /* }}} */
+
+/* {{{ unlock synchronization object */
+int pthreads_synchro_unlock(pthreads_synchro sync TSRMLS_DC); /* }}} */
+
 /* {{{ wait for notification */
 int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC); /* }}} */
 

@@ -109,7 +109,11 @@ zend_bool pthreads_state_wait(pthreads_state state, int mask TSRMLS_DC) {
 			if (locked)
 				pthreads_lock_release(state->lock, locked TSRMLS_CC);
 			if (!wasset) do {
+				pthreads_synchro_lock(
+				    state->synchro TSRMLS_CC);
 				pthreads_synchro_wait(state->synchro TSRMLS_CC);
+				pthreads_synchro_unlock(
+				    state->synchro TSRMLS_CC);
 			} while(!((state->was & mask)==mask));
 		} else result = 0;
 	} else result = 0;
