@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2013-04-30</date>
+ <date>2013-08-24</date>
  <time>08:30:00</time>
  <version>
-  <release>0.0.44</release>
-  <api>0.0.44</api>
+  <release>0.0.45</release>
+  <api>0.0.45</api>
  </version>
  <stability>
   <release>beta</release>
@@ -109,6 +109,8 @@
    <file name="classes/stackable.h" role="src" />
    <file name="classes/mutex.h" role="src" />
    <file name="classes/cond.h" role="src" />
+   <file name="iterators/iterator.h" role="src" />
+   <file name="iterators/default.h" role="src" />
    <file name="config.m4" role="src" />
    <file name="config.w32" role="src" />
    <file name="LICENSE" role="src" />
