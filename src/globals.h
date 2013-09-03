@@ -50,6 +50,11 @@ struct _pthreads_globals {
 	* Globals Mutex
 	*/
 	pthreads_lock lock;
+	
+	/*
+	* Global Strings
+	*/
+	HashTable strings;
     
 	/*
 	* Global/Default Resource Destructor
@@ -73,6 +78,9 @@ zend_bool pthreads_globals_lock(zend_bool *locked TSRMLS_DC); /* }}} */
 
 /* {{{ release global lock */
 void pthreads_globals_unlock(zend_bool locked TSRMLS_DC); /* }}} */
+
+/* {{{ copy string to globals */
+char *pthreads_global_string(char *strkey, zend_uint keylen, zend_bool lower TSRMLS_DC); /* }}} */
 
 /* {{{ shutdown global structures */
 void pthreads_globals_shutdown(TSRMLS_D); /* }}} */

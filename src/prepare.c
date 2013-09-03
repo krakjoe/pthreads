@@ -305,39 +305,23 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 	zend_class_entry *prepared = NULL, **searched = NULL;
 	
 	if (candidate) {
-#if PHP_VERSION_ID > 50399
-		char *lcname = (char*) emalloc(candidate->name_length+1);
-#else
-		char *lcname = (char*) malloc(candidate->name_length+1);
-#endif	
+        char *lower = pthreads_global_string(
+            candidate->name, candidate->name_length, 1 TSRMLS_CC);
         
-		if (lcname != NULL) {
-			/* lowercase name for lookup/insertion */
-			zend_str_tolower_copy(lcname, candidate->name, candidate->name_length);
-
+		if (lower != NULL) {
 			/* perform lookup for existing class */
-			if (zend_hash_find(CG(class_table), lcname, candidate->name_length+1, (void**)&searched)!=SUCCESS) {
-
+			if (zend_hash_find(CG(class_table), lower, candidate->name_length+1, (void**)&searched)!=SUCCESS) {
+			
 			    /* create a new user class for this context */
 	            prepared = pthreads_copy_entry(
 	                thread, candidate TSRMLS_CC);
+	                
 			    /* update class table */
-#if PHP_VERSION_ID > 50399
-                lcname = (char*)zend_new_interned_string(lcname, prepared->name_length+1, 1 TSRMLS_CC);
-                if (IS_INTERNED(lcname)) {
-	                 zend_hash_quick_update(CG(class_table), lcname, prepared->name_length+1, INTERNED_HASH(lcname), &prepared, sizeof(zend_class_entry*), (void**)&searched);
-                } else zend_hash_update(CG(class_table), lcname, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), (void**)&searched);
-#else
-                zend_hash_update(CG(class_table), lcname, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), (void**)&searched);
-#endif
+                zend_hash_update(   
+                    CG(class_table), lower, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), (void**)&searched);
+                            
 			} else prepared = *searched;
 
-			/* free lowercase name buffer */
-#if PHP_VERSION_ID > 50399
-			str_efree(lcname);
-#else
-			free(lcname);
-#endif
 		} else zend_error(E_ERROR, "pthreads has detected a memory error while attempting to prepare %s for execution in %s %lu", candidate->name, thread->std.ce->name, thread->tid);
 	}
 	return prepared;
