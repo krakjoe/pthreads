@@ -25,4 +25,7 @@ if ($sock) {
 	}
 	printf("%d threads waiting on port %d\n", count($workers), $argv[1]);
 }
+
+foreach ($workers as $thread)
+    $thread->join();
 ?>
