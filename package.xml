@@ -60,6 +60,7 @@
    <file name="tests/gone.phpt" role="test" />
    <file name="tests/graceful-fatalities.phpt" role="test" />
    <file name="tests/included-files.phpt" role="test" />
+   <file name="tests/includeme.php" role="test" />
    <file name="tests/ini.phpt" role="test" />
    <file name="tests/interface.phpt" role="test" />
    <file name="tests/interfaces.phpt" role="test" />
