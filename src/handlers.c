@@ -404,10 +404,13 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 											}
 										}
 #endif
-										if (!return_value_used) {
-											zval_ptr_dtor(&zresult);
-										} else {
-											ZVAL_ZVAL(return_value, zresult, 1, 1);
+                                        
+										if (zresult) {
+										    if (!return_value_used) {
+											    zval_ptr_dtor(&zresult);
+										    } else {
+											    ZVAL_ZVAL(return_value, zresult, 1, 1);
+										    }
 										}
 									}
 									
