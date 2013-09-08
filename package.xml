@@ -10,23 +10,22 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2013-08-24</date>
- <time>08:30:00</time>
+ <date>2013-09-08</date>
+ <time>06:30:00</time>
  <version>
   <release>0.0.45</release>
   <api>0.0.45</api>
  </version>
  <stability>
-  <release>beta</release>
-  <api>beta</api>
+  <release>stable</release>
+  <api>stable</api>
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix ::merge duplicate keys (#97, #98)
- improvements from weltling for config.w32
- corrections to some examples
- fix #99 resources crash
- fix tests - missing include and format incorrect in expect section
+ additional functionality for all objects: pop/merge/shift/chunk
+ shared class name table saves memory for each context/avoids errors
+ segfaults/memory errors avoided where possible
+ more predictable behaviour when objects gone away
  </notes>
  <contents>
   <dir name="/">
