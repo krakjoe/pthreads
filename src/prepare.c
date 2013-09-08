@@ -306,7 +306,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 	
 	if (candidate) {
         char *lower = pthreads_global_string(
-            candidate->name, candidate->name_length, 1 TSRMLS_CC);
+            (char*) candidate->name, candidate->name_length, 1 TSRMLS_CC);
         
 		if (lower != NULL) {
 			/* perform lookup for existing class */
