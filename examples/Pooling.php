@@ -114,6 +114,7 @@ foreach($pool->workers as $worker) {
 }
 printf("---------------------------------------------------------\n");
 printf("Average processing time of %f seconds per task\n", $runtime/$attempts);
+printf("Total execution time of %.3f seconds\n", $runtime);
 printf("---------------------------------------------------------\n");
 if ($sapi) echo "</pre>";
 
