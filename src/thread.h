@@ -178,7 +178,8 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_SCOPE_THREAD 1
 #define PTHREADS_SCOPE_WORKER 2
 #define PTHREADS_SCOPE_STACKABLE 4
-#define PTHREADS_SCOPE_CONNECTION 8 
+#define PTHREADS_SCOPE_CONNECTION 8
+#define PTHREADS_SCOPE_DETACHED 16
 /* }}} */
 
 /* {{{ scope macros */
@@ -191,6 +192,8 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_IS_NOT_WORKER(t) (((t)->scope & PTHREADS_SCOPE_WORKER)!=PTHREADS_SCOPE_WORKER)
 #define PTHREADS_IS_STACKABLE(t) (((t)->scope & PTHREADS_SCOPE_STACKABLE)==PTHREADS_SCOPE_STACKABLE)
 #define PTHREADS_IS_NOT_STACKABLE(t) (((t)->scope & PTHREADS_SCOPE_STACKABLE)!=PTHREADS_SCOPE_STACKABLE)
+#define PTHREADS_IS_DETACHED(t) (((t)->scope & PTHREADS_SCOPE_DETACHED)==PTHREADS_SCOPE_DETACHED)
+#define PTHREADS_IS_NOT_DETACHED(t)  (((t)->scope & PTHREADS_SCOPE_DETACHED)!=PTHREADS_SCOPE_DETACHED)
 /* }}} */
 
 /* {{{ pthread_self wrapper */

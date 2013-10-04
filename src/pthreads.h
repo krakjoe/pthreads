@@ -69,8 +69,10 @@ ZEND_EXTERN_MODULE_GLOBALS(pthreads)
 #ifndef PTHREADS_ZG
 ZEND_BEGIN_MODULE_GLOBALS(pthreads)
 	void *pointer;
+	pid_t pid;
 ZEND_END_MODULE_GLOBALS(pthreads)
 #	define PTHREADS_ZG(v) TSRMG(pthreads_globals_id, zend_pthreads_globals *, v)
+#   define PTHREADS_PID() PTHREADS_ZG(pid) ? PTHREADS_ZG(pid) : (PTHREADS_ZG(pid)=getpid())
 #endif
 
 #endif

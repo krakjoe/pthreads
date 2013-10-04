@@ -109,6 +109,7 @@ ZEND_DECLARE_MODULE_GLOBALS(pthreads)
 
 static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 	pg->pointer = NULL;
+	pg->pid = 0L;
 }
 
 PHP_MINIT_FUNCTION(pthreads)
