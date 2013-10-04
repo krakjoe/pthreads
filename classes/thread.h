@@ -337,8 +337,6 @@ PHP_METHOD(Thread, detach)
             RETURN_FALSE;
         }
         
-        thread->scope |= PTHREADS_SCOPE_DETACHED;
-        
         RETURN_TRUE;
     }
 

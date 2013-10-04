@@ -555,7 +555,7 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 static void pthreads_base_free(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 	if (base) {
-	    if (!PTHREADS_IS_NOT_DETACHED(base)) {
+	    if (PTHREADS_IS_NOT_DETACHED(base)) {
 	        free(
 		        base
 	        );
