@@ -21,6 +21,7 @@ PHP_METHOD(Thread, start);
 PHP_METHOD(Thread, wait);
 PHP_METHOD(Thread, notify);
 PHP_METHOD(Thread, join);
+PHP_METHOD(Thread, detach);
 PHP_METHOD(Thread, isStarted);
 PHP_METHOD(Thread, isRunning);
 PHP_METHOD(Thread, isJoined);
@@ -57,8 +58,12 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_join, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_detach, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(Thread_getThreadId, 0, 0, 0)
 ZEND_END_ARG_INFO()
+
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_getCreatorId, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -116,6 +121,7 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+    PHP_ME(Thread, detach, Thread_detach, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isStarted, Thread_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isRunning, Thread_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -314,6 +320,27 @@ PHP_METHOD(Thread, join)
 		zend_error(E_WARNING, "pthreads has detected an attempt to join from an incorrect context, only the creating context may join with %s (%lu)", PTHREADS_FRIENDLY_NAME);
 		RETURN_FALSE;
 	}
+} /* }}} */
+
+/* {{{ proto boolean Thread::detach()
+        Will return a boolean indication of success */
+
+PHP_METHOD(Thread, detach)
+{
+    PTHREAD thread = PTHREADS_FETCH;
+    int result = FAILURE;
+
+    if (thread) {
+        result = pthreads_detach(thread, 0);
+
+        if (result != SUCCESS) {
+            RETURN_FALSE;
+        }
+
+        RETURN_TRUE;
+    }
+
+    RETURN_FALSE;
 } /* }}} */
 
 /* {{{ proto long Thread::getThreadId()
