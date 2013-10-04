@@ -610,6 +610,15 @@ int pthreads_join(PTHREAD thread TSRMLS_DC) {
 	return dojoin ? pthread_join(thread->thread, NULL) 	: FAILURE;
 } /* }}} */
 
+/* {{{ detach a thread */
+int pthreads_detach(PTHREAD thread TSRMLS_DC) {
+    int results;
+    
+    results = pthread_detach(thread->thread);
+
+    return results;
+} /* }}} */
+
 /* {{{ synchronization helper */
 zend_bool pthreads_wait_member_ex(PTHREAD thread, zval *member, ulong timeout TSRMLS_DC) {
 	if (!pthreads_store_isset(thread->store, Z_STRVAL_P(member), Z_STRLEN_P(member), 2 TSRMLS_CC)) {
