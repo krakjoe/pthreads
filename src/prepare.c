@@ -39,9 +39,14 @@
 #endif
 
 /* {{{ prepared property info ctor */
-static void pthreads_preparation_property_info_ctor(zend_property_info *pi); /* }}} */
+static void pthreads_preparation_property_info_copy_ctor(zend_property_info *pi); /* }}} */
 /* {{{ prepared property info dtor */
-static void pthreads_preparation_property_info_dtor(zend_property_info *pi); /* }}} */
+static void pthreads_preparation_property_info_copy_dtor(zend_property_info *pi); /* }}} */
+
+/* {{{ prepared property info dummy ctor */
+static void pthreads_preparation_property_info_dummy_ctor(zend_property_info *pi); /* }}} */
+/* {{{ prepared property info dummy dtor */
+static void pthreads_preparation_property_info_dummy_dtor(zend_property_info *pi); /* }}} */
 
 #if PHP_VERSION_ID < 50400
 /* {{{ default property ctor for 5.3 */
@@ -202,10 +207,18 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) function_add_ref, &tf, sizeof(zend_function));
 	
 	/* copy property info structures */
-	zend_hash_copy(
-	    &prepared->properties_info, 
-	    &candidate->properties_info, (copy_ctor_func_t) pthreads_preparation_property_info_ctor, &ti, sizeof(zend_property_info));
-	prepared->properties_info.pDestructor = (dtor_func_t) pthreads_preparation_property_info_dtor;
+	if ((thread->options & PTHREADS_INHERIT_COMMENTS)) {
+	    zend_hash_copy(
+	        &prepared->properties_info,
+	        &candidate->properties_info, (copy_ctor_func_t) pthreads_preparation_property_info_copy_ctor, &ti, sizeof(zend_property_info));
+	    prepared->properties_info.pDestructor = (dtor_func_t) pthreads_preparation_property_info_copy_dtor;
+	} else {
+	    zend_hash_copy(
+	        &prepared->properties_info,
+	        &candidate->properties_info, (copy_ctor_func_t) pthreads_preparation_property_info_dummy_ctor, &ti, sizeof(zend_property_info));
+	    prepared->properties_info.pDestructor = (dtor_func_t) pthreads_preparation_property_info_dummy_dtor;
+	}
+	
 	
 	/* copy statics and defaults */
 	{
@@ -247,9 +260,18 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 			}
 		}
 
-		/** pointless copy **/
-		prepared->doc_comment = NULL;
-		prepared->doc_comment_len = 0;
+		/** copy comments where required **/
+		if ((thread->options & PTHREADS_INHERIT_COMMENTS) &&
+		    (prepared->doc_comment)) {
+		    prepared->doc_comment_len = candidate->doc_comment_len;
+	        prepared->doc_comment = estrndup(
+	            candidate->doc_comment, candidate->doc_comment_len
+	        );
+	    } else {
+	        prepared->doc_comment = NULL;
+		    prepared->doc_comment_len = 0;
+	    }
+		
 #else
 		if (candidate->default_properties_count) {
 			int i;
@@ -291,9 +313,15 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 		/* copy user info struct */
 		memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
 		
-		/* null doc comments, pointless copy */
-		prepared->info.user.doc_comment = NULL;
-		prepared->info.user.doc_comment_len = 0;
+		/* copy comments where required */
+		if ((thread->options & PTHREADS_INHERIT_COMMENTS) &&
+		   (candidate->info.user.doc_comment)) {
+	        prepared->info.user.doc_comment = estrndup(
+	            prepared->info.user.doc_comment, prepared->info.user.doc_comment_len);
+	    } else {
+	        prepared->info.user.doc_comment = NULL;
+		    prepared->info.user.doc_comment_len = 0;
+	    }
 #endif
 	}
 	
@@ -477,13 +505,27 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	EG(regular_list).pDestructor =  (dtor_func_t) pthreads_prepared_resource_dtor;	
 } /* }}} */
 
-/* {{{ copy property info
-	@TODO possibly adjust scope here */
-static void pthreads_preparation_property_info_ctor(zend_property_info *pi) {} /* }}} */
+/* {{{ property info ctor */
+static void pthreads_preparation_property_info_copy_ctor(zend_property_info *pi) {
+    pi->name = estrndup(pi->name, pi->name_length);    
+    
+    if (pi->doc_comment)
+        pi->doc_comment = estrndup(pi->doc_comment, pi->doc_comment_len);
+} /* }}} */
 
-/* {{{ destroy property info 
-	@TODO possibly undo/free for adjustments made above */
-static void pthreads_preparation_property_info_dtor(zend_property_info *pi) {} /* }}} */
+/* {{{ property info dtor */
+static void pthreads_preparation_property_info_copy_dtor(zend_property_info *pi) {
+    str_efree((char*)pi->name);    
+        
+    if (pi->doc_comment)
+        efree((char*)pi->doc_comment);
+} /* }}} */
+
+/* {{{ copy property info dummy ctor */
+static void pthreads_preparation_property_info_dummy_ctor(zend_property_info *pi) {} /* }}} */
+
+/* {{{ destroy property info dummy dtor */
+static void pthreads_preparation_property_info_dummy_dtor(zend_property_info *pi) {} /* }}} */
 
 #if PHP_VERSION_ID < 50400
 /* {{{ default property ctor for 5.3 */
