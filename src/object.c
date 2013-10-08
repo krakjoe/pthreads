@@ -499,14 +499,12 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 
 	if (PTHREADS_IS_NOT_CONNECTION(base) && PTHREADS_IS_NOT_DETACHED(base)) {
-	    if (PTHREADS_IS_NOT_DETACHED(base)) {
-	        if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
-		        pthread_t *pthread = &base->thread;
-		        if (pthread) {
-			        pthreads_join(base TSRMLS_CC);
-		        }
+	     if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
+	        pthread_t *pthread = &base->thread;
+	        if (pthread) {
+		        pthreads_join(base TSRMLS_CC);
 	        }
-	    }
+        }
 
 	    pthreads_lock_free(base->lock TSRMLS_CC);
 	    pthreads_state_free(base->state  TSRMLS_CC);
@@ -716,10 +714,11 @@ static void * pthreads_routine(void *arg) {
 		/**
 		* Startup Block Begin
 		**/
-		
+
+#ifdef PTHREADS_PEDANTIC
 		/* acquire a global lock */
 		pthreads_globals_lock(&glocked TSRMLS_CC);
-		
+#endif
 		/* create new context */
 		thread->tls = tsrm_ls = tsrm_new_interpreter_context();
 		
@@ -748,10 +747,12 @@ static void * pthreads_routine(void *arg) {
 		
 		/* prepare environment */
 		pthreads_prepare(thread TSRMLS_CC);
-		
+
+#ifdef PTHREADS_PEDANTIC
 		/* release global lock */
 		pthreads_globals_unlock(glocked TSRMLS_CC);
-		
+#endif
+
 		/**
 		* Startup Block End
 		**/
@@ -859,8 +860,9 @@ static void * pthreads_routine(void *arg) {
 										ops->run_time_cache = NULL;
 									}
 								}
-							}
+							} 
 #endif
+
 							/* deal with references to stackable */
 							if (inwork) {
 								zval_ptr_dtor(&ZEG->This);
@@ -875,9 +877,9 @@ static void * pthreads_routine(void *arg) {
 				} while(worker && pthreads_stack_next(thread, this_ptr TSRMLS_CC));
 			}
 		} zend_catch {
-			/* do something, it's all gone wrong */
+			/* do something, it's all gone wrong */ 
 		} zend_end_try();
-
+        
 		/*
 		* Free original reference to $this
 		*/
@@ -890,24 +892,27 @@ static void * pthreads_routine(void *arg) {
 		/**
 		* Shutdown Block Begin
 		**/
-		
+
+#ifdef PTHREADS_PEDANTIC
 		/* acquire global lock */
 		pthreads_globals_lock(&glocked TSRMLS_CC);
-	
+#endif
 		/* shutdown request */
-		php_request_shutdown(TSRMLS_C);
+	    php_request_shutdown(TSRMLS_C);
 
 		/* free interpreter */
 		tsrm_free_interpreter_context(tsrm_ls);	
-			
+
+#ifdef PTHREADS_PEDANTIC
 		/* release global lock */
 		pthreads_globals_unlock(glocked TSRMLS_CC);
-		
+#endif
+
 		/**
 		* Shutdown Block End
 		**/
 	}
-	
+
 	pthread_exit(NULL);
 	
 #ifdef _WIN32

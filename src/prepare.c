@@ -359,6 +359,22 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 	return prepared;
 } /* }}} */
 
+static inline zend_bool pthreads_constant_exists(char *name, zend_uint name_len TSRMLS_DC) {
+    int retval = 1;
+    char *lookup_name;
+
+    if (!zend_hash_exists(EG(zend_constants), name, name_len+1)) {
+        lookup_name = zend_str_tolower_dup(name, name_len);
+
+        retval = zend_hash_exists(
+            EG(zend_constants), lookup_name, name_len+1);
+            
+        efree(lookup_name);
+    }
+
+    return retval;
+}
+
 /* {{{ prepares the current context to execute the referenced thread */
 void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	HashPosition position;
@@ -367,24 +383,51 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	if (thread->options & PTHREADS_INHERIT_INI) {
 		zend_ini_entry *entry[2];
 		HashTable *table[2] = {PTHREADS_EG(thread->cls, ini_directives), EG(ini_directives)};
-
+        
 		for(zend_hash_internal_pointer_reset_ex(table[0], &position);
 			zend_hash_get_current_data_ex(table[0], (void**) &entry[0], &position)==SUCCESS;
 			zend_hash_move_forward_ex(table[0], &position)) {
 			char *setting;
 			uint slength;
 			ulong idx;
-			
+
 			if ((zend_hash_get_current_key_ex(table[0], &setting, &slength, &idx, 0, &position)==HASH_KEY_IS_STRING) &&
 				(zend_hash_find(table[1], setting, slength, (void**) &entry[1])==SUCCESS)) {
-				if (((entry[0]->value && entry[1]->value) && (strcmp(entry[0]->value, entry[1]->value) != 0)) || entry[0]->value) {
-					zend_bool modifiable = entry[1]->modifiable;
-					zend_alter_ini_entry_ex(
-						setting, slength, 
-						entry[0]->value, entry[0]->value_length,
-						ZEND_INI_STAGE_ACTIVATE, ZEND_INI_SYSTEM, 1 TSRMLS_CC
-					);
-					entry[1]->modifiable = modifiable;
+				if (((entry[0]->value && entry[1]->value) && 
+				    ((memcmp(entry[0]->value, entry[1]->value, entry[0]->value_length) != SUCCESS)))) {
+				    char *duplicate = NULL;
+				    zend_bool resmod = entry[1]->modifiable;
+
+				    if (!EG(modified_ini_directives)) {
+				        ALLOC_HASHTABLE(EG(modified_ini_directives));
+				        zend_hash_init(EG(modified_ini_directives), 8, NULL, NULL, 0);
+				    }
+				    
+				    if (!entry[1]->modified) {
+				        entry[1]->orig_value = entry[1]->value;
+				        entry[1]->orig_value_length = entry[1]->value_length;
+				        entry[1]->orig_modifiable = entry[1]->modifiable;
+				        entry[1]->modified = 1;
+				        zend_hash_add(
+				            EG(modified_ini_directives), setting, slength, &entry[1], sizeof(zend_ini_entry*), NULL);
+				    }
+				    
+				    duplicate = estrndup(entry[0]->value, entry[0]->value_length);
+				    
+				    entry[1]->modifiable = ZEND_INI_SYSTEM;
+				    if (!entry[1]->on_modify ||
+				        entry[1]->on_modify(    
+				            entry[1], duplicate, entry[0]->value_length, 
+				            entry[1]->mh_arg1, entry[1]->mh_arg2, entry[1]->mh_arg3, ZEND_INI_STAGE_ACTIVATE TSRMLS_CC) == SUCCESS) {
+				        if (entry[1]->modified && (entry[1]->orig_value != entry[1]->value)) {
+				            efree(entry[1]->value);
+				        }
+				        entry[1]->value = duplicate;
+				        entry[1]->value_length = entry[0]->value_length;
+				    } else {
+				        efree(duplicate);
+				    }
+				    entry[1]->modifiable = resmod;
 				}
 			}
 		}
@@ -404,8 +447,8 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 				continue;
 			} else {
 				zend_constant constant;
-				zval pzconstant;
-				if (!zend_get_constant(zconstant->name, zconstant->name_len-1, &pzconstant TSRMLS_CC)) {
+
+				if (!pthreads_constant_exists(zconstant->name, zconstant->name_len-1 TSRMLS_CC)) {
 
 					constant.flags = zconstant->flags;
 					constant.module_number = zconstant->module_number;
@@ -425,7 +468,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 					}
 				
 					zend_register_constant(&constant TSRMLS_CC);
-				} else zval_dtor(&pzconstant);
+				}
 			}
 		}
 	}
