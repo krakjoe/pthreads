@@ -54,15 +54,15 @@ static void pthreads_store_create(pthreads_storage *storage, zval *pzval, zend_b
 static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_DC);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRMLS_DC);
-static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC);
-static int pthreads_store_validate_resource(zval **pzval TSRMLS_DC);
-static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC);
+static int pthreads_store_remove_complex_recursive(zval **pzval TSRMLS_DC);
+static int pthreads_store_validate_object(zval **pzval TSRMLS_DC);
+static int pthreads_store_remove_complex(zval **pzval TSRMLS_DC);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
 /* }}} */
 
 /* {{{ allocate storage for an object */
 pthreads_store pthreads_store_alloc(TSRMLS_D) {
-	pthreads_store store = calloc(1, sizeof(*store));
+	pthreads_store store = malloc(sizeof(*store));
 	
 	if (store) {
 		if (zend_hash_init(&store->table, 8, NULL, (dtor_func_t) pthreads_store_storage_dtor, 1)==SUCCESS){
@@ -189,19 +189,21 @@ int pthreads_store_separate(zval * pzval, zval **separated, zend_bool allocate, 
 	int result = FAILURE;
 	pthreads_storage storage;
 	
+	if (allocate) {
+		MAKE_STD_ZVAL(*separated);
+	}
+	
 	if (pzval) {
         pthreads_store_create(&storage, pzval, complex TSRMLS_CC);
-		    		
-		if (allocate) {
-			MAKE_STD_ZVAL(*separated);
-		}
-
+		 
 		result = pthreads_store_convert(
 		    &storage, *separated TSRMLS_CC);
 
 		if (result == SUCCESS)
 			pthreads_store_storage_dtor(&storage);
-	}
+	    else Z_TYPE_PP(separated) = IS_NULL;
+	} else Z_TYPE_PP(separated) = IS_NULL;
+	
 	return result;
 } /* }}} */
 
@@ -419,9 +421,9 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 			
 			case IS_STRING: {
 				if ((storage->length = Z_STRLEN_P(unstore))) {
-					storage->data = (char*) calloc(1, storage->length+1);
-					memmove(
-						storage->data, (const void*) Z_STRVAL_P(unstore), storage->length
+					storage->data = (char*) malloc(storage->length+1);
+					memcpy(
+						storage->data, (const void*) Z_STRVAL_P(unstore), storage->length+1
 					);
 				}
 			} break;
@@ -433,7 +435,7 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 
 			case IS_RESOURCE: {
 				if (complex) {
-					pthreads_resource resource = calloc(1, sizeof(*resource));
+					pthreads_resource resource = malloc(sizeof(*resource));
 					if (resource) {
 						resource->scope = EG(scope);
 						resource->ls = TSRMLS_C;
@@ -448,7 +450,7 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 				}
 			} break;
 			
-			case IS_DOUBLE: 
+			case IS_DOUBLE:
 			    storage->simple.dval = Z_DVAL_P(unstore);
 			break;
 			
@@ -485,7 +487,7 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 				} else ZVAL_EMPTY_STRING(pzval);
 			break;
 			
-			case IS_NULL: ZVAL_NULL(pzval); break;
+			case IS_NULL: Z_TYPE_P(pzval) = IS_NULL; break;
 			case IS_BOOL: ZVAL_BOOL(pzval, storage->simple.lval); break;
 			case IS_LONG: ZVAL_LONG(pzval, storage->simple.lval); break;
 			case IS_DOUBLE: ZVAL_DOUBLE(pzval, storage->simple.dval); break;
@@ -551,9 +553,15 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 					(char*) storage->data, 
 					storage->length TSRMLS_CC
 				);
+				if (result == FAILURE) {
+				    /* display error, do something ... ? */
+				    Z_TYPE_P(pzval) = IS_NULL;
+				}
 			} break;
 			
-			default: ZVAL_NULL(pzval);
+			default: {
+			    Z_TYPE_P(pzval) = IS_NULL;
+			}
 		}	
 	}
 	return result;
@@ -563,13 +571,18 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 /* {{{ zval to string */
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {
 	int result = FAILURE;
-	if (pzval && (Z_TYPE_P(pzval) != IS_OBJECT || Z_OBJ_P(pzval))) {
-		smart_str *psmart = (smart_str*) calloc(1, sizeof(smart_str));
+	if (pzval && 
+	    (Z_TYPE_P(pzval) != IS_NULL) && 
+	    (Z_TYPE_P(pzval) != IS_OBJECT || pthreads_store_validate_object(&pzval TSRMLS_CC))) {
+	    
+		smart_str *psmart = (smart_str*) ecalloc(1, sizeof(smart_str));
+		
 		if (psmart) {
-			if (!complex && (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
-				pthreads_store_remove_resources_recursive(&pzval TSRMLS_CC);
+			if (!complex && 
+			    (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
+				pthreads_store_remove_complex_recursive(&pzval TSRMLS_CC);
 			}
-			
+
 			{
 				if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
 					(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
@@ -583,20 +596,23 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 					PHP_VAR_SERIALIZE_DESTROY(vars);
 				}
 			}
-		
+
 			*slength = psmart->len;
 			if (psmart->len) {
-				*pstring = calloc(1, psmart->len+1);
+				*pstring = malloc(psmart->len+1);
 				if (*pstring) {
-					memmove(
+					memcpy(
 						(char*) *pstring, (const void*) psmart->c, psmart->len
 					);
 					result = SUCCESS;
 				}
 			} else *pstring = NULL;
 			smart_str_free(psmart);	
-			free(psmart);
+			efree(psmart);
 		}
+	} else {
+	    *slength = 0;
+	    *pstring = NULL;
 	}
 	return result;
 } /* }}} */
@@ -638,9 +654,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
     switch (Z_TYPE_P(from)) {
         case IS_OBJECT: {
             /* check for a suitable pthreads object */
-            if (instanceof_function(Z_OBJCE_P(from), pthreads_thread_entry TSRMLS_CC) ||
-                instanceof_function(Z_OBJCE_P(from), pthreads_worker_entry TSRMLS_CC) ||
-                instanceof_function(Z_OBJCE_P(from), pthreads_stackable_entry TSRMLS_CC) ) {
+            if (IS_PTHREADS_OBJECT(from)) {
                 
                 zend_bool locked[2] = {0, 0};
                 PTHREAD pobjects[2] = {PTHREADS_FETCH_FROM(destination), PTHREADS_FETCH_FROM(from)};
@@ -686,8 +700,8 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                                         
                                         case IS_STRING: {
                                             if ((copy.length = storage->length)) {
-                                                copy.data = (char*) calloc(1, copy.length+1);
-                                                memmove(
+                                                copy.data = (char*) malloc(copy.length+1);
+                                                memcpy(
                                                     copy.data, (const void*) storage->data, copy.length
                                                 );
                                             }
@@ -701,8 +715,8 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                                         case IS_OBJECT:
 				                        case IS_ARRAY: {
 				                            if ((copy.length = storage->length)) {
-                                                copy.data = (char*) calloc(1, copy.length+1);
-                                                memmove(
+                                                copy.data = (char*) malloc(copy.length+1);
+                                                memcpy(
                                                     copy.data, (const void*) storage->data, copy.length
                                                 );
                                                 
@@ -793,21 +807,21 @@ next:
     return SUCCESS;
 } /* }}} */
 
-/* {{{ set resources to NULL for non-complex types; helper-function for pthreads_store_remove_resources_recursive */
-static int pthreads_store_remove_resources(zval **pzval TSRMLS_DC) {
+/* {{{ set resources to NULL for non-complex types; helper-function for pthreads_store_remove_complex_recursive */
+static int pthreads_store_remove_complex(zval **pzval TSRMLS_DC) {
 	if (Z_TYPE_PP(pzval) == IS_RESOURCE) {
 		Z_TYPE_PP(pzval) = IS_NULL;
 	}
-	return pthreads_store_remove_resources_recursive(pzval TSRMLS_CC);
+	return pthreads_store_remove_complex_recursive(pzval TSRMLS_CC);
 } /* }}} */
 
 /* {{{ check a handle is valid before reading it */
-static int pthreads_store_validate_resource(zval **pzval TSRMLS_DC) {	
-	return (EG(objects_store).top > Z_OBJ_HANDLE_PP(pzval));
+static int pthreads_store_validate_object(zval **pzval TSRMLS_DC) {
+	return (EG(objects_store).top > Z_OBJ_HANDLE_PP(pzval)) && (Z_OBJ_P(*pzval));
 } /* }}} */
 
 /* {{{ set corrupt objects (like mysqli after thread duplication) to NULL and recurse */
-static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
+static int pthreads_store_remove_complex_recursive(zval **pzval TSRMLS_DC) {
 	int is_temp;
 
 	HashTable *thash = NULL;
@@ -817,7 +831,7 @@ static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
 
 		case IS_OBJECT:
 			if (thash == NULL) {
-				if (!pthreads_store_validate_resource(pzval TSRMLS_CC) || !Z_OBJ_P(*pzval)) {
+				if (!pthreads_store_validate_object(pzval TSRMLS_CC)) {
 					GC_REMOVE_ZVAL_FROM_BUFFER(*pzval);
 					Z_TYPE_PP(pzval) = IS_NULL;
 					return ZEND_HASH_APPLY_KEEP;
@@ -826,7 +840,7 @@ static int pthreads_store_remove_resources_recursive(zval **pzval TSRMLS_DC) {
 			}
 
 			if (thash) {
-				zend_hash_apply(thash, (apply_func_t)pthreads_store_remove_resources TSRMLS_CC);
+				zend_hash_apply(thash, (apply_func_t)pthreads_store_remove_complex TSRMLS_CC);
 			}
 			
 		break;

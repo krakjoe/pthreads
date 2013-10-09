@@ -28,6 +28,7 @@ PHP_METHOD(Thread, isJoined);
 PHP_METHOD(Thread, isWaiting);
 PHP_METHOD(Thread, isTerminated);
 PHP_METHOD(Thread, getThreadId);
+PHP_METHOD(Thread, getCurrentThreadId);
 PHP_METHOD(Thread, getCreatorId);
 
 PHP_METHOD(Thread, synchronized);
@@ -62,6 +63,9 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_detach, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_getThreadId, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_getCurrentThreadId, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 
@@ -128,7 +132,8 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, isWaiting, Thread_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isTerminated, Thread_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getTerminationInfo, Thread_getTerminationInfo, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
+	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, getCurrentThreadId, Thread_getCurrentThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
 	PHP_ME(Thread, getCreatorId, Thread_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, synchronized, Thread_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -347,9 +352,14 @@ PHP_METHOD(Thread, detach)
 	Will return the identifier of the referenced Thread */
 PHP_METHOD(Thread, getThreadId)
 {
-	if (getThis()) {
-		ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->tid);
-	} else ZVAL_LONG(return_value, pthreads_self());
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->tid);
+} /* }}} */
+
+/* {{{ proto long Thread::getCurrentThreadId()
+	Will return the identifier of the current Thread */
+PHP_METHOD(Thread, getCurrentThreadId)
+{
+	ZVAL_LONG(return_value, pthreads_self());
 } /* }}} */
 
 /* {{{ proto long Thread::getCreatorId() 

@@ -424,8 +424,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 		destination->thread = source->thread;
 		destination->tid = source->tid;
 		destination->tls = source->tls;
-		destination->cls = source->cls;
-		destination->cid = source->cid;
 		destination->address = source->address;
 		destination->resources = source->resources;
 		destination->lock = source->lock;
@@ -464,13 +462,11 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 #endif	
 
 		base->cls = tsrm_ls;
+		base->cid = pthreads_self();
 		base->address = pthreads_address_alloc(base TSRMLS_CC);
 		base->options = PTHREADS_INHERIT_ALL;
-		
-		if (PTHREADS_IS_CONNECTION(base)) {
-			base->tid = pthreads_self();
-		} else {
-			base->cid = pthreads_self();
+
+		if (!PTHREADS_IS_CONNECTION(base)) {
 			base->lock = pthreads_lock_alloc(TSRMLS_C);
 			base->state = pthreads_state_alloc(0 TSRMLS_CC);
 			base->synchro = pthreads_synchro_alloc(TSRMLS_C);
@@ -478,7 +474,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->store = pthreads_store_alloc(TSRMLS_C);
 			base->resources = pthreads_resources_alloc(TSRMLS_C);
             base->error = pthreads_error_alloc(TSRMLS_C);
-            
+
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
 				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
@@ -488,8 +484,6 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
                     base->stack->position = 0L;
 				}	
 			}
-			
-
 		}
 	}
 } /* }}} */

@@ -6,7 +6,7 @@ class file {
 	public static $fps;
 
 	public static function __callstatic($method, $args) {
-		$tid = Thread::getThreadId();
+		$tid = Thread::getCurrentThreadId();
 		if (isset(self::$fps[$tid])) {
 			return call_user_func_array(array("file", "_{$method}"), array_merge($args, array($tid)));
 		} else {
