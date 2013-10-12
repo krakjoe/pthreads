@@ -558,7 +558,11 @@ static void pthreads_preparation_property_info_copy_ctor(zend_property_info *pi)
 
 /* {{{ property info dtor */
 static void pthreads_preparation_property_info_copy_dtor(zend_property_info *pi) {
-    str_efree((char*)pi->name);    
+#if PHP_VERSION_ID > 50399
+    str_efree((char*)pi->name);
+#else
+    efree((char*)pi->name);
+#endif
         
     if (pi->doc_comment)
         efree((char*)pi->doc_comment);
