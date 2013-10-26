@@ -264,17 +264,17 @@ PHP_METHOD(Worker, getTerminationInfo)
 		    
 		    if (thread->error->clazz) {
 		        add_assoc_string(
-		            return_value, "scope", thread->error->clazz, 1);       
+		            return_value, "scope", (char *)thread->error->clazz, 1);       
 		    }
 		    
 		    if (thread->error->method) {
 		        add_assoc_string(
-		            return_value, "function", thread->error->method, 1);
+		            return_value, "function", (char *)thread->error->method, 1);
 		    }
 		    
 		    if (thread->error->file) {
 		        add_assoc_string(
-		            return_value, "file", thread->error->file, 1);
+		            return_value, "file", (char *)thread->error->file, 1);
 		        add_assoc_long(return_value, "line", thread->error->line);
 		    }
 		} else {

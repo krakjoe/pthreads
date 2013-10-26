@@ -506,7 +506,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 				    if (zend_hash_find(table[1], lcname, lcnamel, (void**)&exists) != SUCCESS){
 					    if ((prepared=pthreads_prepared_entry(thread, *entry TSRMLS_CC))==NULL) {
 						    zend_error(
-							    E_ERROR, "pthreads detected failure while preparing %s in %s", (*entry)->name, thread->std.ce->name, thread->tid
+							    E_ERROR, "pthreads detected failure while preparing %s in %s (%lu)", (*entry)->name, thread->std.ce->name, thread->tid
 						    );
 						    return;
 					    }
@@ -650,7 +650,6 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 static int pthreads_apply_method_prototype(zend_op_array *ops, zend_class_entry **ce TSRMLS_DC) {
 	if (ops && ce) {
 	    if (ops->prototype && ops->line_end) {
-	        zend_class_entry **scope;
 	        zend_function *prototype;
 	        
 	        if ((*ce)->parent) {

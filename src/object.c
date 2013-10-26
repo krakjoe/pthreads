@@ -48,13 +48,13 @@ static inline pthreads_address pthreads_address_alloc(PTHREAD object TSRMLS_DC) 
 	    
 		/* add the space for null here, once */
 		address->length = snprintf(
-			NULL, 0, "%lu:%lu", pid, (long) object
+			NULL, 0, "%lu:%lu", (long)pid, (long) object
 		);
 		if (address->length) {
 			address->serial = calloc(1, address->length+1);
 			if (address->serial) {
 				sprintf(
-					(char*) address->serial, "%lu:%lu", pid, (long) object
+					(char*) address->serial, "%lu:%lu", (long)pid, (long) object
 				);
 			}
 		}
@@ -127,12 +127,12 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
         /* deal with scope stuff */
         if (active) {
             if (active->common.scope) {
-                error->clazz = strdup(
+                error->clazz = (unsigned char *)strdup(
                     active->common.scope->name);
             } else error->clazz = NULL;
             
             if (active->common.function_name) {
-                error->method = strdup(
+                error->method = (unsigned char *)strdup(
                     active->common.function_name);
             } else error->method = NULL;
         }
@@ -143,7 +143,7 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
             
             tmp = zend_get_executed_filename(TSRMLS_C);
             if (tmp)
-                error->file = strdup(tmp);
+                error->file = (unsigned char *)strdup(tmp);
             
            error->line = zend_get_executed_lineno(TSRMLS_C);
         }
@@ -244,7 +244,6 @@ size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	zval *that_ptr;
 	zend_function *run;
 	zend_class_entry *popped;
-	ulong key = 0L;
 	
 burst:
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
@@ -253,7 +252,7 @@ burst:
 			    (HashTable*) thread->stack,
 			     thread->stack->position, (void**) &work
 			);
-			if (current = *work) {
+			if ((current = *work)) {
 				/*
 				* Allocate a $that
 				*/
@@ -614,8 +613,7 @@ int pthreads_join(PTHREAD thread TSRMLS_DC) {
 
 /* {{{ detach a thread */
 int pthreads_detach(PTHREAD thread TSRMLS_DC) {
-    int results;
-    
+
     if (PTHREADS_IS_NOT_DETACHED(thread)) {
         if ((pthread_detach(thread->thread) == SUCCESS)) {
             thread->scope |= PTHREADS_SCOPE_DETACHED;
@@ -664,7 +662,7 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
 	if (object_init_ex(
 		    *object, ce
 	    )==SUCCESS) {
-        zend_ulong len = sscanf((const char*)buffer, "%lu:%lu", &pid, &address);
+        zend_ulong len = sscanf((const char*)buffer, "%lu:%lu", (long unsigned int *)&pid, (long unsigned int *)&address);
         if (len) {
             pid_t mpid = PTHREADS_PID();
             
@@ -695,8 +693,10 @@ static void * pthreads_routine(void *arg) {
 		/* TSRM */
 		void ***tsrm_ls = NULL;
 		
-		zend_bool  glocked = 0, /* global lock indicator */
-                   worker = 0,  /* worker indicator */
+#ifdef PTHREADS_PEDANTIC
+		zend_bool  glocked = 0; /* global lock indicator */
+#endif
+        zend_bool  worker = 0,  /* worker indicator */
                    inwork = 0;  /* working indicator */
 		
 		/* $this original pointer */
@@ -752,6 +752,11 @@ static void * pthreads_routine(void *arg) {
 		**/
 		ZEG = PTHREADS_EG_ALL(TSRMLS_C);
 		
+		/*
+		* Allocate original $this
+		*/
+		MAKE_STD_ZVAL(this_ptr);
+
 		/**
 		* Thread Block Begin
 		**/
@@ -760,11 +765,6 @@ static void * pthreads_routine(void *arg) {
 			* Set worker indicator
 			*/
 			worker = PTHREADS_IS_WORKER(thread);
-
-			/*
-			* Allocate original $this
-			*/
-			MAKE_STD_ZVAL(this_ptr);
 
 			/* EG setup */
 			ZEG->in_execution = 1;							
