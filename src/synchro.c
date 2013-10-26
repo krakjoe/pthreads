@@ -125,6 +125,7 @@ void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_in
 		}
 		
 		/* return the result */
+			/* TODO warning: the address of '_zval_ptr_dtor' will always evaluate as 'true' [-Waddress] */
 		ZVAL_ZVAL(return_value, retval, 1, ZVAL_PTR_DTOR);
 	} zend_catch {
 		/* something horrible happened */

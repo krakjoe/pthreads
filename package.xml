@@ -48,12 +48,15 @@
    <file name="examples/Stacking.php" role="doc" />
    <file name="tests/binding.phpt" role="test" />
    <file name="tests/callstatic-etc.phpt" role="test" />
+   <file name="tests/chunk.phpt" role="test" />
    <file name="tests/complex-statics.phpt" role="test" />
    <file name="tests/complex-statics-set-null.phpt" role="test" />
    <file name="tests/conditions.phpt" role="test" />
    <file name="tests/constants.phpt" role="test" />
    <file name="tests/corrupted-resources.phpt" role="test" />
    <file name="tests/counting-members.phpt" role="test" />
+   <file name="tests/detach.phpt" role="test" />
+   <file name="tests/doc-comments.phpt" role="test" />
    <file name="tests/foreign-private-members.phpt" role="test" />
    <file name="tests/functions.phpt" role="test" />
    <file name="tests/global-constants.phpt" role="test" />
@@ -65,6 +68,8 @@
    <file name="tests/interface.phpt" role="test" />
    <file name="tests/interfaces.phpt" role="test" />
    <file name="tests/isset-unset.phpt" role="test" />
+   <file name="tests/merging-members.phpt" role="test" />
+   <file name="tests/merging-range.phpt" role="test" />
    <file name="tests/mutex.phpt" role="test" />
    <file name="tests/norefs.phpt" role="test" />
    <file name="tests/normalize-members.phpt" role="test" />
@@ -113,10 +118,10 @@
    <file name="iterators/default.h" role="src" />
    <file name="config.m4" role="src" />
    <file name="config.w32" role="src" />
-   <file name="LICENSE" role="src" />
+   <file name="LICENSE" role="doc" />
    <file name="php_pthreads.c" role="src" />
    <file name="php_pthreads.h" role="src" />
-   <file name="README.md" role="src" />
+   <file name="README.md" role="doc" />
   </dir>
  </contents>
  <dependencies>

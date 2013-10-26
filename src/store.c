@@ -212,7 +212,6 @@ int pthreads_store_count(zval *object, long *count TSRMLS_DC) {
    PTHREAD pthreads = PTHREADS_FETCH_FROM(object);
    
    if (pthreads) {
-    zend_bool locked;
     if (pthreads_store_lock(object TSRMLS_CC)) {
         (*count) = zend_hash_num_elements(
             &pthreads->store->table);
@@ -792,7 +791,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                         } break;
                         
                         default: {
-                            zend_error(E_WARNING, "pthreads detected an unsupported key type for merging, ignoring data at %lu", index);
+                            zend_error(E_WARNING, "pthreads detected an unsupported key type for merging, ignoring data at %lu", (long)index);
                         }
                     }
 next:

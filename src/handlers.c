@@ -297,10 +297,12 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 					callable->common.pass_rest_by_reference = call->common.pass_rest_by_reference;
 					callable->common.return_reference = call->common.return_reference;
 #endif
+					free(lcname);
+					return callable;
 				}
 				free(lcname);
-			return callable;
-			
+				/* TODO : if not found ? switch to default ? or return some error ? */
+
 			default: call = zend_handlers->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
 		}
 		
