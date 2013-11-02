@@ -71,7 +71,7 @@ static inline void pthreads_address_free(pthreads_address address) {
 
 /* {{{ base ctor/clone/dtor/free */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC);
-static void pthreads_base_dtor(void *arg TSRMLS_DC); 
+static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC); 
 static void pthreads_base_free(void *arg TSRMLS_DC);
 static void pthreads_base_clone(void *arg, void **pclone TSRMLS_DC); /* }}} */
 
@@ -488,7 +488,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 } /* }}} */
 
 /* {{{ pthreads base destructor */
-static void pthreads_base_dtor(void *arg TSRMLS_DC) {
+static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 
 	if (PTHREADS_IS_NOT_CONNECTION(base) && PTHREADS_IS_NOT_DETACHED(base)) {
@@ -516,8 +516,6 @@ static void pthreads_base_dtor(void *arg TSRMLS_DC) {
 	    }
 	}
     
-    
-
 #if PHP_VERSION_ID > 50399
 	{
 		zend_object *object = &base->std;
