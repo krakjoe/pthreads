@@ -35,6 +35,9 @@
 #include <php_globals.h>
 #include <php_main.h>
 #include <php_ticks.h>
+#ifdef HAVE_PHP_SESSION
+#	include <ext/session/php_session.h>
+#endif
 #include <ext/standard/info.h>
 #include <ext/standard/php_smart_str.h>
 #include <ext/standard/php_smart_str_public.h>

@@ -172,7 +172,8 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_INHERIT_CLASSES   0x00001000
 #define PTHREADS_INHERIT_INCLUDES  0x00010000
 #define PTHREADS_INHERIT_COMMENTS  0x00100000
-#define PTHREADS_INHERIT_ALL       0x00111111 /* }}} */
+#define PTHREADS_INHERIT_ALL       0x00111111
+#define PTHREADS_ALLOW_HEADERS	   0x01000000 /* }}} */
 
 /* {{{ scope constants */
 #define PTHREADS_SCOPE_UNKNOWN     0x00000000

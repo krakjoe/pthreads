@@ -726,16 +726,26 @@ static void * pthreads_routine(void *arg) {
 		/* some php globals */
 		PG(expose_php) = 0;
 		PG(auto_globals_jit) = 0;
-		
+
+#ifdef HAVE_PHP_SESSION
+		/* fixup sessions for compatibility */
+		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
+			PS(cache_limiter)[0] = 0;
+			PS(use_cookies) = 0;
+		}
+#endif
+
 		/* request startup */
 		php_request_startup(TSRMLS_C);
 
 		/* fix php-fpm compatibility */
 		SG(sapi_started)=0;		
 		
-		/* do not send headers again */
-		SG(headers_sent)=1;
-		SG(request_info).no_headers = 1;
+		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
+			/* do not send headers again */
+			SG(headers_sent)=1;
+			SG(request_info).no_headers = 1;
+		}
 		
 		/* prepare environment */
 		pthreads_prepare(thread TSRMLS_CC);
