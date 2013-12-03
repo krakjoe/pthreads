@@ -480,4 +480,15 @@ int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D) {
     return SUCCESS;
 } /* }}} */
 
+/* {{{ clone object handler */
+zend_object_value pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D)
+{
+	zend_object_value attach;
+	
+	zend_error(
+		E_ERROR, "pthreads objects cannot be cloned");
+	
+	return attach;
+} /* }}} */
+
 #endif

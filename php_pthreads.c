@@ -204,6 +204,8 @@ PHP_MINIT_FUNCTION(pthreads)
     pthreads_handlers.get_gc = NULL;
 #endif
 
+	pthreads_handlers.clone_obj = pthreads_clone_object; 
+
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 
 	if (pthreads_globals_init(TSRMLS_C)) {
