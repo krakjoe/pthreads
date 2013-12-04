@@ -34,6 +34,8 @@
 #define PTHREADS_CAST_PASSTHRU_C from, to, type TSRMLS_CC
 #define PTHREADS_COUNT_PASSTHRU_D zval *object, long *count TSRMLS_DC
 #define PTHREADS_COUNT_PASSTHRU_C object, count TSRMLS_CC
+#define PTHREADS_CLONE_PASSTHRU_D zval *object TSRMLS_DC
+#define PTHREADS_CLONE_PASSTHRU_C object TSRMLS_CC
 
 /* {{{ these resolve differences in 5.3 and 5.4 object handling API */
 #if PHP_VERSION_ID > 50399
@@ -129,4 +131,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D); /* }}} */
 
 /* {{{ cast an object to a normal array helper */
 int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D); /* }}} */
+
+/* {{{ clone object handler */
+zend_object_value pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D); /* }}} */
 #endif

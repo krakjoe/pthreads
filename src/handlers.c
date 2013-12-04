@@ -297,10 +297,12 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 					callable->common.pass_rest_by_reference = call->common.pass_rest_by_reference;
 					callable->common.return_reference = call->common.return_reference;
 #endif
+					free(lcname);
+					return callable;
 				}
 				free(lcname);
-			return callable;
-			
+				/* TODO : if not found ? switch to default ? or return some error ? */
+
 			default: call = zend_handlers->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
 		}
 		
@@ -476,6 +478,17 @@ int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D) {
     }
     
     return SUCCESS;
+} /* }}} */
+
+/* {{{ clone object handler */
+zend_object_value pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D)
+{
+	zend_object_value attach;
+	
+	zend_error(
+		E_ERROR, "pthreads objects cannot be cloned");
+	
+	return attach;
 } /* }}} */
 
 #endif

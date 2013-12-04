@@ -8,7 +8,7 @@ class sql {
 	public static $connection;
 
 	public static function __callstatic($method, $args){
-		$tid = Thread::getThreadId();
+		$tid = Thread::getCurrentThreadId();
 		if (isset(self::$connection[$tid])) {
 			return call_user_func_array(array(self::$connection[$tid], "_{$method}"), $args);
 		} else {

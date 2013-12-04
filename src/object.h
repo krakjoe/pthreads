@@ -61,6 +61,7 @@ size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC);
 /* {{{ start/join */
 int pthreads_start(PTHREAD thread TSRMLS_DC);
 int pthreads_join(PTHREAD thread TSRMLS_DC);
+int pthreads_detach(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
 /* {{{ synchronization heplers */

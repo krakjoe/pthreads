@@ -7,22 +7,23 @@ This test will verify wait/notify functionality
 class ThreadTest extends Thread {
 	public $sent;
 	
+	public function __construct() {
+	    $this->sent = false;
+	}
+	
 	public function run(){
-	    sleep(1);
-		$this->sent = true;
-		$this->synchronized(function(){
-		    $this->notify();
-		});
+	    $this->synchronized(function($self){
+		    $self->sent = true;
+		    $self->notify();
+	    }, $this);
 	}
 }
 $thread = new ThreadTest();
 if($thread->start()) {
-	$thread->lock();
 	$thread->synchronized(function($me){
 	    if (!$me->sent) {
-		    $me->unlock();
 		    var_dump($me->wait());
-	    } else $me->unlock();
+	    } else var_dump($me->sent);
 	}, $thread);
 	
 } else printf("bool(false)\n");

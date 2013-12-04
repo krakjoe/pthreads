@@ -124,8 +124,8 @@ void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_in
 			}
 		}
 		
-		/* return the result */		
-		ZVAL_ZVAL(return_value, retval, 1, ZVAL_PTR_DTOR);
+		/* return the result */
+		ZVAL_ZVAL(return_value, retval, 1, 1);
 	} zend_catch {
 		/* something horrible happened */
 		ZVAL_NULL(return_value);

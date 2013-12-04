@@ -35,6 +35,9 @@
 #include <php_globals.h>
 #include <php_main.h>
 #include <php_ticks.h>
+#ifdef HAVE_PHP_SESSION
+#	include <ext/session/php_session.h>
+#endif
 #include <ext/standard/info.h>
 #include <ext/standard/php_smart_str.h>
 #include <ext/standard/php_smart_str_public.h>
@@ -59,6 +62,18 @@ extern zend_class_entry *pthreads_stackable_entry;
 extern zend_class_entry *pthreads_mutex_entry;
 extern zend_class_entry *pthreads_condition_entry;
 
+#ifndef IS_PTHREADS_CLASS
+#define IS_PTHREADS_CLASS(c)    \
+        (instanceof_function(c, pthreads_thread_entry TSRMLS_CC) || \
+         instanceof_function(c, pthreads_worker_entry TSRMLS_CC) || \
+         instanceof_function(c, pthreads_stackable_entry TSRMLS_CC))
+#endif
+
+#ifndef IS_PTHREADS_OBJECT
+#define IS_PTHREADS_OBJECT(o)   \
+        (IS_PTHREADS_CLASS(Z_OBJCE_P(o)))
+#endif
+
 extern zend_object_handlers pthreads_handlers;
 extern zend_object_handlers *zend_handlers;
 
@@ -69,8 +84,10 @@ ZEND_EXTERN_MODULE_GLOBALS(pthreads)
 #ifndef PTHREADS_ZG
 ZEND_BEGIN_MODULE_GLOBALS(pthreads)
 	void *pointer;
+	pid_t pid;
 ZEND_END_MODULE_GLOBALS(pthreads)
 #	define PTHREADS_ZG(v) TSRMG(pthreads_globals_id, zend_pthreads_globals *, v)
+#   define PTHREADS_PID() PTHREADS_ZG(pid) ? PTHREADS_ZG(pid) : (PTHREADS_ZG(pid)=getpid())
 #endif
 
 #endif

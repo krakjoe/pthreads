@@ -109,6 +109,7 @@ ZEND_DECLARE_MODULE_GLOBALS(pthreads)
 
 static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 	pg->pointer = NULL;
+	pg->pid = 0L;
 }
 
 PHP_MINIT_FUNCTION(pthreads)
@@ -126,6 +127,9 @@ PHP_MINIT_FUNCTION(pthreads)
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_CLASSES", PTHREADS_INHERIT_CLASSES, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_FUNCTIONS", PTHREADS_INHERIT_FUNCTIONS, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_INCLUDES", PTHREADS_INHERIT_INCLUDES, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_COMMENTS", PTHREADS_INHERIT_COMMENTS, CONST_CS | CONST_PERSISTENT);
+	
+	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
 	
 	INIT_CLASS_ENTRY(te, "Thread", pthreads_thread_methods);
 	te.create_object = pthreads_thread_ctor;
@@ -199,6 +203,8 @@ PHP_MINIT_FUNCTION(pthreads)
     /* properties copied will be destroyed with the object */
     pthreads_handlers.get_gc = NULL;
 #endif
+
+	pthreads_handlers.clone_obj = pthreads_clone_object; 
 
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 

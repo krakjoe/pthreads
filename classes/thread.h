@@ -21,12 +21,14 @@ PHP_METHOD(Thread, start);
 PHP_METHOD(Thread, wait);
 PHP_METHOD(Thread, notify);
 PHP_METHOD(Thread, join);
+PHP_METHOD(Thread, detach);
 PHP_METHOD(Thread, isStarted);
 PHP_METHOD(Thread, isRunning);
 PHP_METHOD(Thread, isJoined);
 PHP_METHOD(Thread, isWaiting);
 PHP_METHOD(Thread, isTerminated);
 PHP_METHOD(Thread, getThreadId);
+PHP_METHOD(Thread, getCurrentThreadId);
 PHP_METHOD(Thread, getCreatorId);
 
 PHP_METHOD(Thread, synchronized);
@@ -57,8 +59,15 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_join, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_detach, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(Thread_getThreadId, 0, 0, 0)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_getCurrentThreadId, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_getCreatorId, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -116,13 +125,15 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+    PHP_ME(Thread, detach, Thread_detach, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isStarted, Thread_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isRunning, Thread_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isWaiting, Thread_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, isTerminated, Thread_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, getTerminationInfo, Thread_getTerminationInfo, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
+	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, getCurrentThreadId, Thread_getCurrentThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
 	PHP_ME(Thread, getCreatorId, Thread_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, synchronized, Thread_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -249,17 +260,17 @@ PHP_METHOD(Thread, getTerminationInfo)
 		    
 		    if (thread->error->clazz) {
 		        add_assoc_string(
-		            return_value, "scope", thread->error->clazz, 1);       
+		            return_value, "scope", (char *)thread->error->clazz, 1);       
 		    }
 		    
 		    if (thread->error->method) {
 		        add_assoc_string(
-		            return_value, "function", thread->error->method, 1);
+		            return_value, "function", (char *)thread->error->method, 1);
 		    }
 		    
 		    if (thread->error->file) {
 		        add_assoc_string(
-		            return_value, "file", thread->error->file, 1);
+		            return_value, "file", (char *)thread->error->file, 1);
 		        add_assoc_long(return_value, "line", thread->error->line);
 		    }
 		} else {
@@ -316,13 +327,39 @@ PHP_METHOD(Thread, join)
 	}
 } /* }}} */
 
+/* {{{ proto boolean Thread::detach()
+        Will return a boolean indication of success */
+
+PHP_METHOD(Thread, detach)
+{
+    PTHREAD thread = PTHREADS_FETCH;
+    int result = FAILURE;
+
+    if (thread) {
+        result = pthreads_detach(thread, 0);
+
+        if (result != SUCCESS) {
+            RETURN_FALSE;
+        }
+        
+        RETURN_TRUE;
+    }
+
+    RETURN_FALSE;
+} /* }}} */
+
 /* {{{ proto long Thread::getThreadId()
 	Will return the identifier of the referenced Thread */
 PHP_METHOD(Thread, getThreadId)
 {
-	if (getThis()) {
-		ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->tid);
-	} else ZVAL_LONG(return_value, pthreads_self());
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->tid);
+} /* }}} */
+
+/* {{{ proto long Thread::getCurrentThreadId()
+	Will return the identifier of the current Thread */
+PHP_METHOD(Thread, getCurrentThreadId)
+{
+	ZVAL_LONG(return_value, pthreads_self());
 } /* }}} */
 
 /* {{{ proto long Thread::getCreatorId() 

@@ -23,11 +23,15 @@ var PTHREADS_EXT_FLAGS="/I" + configure_module_dirname;
 var PTHREADS_EXT_DEP="pthreadVC2.lib";
 /* --------------------------------------------------------------------- */
 ARG_WITH("pthreads", "for pthreads support", "no");
+ARG_ENABLE("pthreads-pedantic", "for pthreads pedantic locking", "no");
 
 if (PHP_PTHREADS != "no") {
-	if(CHECK_HEADER_ADD_INCLUDE("pthread.h", "CFLAGS_PTHREADS", PHP_PTHREADS + ";" + configure_module_dirname) &&
+	if(CHECK_HEADER_ADD_INCLUDE("pthread.h", "CFLAGS_PTHREADS", PHP_PTHREADS + ";" + configure_module_dirname) &&    
 		CHECK_HEADER_ADD_INCLUDE("sched.h", "CFLAGS_PTHREADS", PHP_PTHREADS + ";" + configure_module_dirname) &&
 		CHECK_LIB(PTHREADS_EXT_DEP, PTHREADS_EXT_NAME, PHP_PTHREADS) ) {
+		if (PHP_PTHREADS_PEDANTIC != "no") {
+		    AC_DEFINE('PTHREADS_PEDANTIC', 1);
+		}
 		EXTENSION(PTHREADS_EXT_NAME, PTHREADS_EXT_API, PHP_PTHREADS_SHARED, PTHREADS_EXT_FLAGS);
 		ADD_SOURCES(
 			PTHREADS_EXT_DIR,
