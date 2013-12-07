@@ -730,7 +730,7 @@ static void * pthreads_routine(void *arg) {
 #ifdef HAVE_PHP_SESSION
 		/* fixup sessions for compatibility */
 		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-			PS(cache_limiter)[0] = 0;
+			PS(cache_limiter) = 0;
 			PS(use_cookies) = 0;
 		}
 #endif
