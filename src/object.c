@@ -151,7 +151,7 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ allocate error structure */
-static inline pthreads_error pthreads_error_alloc(TSRMLS_C) {
+static inline pthreads_error pthreads_error_alloc(TSRMLS_D) {
     pthreads_error error = calloc(1, sizeof(*error));
     
     error->clazz = NULL;

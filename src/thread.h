@@ -212,4 +212,4 @@ static inline ulong pthreads_self() {
 /* {{{ tell if the referenced thread is the threading context */
 #define PTHREADS_IN_THREAD(t)	(t->tls == tsrm_ls) /* }}} */
 
-#endif /* }}} */ /* HAVE_PTHREADS_THREAD_H */
+#endif /* HAVE_PTHREADS_THREAD_H */
