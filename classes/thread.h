@@ -116,8 +116,7 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_chunk, 0, 0, 1)
     ZEND_ARG_INFO(0, size)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_kill, 0, 0, 1)
-    ZEND_ARG_INFO(0, signal)
+ZEND_BEGIN_ARG_INFO_EX(Thread_kill, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_thread_methods[];
