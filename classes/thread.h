@@ -41,6 +41,7 @@ PHP_METHOD(Thread, pop);
 PHP_METHOD(Thread, chunk);
 
 PHP_METHOD(Thread, getTerminationInfo);
+PHP_METHOD(Thread, kill);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -115,6 +116,10 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_chunk, 0, 0, 1)
     ZEND_ARG_INFO(0, size)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_kill, 0, 0, 1)
+    ZEND_ARG_INFO(0, signal)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_thread_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREAD
@@ -142,6 +147,7 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, shift, Thread_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, pop, Thread_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, chunk, Thread_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, kill, Thread_kill, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Thread::start([long $options = PTHREADS_INHERIT_ALL])
@@ -452,6 +458,22 @@ PHP_METHOD(Thread, chunk)
     }
     
     pthreads_store_chunk(getThis(), size, preserve, &return_value TSRMLS_CC);
+} /* }}} */
+
+/* {{{ proto boolean Thread::kill()
+	Will kill the referenced thread, forcefully */
+PHP_METHOD(Thread, kill) 
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+    
+    {
+    	PTHREAD thread = PTHREADS_FETCH;
+    	/* allowing sending other signals here is just too dangerous */
+    	RETURN_BOOL(
+    		pthread_kill(thread->thread, SIGUSR1)==SUCCESS);
+    }
 } /* }}} */
 #	endif
 #endif

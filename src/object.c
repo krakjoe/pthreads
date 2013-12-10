@@ -473,7 +473,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->store = pthreads_store_alloc(TSRMLS_C);
 			base->resources = pthreads_resources_alloc(TSRMLS_C);
             base->error = pthreads_error_alloc(TSRMLS_C);
-
+			
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
 				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
@@ -682,10 +682,19 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
 	return SUCCESS;
 } /* }}} */
 
+static inline void pthreads_kill_handler(int signo) /* {{{ */
+{	
+	zend_bailout();
+} /* }}} */
+
 /* {{{ this is aptly named ... */
 static void * pthreads_routine(void *arg) {
 	/* passed the object as argument */
 	PTHREAD thread = (PTHREAD) arg;
+
+	/* installed to support a graceful-ish kill function */
+	signal(
+		SIGUSR1, pthreads_kill_handler);
 
 	if (thread) {
 		/* TSRM */
@@ -706,7 +715,7 @@ static void * pthreads_routine(void *arg) {
 		/**
 		* Startup Block Begin
 		**/
-
+		
 #ifdef PTHREADS_PEDANTIC
 		/* acquire a global lock */
 		pthreads_globals_lock(&glocked TSRMLS_CC);
@@ -795,7 +804,7 @@ static void * pthreads_routine(void *arg) {
 				zval zmethod;
 				
 				ZVAL_STRINGL(&zmethod, "run", sizeof("run"), 0);				
-								
+				
 				/* execute $this */
 				do {	
 					zend_function *zrun;
@@ -881,7 +890,7 @@ static void * pthreads_routine(void *arg) {
 		} zend_catch {
 			/* do something, it's all gone wrong */ 
 		} zend_end_try();
-        
+		
 		/*
 		* Free original reference to $this
 		*/
