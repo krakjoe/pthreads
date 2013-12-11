@@ -35,6 +35,7 @@ PHP_METHOD(Worker, pop);
 PHP_METHOD(Worker, chunk);
 PHP_METHOD(Worker, kill);
 
+
 ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
@@ -88,6 +89,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_kill, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+
 extern zend_function_entry pthreads_worker_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_WORKER
@@ -96,26 +98,20 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, start, Worker_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ABSTRACT_ME(Worker, run, Worker_run)
 	PHP_ME(Worker, shutdown, Worker_shutdown, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	
 	PHP_ME(Worker, getThreadId, Worker_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, getCreatorId, Worker_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	
 	PHP_ME(Worker, stack, Worker_stack, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, unstack, Worker_unstack, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, getStacked, Worker_getStacked, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	
 	PHP_ME(Worker, isShutdown, Worker_isShutdown, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, isStarted, Worker_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, isTerminated, Worker_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, getTerminationInfo, Worker_getTerminationInfo, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	
 	PHP_ME(Worker, merge, Worker_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	
 	PHP_ME(Worker, shift, Worker_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, pop, Worker_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, chunk, Worker_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-
 	PHP_ME(Worker, kill, Worker_kill, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
@@ -377,13 +373,14 @@ PHP_METHOD(Worker, kill)
     if (zend_parse_parameters_none() != SUCCESS) {
         return;
     }
-    
+#ifdef PTHREADS_KILL_SIGNAL
     {
     	PTHREAD thread = PTHREADS_FETCH;
     	/* allowing sending other signals here is just too dangerous */
     	RETURN_BOOL(pthread_kill(
     		thread->thread, SIGUSR1)==SUCCESS);
     }
+#endif
 } /* }}} */
 #	endif
 #endif

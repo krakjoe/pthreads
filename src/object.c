@@ -186,18 +186,19 @@ size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 	int remain = 0;
 	
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
-		HashTable *stack = &thread->stack->objects;
-		if (work) {
-		    HashPosition position;
-		    PTHREAD search = NULL;
-		    
-		    for (zend_hash_internal_pointer_reset_ex(stack, &position);
-		        zend_hash_get_current_data_ex(stack, (void**)&search, &position) == SUCCESS;
-		        zend_hash_move_forward_ex(stack, &position)) {
-		        /* arghhh */
-		    }
-		} else zend_hash_destroy(stack);
-		remain = zend_hash_num_elements(stack);
+		if (PTHREADS_IS_WORKER(thread)) {
+			HashTable *stack = &thread->stack->objects;
+			if (work) {
+				HashPosition position;
+				PTHREAD search = NULL;
+				for (zend_hash_internal_pointer_reset_ex(stack, &position);
+				    zend_hash_get_current_data_ex(stack, (void**)&search, &position) == SUCCESS;
+				    zend_hash_move_forward_ex(stack, &position)) {
+				    /* arghhh */
+				}
+			} else zend_hash_destroy(stack);
+			remain = zend_hash_num_elements(stack);
+		}
 		pthreads_lock_release(thread->lock, locked TSRMLS_CC);
 	} else remain = -1;
 	return remain;
@@ -682,19 +683,25 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
 	return SUCCESS;
 } /* }}} */
 
+#ifdef PTHREADS_KILL_SIGNAL
 static inline void pthreads_kill_handler(int signo) /* {{{ */
 {	
+	TSRMLS_FETCH();
+	PTHREADS_ZG(signal) = signo;
 	zend_bailout();
 } /* }}} */
+#endif
 
 /* {{{ this is aptly named ... */
 static void * pthreads_routine(void *arg) {
 	/* passed the object as argument */
 	PTHREAD thread = (PTHREAD) arg;
-
+	
+#ifdef PTHREADS_KILL_SIGNAL
 	/* installed to support a graceful-ish kill function */
 	signal(
-		SIGUSR1, pthreads_kill_handler);
+		PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
+#endif
 
 	if (thread) {
 		/* TSRM */
@@ -846,6 +853,12 @@ static void * pthreads_routine(void *arg) {
 								} zend_catch {
 								    /* catches fatal errors and uncaught exceptions */
 									terminated = 1;
+									
+									/* danger lurking ... */
+									if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
+										/* like, totally bail man ! */
+										zend_bailout();
+									}
 								} zend_end_try();
 								
 								if (current) {
@@ -860,28 +873,28 @@ static void * pthreads_routine(void *arg) {
 								    /* unset running for waiters */
 								    pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 								}
-							}
 #if PHP_VERSION_ID > 50399
-							{
-								zend_op_array *ops = &zrun->op_array;
+								{
+									zend_op_array *ops = &zrun->op_array;
 							
-								if (ops) {
-									if (ops->run_time_cache) {
-										efree(ops->run_time_cache);
-										ops->run_time_cache = NULL;
+									if (ops) {
+										if (ops->run_time_cache) {
+											efree(ops->run_time_cache);
+											ops->run_time_cache = NULL;
+										}
 									}
-								}
-							} 
+								} 
 #endif
 
-							/* deal with references to stackable */
-							if (inwork) {
-								zval_ptr_dtor(&ZEG->This);
-							} else inwork = 1;
+								/* deal with references to stackable */
+								if (inwork) {
+									zval_ptr_dtor(&ZEG->This);
+								} else inwork = 1;
 
-							/* deal with zresult (ignored) */
-							if (zresult) {
-								zval_ptr_dtor(&zresult);
+								/* deal with zresult (ignored) */
+								if (zresult) {
+									zval_ptr_dtor(&zresult);
+								}
 							}
 						}
 					} else zend_error(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", ZEG->scope->name);

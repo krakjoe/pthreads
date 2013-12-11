@@ -824,6 +824,7 @@ static int pthreads_store_remove_complex_recursive(zval **pzval TSRMLS_DC) {
 	int is_temp;
 
 	HashTable *thash = NULL;
+	
 	switch (Z_TYPE_PP(pzval)) {
 		case IS_ARRAY:
 			thash = Z_ARRVAL_PP(pzval);

@@ -197,6 +197,10 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_IS_NOT_DETACHED(t)     (!PTHREADS_IS_DETACHED(t))
 /* }}} */
 
+#ifdef HAVE_SIGNAL_H
+#	define PTHREADS_KILL_SIGNAL			SIGUSR1
+#endif
+
 /* {{{ pthread_self wrapper */
 static inline ulong pthreads_self() {
 #ifdef _WIN32
