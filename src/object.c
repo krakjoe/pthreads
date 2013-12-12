@@ -887,7 +887,7 @@ static void * pthreads_routine(void *arg) {
 #endif
 
 								/* deal with references to stackable */
-								if (inwork) {
+								if (!terminated && inwork) {
 									zval_ptr_dtor(&ZEG->This);
 								} else inwork = 1;
 
