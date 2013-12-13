@@ -838,8 +838,8 @@ static void * pthreads_routine(void *arg) {
 							/* initialize cache object */
 							cache.initialized = 1;
 							cache.function_handler = zrun;
-							cache.calling_scope = ZEG->scope;
-							cache.called_scope = ZEG->called_scope;
+							cache.calling_scope = current->std.ce;
+							cache.called_scope = current->std.ce;
 							cache.object_ptr = ZEG->This;
 																																																																					
 							/* call the function */
