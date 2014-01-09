@@ -780,7 +780,7 @@ static void * pthreads_routine(void *arg) {
 		* Allocate original $this
 		*/
 		MAKE_STD_ZVAL(this_ptr);
-
+		
 		/**
 		* Thread Block Begin
 		**/
@@ -904,14 +904,24 @@ static void * pthreads_routine(void *arg) {
 			/* do something, it's all gone wrong */ 
 		} zend_end_try();
 		
-		/*
-		* Free original reference to $this
-		*/
-		FREE_ZVAL(this_ptr);
-		
 		/**
 		* Thread Block End
 		**/
+		
+	    /*
+		* Free original reference to $this
+		*/
+		if (!BG(user_shutdown_function_names)) {
+			FREE_ZVAL(this_ptr);
+		} else {
+			/*
+			* Note, this doesn't stop them being freed
+			* This has to be done to stop closures set as
+			* shutdown handlers from being freed before they
+			* are invoked
+			*/
+			PG(report_memleaks) = 0;
+		}
 		
 		/**
 		* Shutdown Block Begin
@@ -923,6 +933,7 @@ static void * pthreads_routine(void *arg) {
 #endif
 		/* shutdown request */
 	    php_request_shutdown(TSRMLS_C);
+	    
 
 		/* free interpreter */
 		tsrm_free_interpreter_context(tsrm_ls);	
