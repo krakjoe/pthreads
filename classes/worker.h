@@ -378,7 +378,7 @@ PHP_METHOD(Worker, kill)
     	PTHREAD thread = PTHREADS_FETCH;
     	/* allowing sending other signals here is just too dangerous */
     	RETURN_BOOL(pthread_kill(
-    		thread->thread, SIGUSR1)==SUCCESS);
+    		thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
     }
 #endif
 } /* }}} */

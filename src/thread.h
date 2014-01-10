@@ -198,7 +198,11 @@ static inline int pthreads_equal_func(void **first, void **second){
 /* }}} */
 
 #ifdef HAVE_SIGNAL_H
+#ifdef _WIN32
+#	define PTHREADS_KILL_SIGNAL			SIGBREAK
+#else
 #	define PTHREADS_KILL_SIGNAL			SIGUSR1
+#endif
 #endif
 
 /* {{{ pthread_self wrapper */
