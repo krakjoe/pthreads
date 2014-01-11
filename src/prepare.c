@@ -186,8 +186,8 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 					case 8: zend_hash_update(&prepared->function_table, "__callstatic", sizeof("__callstatic"), &candidate->__callstatic, sizeof(zend_function), (void**) &prepared->__callstatic); break;
 					case 9: zend_hash_update(&prepared->function_table, "__tostring", sizeof("__tostring"), &candidate->__tostring, sizeof(zend_function), (void**) &prepared->__tostring); break;
 					
-					case 10: zend_hash_update(&prepared->function_table, "__serialize", sizeof("__serialize"), &candidate->serialize_func, sizeof(zend_function), (void**) &prepared->serialize_func); break;
-					case 11: zend_hash_update(&prepared->function_table, "__unserialize", sizeof("__unserialize"), &candidate->unserialize_func, sizeof(zend_function), (void**) &prepared->unserialize_func); break;
+					case 10: zend_hash_update(&prepared->function_table, "serialize", sizeof("serialize"), &candidate->serialize_func, sizeof(zend_function), (void**) &prepared->serialize_func); break;
+					case 11: zend_hash_update(&prepared->function_table, "unserialize", sizeof("unserialize"), &candidate->unserialize_func, sizeof(zend_function), (void**) &prepared->unserialize_func); break;
 					/* handlers */
 					case 12: prepared->create_object = candidate->create_object; break;
 					case 13: prepared->serialize = candidate->serialize; break;
