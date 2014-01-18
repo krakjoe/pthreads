@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2013-09-08</date>
- <time>06:30:00</time>
+ <date>2014-01-18</date>
+ <time>08:30:00</time>
  <version>
-  <release>0.0.46</release>
-  <api>0.0.46</api>
+  <release>0.1.0</release>
+  <api>0.1.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,15 +22,18 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- additional functionality for all objects: pop/merge/shift/chunk
- shared class name table saves memory for each context/avoids errors
- segfaults/memory errors avoided where possible
- more predictable behaviour when objects gone away
+ fixed shutdown handler causing segfaults
+ add ::kill method, safely kill threads that are blocking/misbehaving
+ fix segfault induced by clone
+ fix usage of sessions causing segfaults
+ various internal changes to improve stability
  </notes>
  <contents>
   <dir name="/">
+   <file name="examples/Benchmark.php" role="doc" />
    <file name="examples/CallAnyFunction.php" role="doc" />
    <file name="examples/Fetch.php" role="doc" />
+   <file name="examples/KeepAliveSession.php" role="doc" />
    <file name="examples/Mutexes.php" role="doc" />
    <file name="examples/NewSynchronization.php" role="doc" />
    <file name="examples/Notifications.php" role="doc" />
@@ -78,8 +81,10 @@
    <file name="tests/oomethods.phpt" role="test" />
    <file name="tests/selective-inheritance.phpt" role="test" />
    <file name="tests/shift-pop.phpt" role="test" />
+   <file name="tests/shutdown-handler.phpt" role="test" />
    <file name="tests/stateful-fatalities.phpt" role="test" />
    <file name="tests/staticmethods.phpt" role="test" />
+   <file name="tests/static-resolution.phpt" role="test" />
    <file name="tests/statics.phpt" role="test" />
    <file name="tests/synchronization.phpt" role="test" />
    <file name="tests/thorn-in-side.phpt" role="test" />
