@@ -29,6 +29,7 @@
 #include <sys/time.h>
 #else
 #include <pthread.h>
+#include <signal.h>
 #endif
 
 #include <php.h>
@@ -39,6 +40,7 @@
 #	include <ext/session/php_session.h>
 #endif
 #include <ext/standard/info.h>
+#include <ext/standard/basic_functions.h>
 #include <ext/standard/php_smart_str.h>
 #include <ext/standard/php_smart_str_public.h>
 #include <ext/standard/php_var.h>
