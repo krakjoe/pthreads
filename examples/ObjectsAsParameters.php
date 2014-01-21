@@ -94,6 +94,6 @@ if($request->start()){
 			when a thread returns false for isRunning then your code is no longer being executed
 			pthreads will cleanup the variable when it goes out of scope like any other variable in php
 	*/
-	printf(" got %d bytes in %f seconds\n", $response->getLength(), $response->getDuration());
+	printf("got %d bytes in %f seconds\n", $response->getLength(), $response->getDuration());
 }
 ?>
