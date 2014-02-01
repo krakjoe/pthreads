@@ -8,7 +8,7 @@
 *	We often think of a language as high or low level, PHP doesn't fit into either of those two categories very well
 *	Lots of functions we're used to using in PHP are strikingly similar, if not exactly the same as their C counterparts, which gives it a low level feel ...
 *	The threading API is similar to __insert_high_level_language__, but infact we are still in the middle. In both high and low level languages your threads share memory
-*	The architecture we are executing in prohibits that from occuring, agressively ( it forms the thread safety used to execute in some SAPI's and indeed execute pthreads )
+*	The architecture we are executing in prohibits that from occuring, aggressively ( it forms the thread safety used to execute in some SAPI's and indeed execute pthreads )
 *	When a thread is started it is allocated a context, to allocate that context and throw it away after a file_get_contents or a few instructions is wasteful, especially
 *	if the programmer knows they will soon need to execute another Thread.
 *	pthreads includes a Worker Thread functionality, and this can be built upon in the user space to pool threads that you have created in order to reuse their contexts.
