@@ -81,6 +81,10 @@ zend_object_handlers pthreads_handlers;
 zend_object_handlers *zend_handlers;
 void ***pthreads_instance = NULL;
 
+#ifndef HAVE_SPL
+zend_class_entry *spl_ce_InvalidArgumentException;
+#endif
+
 #ifndef HAVE_PTHREADS_OBJECT_H
 #	include <src/object.h>
 #endif
@@ -214,6 +218,10 @@ PHP_MINIT_FUNCTION(pthreads)
 		*/
 		pthreads_instance = TSRMLS_C;
 	}
+
+#ifndef HAVE_SPL
+	spl_ce_InvalidArgumentException = zend_exception_get_default(TSRMLS_C);
+#endif
 	
 	return SUCCESS;
 }

@@ -83,6 +83,8 @@
    <file name="tests/shift-pop.phpt" role="test" />
    <file name="tests/shutdown-handler.phpt" role="test" />
    <file name="tests/stateful-fatalities.phpt" role="test" />
+   <file name="tests/stack-by-reference.phpt" role="test" />
+   <file name="tests/stack-by-reference-pass.phpt" role="test" />
    <file name="tests/staticmethods.phpt" role="test" />
    <file name="tests/static-resolution.phpt" role="test" />
    <file name="tests/statics.phpt" role="test" />

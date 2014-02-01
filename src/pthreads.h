@@ -44,6 +44,12 @@
 #include <ext/standard/php_smart_str.h>
 #include <ext/standard/php_smart_str_public.h>
 #include <ext/standard/php_var.h>
+#ifdef HAVE_SPL
+#include <ext/spl/spl_exceptions.h>
+#else
+extern zend_class_entry *spl_ce_InvalidArgumentException;
+#endif
+
 #include <Zend/zend.h>
 #include <Zend/zend_compile.h>
 #include <Zend/zend_exceptions.h>

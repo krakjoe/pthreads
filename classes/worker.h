@@ -35,7 +35,6 @@ PHP_METHOD(Worker, pop);
 PHP_METHOD(Worker, chunk);
 PHP_METHOD(Worker, kill);
 
-
 ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
@@ -63,10 +62,10 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_getTerminationInfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_stack, 0, 0, 1)
-	ZEND_ARG_INFO(0, work)
+	ZEND_ARG_INFO(1, work)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_unstack, 0, 0, 0)
-	ZEND_ARG_INFO(0, work)
+	ZEND_ARG_INFO(1, work)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -164,7 +163,7 @@ PHP_METHOD(Worker, start)
 	RETURN_FALSE;
 } /* }}} */
 
-/* {{{ proto int Worker::stack(Stackable $work)
+/* {{{ proto int Worker::stack(Stackable &$work)
 	Pushes an item onto the Thread Stack, returns the size of stack */
 PHP_METHOD(Worker, stack)
 {
@@ -174,6 +173,12 @@ PHP_METHOD(Worker, stack)
 	if (thread) {
 		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
 			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
+				if (Z_REFCOUNT_P(work) < 2) {
+					zend_throw_exception(
+						spl_ce_InvalidArgumentException, "Worker::stack expects $work to be a reference", 0 TSRMLS_CC);
+					return;
+				}
+				
 				RETURN_LONG(pthreads_stack_push(thread, work TSRMLS_CC));
 			}
 		} else zend_error(E_ERROR, "pthreads has detected an attempt to stack onto %s (%lu) which has already been shutdown", PTHREADS_FRIENDLY_NAME);
@@ -181,7 +186,7 @@ PHP_METHOD(Worker, stack)
 	RETURN_FALSE;
 } /* }}} */
 
-/* {{{ proto int Worker::unstack([Stackable $work])
+/* {{{ proto int Worker::unstack([Stackable &$work])
 	Removes an item from the Thread stack, if no item is specified the stack is cleared, returns the size of stack */
 PHP_METHOD(Worker, unstack)
 {
@@ -191,6 +196,12 @@ PHP_METHOD(Worker, unstack)
 	if (thread) {
 		if (ZEND_NUM_ARGS() > 0) {
 			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
+				if (Z_REFCOUNT_P(work) < 2) {
+					zend_throw_exception(
+						spl_ce_InvalidArgumentException, "Worker::unstack expects $work to be a reference", 0 TSRMLS_CC);
+					return;
+				}
+				
 				RETURN_LONG(pthreads_stack_pop(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC));
 			}
 		} else RETURN_LONG(pthreads_stack_pop(thread, NULL TSRMLS_CC));

@@ -14,7 +14,9 @@ class T extends Thread {
 	public $o;
 
 	public function run() {
-		$this->o = new O();	
+		$this->o = new O();
+		/* this will disappear */
+		$this->o["data"] = true;	
 	}
 }
 
@@ -25,5 +27,6 @@ $t->join();
 var_dump($t->o);
 ?>
 --EXPECT--
-
+object(O)#2 (0) {
+}
 
