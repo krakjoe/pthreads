@@ -141,7 +141,7 @@ int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read T
 
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			pthreads_storage *storage = NULL;
-			
+
 			if (zend_hash_find(&store->table, key, keyl+1, (void**)&storage)==SUCCESS) {
 				result = pthreads_store_convert(
 				    storage, *read TSRMLS_CC);
@@ -726,8 +726,8 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
 				                        
 				                        default: {  }
                                     }
-                                    
-                                    zend_hash_update(tables[0], key, klen, (void**) &copy, sizeof(pthreads_storage), NULL);
+
+                                    zend_hash_update(tables[0], key, klen+1, (void**) &copy, sizeof(pthreads_storage), NULL);
                                 }
                             }
                         }
@@ -767,9 +767,9 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             if (!overwrite && zend_hash_exists(table, key, klen+1)) {
                                 goto next;
                             }
-                                
+                            
                             pthreads_store_write(
-                                pobject->store, key, klen, pzval TSRMLS_CC);
+                                pobject->store, key, klen-1, pzval TSRMLS_CC);
                         } break;
                         
                         case HASH_KEY_IS_LONG: {
@@ -785,7 +785,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             }
                             
                             pthreads_store_write(
-                                pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey), pzval TSRMLS_CC);
+                                pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey)-1, pzval TSRMLS_CC);
                             
                             zval_dtor(&zkey);
                         } break;
