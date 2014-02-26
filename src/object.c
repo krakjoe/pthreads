@@ -391,6 +391,16 @@ zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
 	return attach;
 } /* }}} */
 
+/* {{{ */
+void pthreads_current_thread(zval **return_value TSRMLS_DC) {
+	if (PTHREADS_ZG(pointer)) {
+		PTHREAD current = (PTHREAD) PTHREADS_ZG(pointer);
+		object_init_ex(
+			(*return_value), pthreads_prepared_entry(NULL, current->std.ce TSRMLS_CC));
+		pthreads_connect(current, PTHREADS_FETCH_FROM((*return_value)) TSRMLS_CC);
+	}
+} /* }}} */
+
 /* {{{ connect pthread objects */
 static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 	if (source && destination) {

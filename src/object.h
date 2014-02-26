@@ -58,6 +58,10 @@ size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC);
 size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC);
 /* }}} */
 
+/* {{{ MISC */
+void pthreads_current_thread(zval **return_value TSRMLS_DC);
+/* }}} */
+
 /* {{{ start/join */
 int pthreads_start(PTHREAD thread TSRMLS_DC);
 int pthreads_join(PTHREAD thread TSRMLS_DC);
