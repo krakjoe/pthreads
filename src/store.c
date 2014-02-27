@@ -727,7 +727,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
 				                        default: {  }
                                     }
 
-                                    zend_hash_update(tables[0], key, klen+1, (void**) &copy, sizeof(pthreads_storage), NULL);
+                                    zend_hash_update(tables[0], key, klen, (void**) &copy, sizeof(pthreads_storage), NULL);
                                 }
                             }
                         }
@@ -764,7 +764,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                     
                     switch (zend_hash_get_current_key_ex(table, &key, &klen, &idx, 0, &position)) {
                         case HASH_KEY_IS_STRING: {
-                            if (!overwrite && zend_hash_exists(table, key, klen+1)) {
+                            if (!overwrite && zend_hash_exists(table, key, klen)) {
                                 goto next;
                             }
                             
@@ -779,13 +779,13 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             
                             convert_to_string(&zkey);
                             
-                            if (!overwrite && zend_hash_exists(table, Z_STRVAL(zkey), Z_STRLEN(zkey)+1)) {
+                            if (!overwrite && zend_hash_exists(table, Z_STRVAL(zkey), Z_STRLEN(zkey))) {
                                 zval_dtor(&zkey);
                                 goto next;
                             }
                             
                             pthreads_store_write(
-                                pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey)-1, pzval TSRMLS_CC);
+                                pobject->store, Z_STRVAL(zkey), Z_STRLEN(zkey), pzval TSRMLS_CC);
                             
                             zval_dtor(&zkey);
                         } break;
