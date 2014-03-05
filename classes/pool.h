@@ -27,6 +27,7 @@ PHP_METHOD(Pool, __destruct);
 ZEND_BEGIN_ARG_INFO_EX(Pool___construct, 0, 0, 2)
 	ZEND_ARG_INFO(0, size)
 	ZEND_ARG_INFO(0, class)
+	ZEND_ARG_INFO(0, ctor)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_resize, 0, 0, 1)
