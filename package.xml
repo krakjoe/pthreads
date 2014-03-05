@@ -36,6 +36,7 @@
    <file name="examples/KeepAliveSession.php" role="doc" />
    <file name="examples/Mutexes.php" role="doc" />
    <file name="examples/NewSynchronization.php" role="doc" />
+   <file name="examples/NewPool.php" role="doc" />
    <file name="examples/Notifications.php" role="doc" />
    <file name="examples/ObjectsAsParameters.php" role="doc" />
    <file name="examples/Objects.php" role="doc" />
@@ -79,6 +80,7 @@
    <file name="tests/normal-reads.phpt" role="test" />
    <file name="tests/null-member-crash.phpt" role="test" />
    <file name="tests/oomethods.phpt" role="test" />
+   <file name="tests/pools.phpt" role="test" />
    <file name="tests/selective-inheritance.phpt" role="test" />
    <file name="tests/shift-pop.phpt" role="test" />
    <file name="tests/shutdown-handler.phpt" role="test" />
@@ -121,6 +123,7 @@
    <file name="classes/stackable.h" role="src" />
    <file name="classes/mutex.h" role="src" />
    <file name="classes/cond.h" role="src" />
+   <file name="classes/pool.h" role="src" />
    <file name="iterators/iterator.h" role="src" />
    <file name="iterators/default.h" role="src" />
    <file name="config.m4" role="src" />

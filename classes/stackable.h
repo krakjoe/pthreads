@@ -17,6 +17,7 @@
  */
 #ifndef HAVE_PTHREADS_CLASS_STACKABLE_H
 #define HAVE_PTHREADS_CLASS_STACKABLE_H
+PHP_METHOD(Stackable, run);
 PHP_METHOD(Stackable, wait);
 PHP_METHOD(Stackable, notify);
 PHP_METHOD(Stackable, isRunning);
@@ -78,7 +79,7 @@ extern zend_function_entry pthreads_stackable_methods[];
 #	ifndef HAVE_PTHREADS_CLASS_STACKABLE
 #	define HAVE_PTHREADS_CLASS_STACKABLE
 zend_function_entry pthreads_stackable_methods[] = {
-	PHP_ABSTRACT_ME(Stackable, run, Stackable_run)
+	PHP_ME(Stackable, run, Stackable_run, ZEND_ACC_PUBLIC)
 	PHP_ME(Stackable, wait, Stackable_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, notify, Stackable_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, isRunning, Stackable_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -94,6 +95,10 @@ zend_function_entry pthreads_stackable_methods[] = {
 	PHP_ME(Stackable, pop, Stackable_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
+
+/* {{{ */
+PHP_METHOD(Stackable, run) {} /* }}} */
+
 /* {{{ proto boolean Stackable::wait([long timeout]) 
 		Will cause the calling thread to wait for notification from the referenced object
 		When a timeout is used and reached boolean false will return

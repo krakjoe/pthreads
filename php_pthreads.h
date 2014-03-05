@@ -44,6 +44,10 @@ PHP_MINFO_FUNCTION(pthreads);
 #	include <classes/cond.h>
 #endif
 
+#ifndef HAVE_PTHREADS_CLASS_POOL_H
+#	include <classes/pool.h>
+#endif
+
 extern zend_module_entry pthreads_module_entry;
 #define phpext_pthreads_ptr &pthreads_module_entry
 

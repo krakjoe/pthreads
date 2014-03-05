@@ -76,6 +76,7 @@ zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_stackable_entry;
 zend_class_entry *pthreads_mutex_entry;
 zend_class_entry *pthreads_condition_entry;
+zend_class_entry *pthreads_pool_entry;
 
 zend_object_handlers pthreads_handlers;
 zend_object_handlers *zend_handlers;
@@ -124,6 +125,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_class_entry ce;
 	zend_class_entry se;
 	zend_class_entry we;
+	zend_class_entry pe;
 	
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_ALL", PTHREADS_INHERIT_ALL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_NONE", PTHREADS_INHERIT_NONE, CONST_CS | CONST_PERSISTENT);
@@ -172,6 +174,17 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_condition_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	pthreads_condition_entry->ce_flags |= ZEND_ACC_FINAL;
 	
+	INIT_CLASS_ENTRY(pe, "Pool", pthreads_pool_methods);
+	pe.serialize = zend_class_serialize_deny;
+	pe.unserialize = zend_class_unserialize_deny;
+	pthreads_pool_entry=zend_register_internal_class(&pe TSRMLS_CC);
+	zend_declare_property_long(pthreads_pool_entry, ZEND_STRL("size"), 1, ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("class"),   ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("workers"), ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("work"),    ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("ctor"),    ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_long(pthreads_pool_entry, ZEND_STRL("last"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
+
 	/*
 	* Setup standard and pthreads object handlers
 	*/
@@ -261,6 +274,10 @@ PHP_MINFO_FUNCTION(pthreads)
 
 #ifndef HAVE_PTHREADS_CLASS_COND
 #	include <classes/cond.h>
+#endif
+
+#ifndef HAVE_PTHREADS_CLASS_POOL
+#	include <classes/pool.h>
 #endif
 
 #endif

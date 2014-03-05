@@ -273,34 +273,29 @@ burst:
 				popped = Z_OBJCE_P(that_ptr);
 
 				/*
-				* Switch scope to the next stackable
+				* Setup Executor
 				*/
-				if (zend_hash_find(&popped->function_table, "run", sizeof("run"), (void**) &run)==SUCCESS) {
-					/*
-					* Setup Executor
-					*/
-					EG(This) = that_ptr;
-					EG(scope) = popped;
-					EG(called_scope) = popped;
+				EG(This) = that_ptr;
+				EG(scope) = popped;
+				EG(called_scope) = popped;
+				
+				/*
+				* Setup stackable for runtime
+				*/
+				{
+					PTHREAD stackable = PTHREADS_FETCH_FROM(that_ptr);
 					
-					/*
-					* Setup stackable for runtime
-					*/
-					{
-						PTHREAD stackable = PTHREADS_FETCH_FROM(that_ptr);
+					if (stackable) {
+						current->tid = thread->tid;
+						current->tls = thread->tls;
 						
-						if (stackable) {
-							current->tid = thread->tid;
-							current->tls = thread->tls;
-							
-							pthreads_connect(current, stackable TSRMLS_CC);
+						pthreads_connect(current, stackable TSRMLS_CC);
 
-							pthreads_store_write(
-								stackable->store, "worker", sizeof("worker")-1, &this_ptr TSRMLS_CC
-							);
-	
-							Z_ADDREF_P(this_ptr);
-						}
+						pthreads_store_write(
+							stackable->store, "worker", sizeof("worker")-1, &this_ptr TSRMLS_CC
+						);
+
+						Z_ADDREF_P(this_ptr);
 					}
 				}
 			}
@@ -817,97 +812,55 @@ static void * pthreads_routine(void *arg) {
 			
 			/* connect $this */
 			if (pthreads_connect(PTHREADS_ZG(pointer)=thread, PTHREADS_FETCH_FROM(ZEG->This) TSRMLS_CC)==SUCCESS) {
-				/* always the same no point recreating this for every execution */
-				zval zmethod;
-				
-				ZVAL_STRINGL(&zmethod, "run", sizeof("run"), 0);				
-				
 				/* execute $this */
-				do {	
-					zend_function *zrun;
-					/* find zrun method */
-					if (zend_hash_find(&(ZEG->scope->function_table), "run", sizeof("run"), (void**) &zrun)==SUCCESS) {
-						zval *zresult;
-						zend_fcall_info info;
-						zend_fcall_info_cache cache;
-
-						PTHREAD current = PTHREADS_FETCH_FROM(ZEG->This);
-						
-						/* populate a cache and call the run method */
-						{
-							/* initialize info object */
-							info.size = sizeof(info);
-							info.object_ptr = ZEG->This;
-							info.function_name = &zmethod;
-							info.retval_ptr_ptr = &zresult;
-							info.no_separation = 1;
-							info.symbol_table = NULL;
-							info.param_count = 0;
-							info.params = NULL;
+				do {
+					PTHREAD current = PTHREADS_FETCH_FROM(ZEG->This);
+					zval *zresult = NULL;
+					
+					pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
+					{
+					    zend_bool terminated = 0;
+						/* graceful fatalities */
+						zend_try {
+						    /* ::run */
+							zend_call_method(
+								&ZEG->This, ZEG->scope, NULL, 
+								ZEND_STRL("run"), 
+								&zresult, 0, NULL, NULL TSRMLS_CC);
+						} zend_catch {
+						    /* catches fatal errors and uncaught exceptions */
+							terminated = 1;
 							
-							/* initialize cache object */
-							cache.initialized = 1;
-							cache.function_handler = zrun;
-							cache.calling_scope = current->std.ce;
-							cache.called_scope = current->std.ce;
-							cache.object_ptr = ZEG->This;
-																																																																					
-							/* call the function */
-							pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-							{
-							    zend_bool terminated = 0;
-								/* graceful fatalities */
-								zend_try {
-								    /* ::run */
-									zend_call_function(&info, &cache TSRMLS_CC);
-								} zend_catch {
-								    /* catches fatal errors and uncaught exceptions */
-									terminated = 1;
-									
-									/* danger lurking ... */
-									if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
-										/* like, totally bail man ! */
-										zend_bailout();
-									}
-								} zend_end_try();
-								
-								if (current) {
-								    /* set terminated state */
-								    if (terminated) {
-								        pthreads_state_set(
-									        current->state, PTHREADS_ST_ERROR TSRMLS_CC);
-									    /* save error information */
-									    pthreads_error_save(current->error TSRMLS_CC);
-								    }
-								    
-								    /* unset running for waiters */
-								    pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
-								}
-#if PHP_VERSION_ID > 50399
-								{
-									zend_op_array *ops = &zrun->op_array;
-							
-									if (ops) {
-										if (ops->run_time_cache) {
-											efree(ops->run_time_cache);
-											ops->run_time_cache = NULL;
-										}
-									}
-								} 
-#endif
-
-								/* deal with references to stackable */
-								if (!terminated && inwork) {
-									zval_ptr_dtor(&ZEG->This);
-								} else inwork = 1;
-
-								/* deal with zresult (ignored) */
-								if (zresult) {
-									zval_ptr_dtor(&zresult);
-								}
+							/* danger lurking ... */
+							if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
+								/* like, totally bail man ! */
+								zend_bailout();
 							}
+						} zend_end_try();
+						
+						if (current) {
+						    /* set terminated state */
+						    if (terminated) {
+						        pthreads_state_set(
+							        current->state, PTHREADS_ST_ERROR TSRMLS_CC);
+							    /* save error information */
+							    pthreads_error_save(current->error TSRMLS_CC);
+						    }
+						    
+						    /* unset running for waiters */
+						    pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 						}
-					} else zend_error(E_ERROR, "pthreads has experienced an internal error while trying to execute %s::run", ZEG->scope->name);
+
+						/* deal with references to stackable */
+						if (!terminated && inwork) {
+							zval_ptr_dtor(&ZEG->This);
+						} else inwork = 1;
+
+						/* deal with zresult (ignored) */
+						if (zresult) {
+							zval_ptr_dtor(&zresult);
+						}
+					}
 				} while(worker && pthreads_stack_next(thread, this_ptr TSRMLS_CC));
 			}
 		} zend_catch {

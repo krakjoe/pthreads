@@ -398,7 +398,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 										{
 											zend_op_array *ops = (zend_op_array*) call;
 										
-											if (ops) {
+											if (ops && ops->type == ZEND_USER_FUNCTION) {
 												if (ops->run_time_cache) {
 													efree(ops->run_time_cache);
 													ops->run_time_cache = NULL;
