@@ -39,7 +39,7 @@ ZEND_BEGIN_ARG_INFO_EX(Pool_submit, 0, 0, 1)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_collect, 0, 0, 1)
-	ZEND_ARG_INFO(0, callable)
+	ZEND_ARG_INFO(0, collector)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_noargs, 0, 0, 0)
