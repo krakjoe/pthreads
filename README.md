@@ -98,8 +98,8 @@ Further insights and occasional announcements can be read at the http://pthreads
 
 Here are some links to articles I have prepared for users: everybody should read them before they do anything else:
 
-https://gist.github.com/krakjoe/6437782
-https://gist.github.com/krakjoe/9384409
+ - https://gist.github.com/krakjoe/6437782
+ - https://gist.github.com/krakjoe/9384409
 
 If you have had the time to put any cool demo's together and would like them showcased on pthreads.org please get in touch.
 
