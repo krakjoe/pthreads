@@ -295,11 +295,13 @@ PHP_METHOD(Pool, shutdown) {
 	
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1 TSRMLS_CC);
 	
-	if (Z_TYPE_P(workers) == IS_ARRAY && zend_hash_num_elements(Z_ARRVAL_P(workers))) {
-		zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown TSRMLS_CC);
+	if (Z_TYPE_P(workers) == IS_ARRAY) {
+		if (zend_hash_num_elements(Z_ARRVAL_P(workers))) {
+			zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown TSRMLS_CC);	
+		}
+			
+		zend_hash_clean(Z_ARRVAL_P(workers));	
 	}
-	
-	zend_hash_clean(Z_ARRVAL_P(workers));
 } /* }}} */
 
 /* {{{ proto void Pool::__destruct()
@@ -315,12 +317,16 @@ PHP_METHOD(Pool, __destruct) {
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1 TSRMLS_CC);
 	work    = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"),	1 TSRMLS_CC);
 	
-	if (Z_TYPE_P(workers) == IS_ARRAY && zend_hash_num_elements(Z_ARRVAL_P(workers))) {
-		zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown TSRMLS_CC);
+	if (Z_TYPE_P(workers) == IS_ARRAY) {
+		if (zend_hash_num_elements(Z_ARRVAL_P(workers))) {
+			zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown TSRMLS_CC);
+		}
+		
+		zend_hash_clean(Z_ARRVAL_P(workers));
 	}
 	
-	zend_hash_clean(Z_ARRVAL_P(workers));
-	zend_hash_clean(Z_ARRVAL_P(work));
+	if (Z_TYPE_P(work) == IS_ARRAY)
+		zend_hash_clean(Z_ARRVAL_P(work));
 } /* }}} */
 #	endif
 #endif
