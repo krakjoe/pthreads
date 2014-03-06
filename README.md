@@ -96,9 +96,10 @@ Documentation can be found in the PHP manual: http://docs.php.net/manual/en/book
 
 Further insights and occasional announcements can be read at the http://pthreads.org site where pthreads is developed and tested in the real world.
 
-Multi-Threading in PHP with pthreads is an article I wrote to provide an introduction in using pthreads, everybody should read it before they do anything else:
+Here are some links to articles I have prepared for users: everybody should read them before they do anything else:
 
 https://gist.github.com/krakjoe/6437782
+https://gist.github.com/krakjoe/9384409
 
 If you have had the time to put any cool demo's together and would like them showcased on pthreads.org please get in touch.
 
