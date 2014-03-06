@@ -72,6 +72,11 @@ PHP_METHOD(Pool, __construct)
 		return;
 	}
 	
+	if (!instanceof_function(clazz, pthreads_worker_entry TSRMLS_CC)) {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
+			"The class provided (%s) does not extend Worker", clazz->name);
+	}
+	
 	zend_update_property_long(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"), size TSRMLS_CC);
 	zend_update_property_stringl(
 		Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("class"), clazz->name, clazz->name_length TSRMLS_CC);
