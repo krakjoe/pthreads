@@ -119,7 +119,7 @@ PHP_METHOD(Pool, resize) {
 	ZVAL_LONG(size, newsize);
 } /* }}} */
 
-/* {{{ proto bool Pool::submit(Stackable task) 
+/* {{{ proto integer Pool::submit(Stackable task) 
 	Will submit the given task to the next worker in the pool, by default workers are selected round robin */
 PHP_METHOD(Pool, submit) {
 	zval *task = NULL;
@@ -218,7 +218,8 @@ PHP_METHOD(Pool, submit) {
 	Z_SET_ISREF_P(task);
 	Z_ADDREF_P(task);
 	
-	zend_call_method(selected, Z_OBJCE_PP(selected), NULL, ZEND_STRL("stack"), &return_value, 1, task, NULL TSRMLS_CC);
+	zend_call_method(selected, Z_OBJCE_PP(selected), NULL, ZEND_STRL("stack"), NULL, 1, task, NULL TSRMLS_CC);
+	ZVAL_LONG(return_value, Z_LVAL_P(last));
 	Z_LVAL_P(last)++;
 	
 } /* }}} */
