@@ -185,7 +185,7 @@ PHP_METHOD(Pool, submit) {
 				zend_fcall_info_cache fcc;
 				
 				memset(&fci, 0, sizeof(zend_fcall_info));
-				memset(&fcc, 0, sizeof(zend_fcall_info));
+				memset(&fcc, 0, sizeof(zend_fcall_info_cache));
 				
 				fci.size = sizeof(zend_fcall_info);
 				fci.function_table = EG(function_table);
