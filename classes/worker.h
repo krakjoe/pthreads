@@ -18,6 +18,7 @@
 #ifndef HAVE_PTHREADS_CLASS_WORKER_H
 #define HAVE_PTHREADS_CLASS_WORKER_H
 PHP_METHOD(Worker, start); 
+PHP_METHOD(Worker, run); 
 PHP_METHOD(Worker, shutdown);
 PHP_METHOD(Worker, isStarted);
 PHP_METHOD(Worker, isShutdown);
@@ -98,7 +99,7 @@ extern zend_function_entry pthreads_worker_methods[];
 #	define HAVE_PTHREADS_CLASS_WORKER
 zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, start, Worker_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ABSTRACT_ME(Worker, run, Worker_run)
+	PHP_ME(Worker, run, Worker_run, ZEND_ACC_PUBLIC)
 	PHP_ME(Worker, shutdown, Worker_shutdown, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, getThreadId, Worker_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, getCreatorId, Worker_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
@@ -118,6 +119,10 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, count, Worker_count, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
+
+/* {{{ proto void Worker::run(void) */
+PHP_METHOD(Worker, run) {} /* }}} */
+
 /* {{{ proto boolean Worker::start([long $options = PTHREADS_INHERIT_ALL])
 		Starts a new Worker Thread, executing the Workers implementation of Worker::run and then waiting for Stackables
 		$options should be a mask of inheritance constants */

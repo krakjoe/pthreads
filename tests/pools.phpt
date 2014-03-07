@@ -35,7 +35,7 @@ class WebWork extends Stackable {
 
 class SafeLog extends Stackable {
 	
-	protected function log($message, $args = []) {
+	protected function log($message, $args = array()) {
 		$args = func_get_args();	
 		
 		if (($message = array_shift($args))) {
@@ -47,7 +47,7 @@ class SafeLog extends Stackable {
 	public function run(){}
 }
 
-$pool = new Pool(8, \WebWorker::class, [new SafeLog()]);
+$pool = new Pool(8, \WebWorker::class, array(new SafeLog()));
 
 $pool->submit(new WebWork());
 $pool->submit(new WebWork());
