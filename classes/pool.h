@@ -20,6 +20,7 @@
 PHP_METHOD(Pool, __construct);
 PHP_METHOD(Pool, resize);
 PHP_METHOD(Pool, submit);
+PHP_METHOD(Pool, submitTo);
 PHP_METHOD(Pool, collect);
 PHP_METHOD(Pool, shutdown);
 PHP_METHOD(Pool, __destruct);
@@ -38,6 +39,11 @@ ZEND_BEGIN_ARG_INFO_EX(Pool_submit, 0, 0, 1)
 	ZEND_ARG_INFO(0, task)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Pool_submitTo, 0, 0, 2)
+	ZEND_ARG_INFO(0, worker)
+	ZEND_ARG_INFO(0, task)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(Pool_collect, 0, 0, 1)
 	ZEND_ARG_INFO(0, collector)
 ZEND_END_ARG_INFO()
@@ -53,6 +59,7 @@ zend_function_entry pthreads_pool_methods[] = {
 	PHP_ME(Pool, __construct, 	Pool___construct, 	ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, resize, 		Pool_resize, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, submit, 		Pool_submit, 		ZEND_ACC_PUBLIC)
+	PHP_ME(Pool, submitTo, 		Pool_submitTo, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, collect, 		Pool_collect, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, shutdown, 		Pool_noargs, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, __destruct,	Pool_noargs,		ZEND_ACC_PUBLIC)
@@ -222,6 +229,50 @@ PHP_METHOD(Pool, submit) {
 	ZVAL_LONG(return_value, Z_LVAL_P(last));
 	Z_LVAL_P(last)++;
 	
+} /* }}} */
+
+/* {{{ proto integer Pool::submitTo(integer $worker, Stackable task) 
+	Will submit the given task to the specified worker */
+PHP_METHOD(Pool, submitTo) {
+	zval *task = NULL;
+	zval *last = NULL;
+	zval *size = NULL;
+	zval *workers = NULL;
+	long worker = 0;
+	zval *clazz = NULL;
+	zval *ctor = NULL;
+	zval *work = NULL;
+	zval **working = NULL;
+	zval **selected = NULL;
+	
+	zend_class_entry **ce = NULL;
+	
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lO", &worker, &task, pthreads_stackable_entry) != SUCCESS) {
+		return;
+	}
+	
+	size = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"), 1 TSRMLS_CC);
+	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1 TSRMLS_CC);
+	work = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"), 1 TSRMLS_CC);
+
+	if (Z_TYPE_P(workers) != IS_ARRAY)
+		array_init(workers);
+	
+	if (Z_TYPE_P(work ) != IS_ARRAY)
+		array_init(work);
+
+	if (zend_hash_index_find(Z_ARRVAL_P(workers), worker, (void**)&selected) == SUCCESS) {
+		zend_hash_next_index_insert(
+			Z_ARRVAL_P(work), (void**) &task, sizeof(zval*), (void**)&working);
+		Z_SET_ISREF_P(task);
+		Z_ADDREF_P(task);
+	
+		zend_call_method(selected, Z_OBJCE_PP(selected), NULL, ZEND_STRL("stack"), NULL, 1, task, NULL TSRMLS_CC);
+		ZVAL_LONG(return_value, worker);
+	} else {
+		zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
+			"The selected worker (%ld) does not exist", worker);
+	}
 } /* }}} */
 
 /* {{{ proto void Pool::collect(Callable collector)
