@@ -185,8 +185,8 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_condition_entry->ce_flags |= ZEND_ACC_FINAL;
 	
 	INIT_CLASS_ENTRY(pe, "Pool", pthreads_pool_methods);
-	pe.serialize = zend_class_serialize_deny;
-	pe.unserialize = zend_class_unserialize_deny;
+	//pe.serialize = zend_class_serialize_deny;
+	//pe.unserialize = zend_class_unserialize_deny;
 	pthreads_pool_entry=zend_register_internal_class(&pe TSRMLS_CC);
 	zend_declare_property_long(pthreads_pool_entry, ZEND_STRL("size"), 1, ZEND_ACC_PROTECTED TSRMLS_CC);
 	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("class"),   ZEND_ACC_PROTECTED TSRMLS_CC);
