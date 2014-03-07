@@ -6,8 +6,6 @@ class WebWorker extends Worker {
 		$this->logger = $logger;
 	}
 	
-	public function run(){}
-	
 	protected $loger;	
 }
 
@@ -38,8 +36,6 @@ class SafeLog extends Stackable {
 				"{$message}\n", $args);
 		}
 	}
-	
-	public function run(){}
 }
 
 
