@@ -34,6 +34,7 @@ PHP_METHOD(Worker, shift);
 PHP_METHOD(Worker, pop);
 PHP_METHOD(Worker, chunk);
 PHP_METHOD(Worker, kill);
+PHP_METHOD(Worker, count);
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -88,6 +89,8 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_kill, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Worker_count, 0, 0, 0)
+ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_worker_methods[];
 #else
@@ -112,6 +115,7 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, pop, Worker_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, chunk, Worker_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Worker, kill, Worker_kill, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Worker, count, Worker_count, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 /* {{{ proto boolean Worker::start([long $options = PTHREADS_INHERIT_ALL])
@@ -392,6 +396,20 @@ PHP_METHOD(Worker, kill)
     		thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
     }
 #endif
+} /* }}} */
+
+/* {{{ proto boolean Worker::count()
+	Will return the size of the properties table */
+PHP_METHOD(Worker, count)
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+	
+	ZVAL_LONG(return_value, 0);
+	
+	pthreads_store_count(
+		getThis(), &Z_LVAL_P(return_value) TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif

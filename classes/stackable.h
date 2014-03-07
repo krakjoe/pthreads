@@ -31,6 +31,7 @@ PHP_METHOD(Stackable, merge);
 PHP_METHOD(Stackable, shift);
 PHP_METHOD(Stackable, chunk);
 PHP_METHOD(Stackable, pop);
+PHP_METHOD(Stackable, count);
 
 ZEND_BEGIN_ARG_INFO_EX(Stackable_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -74,6 +75,9 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Stackable_pop, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Stackable_count, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_stackable_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_STACKABLE
@@ -93,6 +97,7 @@ zend_function_entry pthreads_stackable_methods[] = {
 	PHP_ME(Stackable, shift, Stackable_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, chunk, Stackable_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Stackable, pop, Stackable_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Stackable, count, Stackable_count, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
 
@@ -274,6 +279,20 @@ PHP_METHOD(Stackable, pop)
     }
     
     pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
+} /* }}} */
+
+/* {{{ proto boolean Stackable::count()
+	Will return the size of the properties table */
+PHP_METHOD(Stackable, count)
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+	
+	ZVAL_LONG(return_value, 0);
+	
+	pthreads_store_count(
+		getThis(), &Z_LVAL_P(return_value) TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif

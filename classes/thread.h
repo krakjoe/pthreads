@@ -44,6 +44,8 @@ PHP_METHOD(Thread, chunk);
 PHP_METHOD(Thread, getTerminationInfo);
 PHP_METHOD(Thread, kill);
 
+PHP_METHOD(Thread, count);
+
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
@@ -122,6 +124,9 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_kill, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_count, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_thread_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREAD
@@ -151,8 +156,10 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, pop, Thread_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, chunk, Thread_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	PHP_ME(Thread, kill, Thread_kill, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, count, Thread_count, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
 	{NULL, NULL, NULL}
 };
+
 /* {{{ proto boolean Thread::start([long $options = PTHREADS_INHERIT_ALL])
 		Starts executing the implementations run method in a thread, will return a boolean indication of success
 		$options should be a mask of inheritance constants */
@@ -485,6 +492,20 @@ PHP_METHOD(Thread, kill)
     		pthread_kill(thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
     }
 #endif
+} /* }}} */
+
+/* {{{ proto boolean Thread::count()
+	Will return the size of the properties table */
+PHP_METHOD(Thread, count)
+{
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+	
+	ZVAL_LONG(return_value, 0);
+	
+	pthreads_store_count(
+		getThis(), &Z_LVAL_P(return_value) TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif
