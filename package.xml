@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-01-18</date>
+ <date>2014-03-07</date>
  <time>08:30:00</time>
  <version>
-  <release>0.1.0</release>
-  <api>0.1.0</api>
+  <release>1.0.0</release>
+  <api>1.0.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,11 +22,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fixed shutdown handler causing segfaults
- add ::kill method, safely kill threads that are blocking/misbehaving
- fix segfault induced by clone
- fix usage of sessions causing segfaults
- various internal changes to improve stability
+  Pooling implemented as part of extension
+  Stackable no longer abstract to reduce boilerplate
+  Simplified code in a few places
  </notes>
  <contents>
   <dir name="/">
@@ -36,7 +34,6 @@
    <file name="examples/KeepAliveSession.php" role="doc" />
    <file name="examples/Mutexes.php" role="doc" />
    <file name="examples/NewSynchronization.php" role="doc" />
-   <file name="examples/NewPool.php" role="doc" />
    <file name="examples/Notifications.php" role="doc" />
    <file name="examples/ObjectsAsParameters.php" role="doc" />
    <file name="examples/Objects.php" role="doc" />
@@ -67,7 +64,7 @@
    <file name="tests/gone.phpt" role="test" />
    <file name="tests/graceful-fatalities.phpt" role="test" />
    <file name="tests/included-files.phpt" role="test" />
-   <file name="tests/includeme.php" role="test" />
+   <file name="tests/includeme.inc" role="test" />
    <file name="tests/ini.phpt" role="test" />
    <file name="tests/interface.phpt" role="test" />
    <file name="tests/interfaces.phpt" role="test" />

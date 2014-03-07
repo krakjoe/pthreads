@@ -84,6 +84,7 @@ void ***pthreads_instance = NULL;
 
 #ifndef HAVE_SPL
 zend_class_entry *spl_ce_InvalidArgumentException;
+zend_class_entry *spl_ce_Countable;
 #endif
 
 #ifndef HAVE_PTHREADS_OBJECT_H
@@ -145,6 +146,9 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_thread_entry=zend_register_internal_class(&te TSRMLS_CC);
 	pthreads_thread_entry->get_iterator = pthreads_object_iterator_ctor;
 	zend_class_implements(pthreads_thread_entry TSRMLS_CC, 1, zend_ce_traversable);
+#ifdef HAVE_SPL
+	zend_class_implements(pthreads_thread_entry TSRMLS_CC, 1, spl_ce_Countable);
+#endif
 	
 	INIT_CLASS_ENTRY(we, "Worker", pthreads_worker_methods);
 	we.create_object = pthreads_worker_ctor;
@@ -153,7 +157,10 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_worker_entry=zend_register_internal_class(&we TSRMLS_CC);
 	pthreads_worker_entry->get_iterator = pthreads_object_iterator_ctor;
 	zend_class_implements(pthreads_worker_entry TSRMLS_CC, 1, zend_ce_traversable);
-	
+#ifdef HAVE_SPL
+	zend_class_implements(pthreads_worker_entry TSRMLS_CC, 1, spl_ce_Countable);
+#endif
+
 	INIT_CLASS_ENTRY(se, "Stackable", pthreads_stackable_methods);
 	se.create_object = pthreads_stackable_ctor;
 	se.serialize = pthreads_internal_serialize;
@@ -161,7 +168,10 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_stackable_entry=zend_register_internal_class(&se TSRMLS_CC);
 	pthreads_stackable_entry->get_iterator = pthreads_object_iterator_ctor;
 	zend_class_implements(pthreads_stackable_entry TSRMLS_CC, 1, zend_ce_traversable);
-	
+#ifdef HAVE_SPL
+	zend_class_implements(pthreads_stackable_entry TSRMLS_CC, 1, spl_ce_Countable);
+#endif
+
 	INIT_CLASS_ENTRY(me, "Mutex", pthreads_mutex_methods);
 	me.serialize = zend_class_serialize_deny;
 	me.unserialize = zend_class_unserialize_deny;
@@ -235,6 +245,7 @@ PHP_MINIT_FUNCTION(pthreads)
 
 #ifndef HAVE_SPL
 	spl_ce_InvalidArgumentException = zend_exception_get_default(TSRMLS_C);
+	spl_ce_Countable                = zend_exception_get_default(TSRMLS_C);
 #endif
 	
 	return SUCCESS;
