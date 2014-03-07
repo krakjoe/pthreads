@@ -4,7 +4,7 @@ Test include/require functions as expected
 This test verifies that require_once and include are working as expected
 --FILE--
 <?php
-define("INC", sprintf("%s/includeme.php", dirname(__FILE__)));
+define("INC", sprintf("%s/includeme.inc", dirname(__FILE__)));
 
 include(INC);
 class TestThread extends Thread {
