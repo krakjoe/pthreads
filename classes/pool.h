@@ -235,23 +235,16 @@ PHP_METHOD(Pool, submit) {
 	Will submit the given task to the specified worker */
 PHP_METHOD(Pool, submitTo) {
 	zval *task = NULL;
-	zval *last = NULL;
-	zval *size = NULL;
 	zval *workers = NULL;
 	long worker = 0;
-	zval *clazz = NULL;
-	zval *ctor = NULL;
 	zval *work = NULL;
 	zval **working = NULL;
 	zval **selected = NULL;
-	
-	zend_class_entry **ce = NULL;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lO", &worker, &task, pthreads_stackable_entry) != SUCCESS) {
 		return;
 	}
 	
-	size = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"), 1 TSRMLS_CC);
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1 TSRMLS_CC);
 	work = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"), 1 TSRMLS_CC);
 

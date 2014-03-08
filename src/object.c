@@ -243,7 +243,6 @@ size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC) {
 	zend_bool locked;
 	size_t bubble = 0;
 	zval *that_ptr;
-	zend_function *run;
 	zend_class_entry *popped;
 	
 burst:
