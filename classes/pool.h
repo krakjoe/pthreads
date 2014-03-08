@@ -207,7 +207,7 @@ PHP_METHOD(Pool, submit) {
 				if (ctor)
 					zend_fcall_info_args_clear(&fci, 1);
 				
-				if (retval) 
+				if (retval)
 					zval_ptr_dtor(&retval);
 			}
 			
@@ -217,7 +217,6 @@ PHP_METHOD(Pool, submit) {
 		zend_hash_index_update(
 			Z_ARRVAL_P(workers), Z_LVAL_P(last), 
 			(void**)&worker, sizeof(zval*), (void**)&selected);
-		Z_OBJ_HT_P(worker)->add_ref(worker TSRMLS_CC);
 	}
 	
 	zend_hash_next_index_insert(
@@ -268,6 +267,43 @@ PHP_METHOD(Pool, submitTo) {
 	}
 } /* }}} */
 
+/* {{{ */
+typedef struct _pool_call_t {
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+} pool_call_t; /* }}} */
+
+/* {{{ */
+static inline int pool_collect_function(void *bucket, void *argument TSRMLS_DC) {
+	zval **task = (zval**) bucket;
+	pool_call_t *call = (pool_call_t*) argument;
+	zval *remove = NULL;
+	zend_ulong index = 0L;
+	int result = ZEND_HASH_APPLY_KEEP;
+	
+	call->fci.retval_ptr_ptr = &remove;
+	
+	zend_fcall_info_argn(&call->fci TSRMLS_CC, 1, task);
+
+	if (zend_call_function(&call->fci, &call->fcc TSRMLS_CC) == SUCCESS) {
+		
+		if (remove) {
+			convert_to_boolean(remove);
+
+			if (Z_BVAL_P(remove)) {
+				result = ZEND_HASH_APPLY_REMOVE;
+			}
+		}
+	}
+	
+	zend_fcall_info_argn(&call->fci TSRMLS_CC, 0);
+	
+	if (remove) 
+		zval_ptr_dtor(&remove);
+	
+	return result;
+} /* }}} */
+
 /* {{{ proto void Pool::collect(Callable collector)
 	Shall execute the collector on each of the tasks in the working set 
 		removing the task if the collector returns positively
@@ -284,37 +320,16 @@ PHP_METHOD(Pool, collect) {
 	work = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"), 1 TSRMLS_CC);
 	
 	if (Z_TYPE_P(work) == IS_ARRAY && zend_hash_num_elements(Z_ARRVAL_P(work))) {
-		HashPosition position;
 		zval **task = NULL;
+		pool_call_t call;
 		
-		for (zend_hash_internal_pointer_reset_ex(Z_ARRVAL_P(work), &position);
-			zend_hash_get_current_data_ex(Z_ARRVAL_P(work), (void**)&task, &position) == SUCCESS;
-			zend_hash_move_forward_ex(Z_ARRVAL_P(work), &position)) {
-			zval *remove = NULL;
-			zend_ulong index = 0L;
-			
-			fci.retval_ptr_ptr = &remove;
-			
-			zend_fcall_info_argn(&fci TSRMLS_CC, 1, task);
-			
-			if (zend_call_function(&fci, &fcc TSRMLS_CC) == SUCCESS) {
-				
-				if (remove) {
-					convert_to_boolean(remove);
-				
-					if (Z_BVAL_P(remove)) {
-						if (zend_hash_get_current_key_ex(Z_ARRVAL_P(work), NULL, NULL, &index, 0, &position) != HASH_KEY_IS_STRING) {
-							zend_hash_index_del(
-								Z_ARRVAL_P(work), index);
-						}
-					}
-				}
-			}
-			
-			zend_fcall_info_argn(&fci TSRMLS_CC, 0);
-			
-			if (remove) 
-				zval_ptr_dtor(&remove);
+		call.fci = fci;
+		call.fcc = fcc;
+		
+		zend_hash_apply_with_argument(Z_ARRVAL_P(work), pool_collect_function, &call TSRMLS_CC);
+		
+		if (!zend_hash_num_elements(Z_ARRVAL_P(work))) {
+			zend_hash_clean(Z_ARRVAL_P(work));
 		}
 	}
 } /* }}} */

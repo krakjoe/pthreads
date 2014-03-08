@@ -648,7 +648,8 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 
 /* {{{ fix method prototype for prepared entries, enabling inheritance to function correctly */
 static int pthreads_apply_method_prototype(zend_op_array *ops, zend_class_entry **ce TSRMLS_DC) {
-	if (ops && ce) {
+	if ((ops && ce) && 
+		(ops->type == ZEND_USER_FUNCTION)) {
 	    if (ops->prototype && ops->line_end) {
 	        zend_function *prototype;
 	        

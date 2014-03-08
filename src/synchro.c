@@ -97,39 +97,40 @@ int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
 /* {{{ the ability to execute a block of code truly synchronized */
 void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_info_cache *cache, uint argc, zval ***argv, zval *return_value TSRMLS_DC) {
 	zval *retval = NULL;
-	zend_try {
-		/* set argc and argv for function call */
-		{
-			info->param_count = argc;
-			info->params = argv;
-			info->retval_ptr_ptr = &retval;
-		}
-		
-		/* acquire synchronization lock and execute function synchronized */
-		{
-			PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());	
-			if (pobject) {
-				/* synchronized block execution */
-				{
-					pthreads_synchro_lock(pobject->synchro TSRMLS_CC);		
-					/* call the closure */
-					zend_call_function(
-						info, 
-						cache 
-						TSRMLS_CC
-					);
-					pthreads_synchro_unlock(pobject->synchro TSRMLS_CC);
-				}
-				/* end synchronization */
-			}
-		}
-		
-		/* return the result */
+	zend_bool failed = 0;
+	
+	PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());	
+	
+	if (!pobject)
+		return;
+	
+	/* set argc and argv for function call */
+	zend_fcall_info_argp(info TSRMLS_CC, argc, argv);
+	
+	/* set local return value */
+	info->retval_ptr_ptr = &retval;
+	
+	/* acquire synchronization lock and execute function synchronized */
+	{
+		pthreads_synchro_lock(pobject->synchro TSRMLS_CC);
+		zend_try {
+			/* call the closure */
+			zend_call_function(
+				info, 
+				cache 
+				TSRMLS_CC);
+		} zend_catch {
+			failed = 1;
+		} zend_end_try ();
+		pthreads_synchro_unlock(pobject->synchro TSRMLS_CC);
+	}
+	
+	zend_fcall_info_args_clear(info, 1);
+	
+	/* return the result */
+	if (!failed && retval)
 		ZVAL_ZVAL(return_value, retval, 1, 1);
-	} zend_catch {
-		/* something horrible happened */
-		ZVAL_NULL(return_value);
-	} zend_end_try();
+	else ZVAL_NULL(return_value);
 } /* }}} */
 
 /* {{{ free synchronization object */

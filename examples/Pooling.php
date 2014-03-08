@@ -61,5 +61,5 @@ $pool->collect(function($work){
 	return $work->isComplete();
 });
 
-var_dump($pool, $w);
+var_dump($pool);
 ?>

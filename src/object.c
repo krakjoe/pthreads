@@ -718,7 +718,8 @@ static void * pthreads_routine(void *arg) {
                    inwork = 0;  /* working indicator */
 		
 		/* $this original pointer */
-		zval *this_ptr;		
+		zval *this_ptr = NULL, 
+			 *this = NULL;		
 		
 		/* executor globals */
 		zend_executor_globals *ZEG = NULL;
@@ -781,9 +782,14 @@ static void * pthreads_routine(void *arg) {
 		ZEG = PTHREADS_EG_ALL(TSRMLS_C);
 		
 		/*
-		* Allocate original $this
+		* Allocate $this
 		*/
-		MAKE_STD_ZVAL(this_ptr);
+		ALLOC_INIT_ZVAL(this);
+		
+		/*
+		* Assign $this
+		*/
+		this_ptr = this;
 		
 		/**
 		* Thread Block Begin
@@ -874,7 +880,7 @@ static void * pthreads_routine(void *arg) {
 		* Free original reference to $this
 		*/
 		if (!BG(user_shutdown_function_names)) {
-			FREE_ZVAL(this_ptr);
+			FREE_ZVAL(this);
 		} else {
 			/*
 			* Note, this doesn't stop them being freed
@@ -882,8 +888,9 @@ static void * pthreads_routine(void *arg) {
 			* shutdown handlers from being freed before they
 			* are invoked
 			*/
-			PG(report_memleaks) = 0;
 		}
+		
+		PG(report_memleaks) = 0;
 		
 		/**
 		* Shutdown Block Begin
