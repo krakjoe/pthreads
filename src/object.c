@@ -880,7 +880,7 @@ static void * pthreads_routine(void *arg) {
 		* Free original reference to $this
 		*/
 		if (!BG(user_shutdown_function_names)) {
-			FREE_ZVAL(this);
+			zval_ptr_dtor(&this);
 		} else {
 			/*
 			* Note, this doesn't stop them being freed
