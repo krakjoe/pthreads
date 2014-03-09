@@ -128,8 +128,9 @@ void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_in
 	zend_fcall_info_args_clear(info, 1);
 	
 	/* return the result */
-	if (!failed && retval)
+	if (!failed && retval) {
 		ZVAL_ZVAL(return_value, retval, 1, 1);
+	}
 	else ZVAL_NULL(return_value);
 } /* }}} */
 
