@@ -24,9 +24,6 @@ PHP_METHOD(Worker, stack);
 PHP_METHOD(Worker, unstack);
 PHP_METHOD(Worker, getStacked);
 
-ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
-    ZEND_ARG_INFO(0, options)
-ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_shutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
