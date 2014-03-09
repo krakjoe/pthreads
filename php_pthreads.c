@@ -85,6 +85,7 @@ void ***pthreads_instance = NULL;
 #ifndef HAVE_SPL
 zend_class_entry *spl_ce_InvalidArgumentException;
 zend_class_entry *spl_ce_Countable;
+zend_class_entry *spl_ce_RuntimeException;
 #endif
 
 #ifndef HAVE_PTHREADS_OBJECT_H
@@ -235,6 +236,7 @@ PHP_MINIT_FUNCTION(pthreads)
 #ifndef HAVE_SPL
 	spl_ce_InvalidArgumentException = zend_exception_get_default(TSRMLS_C);
 	spl_ce_Countable                = zend_exception_get_default(TSRMLS_C);
+	spl_ce_RuntimeException			= zend_exception_get_default(TSRMLS_C);
 #endif
 	
 	return SUCCESS;

@@ -113,11 +113,18 @@ PHP_METHOD(Threaded, wait)
 	PTHREAD thread = PTHREADS_FETCH;
 	long timeout = 0L;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &timeout)==SUCCESS) {
-		if (ZEND_NUM_ARGS()) {
-			RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, timeout TSRMLS_CC));
-		} else RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, 0L TSRMLS_CC));
+	if (thread) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &timeout)==SUCCESS) {
+			if (ZEND_NUM_ARGS()) {
+				RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, timeout TSRMLS_CC));
+			} else RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, 0L TSRMLS_CC));
+		}
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to wait for a %s", PTHREADS_NAME);
 	}
+	
 } /* }}} */
 
 /* {{{ proto boolean Threaded::notify()
@@ -128,8 +135,11 @@ PHP_METHOD(Threaded, notify)
 	PTHREAD thread = PTHREADS_FETCH;
 	if (thread) {
 		RETURN_BOOL(pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC));
-	}else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to notify a %s and cannot continue", PTHREADS_NAME);
-	RETURN_FALSE;
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to notify a %s", PTHREADS_NAME);
+	}
 } /* }}} */
 
 /* {{{ proto boolean Threaded::isRunning() 
@@ -140,7 +150,11 @@ PHP_METHOD(Threaded, isRunning)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);		
+	}
 } /* }}} */
 
 /* {{{ proto boolean Threaded::isWaiting() 
@@ -151,7 +165,11 @@ PHP_METHOD(Threaded, isWaiting)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);		
+	}
 } /* }}} */
 
 /* {{{ proto boolean Threaded::isTerminated() 
@@ -162,7 +180,11 @@ PHP_METHOD(Threaded, isTerminated)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);	
+	}
 } /* }}} */
 
 /* {{{ proto boolean Threaded::getTerminationInfo() 
@@ -193,7 +215,11 @@ PHP_METHOD(Threaded, getTerminationInfo)
 		} else {
 		    RETURN_FALSE;
 		}
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);	
+	}
 } /* }}} */
 
 /* {{{ proto void Threaded::synchronized(Callable function, ...)

@@ -431,6 +431,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 								}
 							}
 						} else {
+							
 							zend_error(
 								E_ERROR, 
 								"pthreads has experienced an internal error while finding %s method %s::%s and cannot continue", 

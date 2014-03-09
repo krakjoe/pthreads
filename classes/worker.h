@@ -73,8 +73,16 @@ PHP_METHOD(Worker, stack)
 				
 				RETURN_LONG(pthreads_stack_push(thread, work TSRMLS_CC));
 			}
-		} else zend_error(E_ERROR, "pthreads has detected an attempt to stack onto %s (%lu) which has already been shutdown", PTHREADS_FRIENDLY_NAME);
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while stacking onto %s (%lu) and cannot continue", PTHREADS_FRIENDLY_NAME);
+		} else {
+			zend_throw_exception_ex(
+				spl_ce_RuntimeException, 0 TSRMLS_CC, 
+				"pthreads has detected an attempt to stack onto %s (%lu) which has already been shutdown", PTHREADS_FRIENDLY_NAME);
+		}
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while stacking onto %s (%lu)", PTHREADS_FRIENDLY_NAME);
+	}
 	RETURN_FALSE;
 } /* }}} */
 
@@ -97,7 +105,11 @@ PHP_METHOD(Worker, unstack)
 				RETURN_LONG(pthreads_stack_pop(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC));
 			}
 		} else RETURN_LONG(pthreads_stack_pop(thread, NULL TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while unstacking from %s (%lu) and cannot continue", PTHREADS_FRIENDLY_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while unstacking from %s (%lu)", PTHREADS_FRIENDLY_NAME);	
+	}
 	RETURN_FALSE;
 }
 
@@ -109,7 +121,11 @@ PHP_METHOD(Worker, getStacked)
 	
 	if (thread) {
 		RETURN_LONG(pthreads_stack_length(thread TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while getting the stack length of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while getting the stack length of %s (%lu)", PTHREADS_FRIENDLY_NAME);
+	}
 	RETURN_FALSE;
 }
 
@@ -121,7 +137,11 @@ PHP_METHOD(Worker, isShutdown)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while determining the state of %s (%lu)", PTHREADS_FRIENDLY_NAME);
+	}
 } /* }}} */
 
 /* {{{ proto boolean Worker::isWorking() 
@@ -132,7 +152,11 @@ PHP_METHOD(Worker, isWorking)
 	
 	if (thread) {
 		RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while determining the state of %s (%lu)", PTHREADS_FRIENDLY_NAME);
+	}
 } /* }}} */
 
 /* {{{ proto boolean Worker::shutdown() 
@@ -146,9 +170,10 @@ PHP_METHOD(Worker, shutdown)
 	*/
 	if (PTHREADS_IN_CREATOR(thread)) {
 		RETURN_BOOL((pthreads_join(thread TSRMLS_CC)==SUCCESS));
-	} else {
-		zend_error(E_WARNING, "pthreads has detected an attempt to shutdown from an incorrect context, only the creating context may shutdown %s (%lu)", PTHREADS_FRIENDLY_NAME);
-		RETURN_FALSE;
+	} else {	
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has detected an attempt to shutdown %s (%lu) from an incorrect context", PTHREADS_FRIENDLY_NAME);
 	}
 } /* }}} */
 

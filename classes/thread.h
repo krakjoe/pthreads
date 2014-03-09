@@ -120,17 +120,29 @@ PHP_METHOD(Thread, start)
 			*/
 			switch(result) {
 				case PTHREADS_ST_STARTED:
-					zend_error(E_WARNING, "pthreads has detected an attempt to start %s (%lu), which has been previously started", PTHREADS_FRIENDLY_NAME);
+					zend_throw_exception_ex(
+						spl_ce_RuntimeException, 0 TSRMLS_CC, 
+						"pthreads has detected an attempt to start %s (%lu), which has been previously started", PTHREADS_FRIENDLY_NAME);
 				break;
 				
 				case EAGAIN:
-					zend_error(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", PTHREADS_NAME);
+					zend_throw_exception_ex(
+						spl_ce_RuntimeException, 0 TSRMLS_CC, 
+						"pthreads has detected that the %s could not be started, the system "
+						"lacks the necessary resources or the system-imposed limit would be exceeded", PTHREADS_FRIENDLY_NAME);
 				break;
 				
-				default: zend_error(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error (%d)", PTHREADS_NAME, result);
+				default:
+					zend_throw_exception_ex(
+						spl_ce_RuntimeException, 0 TSRMLS_CC, 
+						"pthreads has detected that the %s could not be started because of an unspecified system error (%d)", PTHREADS_NAME, result);
 			}
 		}
-	} else zend_error(E_WARNING, "pthreads has detected an attempt to start %s from an invalid context, the creating context must start %s", PTHREADS_NAME, PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has detected an attempt to start %s from an invalid context, the creating context must start %s", PTHREADS_NAME, PTHREADS_NAME);
+	}
 	
 	if (result==SUCCESS) {
 		RETURN_TRUE;
@@ -147,7 +159,11 @@ PHP_METHOD(Thread, isStarted)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_STARTED TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);
+	}
 } /* }}} */
 
 /* {{{ proto Thread::isJoined()
@@ -158,7 +174,11 @@ PHP_METHOD(Thread, isJoined)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);
+	}
 } /* }}} */
 
 /* {{{ proto boolean Thread::isWaiting() 
@@ -169,7 +189,11 @@ PHP_METHOD(Thread, isWaiting)
 	
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);
+	}
 } /* }}} */
 
 /* {{{ proto boolean Thread::join() 
@@ -177,7 +201,6 @@ PHP_METHOD(Thread, isWaiting)
 PHP_METHOD(Thread, join) 
 { 
 	PTHREAD thread = PTHREADS_FETCH;
-	
 	/*
 	* Check that we are in the correct context
 	*/
@@ -187,7 +210,9 @@ PHP_METHOD(Thread, join)
 		*/
 		RETURN_BOOL((pthreads_join(thread TSRMLS_CC)==SUCCESS));
 	} else {
-		zend_error(E_WARNING, "pthreads has detected an attempt to join from an incorrect context, only the creating context may join with %s (%lu)", PTHREADS_FRIENDLY_NAME);
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC,
+			"pthreads has detected an attempt to shutdown %s (%lu) from an incorrect context", PTHREADS_FRIENDLY_NAME);
 		RETURN_FALSE;
 	}
 } /* }}} */
@@ -207,9 +232,11 @@ PHP_METHOD(Thread, detach)
         }
         
         RETURN_TRUE;
+    } else {
+    	zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC,
+			"pthreads has experienced an internal error while preparing to detach a %s", PTHREADS_NAME);
     }
-
-    RETURN_FALSE;
 } /* }}} */
 
 /* {{{ proto long Thread::getThreadId()
