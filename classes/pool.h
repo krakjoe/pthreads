@@ -278,7 +278,6 @@ static inline int pool_collect_function(void *bucket, void *argument TSRMLS_DC) 
 	zval **task = (zval**) bucket;
 	pool_call_t *call = (pool_call_t*) argument;
 	zval *remove = NULL;
-	zend_ulong index = 0L;
 	int result = ZEND_HASH_APPLY_KEEP;
 	
 	call->fci.retval_ptr_ptr = &remove;
@@ -320,7 +319,6 @@ PHP_METHOD(Pool, collect) {
 	work = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"), 1 TSRMLS_CC);
 	
 	if (Z_TYPE_P(work) == IS_ARRAY && zend_hash_num_elements(Z_ARRVAL_P(work))) {
-		zval **task = NULL;
 		pool_call_t call;
 		
 		call.fci = fci;
