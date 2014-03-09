@@ -217,6 +217,7 @@ PHP_METHOD(Pool, submit) {
 		zend_hash_index_update(
 			Z_ARRVAL_P(workers), Z_LVAL_P(last), 
 			(void**)&worker, sizeof(zval*), (void**)&selected);
+		Z_OBJ_HT_P(worker)->add_ref(worker TSRMLS_CC);
 	}
 	
 	zend_hash_next_index_insert(
