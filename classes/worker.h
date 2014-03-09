@@ -113,18 +113,7 @@ PHP_METHOD(Worker, getStacked)
 	RETURN_FALSE;
 }
 
-/* {{{ proto Worker::isStarted() 
-	Will return true if the Worker has been started */
-PHP_METHOD(Worker, isStarted)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_STARTED TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-} /* }}} */
-
-/* {{{ proto Worker::isJoined()
+/* {{{ proto Worker::isShutdown()
 	Will return true if the Worker has been shutdown */
 PHP_METHOD(Worker, isShutdown)
 {
