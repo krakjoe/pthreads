@@ -146,48 +146,6 @@ PHP_METHOD(Worker, isWorking)
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
 } /* }}} */
 
-/* {{{ proto boolean Worker::isTerminated() 
-	Will return true if the referenced thread suffered fatal errors or uncaught exceptions */
-PHP_METHOD(Worker, isTerminated)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-} /* }}} */
-
-/* {{{ proto boolean Worker::getTerminationInfo() 
-	Will return information concerning the location of the termination to aid debugging */
-PHP_METHOD(Worker, getTerminationInfo)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		if (pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC)) {
-		    array_init(return_value);
-		    
-		    if (thread->error->clazz) {
-		        add_assoc_string(
-		            return_value, "scope", (char *)thread->error->clazz, 1);       
-		    }
-		    
-		    if (thread->error->method) {
-		        add_assoc_string(
-		            return_value, "function", (char *)thread->error->method, 1);
-		    }
-		    
-		    if (thread->error->file) {
-		        add_assoc_string(
-		            return_value, "file", (char *)thread->error->file, 1);
-		        add_assoc_long(return_value, "line", thread->error->line);
-		    }
-		} else {
-		    RETURN_FALSE;
-		}
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-} /* }}} */
-
 /* {{{ proto boolean Worker::shutdown() 
 		Will wait for execution of all Stackables to complete before shutting down the Worker */
 PHP_METHOD(Worker, shutdown) 
