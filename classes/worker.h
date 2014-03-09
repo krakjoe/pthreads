@@ -17,50 +17,22 @@
  */
 #ifndef HAVE_PTHREADS_CLASS_WORKER_H
 #define HAVE_PTHREADS_CLASS_WORKER_H
-PHP_METHOD(Worker, start); 
-PHP_METHOD(Worker, run); 
 PHP_METHOD(Worker, shutdown);
-PHP_METHOD(Worker, isStarted);
 PHP_METHOD(Worker, isShutdown);
 PHP_METHOD(Worker, isWorking);
-PHP_METHOD(Worker, isTerminated);
-PHP_METHOD(Worker, getTerminationInfo);
 PHP_METHOD(Worker, stack);
 PHP_METHOD(Worker, unstack);
 PHP_METHOD(Worker, getStacked);
-PHP_METHOD(Worker, getThreadId);
-PHP_METHOD(Worker, getCreatorId);
-PHP_METHOD(Worker, merge);
-PHP_METHOD(Worker, shift);
-PHP_METHOD(Worker, pop);
-PHP_METHOD(Worker, chunk);
-PHP_METHOD(Worker, kill);
-PHP_METHOD(Worker, count);
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO_EX(Worker_run, 0, 0, 0)
-ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_shutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Worker_getThreadId, 0, 0, 0)
-ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO_EX(Worker_getCreatorId, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Worker_isStarted, 0, 0, 0)
-ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_isShutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_isWorking, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Worker_isTerminated, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Worker_getTerminationInfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_stack, 0, 0, 1)
@@ -72,107 +44,21 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Worker_merge, 0, 0, 1)
-	ZEND_ARG_INFO(0, from)
-	ZEND_ARG_INFO(0, overwrite)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Worker_shift, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Worker_pop, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Worker_chunk, 0, 0, 1)
-    ZEND_ARG_INFO(0, size)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Worker_kill, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Worker_count, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
 extern zend_function_entry pthreads_worker_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_WORKER
 #	define HAVE_PTHREADS_CLASS_WORKER
 zend_function_entry pthreads_worker_methods[] = {
-	PHP_ME(Worker, start, Worker_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, run, Worker_run, ZEND_ACC_PUBLIC)
-	PHP_ME(Worker, shutdown, Worker_shutdown, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, getThreadId, Worker_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, getCreatorId, Worker_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, stack, Worker_stack, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, unstack, Worker_unstack, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, getStacked, Worker_getStacked, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, isShutdown, Worker_isShutdown, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, isStarted, Worker_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, isTerminated, Worker_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, getTerminationInfo, Worker_getTerminationInfo, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, merge, Worker_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, shift, Worker_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, pop, Worker_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, chunk, Worker_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, kill, Worker_kill, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Worker, count, Worker_count, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Worker, shutdown, Worker_shutdown, ZEND_ACC_PUBLIC)
+	PHP_ME(Worker, stack, Worker_stack, ZEND_ACC_PUBLIC)
+	PHP_ME(Worker, unstack, Worker_unstack, ZEND_ACC_PUBLIC)
+	PHP_ME(Worker, getStacked, Worker_getStacked, ZEND_ACC_PUBLIC)
+	PHP_ME(Worker, isShutdown, Worker_isShutdown, ZEND_ACC_PUBLIC)
+	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
-/* {{{ proto void Worker::run(void) */
-PHP_METHOD(Worker, run) {} /* }}} */
-
-/* {{{ proto boolean Worker::start([long $options = PTHREADS_INHERIT_ALL])
-		Starts a new Worker Thread, executing the Workers implementation of Worker::run and then waiting for Stackables
-		$options should be a mask of inheritance constants */
-PHP_METHOD(Worker, start)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	int result = FAILURE;
-	long options = PTHREADS_INHERIT_ALL;
-	
-	/* get options */
-	if (ZEND_NUM_ARGS()) {
-	    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &options) != SUCCESS) {
-	        return;
-	    }
-	    
-	    /* set thread options */
-	    thread->options = options;
-	}
-	
-	/*
-	* See if there are any limits in this environment
-	*/
-	if (PTHREADS_IS_NOT_CONNECTION(thread)) {
-		/* attempt to create the thread */
-		if ((result = pthreads_start(thread TSRMLS_CC)) != SUCCESS) {
-			/*
-			* Report the error, there's no chance of recovery ...
-			*/
-			switch(result) {
-				case PTHREADS_ST_STARTED:
-					zend_error(E_WARNING, "pthreads has detected an attempt to start %s (%lu), which has been previously started", PTHREADS_FRIENDLY_NAME);
-				break;
-				
-				case EAGAIN:
-					zend_error(E_WARNING, "pthreads has detected that the %s could not be started, the system lacks the necessary resources or the system-imposed limit would be exceeded", PTHREADS_NAME);
-				break;
-				
-				default: zend_error(E_WARNING, "pthreads has detected that the %s could not be started because of an unspecified system error (%d)", PTHREADS_NAME, result);
-			}
-		}
-	} else zend_error(E_WARNING, "pthreads has detected an attempt to start %s from an invalid context, the creating context must start %s", PTHREADS_NAME, PTHREADS_NAME);
-	
-	if (result==SUCCESS) {
-		RETURN_TRUE;
-	}
-	
-	RETURN_FALSE;
-} /* }}} */
-
-/* {{{ proto int Worker::stack(Stackable &$work)
+/* {{{ proto int Worker::stack(Threaded &$work)
 	Pushes an item onto the Thread Stack, returns the size of stack */
 PHP_METHOD(Worker, stack)
 {
@@ -181,7 +67,7 @@ PHP_METHOD(Worker, stack)
 	
 	if (thread) {
 		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_threaded_entry)==SUCCESS) {
 				if (Z_REFCOUNT_P(work) < 2) {
 					zend_throw_exception(
 						spl_ce_InvalidArgumentException, "Worker::stack expects $work to be a reference", 0 TSRMLS_CC);
@@ -195,7 +81,7 @@ PHP_METHOD(Worker, stack)
 	RETURN_FALSE;
 } /* }}} */
 
-/* {{{ proto int Worker::unstack([Stackable &$work])
+/* {{{ proto int Worker::unstack([Threaded &$work])
 	Removes an item from the Thread stack, if no item is specified the stack is cleared, returns the size of stack */
 PHP_METHOD(Worker, unstack)
 {
@@ -204,7 +90,7 @@ PHP_METHOD(Worker, unstack)
 	
 	if (thread) {
 		if (ZEND_NUM_ARGS() > 0) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_stackable_entry)==SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_threaded_entry)==SUCCESS) {
 				if (Z_REFCOUNT_P(work) < 2) {
 					zend_throw_exception(
 						spl_ce_InvalidArgumentException, "Worker::unstack expects $work to be a reference", 0 TSRMLS_CC);
@@ -334,87 +220,6 @@ PHP_METHOD(Worker, getThreadId)
 PHP_METHOD(Worker, getCreatorId)
 {
 	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->cid);
-} /* }}} */
-
-/* {{{ proto boolean Worker::merge(mixed $data, [boolean $overwrite = true])
-	Will merge data with the referenced Worker */
-PHP_METHOD(Worker, merge) 
-{
-    zval *from;
-    zend_bool overwrite = 1;
-    
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|b", &from, &overwrite) != SUCCESS) {
-        return;
-    }
-    
-	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
-} /* }}} */
-
-/* {{{ proto mixed Worker::shift()
-	Will shift the first member from the object */
-PHP_METHOD(Worker, shift) 
-{
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-    
-    pthreads_store_shift(getThis(), &return_value TSRMLS_CC);
-} /* }}} */
-
-/* {{{ proto mixed Worker::pop()
-	Will pop the last member from the object */
-PHP_METHOD(Worker, pop) 
-{
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-    
-    pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
-} /* }}} */
-
-/* {{{ proto mixed Worker::chunk(integer $size [, boolean $preserve])
-	Will shift the first member from the object */
-PHP_METHOD(Worker, chunk) 
-{
-    long size;
-    zend_bool preserve = 0;
-    
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|b", &size, &preserve) != SUCCESS) {
-        return;
-    }
-    
-    pthreads_store_chunk(getThis(), size, preserve, &return_value TSRMLS_CC);
-} /* }}} */
-
-/* {{{ proto boolean Worker::kill(])
-	Will kill the referenced worker, forcefully */
-PHP_METHOD(Worker, kill) 
-{
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-#ifdef PTHREADS_KILL_SIGNAL
-    {
-    	PTHREAD thread = PTHREADS_FETCH;
-    	/* allowing sending other signals here is just too dangerous */
-    	RETURN_BOOL(pthread_kill(
-    		thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
-    }
-#endif
-} /* }}} */
-
-/* {{{ proto boolean Worker::count()
-	Will return the size of the properties table */
-PHP_METHOD(Worker, count)
-{
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-	
-	ZVAL_LONG(return_value, 0);
-	
-	pthreads_store_count(
-		getThis(), &Z_LVAL_P(return_value) TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif

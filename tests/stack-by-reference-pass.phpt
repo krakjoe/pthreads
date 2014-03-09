@@ -4,7 +4,7 @@ Test stacking by reference ONLY (pass)
 Stacking without a reference is not allowed, so the API should enforce the requirement
 --FILE--
 <?php
-class T extends Stackable { 
+class T extends Threaded { 
 	public function run() {
 		printf("OK");
 	}

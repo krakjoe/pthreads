@@ -176,12 +176,12 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_ALLOW_HEADERS	   0x01000000 /* }}} */
 
 /* {{{ scope constants */
-#define PTHREADS_SCOPE_UNKNOWN     0x00000000
-#define PTHREADS_SCOPE_THREAD      0x00000001
-#define PTHREADS_SCOPE_WORKER      0x00000010
-#define PTHREADS_SCOPE_STACKABLE   0x00000100
-#define PTHREADS_SCOPE_CONNECTION  0x00001000
-#define PTHREADS_SCOPE_DETACHED    0x00010000 /* }}} */
+#define PTHREADS_SCOPE_UNKNOWN     0
+#define PTHREADS_SCOPE_THREADED    1
+#define PTHREADS_SCOPE_THREAD      2
+#define PTHREADS_SCOPE_WORKER      4
+#define PTHREADS_SCOPE_CONNECTION  8
+#define PTHREADS_SCOPE_DETACHED    16 /* }}} */
 
 /* {{{ scope macros */
 #define PTHREADS_IS_KNOWN_ENTRY(t)      ((t)->scope)
@@ -191,8 +191,8 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_IS_NOT_THREAD(t)       (!PTHREADS_IS_THREAD(t))
 #define PTHREADS_IS_WORKER(t)           ((t)->scope & PTHREADS_SCOPE_WORKER)
 #define PTHREADS_IS_NOT_WORKER(t)       (!PTHREADS_IS_WORKER(t))
-#define PTHREADS_IS_STACKABLE(t)        ((t)->scope & PTHREADS_SCOPE_STACKABLE)
-#define PTHREADS_IS_NOT_STACKABLE(t)    (!PTHREADS_IS_STACKABLE(t))
+#define PTHREADS_IS_THREADED(t)         ((t)->scope & PTHREADS_SCOPE_THREADED)
+#define PTHREADS_IS_NOT_THREADED(t)     (!PTHREADS_IS_THREADED(t))
 #define PTHREADS_IS_DETACHED(t)         ((t)->scope & PTHREADS_SCOPE_DETACHED)
 #define PTHREADS_IS_NOT_DETACHED(t)     (!PTHREADS_IS_DETACHED(t))
 /* }}} */

@@ -4,7 +4,7 @@ Testing isset unset
 This tests that isset and unset are working properly
 --FILE--
 <?php
-class Storage extends Stackable {
+class Storage extends Threaded {
     public function run(){}
 }
 

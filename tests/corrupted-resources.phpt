@@ -4,7 +4,7 @@ Testing sane handling of resources and objects bug #39
 Test that resources and objects are not corrupted when written to thread storage
 --FILE--
 <?php
-class Work extends Stackable {
+class Work extends Threaded {
 	public function run(){
 		
 	}

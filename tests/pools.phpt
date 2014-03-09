@@ -11,12 +11,10 @@ class WebWorker extends Worker {
 		$this->logger = $logger;
 	}
 	
-	public function run(){}
-	
 	protected $loger;	
 }
 
-class WebWork extends Stackable {
+class WebWork extends Threaded {
 	
 	public function isComplete() {
 		return $this->complete;
@@ -33,7 +31,7 @@ class WebWork extends Stackable {
 	protected $complete;
 }
 
-class SafeLog extends Stackable {
+class SafeLog extends Threaded {
 	
 	protected function log($message, $args = array()) {
 		$args = func_get_args();	
@@ -43,8 +41,6 @@ class SafeLog extends Stackable {
 				"{$message}\n", $args);
 		}
 	}
-	
-	public function run(){}
 }
 
 $pool = new Pool(8, '\WebWorker', array(new SafeLog()));

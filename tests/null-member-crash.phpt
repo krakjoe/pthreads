@@ -4,7 +4,7 @@ Null member crash
 This test verifies that null members do not crash php
 --FILE--
 <?php
-class Test extends Stackable {
+class Test extends Threaded {
     public function run(){}
 }
 $test = new Test();

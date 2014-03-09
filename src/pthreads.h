@@ -66,17 +66,15 @@ extern zend_class_entry *spl_ce_Countable;
 #include <Zend/zend_vm.h>
 #include <TSRM/TSRM.h>
 
+extern zend_class_entry *pthreads_threaded_entry;
 extern zend_class_entry *pthreads_thread_entry;
 extern zend_class_entry *pthreads_worker_entry;
-extern zend_class_entry *pthreads_stackable_entry;
 extern zend_class_entry *pthreads_mutex_entry;
 extern zend_class_entry *pthreads_condition_entry;
 
 #ifndef IS_PTHREADS_CLASS
-#define IS_PTHREADS_CLASS(c)    \
-        (instanceof_function(c, pthreads_thread_entry TSRMLS_CC) || \
-         instanceof_function(c, pthreads_worker_entry TSRMLS_CC) || \
-         instanceof_function(c, pthreads_stackable_entry TSRMLS_CC))
+#define IS_PTHREADS_CLASS(c) \
+	(instanceof_function(c, pthreads_threaded_entry TSRMLS_CC))
 #endif
 
 #ifndef IS_PTHREADS_OBJECT

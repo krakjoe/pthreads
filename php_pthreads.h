@@ -18,11 +18,15 @@
 #ifndef HAVE_PHP_PTHREADS_H
 #define HAVE_PHP_PTHREADS_H
 #define PHP_PTHREADS_EXTNAME "pthreads"
-#define PHP_PTHREADS_VERSION "1.0.1"
+#define PHP_PTHREADS_VERSION "2.0.0"
 
 PHP_MINIT_FUNCTION(pthreads);
 PHP_MSHUTDOWN_FUNCTION(pthreads);
 PHP_MINFO_FUNCTION(pthreads);
+
+#ifndef HAVE_PTHREADS_CLASS_THREADED_H
+#	include <classes/threaded.h>
+#endif
 
 #ifndef HAVE_PTHREADS_CLASS_THREAD_H
 #	include <classes/thread.h>
@@ -30,10 +34,6 @@ PHP_MINFO_FUNCTION(pthreads);
 
 #ifndef HAVE_PTHREADS_CLASS_WORKER_H
 #	include <classes/worker.h>
-#endif
-
-#ifndef HAVE_PTHREADS_CLASS_STACKABLE_H
-#	include <classes/stackable.h>
 #endif
 
 #ifndef HAVE_PTHREADS_CLASS_MUTEX_H

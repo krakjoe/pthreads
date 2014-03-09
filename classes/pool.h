@@ -126,7 +126,7 @@ PHP_METHOD(Pool, resize) {
 	ZVAL_LONG(size, newsize);
 } /* }}} */
 
-/* {{{ proto integer Pool::submit(Stackable task) 
+/* {{{ proto integer Pool::submit(Threaded task) 
 	Will submit the given task to the next worker in the pool, by default workers are selected round robin */
 PHP_METHOD(Pool, submit) {
 	zval *task = NULL;
@@ -142,7 +142,7 @@ PHP_METHOD(Pool, submit) {
 	
 	zend_class_entry **ce = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &task, pthreads_stackable_entry) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &task, pthreads_threaded_entry) != SUCCESS) {
 		return;
 	}
 	
@@ -231,7 +231,7 @@ PHP_METHOD(Pool, submit) {
 	
 } /* }}} */
 
-/* {{{ proto integer Pool::submitTo(integer $worker, Stackable task) 
+/* {{{ proto integer Pool::submitTo(integer $worker, Threaded task) 
 	Will submit the given task to the specified worker */
 PHP_METHOD(Pool, submitTo) {
 	zval *task = NULL;
@@ -241,7 +241,7 @@ PHP_METHOD(Pool, submitTo) {
 	zval **working = NULL;
 	zval **selected = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lO", &worker, &task, pthreads_stackable_entry) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lO", &worker, &task, pthreads_threaded_entry) != SUCCESS) {
 		return;
 	}
 	

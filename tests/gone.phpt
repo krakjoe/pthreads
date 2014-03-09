@@ -4,7 +4,7 @@ Test objects that have gone away
 This test verifies that objects that have gone away do not cause segfaults
 --FILE--
 <?php
-class O extends Stackable { 
+class O extends Threaded { 
 	public function run() {
 
 	}

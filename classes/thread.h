@@ -23,41 +23,18 @@ PHP_METHOD(Thread, notify);
 PHP_METHOD(Thread, join);
 PHP_METHOD(Thread, detach);
 PHP_METHOD(Thread, isStarted);
-PHP_METHOD(Thread, isRunning);
 PHP_METHOD(Thread, isJoined);
-PHP_METHOD(Thread, isWaiting);
-PHP_METHOD(Thread, isTerminated);
 PHP_METHOD(Thread, getThreadId);
 PHP_METHOD(Thread, getCurrentThreadId);
 PHP_METHOD(Thread, getCurrentThread);
 PHP_METHOD(Thread, getCreatorId);
-
-PHP_METHOD(Thread, synchronized);
-PHP_METHOD(Thread, lock);
-PHP_METHOD(Thread, unlock);
-
-PHP_METHOD(Thread, merge);
-PHP_METHOD(Thread, shift);
-PHP_METHOD(Thread, pop);
-PHP_METHOD(Thread, chunk);
-
-PHP_METHOD(Thread, getTerminationInfo);
 PHP_METHOD(Thread, kill);
-
-PHP_METHOD(Thread, count);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_wait, 0, 0, 0)
-	ZEND_ARG_INFO(0, timeout)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_notify, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_join, 0, 0, 0)
@@ -81,29 +58,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_isStarted, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_isRunning, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_INFO_EX(Thread_isJoined, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_isWaiting, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_INFO_EX(Thread_isTerminated, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_getTerminationInfo, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_synchronized, 0, 0, 1)
-	ZEND_ARG_INFO(0, function)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_lock, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_unlock, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_merge, 0, 0, 1)
@@ -111,20 +69,7 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_merge, 0, 0, 1)
     ZEND_ARG_INFO(0, overwrite)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_shift, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_pop, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_chunk, 0, 0, 1)
-    ZEND_ARG_INFO(0, size)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_INFO_EX(Thread_kill, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_count, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_thread_methods[];
@@ -132,31 +77,16 @@ extern zend_function_entry pthreads_thread_methods[];
 #	ifndef HAVE_PTHREADS_CLASS_THREAD
 #	define HAVE_PTHREADS_CLASS_THREAD
 zend_function_entry pthreads_thread_methods[] = {
-	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ABSTRACT_ME(Thread, run, Thread_run)
-	PHP_ME(Thread, wait, Thread_wait, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, notify, Thread_notify, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-    PHP_ME(Thread, detach, Thread_detach, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, isStarted, Thread_isStarted, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, isRunning, Thread_isRunning, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, isWaiting, Thread_isWaiting, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, isTerminated, Thread_isTerminated, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, getTerminationInfo, Thread_getTerminationInfo, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, getCurrentThreadId, Thread_getCurrentThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
-	PHP_ME(Thread, getCurrentThread, Thread_getCurrentThread, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL|ZEND_ACC_STATIC)
-	PHP_ME(Thread, getCreatorId, Thread_getCreatorId, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, synchronized, Thread_synchronized, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, lock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, unlock, Thread_lock, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, merge, Thread_merge, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, shift, Thread_shift, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, pop, Thread_pop, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, chunk, Thread_chunk, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, kill, Thread_kill, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
-	PHP_ME(Thread, count, Thread_count, ZEND_ACC_PUBLIC|ZEND_ACC_FINAL)
+	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC)
+    PHP_ME(Thread, detach, Thread_detach, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, isStarted, Thread_isStarted, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, getCreatorId, Thread_getThreadId, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, getCurrentThreadId, Thread_getCurrentThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	PHP_ME(Thread, getCurrentThread, Thread_getCurrentThread, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	PHP_ME(Thread, kill, Thread_kill, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -220,17 +150,6 @@ PHP_METHOD(Thread, isStarted)
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
 } /* }}} */
 
-/* {{{ proto Thread::isRunning() 
-	Will return true while a thread is executing */
-PHP_METHOD(Thread, isRunning)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-} /* }}} */
-
 /* {{{ proto Thread::isJoined()
 	Will return true if a Thread has been joined already */
 PHP_METHOD(Thread, isJoined)
@@ -251,76 +170,6 @@ PHP_METHOD(Thread, isWaiting)
 	if (thread) {
 		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
 	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-} /* }}} */
-
-/* {{{ proto boolean Thread::isTerminated() 
-	Will return true if the referenced thread suffered fatal errors or uncaught exceptions */
-PHP_METHOD(Thread, isTerminated)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC));
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-} /* }}} */
-
-/* {{{ proto boolean Thread::getTerminationInfo() 
-	Will return information concerning the location of the termination to aid debugging */
-PHP_METHOD(Thread, getTerminationInfo)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		if (pthreads_state_isset(thread->state, PTHREADS_ST_ERROR TSRMLS_CC)) {
-		    array_init(return_value);
-		    
-		    if (thread->error->clazz) {
-		        add_assoc_string(
-		            return_value, "scope", (char *)thread->error->clazz, 1);       
-		    }
-		    
-		    if (thread->error->method) {
-		        add_assoc_string(
-		            return_value, "function", (char *)thread->error->method, 1);
-		    }
-		    
-		    if (thread->error->file) {
-		        add_assoc_string(
-		            return_value, "file", (char *)thread->error->file, 1);
-		        add_assoc_long(return_value, "line", thread->error->line);
-		    }
-		} else {
-		    RETURN_FALSE;
-		}
-	} else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to read the state of a %s and cannot continue", PTHREADS_NAME);
-} /* }}} */
-
-/* {{{ 	proto boolean Thread::wait([long timeout])
-		Will cause the calling thread to wait for notification from the referenced object
-		When a timeout is used and reached boolean false will return
-		Otherwise returns a boolean indication of success */
-PHP_METHOD(Thread, wait)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	long timeout = 0L;
-	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l", &timeout)==SUCCESS) {
-		if (ZEND_NUM_ARGS()) {
-			RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, timeout TSRMLS_CC));
-		} else RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, 0L TSRMLS_CC));
-	}
-} /* }}} */
-
-/* {{{ proto boolean Thread::notify()
-		Notify anyone waiting that they can continue
-		Will return a boolean indication of success */
-PHP_METHOD(Thread, notify)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	if (thread) {
-		RETURN_BOOL(pthreads_unset_state(thread, PTHREADS_ST_WAITING TSRMLS_CC));
-	}else zend_error(E_ERROR, "pthreads has experienced an internal error while preparing to notify a %s and cannot continue", PTHREADS_NAME);
-	RETURN_FALSE;
 } /* }}} */
 
 /* {{{ proto boolean Thread::join() 
@@ -345,7 +194,6 @@ PHP_METHOD(Thread, join)
 
 /* {{{ proto boolean Thread::detach()
         Will return a boolean indication of success */
-
 PHP_METHOD(Thread, detach)
 {
     PTHREAD thread = PTHREADS_FETCH;
@@ -392,91 +240,6 @@ PHP_METHOD(Thread, getCreatorId)
 	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->cid);
 } /* }}} */
 
-/* {{{ proto void Thread::synchronized(Callable function, ...)
-	Will synchronize the thread, call the function, passing anything after the function as parameters
-	 */
-PHP_METHOD(Thread, synchronized) 
-{
-	zend_fcall_info *info = emalloc(sizeof(zend_fcall_info));
-	zend_fcall_info_cache *cache = emalloc(sizeof(zend_fcall_info_cache));
-	
-	uint argc = 0;
-	zval ***argv = NULL;
-	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "f|+", info, cache, &argv, &argc) == SUCCESS) {
-		pthreads_synchro_block(getThis(), info, cache, argc, argv, return_value TSRMLS_CC);
-	}
-	
-	if (argc) 
-		efree(argv);	
-	efree(info);
-	efree(cache);
-} /* }}} */
-
-/* {{{ proto boolean Thread::lock()
-	Will acquire the storage lock */
-PHP_METHOD(Thread, lock) 
-{
-	ZVAL_BOOL(return_value, pthreads_store_lock(getThis() TSRMLS_CC));
-} /* }}} */
-
-/* {{{ proto boolean Thread::unlock()
-	Will release the storage lock */
-PHP_METHOD(Thread, unlock) 
-{
-	ZVAL_BOOL(return_value, pthreads_store_unlock(getThis() TSRMLS_CC));
-} /* }}} */
-
-/* {{{ proto boolean Thread::merge(mixed $data, [boolean $overwrite = true])
-	Will merge data with the referenced Thread */
-PHP_METHOD(Thread, merge) 
-{
-    zval *from;
-    zend_bool overwrite = 1;
-    
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|b", &from, &overwrite) != SUCCESS) {
-        return;
-    }
-    
-	RETURN_BOOL((pthreads_store_merge(getThis(), from, overwrite TSRMLS_CC)==SUCCESS));
-} /* }}} */
-
-/* {{{ proto mixed Thread::shift()
-	Will shift the first member from the object */
-PHP_METHOD(Thread, shift) 
-{
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-    
-    pthreads_store_shift(getThis(), &return_value TSRMLS_CC);
-} /* }}} */
-
-/* {{{ proto mixed Thread::pop()
-	Will pop the last member from the object */
-PHP_METHOD(Thread, pop) 
-{
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-    
-    pthreads_store_pop(getThis(), &return_value TSRMLS_CC);
-} /* }}} */
-
-/* {{{ proto mixed Thread::chunk(integer $size [, boolean $preserve])
-	Will shift the first member from the object */
-PHP_METHOD(Thread, chunk) 
-{
-    long size;
-    zend_bool preserve = 0;
-    
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|b", &size, &preserve) != SUCCESS) {
-        return;
-    }
-    
-    pthreads_store_chunk(getThis(), size, preserve, &return_value TSRMLS_CC);
-} /* }}} */
-
 /* {{{ proto boolean Thread::kill()
 	Will kill the referenced thread, forcefully */
 PHP_METHOD(Thread, kill) 
@@ -492,20 +255,6 @@ PHP_METHOD(Thread, kill)
     		pthread_kill(thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
     }
 #endif
-} /* }}} */
-
-/* {{{ proto boolean Thread::count()
-	Will return the size of the properties table */
-PHP_METHOD(Thread, count)
-{
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-	
-	ZVAL_LONG(return_value, 0);
-	
-	pthreads_store_count(
-		getThis(), &Z_LVAL_P(return_value) TSRMLS_CC);
 } /* }}} */
 #	endif
 #endif

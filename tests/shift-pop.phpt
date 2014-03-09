@@ -4,7 +4,7 @@ Test shift and pop
 This test verifies that shift and pop functionality are working
 --FILE--
 <?php
-class S extends Stackable {
+class S extends Threaded {
 	public function run(){}
 }
 $s = new S();

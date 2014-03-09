@@ -4,7 +4,7 @@ Check chunking
 This test verifies functionality of ::chunk
 --FILE--
 <?php
-class S extends Stackable {
+class S extends Threaded {
     public function run(){}
 }
 

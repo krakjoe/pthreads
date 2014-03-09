@@ -71,9 +71,9 @@ zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_PROPERTIES
 };
 
+zend_class_entry *pthreads_threaded_entry;
 zend_class_entry *pthreads_thread_entry;
 zend_class_entry *pthreads_worker_entry;
-zend_class_entry *pthreads_stackable_entry;
 zend_class_entry *pthreads_mutex_entry;
 zend_class_entry *pthreads_condition_entry;
 zend_class_entry *pthreads_pool_entry;
@@ -121,12 +121,7 @@ static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 
 PHP_MINIT_FUNCTION(pthreads)
 {
-	zend_class_entry te;
-	zend_class_entry me;
 	zend_class_entry ce;
-	zend_class_entry se;
-	zend_class_entry we;
-	zend_class_entry pe;
 	
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_ALL", PTHREADS_INHERIT_ALL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_NONE", PTHREADS_INHERIT_NONE, CONST_CS | CONST_PERSISTENT);
@@ -138,44 +133,40 @@ PHP_MINIT_FUNCTION(pthreads)
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_COMMENTS", PTHREADS_INHERIT_COMMENTS, CONST_CS | CONST_PERSISTENT);
 	
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
+
+	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
+	ce.serialize = pthreads_internal_serialize;
+	ce.unserialize = pthreads_internal_unserialize;
+	pthreads_threaded_entry=zend_register_internal_class(&ce TSRMLS_CC);
+	pthreads_threaded_entry->get_iterator = pthreads_object_iterator_ctor;
+	pthreads_threaded_entry->create_object = pthreads_threaded_ctor;
+	zend_class_implements(pthreads_threaded_entry TSRMLS_CC, 1, zend_ce_traversable);
+#ifdef HAVE_SPL
+	zend_class_implements(pthreads_threaded_entry TSRMLS_CC, 1, spl_ce_Countable);
+#endif	
 	
-	INIT_CLASS_ENTRY(te, "Thread", pthreads_thread_methods);
-	te.create_object = pthreads_thread_ctor;
-	te.serialize = pthreads_internal_serialize;
-	te.unserialize = pthreads_internal_unserialize;
-	pthreads_thread_entry=zend_register_internal_class(&te TSRMLS_CC);
+	/* for BC with <= 1* */
+	zend_register_class_alias_ex(
+		ZEND_STRL("Stackable"), pthreads_threaded_entry TSRMLS_CC);
+
+	INIT_CLASS_ENTRY(ce, "Thread", pthreads_thread_methods);
+	ce.serialize = pthreads_internal_serialize;
+	ce.unserialize = pthreads_internal_unserialize;
+	pthreads_thread_entry=zend_register_internal_class_ex(&ce, pthreads_threaded_entry, NULL TSRMLS_CC);
 	pthreads_thread_entry->get_iterator = pthreads_object_iterator_ctor;
-	zend_class_implements(pthreads_thread_entry TSRMLS_CC, 1, zend_ce_traversable);
-#ifdef HAVE_SPL
-	zend_class_implements(pthreads_thread_entry TSRMLS_CC, 1, spl_ce_Countable);
-#endif
+	pthreads_thread_entry->create_object = pthreads_thread_ctor;
 	
-	INIT_CLASS_ENTRY(we, "Worker", pthreads_worker_methods);
-	we.create_object = pthreads_worker_ctor;
-	we.serialize = pthreads_internal_serialize;
-	we.unserialize = pthreads_internal_unserialize;
-	pthreads_worker_entry=zend_register_internal_class(&we TSRMLS_CC);
+	INIT_CLASS_ENTRY(ce, "Worker", pthreads_worker_methods);
+	ce.serialize = pthreads_internal_serialize;
+	ce.unserialize = pthreads_internal_unserialize;
+	pthreads_worker_entry=zend_register_internal_class_ex(&ce, pthreads_thread_entry, NULL TSRMLS_CC);
 	pthreads_worker_entry->get_iterator = pthreads_object_iterator_ctor;
-	zend_class_implements(pthreads_worker_entry TSRMLS_CC, 1, zend_ce_traversable);
-#ifdef HAVE_SPL
-	zend_class_implements(pthreads_worker_entry TSRMLS_CC, 1, spl_ce_Countable);
-#endif
+	pthreads_worker_entry->create_object = pthreads_worker_ctor;
 
-	INIT_CLASS_ENTRY(se, "Stackable", pthreads_stackable_methods);
-	se.create_object = pthreads_stackable_ctor;
-	se.serialize = pthreads_internal_serialize;
-	se.unserialize = pthreads_internal_unserialize;
-	pthreads_stackable_entry=zend_register_internal_class(&se TSRMLS_CC);
-	pthreads_stackable_entry->get_iterator = pthreads_object_iterator_ctor;
-	zend_class_implements(pthreads_stackable_entry TSRMLS_CC, 1, zend_ce_traversable);
-#ifdef HAVE_SPL
-	zend_class_implements(pthreads_stackable_entry TSRMLS_CC, 1, spl_ce_Countable);
-#endif
-
-	INIT_CLASS_ENTRY(me, "Mutex", pthreads_mutex_methods);
-	me.serialize = zend_class_serialize_deny;
-	me.unserialize = zend_class_unserialize_deny;
-	pthreads_mutex_entry=zend_register_internal_class(&me TSRMLS_CC);
+	INIT_CLASS_ENTRY(ce, "Mutex", pthreads_mutex_methods);
+	ce.serialize = zend_class_serialize_deny;
+	ce.unserialize = zend_class_unserialize_deny;
+	pthreads_mutex_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	pthreads_mutex_entry->ce_flags |= ZEND_ACC_FINAL;
 	
 	INIT_CLASS_ENTRY(ce, "Cond", pthreads_condition_methods);
@@ -184,10 +175,8 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_condition_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	pthreads_condition_entry->ce_flags |= ZEND_ACC_FINAL;
 	
-	INIT_CLASS_ENTRY(pe, "Pool", pthreads_pool_methods);
-	//pe.serialize = zend_class_serialize_deny;
-	//pe.unserialize = zend_class_unserialize_deny;
-	pthreads_pool_entry=zend_register_internal_class(&pe TSRMLS_CC);
+	INIT_CLASS_ENTRY(ce, "Pool", pthreads_pool_methods);
+	pthreads_pool_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	zend_declare_property_long(pthreads_pool_entry, ZEND_STRL("size"), 1, ZEND_ACC_PROTECTED TSRMLS_CC);
 	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("class"),   ZEND_ACC_PROTECTED TSRMLS_CC);
 	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("workers"), ZEND_ACC_PROTECTED TSRMLS_CC);
@@ -267,16 +256,16 @@ PHP_MINFO_FUNCTION(pthreads)
 	php_info_print_table_end();
 }
 
+#ifndef HAVE_PTHREADS_CLASS_THREADED
+#	include <classes/threaded.h>
+#endif
+
 #ifndef HAVE_PTHREADS_CLASS_THREAD
 #	include <classes/thread.h>
 #endif
 
 #ifndef HAVE_PTHREADS_CLASS_WORKER
 #	include <classes/worker.h>
-#endif
-
-#ifndef HAVE_PTHREADS_CLASS_STACKABLE
-#	include <classes/stackable.h>
 #endif
 
 #ifndef HAVE_PTHREADS_CLASS_MUTEX

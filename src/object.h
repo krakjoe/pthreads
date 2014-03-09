@@ -37,7 +37,7 @@
 #endif
 
 /* {{{ object creation and destruction */
-zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object_value pthreads_threaded_ctor(zend_class_entry *entry TSRMLS_DC);
 zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC);
 zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC);
 /* }}} */

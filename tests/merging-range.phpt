@@ -4,7 +4,7 @@ Testing merging members (long keys)
 This tests that merging ranges works as expected (long keys)
 --FILE--
 <?php
-class Storage extends Stackable {
+class Storage extends Threaded {
     public function run() {}
 }
 

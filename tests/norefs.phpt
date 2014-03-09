@@ -4,7 +4,7 @@ Test members (typeof object) with no other references
 This test verifies that members of an object type that have no other references in the engine can be set as members of threaded objects
 --FILE--
 <?php
-class O extends Stackable {
+class O extends Threaded {
 	public function run(){}
 }
 

@@ -4,7 +4,7 @@ Testing member count
 This test verifies that getting member counts works without effort
 --FILE--
 <?php
-class Test extends Stackable {
+class Test extends Threaded {
 	public function run() { 
 	}
 }

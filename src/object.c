@@ -207,7 +207,7 @@ size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC) {
 /* {{{ push an item onto the work buffer */
 size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 	zend_bool locked;
-	PTHREAD stackable = PTHREADS_FETCH_FROM(work);
+	PTHREAD threaded = PTHREADS_FETCH_FROM(work);
 	size_t counted = 0L;
 	
 	if (pthreads_lock_acquire(thread->lock, &locked TSRMLS_CC)) {
@@ -220,7 +220,7 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC) {
 	        }
 	        
 		    zend_hash_next_index_insert(
-		        stack, (void**) &stackable, sizeof(struct _pthread_construct), NULL
+		        stack, (void**) &threaded, sizeof(struct _pthread_construct), NULL
 		    );
 			counted = zend_hash_num_elements(stack);
 		}
@@ -279,19 +279,19 @@ burst:
 				EG(called_scope) = popped;
 				
 				/*
-				* Setup stackable for runtime
+				* Setup threaded object for runtime
 				*/
 				{
-					PTHREAD stackable = PTHREADS_FETCH_FROM(that_ptr);
+					PTHREAD threaded = PTHREADS_FETCH_FROM(that_ptr);
 					
-					if (stackable) {
+					if (threaded) {
 						current->tid = thread->tid;
 						current->tls = thread->tls;
 						
-						pthreads_connect(current, stackable TSRMLS_CC);
+						pthreads_connect(current, threaded TSRMLS_CC);
 
 						pthreads_store_write(
-							stackable->store, "worker", sizeof("worker")-1, &this_ptr TSRMLS_CC
+							threaded->store, "worker", sizeof("worker")-1, &this_ptr TSRMLS_CC
 						);
 
 						Z_ADDREF_P(this_ptr);
@@ -367,15 +367,15 @@ zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 	return attach;
 } /* }}} */
 
-/* {{{ stackable object constructor */
-zend_object_value pthreads_stackable_ctor(zend_class_entry *entry TSRMLS_DC) {
+/* {{{ threaded object constructor */
+zend_object_value pthreads_threaded_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD stackable = calloc(1, sizeof(*stackable));
-	if (stackable) {
-		stackable->scope = PTHREADS_SCOPE_STACKABLE;
-		pthreads_base_ctor(stackable, entry TSRMLS_CC);
+	PTHREAD threaded = calloc(1, sizeof(*threaded));
+	if (threaded) {
+		threaded->scope = PTHREADS_SCOPE_THREADED;
+		pthreads_base_ctor(threaded, entry TSRMLS_CC);
 		attach.handle = zend_objects_store_put(
-			stackable,
+			threaded,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
 			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
@@ -856,7 +856,7 @@ static void * pthreads_routine(void *arg) {
 						    pthreads_state_unset(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 						}
 
-						/* deal with references to stackable */
+						/* deal with references to stacked objects */
 						if (!terminated && inwork) {
 							zval_ptr_dtor(&ZEG->This);
 						} else inwork = 1;

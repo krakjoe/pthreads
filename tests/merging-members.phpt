@@ -4,7 +4,7 @@ Testing merging members
 This tests that merging members works as expected
 --FILE--
 <?php
-class Store extends Stackable {
+class Store extends Threaded {
         public function run(){}
 }
 
