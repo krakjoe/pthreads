@@ -738,9 +738,6 @@ static void * pthreads_routine(void *arg) {
 		**/
 		TSRMLS_FETCH();
 		
-		/* request startup */
-		php_request_startup(TSRMLS_C);
-		
 #ifdef PTHREADS_PEDANTIC
 		/* acquire a global lock */
 		pthreads_globals_lock(&glocked TSRMLS_CC);
@@ -772,6 +769,9 @@ static void * pthreads_routine(void *arg) {
 			SG(headers_sent)=1;
 			SG(request_info).no_headers = 1;
 		}
+		
+		/* request startup */
+		php_request_startup(TSRMLS_C);
 		
 		/* prepare environment */
 		pthreads_prepare(thread TSRMLS_CC);

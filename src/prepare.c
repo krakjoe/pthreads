@@ -350,8 +350,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 	            
 			    /* update class table */
                 zend_hash_update(   
-                    CG(class_table), lower, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), (void**)&searched);
-                            
+                    CG(class_table), lower, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), (void**)&searched);      
 			} else prepared = *searched;
 		}
 	}
