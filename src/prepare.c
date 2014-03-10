@@ -353,8 +353,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
                     CG(class_table), lower, prepared->name_length+1, &prepared, sizeof(zend_class_entry*), (void**)&searched);
                             
 			} else prepared = *searched;
-
-		} else zend_error(E_ERROR, "pthreads has detected a memory error while attempting to prepare %s for execution in %s %lu", candidate->name, thread->std.ce->name, thread->tid);
+		}
 	}
 	return prepared;
 } /* }}} */
@@ -376,7 +375,7 @@ static inline zend_bool pthreads_constant_exists(char *name, zend_uint name_len 
 }
 
 /* {{{ prepares the current context to execute the referenced thread */
-void pthreads_prepare(PTHREAD thread TSRMLS_DC){
+int pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	HashPosition position;
 	
 	/* inherit ini entries from parent ... */
@@ -505,10 +504,7 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			    if (zend_hash_get_current_key_ex(table[0], &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
 				    if (zend_hash_find(table[1], lcname, lcnamel, (void**)&exists) != SUCCESS){
 					    if ((prepared=pthreads_prepared_entry(thread, *entry TSRMLS_CC))==NULL) {
-						    zend_error(
-							    E_ERROR, "pthreads detected failure while preparing %s in %s (%lu)", (*entry)->name, thread->std.ce->name, thread->tid
-						    );
-						    return;
+						    return FAILURE;
 					    }
 					
 					    zend_hash_next_index_insert(&store, (void**) &prepared, sizeof(zend_class_entry*), NULL);
@@ -546,6 +542,8 @@ void pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	if (!PTHREADS_G(default_resource_dtor))
 		PTHREADS_G(default_resource_dtor)=(EG(regular_list).pDestructor);
 	EG(regular_list).pDestructor =  (dtor_func_t) pthreads_prepared_resource_dtor;	
+	
+	return SUCCESS;
 } /* }}} */
 
 /* {{{ property info ctor */
@@ -711,8 +709,6 @@ static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry) {
 					}
 				}
 			}
-		} zend_catch {
-			zend_error(E_WARNING, "pthreads has detected failure while cleaning resources and is likely to fail");
 		} zend_end_try();
 	}
 } /* }}} */

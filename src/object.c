@@ -669,22 +669,34 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
         if (len) {
             pid_t mpid = PTHREADS_PID();
             
-	        if (address != NULL) {
+	        if (address && address->std.ce) {
 	            if (pid == mpid) {
 	                PTHREAD destination = PTHREADS_FETCH_FROM(*object);
                     if (destination) {
                         pthreads_connect(address, destination TSRMLS_CC);
                     }
+                    return SUCCESS;
 	            } else {
-	                zend_error(
-	                    E_WARNING, 
-	                    "pthreads detected an attempt to connect to a thread in another belonging to another process");
+	            	zend_throw_exception_ex(
+						spl_ce_RuntimeException, 0 TSRMLS_CC,
+						"pthreads detected an attempt to connect to a %s "
+						"which belongs to another process", Z_OBJCE_PP(object)->name);
 	            }
+	        } else {
+	        	zend_throw_exception_ex(
+					spl_ce_RuntimeException, 0 TSRMLS_CC,
+					"pthreads detected an attempt to connect to a %s "
+					"which has already been destroyed", Z_OBJCE_PP(object)->name);
 	        }
+        } else {
+        	zend_throw_exception_ex(
+				spl_ce_RuntimeException, 0 TSRMLS_CC,
+				"pthreads detected an attempt to connect to a %s "
+				"which has already is corrupted", Z_OBJCE_PP(object)->name);
         }
     }
 	
-	return SUCCESS;
+	return FAILURE;
 } /* }}} */
 
 #ifdef PTHREADS_KILL_SIGNAL
@@ -708,9 +720,6 @@ static void * pthreads_routine(void *arg) {
 #endif
 
 	if (thread) {
-		/* TSRM */
-		void ***tsrm_ls = NULL;
-		
 #ifdef PTHREADS_PEDANTIC
 		zend_bool  glocked = 0; /* global lock indicator */
 #endif
@@ -727,16 +736,15 @@ static void * pthreads_routine(void *arg) {
 		/**
 		* Startup Block Begin
 		**/
+		TSRMLS_FETCH();
+		
+		/* request startup */
+		php_request_startup(TSRMLS_C);
 		
 #ifdef PTHREADS_PEDANTIC
 		/* acquire a global lock */
 		pthreads_globals_lock(&glocked TSRMLS_CC);
 #endif
-		/* create new context */
-		thread->tls = tsrm_ls = tsrm_new_interpreter_context();
-		
-		/* set interpreter context */
-		tsrm_set_interpreter_context(tsrm_ls);
 
 		/* set thread id for this object */
 		thread->tid = pthreads_self();
@@ -755,9 +763,6 @@ static void * pthreads_routine(void *arg) {
 			PS(use_cookies) = 0;
 		}
 #endif
-
-		/* request startup */
-		php_request_startup(TSRMLS_C);
 
 		/* fix php-fpm compatibility */
 		SG(sapi_started)=0;		
@@ -881,21 +886,13 @@ static void * pthreads_routine(void *arg) {
 		*/
 		if (!BG(user_shutdown_function_names)) {
 			zval_ptr_dtor(&this);
-		} else {
-			/*
-			* Note, this doesn't stop them being freed
-			* This has to be done to stop closures set as
-			* shutdown handlers from being freed before they
-			* are invoked
-			*/
 		}
-		
-		PG(report_memleaks) = 0;
 		
 		/**
 		* Shutdown Block Begin
 		**/
-
+		PG(report_memleaks) = 0;
+		
 #ifdef PTHREADS_PEDANTIC
 		/* acquire global lock */
 		pthreads_globals_lock(&glocked TSRMLS_CC);
@@ -903,10 +900,6 @@ static void * pthreads_routine(void *arg) {
 		/* shutdown request */
 	    php_request_shutdown(TSRMLS_C);
 	    
-
-		/* free interpreter */
-		tsrm_free_interpreter_context(tsrm_ls);	
-
 #ifdef PTHREADS_PEDANTIC
 		/* release global lock */
 		pthreads_globals_unlock(glocked TSRMLS_CC);

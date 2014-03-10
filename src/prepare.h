@@ -30,5 +30,5 @@
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate TSRMLS_DC); /* }}} */
 
 /* {{{ prepare for execution in context */
-void pthreads_prepare(PTHREAD thread TSRMLS_DC); /* }}} */
+int pthreads_prepare(PTHREAD thread TSRMLS_DC); /* }}} */
 #endif

@@ -88,7 +88,9 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 			mstring
 		);
 		INIT_PZVAL(mstring);
-		convert_to_string(mstring);
+		zend_try {
+			convert_to_string(mstring);
+		} zend_end_try();
 		member = mstring;
 #if PHP_VERSION_ID > 50399
 		key = NULL;
@@ -98,13 +100,16 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	if (Z_TYPE_P(member)==IS_STRING) {
 		pthreads_store_read(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC);
 	} else {
-		zend_error(E_WARNING, "pthreads detected an attempt to use an unsupported kind of key in %s", Z_OBJCE_P(object)->name);
 		if (value != NULL) {
 			value = EG(
 				uninitialized_zval_ptr
 			);
 			Z_ADDREF_P(value);
 		}
+		
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads detected an attempt to use an unsupported key type %s", Z_OBJCE_P(object)->name);
 	}
 
 	if (mstring != NULL) {
@@ -148,7 +153,9 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 			mstring
 		);
 		INIT_PZVAL(mstring);
-		convert_to_string(mstring);
+		zend_try {
+			convert_to_string(mstring);
+		} zend_end_try();
 		if(nulled) 
 			FREE_ZVAL(member);
 		member = mstring;
@@ -168,27 +175,25 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 			case IS_RESOURCE:
 			case IS_BOOL: {
 				if (pthreads_store_write(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC)!=SUCCESS){
-					zend_error(
-						E_WARNING, 
+					zend_throw_exception_ex(
+						spl_ce_RuntimeException, 0 TSRMLS_CC, 
 						"pthreads failed to write member %s::$%s", 
-						Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
-					);
+						Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
 				}
 			} break;
 			
 			default: {
-				zend_error(
-					E_WARNING, 
-					"pthreads detected an attempt to use an unsupported kind of data for %s::$%s", 
-					Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
-				);
+				zend_throw_exception_ex(
+					spl_ce_RuntimeException, 0 TSRMLS_CC,
+					"pthreads detected an attempt to use unsupported data for %s::$%s", 
+					Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
 			}
 		}
-	} else zend_error(
-		E_WARNING,
-		"pthreads detected an attempt to use an unsupported kind of key in %s", 
-		Z_OBJCE_P(object)->name
-	);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC,
+			"pthreads detected an attempt to use an unsupported key type %s", Z_OBJCE_P(object)->name);
+	}
 
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
@@ -212,7 +217,9 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 			mstring
 		);
 		INIT_PZVAL(mstring);
-		convert_to_string(mstring);
+		zend_try {
+			convert_to_string(mstring);
+		} zend_end_try();
 		member = mstring;
 #if PHP_VERSION_ID > 50399
 		key = NULL;
@@ -221,7 +228,11 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 
 	if (Z_TYPE_P(member) == IS_STRING) {
 		isset = pthreads_store_isset(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), has_set_exists TSRMLS_CC);
-	} else zend_error(E_WARNING, "pthreads has detected an attempt to use an unsupported kind of key in %s", Z_OBJCE_P(object)->name);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads detected an attempt to use an unsupported key type %s", Z_OBJCE_P(object)->name);
+	}
 
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
@@ -244,7 +255,9 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 			mstring
 		);
 		INIT_PZVAL(mstring);
-		convert_to_string(mstring);
+		zend_try {
+			convert_to_string(mstring);
+		} zend_end_try();
 		member = mstring;
 #if PHP_VERSION_ID > 50399
 		key = NULL;
@@ -253,13 +266,16 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 
 	if (Z_TYPE_P(member) == IS_STRING) {
 		if (pthreads_store_delete(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member) TSRMLS_CC)!=SUCCESS){
-			zend_error(
-				E_WARNING, 
-				"pthreads has experienced an internal error while deleting %s::$%s", 
-				Z_OBJCE_P(object)->name, Z_STRVAL_P(member)
-			);
+			zend_throw_exception_ex(
+				spl_ce_RuntimeException, 0 TSRMLS_CC, 
+				"pthreads failed to delete member %s::$%s", 
+				Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
 		}
-	} else zend_error(E_WARNING, "pthreads detected an attempt to use an unsupported kind of key in %s", Z_OBJCE_P(object)->name);
+	} else {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads detected an attempt to use an unsupported key type %s", Z_OBJCE_P(object)->name);
+	}
 	
 	if (mstring != NULL) {
 		zval_ptr_dtor(&mstring);
@@ -335,12 +351,11 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 					* Stop invalid private method calls
 					*/
 					if (access == ZEND_ACC_PRIVATE && !PTHREADS_IN_THREAD(thread)) {
-						zend_error(
-							E_ERROR, 
-							"pthreads detected an attempt to call private method %s::%s from outside the threading context", 
-							scope->name,
-							method
-						);
+						zend_throw_exception_ex(
+							spl_ce_RuntimeException, 0 TSRMLS_CC, 
+							"pthreads detected an attempt to call private "
+							"method %s::%s from outside the threading context", 
+							scope->name, method);
 						return FAILURE;
 					}
 					
@@ -385,13 +400,12 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 									cache.object_ptr = getThis();
 									
 									if ((called=zend_call_function(&info, &cache TSRMLS_CC))!=SUCCESS) {
-										zend_error(
-											E_ERROR, 
-											"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
+										zend_throw_exception_ex(
+											spl_ce_RuntimeException, 0 TSRMLS_CC, 
+											"pthreads has experienced an internal error while "
+											"calling %s method %s::%s and cannot continue", 
 											(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
-											scope->name,
-											method
-										);
+											scope->name, method);
 										called = FAILURE;
 									} else {
 #if PHP_VERSION_ID > 50399
@@ -420,25 +434,22 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 										pthreads_modifiers_unprotect(thread->modifiers, method, unprotect TSRMLS_CC);
 									}
 								} else {
-									zend_error(
-										E_ERROR, 
-										"pthreads has experienced an internal error while calling %s method %s::%s and cannot continue", 
+									zend_throw_exception_ex(
+										spl_ce_RuntimeException, 0 TSRMLS_CC, 
+										"pthreads has experienced an internal error while "
+										"calling %s method %s::%s and cannot continue", 
 										(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
-										scope->name,
-										method
-									);
+										scope->name, method);
 									called = FAILURE;
 								}
 							}
 						} else {
-							
-							zend_error(
-								E_ERROR, 
-								"pthreads has experienced an internal error while finding %s method %s::%s and cannot continue", 
+							zend_throw_exception_ex(
+								spl_ce_RuntimeException, 0 TSRMLS_CC, 
+								"pthreads has experienced an internal error while "
+								"finding %s method %s::%s and cannot continue", 
 								(access == ZEND_ACC_PROTECTED) ? "protected" : "private",
-								scope->name,
-								method
-							);
+								scope->name, method);
 							called = FAILURE;
 						}
 					}
@@ -485,9 +496,10 @@ int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D) {
 zend_object_value pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D)
 {
 	zend_object_value attach;
-	
-	zend_error(
-		E_ERROR, "pthreads objects cannot be cloned");
+
+	zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads objects cannot be cloned");
 	
 	return attach;
 } /* }}} */
