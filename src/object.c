@@ -712,6 +712,7 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 static void * pthreads_routine(void *arg) {
 	/* passed the object as argument */
 	PTHREAD thread = (PTHREAD) arg;
+	char nothing[] = {0,};
 	
 #ifdef PTHREADS_KILL_SIGNAL
 	/* installed to support a graceful-ish kill function */
@@ -756,7 +757,7 @@ static void * pthreads_routine(void *arg) {
 #ifdef HAVE_PHP_SESSION
 		/* fixup sessions for compatibility */
 		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-			PS(cache_limiter) = 0;
+			PS(cache_limiter) = nothing;
 			PS(use_cookies) = 0;
 		}
 #endif
