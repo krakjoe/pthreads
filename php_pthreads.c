@@ -64,8 +64,8 @@ zend_module_entry pthreads_module_entry = {
   NULL,
   PHP_MINIT(pthreads),
   PHP_MSHUTDOWN(pthreads),
-  NULL,
-  NULL,
+  PHP_RINIT(pthreads),
+  PHP_RSHUTDOWN(pthreads),
   PHP_MINFO(pthreads),
   PHP_PTHREADS_VERSION,
   STANDARD_MODULE_PROPERTIES
@@ -249,6 +249,14 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 	}
 	
 	return SUCCESS;
+}
+
+PHP_RINIT_FUNCTION(pthreads) {
+	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
+}
+
+PHP_RSHUTDOWN_FUNCTION(pthreads) {
+	zend_hash_destroy(&PTHREADS_ZG(resolve));
 }
 
 PHP_MINFO_FUNCTION(pthreads)
