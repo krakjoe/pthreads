@@ -70,6 +70,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Threaded_chunk, 0, 0, 1)
     ZEND_ARG_INFO(0, size)
+    ZEND_ARG_INFO(0, preserve)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Threaded_pop, 0, 0, 0)
