@@ -60,11 +60,11 @@ pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
 zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC) {
 	zend_bool locked = 0;
 	if (lock) {
+		lock->locks++;
 		switch (pthread_mutex_lock(&lock->mutex)) {
 			case SUCCESS:
 				locked = (((*acquired)=1)==1);
 				lock->owner = TSRMLS_C;
-				lock->locks++;
 			break;
 			
 			default: {
@@ -83,18 +83,16 @@ zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_D
 zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC) {
 	zend_bool released = 1;
 	if (lock) {
-		if (acquired) {
-			switch (pthread_mutex_unlock(&lock->mutex)) {
-				case SUCCESS: 	
-					released = 1;
-					lock->locks--;
-				break;
-				
-				default: {
-					released = 0;
-				}
+		switch (pthread_mutex_unlock(&lock->mutex)) {
+			case SUCCESS: 	
+				released = 1;
+				lock->locks--;
+			break;
+			
+			default: {
+				released = 0;
 			}
-		} else --lock->locks;
+		}
 	} else released = 0;
 
 	return released;
