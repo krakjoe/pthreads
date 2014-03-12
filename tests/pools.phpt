@@ -6,7 +6,6 @@ This test verifies the functionality of selective inheritance
 <?php
 
 class WebWorker extends Worker {
-
 	public function __construct(SafeLog $logger) {
 		$this->logger = $logger;
 	}
@@ -43,7 +42,7 @@ class SafeLog extends Threaded {
 	}
 }
 
-$pool = new Pool(8, '\WebWorker', array(new SafeLog()));
+$pool = new Pool(8, \WebWorker::class, array(new SafeLog()));
 
 $pool->submit(new WebWork());
 $pool->submit(new WebWork());

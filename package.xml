@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-03-09</date>
- <time>06:45:00</time>
+ <date>2014-03-13</date>
+ <time>08:00:00</time>
  <version>
-  <release>1.0.1</release>
-  <api>1.0.1</api>
+  <release>2.0.0</release>
+  <api>2.0.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,8 +22,15 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  Fix fault in logic of Pool
-  Fix segfaut in synchronized blocks on exception #236
+  Fix errors; inheritance and scope in threads (bugs in prepare)
+  Fix fault; accessing destroyed objects (throw ex)
+  Make use of inheritance within pthreads (bc compatible using alias)
+  Remove abstract flag from ::run method
+  Remove use of errors in favour of exceptions
+  Remove all final modifiers on threaded objects
+  Fix fault; submit to incorrectly constructed Pool
+  Fixed fault; (re)using primitives that are object members across contexts
+  Fixed fault; intermittent fault on session_start inside threads
  </notes>
  <contents>
   <dir name="/">
@@ -77,6 +84,7 @@
    <file name="tests/null-member-crash.phpt" role="test" />
    <file name="tests/oomethods.phpt" role="test" />
    <file name="tests/pools.phpt" role="test" />
+   <file name="tests/pools-default.phpt" role="test" />
    <file name="tests/selective-inheritance.phpt" role="test" />
    <file name="tests/shift-pop.phpt" role="test" />
    <file name="tests/shutdown-handler.phpt" role="test" />
@@ -114,9 +122,9 @@
    <file name="src/synchro.c" role="src" />
    <file name="src/synchro.h" role="src" />
    <file name="src/thread.h" role="src" />
+   <file name="classes/threaded.h" role="src" />
    <file name="classes/thread.h" role="src" />
    <file name="classes/worker.h" role="src" />
-   <file name="classes/stackable.h" role="src" />
    <file name="classes/mutex.h" role="src" />
    <file name="classes/cond.h" role="src" />
    <file name="classes/pool.h" role="src" />

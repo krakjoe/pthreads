@@ -497,6 +497,9 @@ static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 
 	if (PTHREADS_IS_NOT_CONNECTION(base) && PTHREADS_IS_NOT_DETACHED(base)) {
+	     
+	     assert(base->cls == TSRMLS_C);
+	     
 	     if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
 	        pthread_t *pthread = &base->thread;
 	        if (pthread) {

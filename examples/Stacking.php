@@ -73,15 +73,18 @@ $worker = new ExampleWorker("My Worker Thread");
 $work = array();
 
 while($i++<10){
+	$work[$i]=new Work(array(rand()*100));
 	printf(
-		"Stacking: %d/%d\n", $i, $worker->stack($work[]=new Work(array(rand()*100)))
+		"Stacking: %d/%d\n", $i, $worker->stack($work[$i])
 	);
 }
+
 $worker->start();
 usleep(10000);
 while($i++<20){
+	$work[$i]=new Work(array(rand()*100));
 	printf(
-		"Stacking: %d/%d\n", $i, $worker->stack($work[]=new Work(array(rand()*100)))
+		"Stacking: %d/%d\n", $i, $worker->stack($work[$i])
 	);
 }
 $worker->shutdown();

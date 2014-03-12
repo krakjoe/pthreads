@@ -31,8 +31,18 @@
 pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
 	pthreads_lock lock = calloc(1, sizeof(*lock));
 	if (lock) {	
+		pthread_mutexattr_t attr;
+
+		pthread_mutexattr_init(&attr);
+
+#ifdef PTHREAD_MUTEX_RECURSIVE
+		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+#else
+		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+#endif
+
 		/* whatever the default type will do */
-		if (pthread_mutex_init(&lock->mutex, NULL)==SUCCESS) {
+		if (pthread_mutex_init(&lock->mutex, &attr)==SUCCESS) {
 			lock->owner = NULL;
 			lock->locks = 0;
 			return lock;
@@ -50,21 +60,16 @@ pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
 zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC) {
 	zend_bool locked = 0;
 	if (lock) {
-		if (!TSRMLS_C || lock->owner != TSRMLS_C){
-			switch (pthread_mutex_lock(&lock->mutex)) {
-				case SUCCESS:
-					locked = (((*acquired)=1)==1);
-					lock->owner = TSRMLS_C;
-					lock->locks = 1;
-				break;
-				
-				default: {
-					locked = (((*acquired)=0)==1);
-				}
+		switch (pthread_mutex_lock(&lock->mutex)) {
+			case SUCCESS:
+				locked = (((*acquired)=1)==1);
+				lock->owner = TSRMLS_C;
+				lock->locks++;
+			break;
+			
+			default: {
+				locked = (((*acquired)=0)==1);
 			}
-		} else {
-			locked = (((*acquired)=0)==0);
-			lock->locks++;
 		}
 	} else locked = (((*acquired)=0)==1);
 	
@@ -79,11 +84,10 @@ zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC
 	zend_bool released = 1;
 	if (lock) {
 		if (acquired) {
-			lock->locks--;
-			lock->owner = NULL;
 			switch (pthread_mutex_unlock(&lock->mutex)) {
 				case SUCCESS: 	
-					released = 1; 
+					released = 1;
+					lock->locks--;
 				break;
 				
 				default: {

@@ -502,7 +502,7 @@ int pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			    zend_class_entry **exists;
 				
 			    if (zend_hash_get_current_key_ex(table[0], &lcname, &lcnamel, &idx, 0, &position)==HASH_KEY_IS_STRING) {
-				    if (zend_hash_find(table[1], lcname, lcnamel+1, (void**)&exists) != SUCCESS){
+				    if (zend_hash_find(table[1], lcname, lcnamel, (void**)&exists) != SUCCESS){
 					    if ((prepared=pthreads_prepared_entry(thread, *entry TSRMLS_CC))==NULL) {
 						    return FAILURE;
 					    }

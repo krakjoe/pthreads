@@ -23,9 +23,8 @@ PHP_METHOD(Pool, submit);
 PHP_METHOD(Pool, submitTo);
 PHP_METHOD(Pool, collect);
 PHP_METHOD(Pool, shutdown);
-PHP_METHOD(Pool, __destruct);
 
-ZEND_BEGIN_ARG_INFO_EX(Pool___construct, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(Pool___construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, size)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, ctor)
@@ -62,11 +61,10 @@ zend_function_entry pthreads_pool_methods[] = {
 	PHP_ME(Pool, submitTo, 		Pool_submitTo, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, collect, 		Pool_collect, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, shutdown, 		Pool_noargs, 		ZEND_ACC_PUBLIC)
-	PHP_ME(Pool, __destruct,	Pool_noargs,		ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
-/* {{{ proto Pool Pool::__construct(integer size, class worker [, array $ctor]) 	
+/* {{{ proto Pool Pool::__construct(integer size, [class worker, [array $ctor]]) 	
 	Construct a pool ready to create a maximum of $size workers of class $worker
 	$ctor will be used as arguments to constructor when spawning workers */
 PHP_METHOD(Pool, __construct) 
@@ -75,9 +73,12 @@ PHP_METHOD(Pool, __construct)
 	zend_class_entry *clazz = NULL;
 	zval *ctor = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "lC|a", &size, &clazz, &ctor) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|Ca", &size, &clazz, &ctor) != SUCCESS) {
 		return;
 	}
+	
+	if (clazz == NULL || Z_TYPE_P(clazz) == IS_NULL)
+		clazz = pthreads_worker_entry;
 	
 	if (!instanceof_function(clazz, pthreads_worker_entry TSRMLS_CC)) {
 		zend_throw_exception_ex(NULL, 0 TSRMLS_CC, 
@@ -161,14 +162,20 @@ PHP_METHOD(Pool, submit) {
 		ZVAL_LONG(last, 0);
 
 	if (zend_hash_index_find(Z_ARRVAL_P(workers), Z_LVAL_P(last), (void**)&selected) != SUCCESS) {
-		MAKE_STD_ZVAL(worker);
-		
 		clazz = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("class"), 1 TSRMLS_CC);
+		
+		if (Z_TYPE_P(clazz) != IS_STRING) {
+			zend_throw_exception_ex(spl_ce_RuntimeException, 0 TSRMLS_CC, 
+				"this Pool has not been initialized properly");
+			return;
+		}
+		
 		ctor  = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("ctor"), 1 TSRMLS_CC);
 		
 		zend_lookup_class(
 			Z_STRVAL_P(clazz), Z_STRLEN_P(clazz), &ce TSRMLS_CC);
 		
+		MAKE_STD_ZVAL(worker);
 		object_init_ex(worker, *ce);
 		
 		{
@@ -358,34 +365,9 @@ PHP_METHOD(Pool, shutdown) {
 		if (zend_hash_num_elements(Z_ARRVAL_P(workers))) {
 			zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown TSRMLS_CC);	
 		}
-			
+
 		zend_hash_clean(Z_ARRVAL_P(workers));	
 	}
-} /* }}} */
-
-/* {{{ proto void Pool::__destruct()
-	Will shutdown all workers and destroy all references held to work */
-PHP_METHOD(Pool, __destruct) {
-	zval *workers = NULL;
-	zval *work = NULL;
-	
-	if (zend_parse_parameters_none() != SUCCESS) {
-		return;
-	}
-	
-	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1 TSRMLS_CC);
-	work    = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"),	1 TSRMLS_CC);
-	
-	if (Z_TYPE_P(workers) == IS_ARRAY) {
-		if (zend_hash_num_elements(Z_ARRVAL_P(workers))) {
-			zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown TSRMLS_CC);
-		}
-		
-		zend_hash_clean(Z_ARRVAL_P(workers));
-	}
-	
-	if (Z_TYPE_P(work) == IS_ARRAY)
-		zend_hash_clean(Z_ARRVAL_P(work));
 } /* }}} */
 #	endif
 #endif

@@ -19,12 +19,11 @@
 #define HAVE_PTHREADS_H
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 #include <stdio.h>
 #ifndef _WIN32
-#define __USE_UNIX98
 #include <pthread.h>
 #include <sys/time.h>
 #else
