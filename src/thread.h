@@ -146,6 +146,11 @@ typedef struct _pthread_construct {
 	* Shared Resources
 	**/
 	pthreads_resources resources;
+	
+	/*
+	* Object Handle
+	*/
+	zend_object_handle handle;
 } *PTHREAD;
 
 /* {{{ comparison function */

@@ -338,12 +338,13 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 	if (thread) {
 		thread->scope = PTHREADS_SCOPE_THREAD;
 		pthreads_base_ctor(thread, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
+		thread->handle = zend_objects_store_put(
 			thread,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
 			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
+		attach.handle   = thread->handle;
 		attach.handlers = &pthreads_handlers;
 	}
 	return attach;
@@ -356,12 +357,13 @@ zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 	if (worker) {
 		worker->scope = PTHREADS_SCOPE_WORKER;
 		pthreads_base_ctor(worker, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
+		worker->handle = zend_objects_store_put(
 			worker,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
 			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
+		attach.handle = worker->handle;
 		attach.handlers = &pthreads_handlers;
 	}
 	return attach;
@@ -374,12 +376,14 @@ zend_object_value pthreads_threaded_ctor(zend_class_entry *entry TSRMLS_DC) {
 	if (threaded) {
 		threaded->scope = PTHREADS_SCOPE_THREADED;
 		pthreads_base_ctor(threaded, entry TSRMLS_CC);
-		attach.handle = zend_objects_store_put(
+		threaded->handle = zend_objects_store_put(
 			threaded,
 			(zend_objects_store_dtor_t) pthreads_base_dtor,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
 			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
+		
+		attach.handle   = threaded->handle;
 		attach.handlers = &pthreads_handlers;
 	}
 	return attach;
@@ -673,9 +677,19 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
         
         if (address && pthreads_globals_object_validate(address TSRMLS_CC)) {
             if (pid == mpid) {
-            	if (object_init_ex(
-					*object, ce
-				)==SUCCESS) {
+
+            	/* if we already own this object do not create another handle */
+            	if (address->cls == TSRMLS_C) {
+            		Z_TYPE_PP(object) = IS_OBJECT;
+            		Z_OBJ_HANDLE_PP(object) = address->handle;
+            		Z_OBJ_HT_PP(object) = &pthreads_handlers;
+            		Z_OBJ_HT_PP(object)->add_ref(*object TSRMLS_CC);
+            		
+            		return SUCCESS;
+            	}
+            	
+            	/* else initialize and connect to the original object */
+            	if (object_init_ex(*object, ce) == SUCCESS) {
 					pthreads_connect(
 		                	address, 
 		                	PTHREADS_FETCH_FROM(*object) TSRMLS_CC);

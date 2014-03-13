@@ -31,7 +31,7 @@ $test->start();
 Work Object
 (
 )
-object(Work)#3 (0) {
+object(Work)#2 (0) {
 }
 resource(2) of type (stream)
 resource(2) of type (stream)

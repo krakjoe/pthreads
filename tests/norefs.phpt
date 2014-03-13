@@ -21,7 +21,7 @@ var_dump(new T());
 --EXPECT--
 object(T)#1 (1) {
   ["t"]=>
-  object(O)#3 (0) {
+  object(O)#2 (0) {
   }
 }
 
