@@ -675,7 +675,7 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
     if (len) {
         pid_t mpid = PTHREADS_PID();
         
-        if (address && pthreads_globals_object_validate(address TSRMLS_CC)) {
+        if (address && pthreads_globals_object_validate((zend_ulong)address TSRMLS_CC)) {
             if (pid == mpid) {
 
             	/* if we already own this object do not create another handle */
