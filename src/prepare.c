@@ -301,8 +301,14 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 			for (i=0; i<prepared->default_static_members_count; i++) {
 				if (candidate->default_static_members_table[i]) {
 					/* we use real separation for a reason */
+					(prepared->default_static_members_table[i]) = (zval*) emalloc(sizeof(zval));
+					
+					memcpy(
+						(prepared->default_static_members_table[i]), 
+						(candidate->default_static_members_table[i]), sizeof(zval));
+					
 					pthreads_store_separate(
-						candidate->default_static_members_table[i],
+						prepared->default_static_members_table[i],
 						&prepared->default_static_members_table[i],
 						1, 0 TSRMLS_CC
 					);

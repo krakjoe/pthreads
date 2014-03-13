@@ -16,7 +16,7 @@ class T extends Thread {
 	public function run() {
 		$this->o = new O();
 		/* this will disappear */
-		$this->o["data"] = true;	
+		$this->o["data"] = true;
 	}
 }
 

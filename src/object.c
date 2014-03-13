@@ -742,6 +742,9 @@ static void * pthreads_routine(void *arg) {
 		**/
 		TSRMLS_FETCH();
 		
+		/* set thread local storage */
+		thread->tls = TSRMLS_C;
+		
 #ifdef PTHREADS_PEDANTIC
 		/* acquire a global lock */
 		pthreads_globals_lock(&glocked TSRMLS_CC);

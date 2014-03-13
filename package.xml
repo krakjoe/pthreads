@@ -31,6 +31,7 @@
   Fix fault; submit to incorrectly constructed Pool
   Fixed fault; (re)using primitives that are object members across contexts
   Fixed fault; intermittent fault on session_start inside threads
+  Various internal improvements
  </notes>
  <contents>
   <dir name="/">
