@@ -334,7 +334,7 @@ size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC) {
 /* {{{ thread object constructor */
 zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD thread = calloc(1, sizeof(*thread));
+	PTHREAD thread = pthreads_globals_object_alloc(sizeof(*thread) TSRMLS_CC);
 	if (thread) {
 		thread->scope = PTHREADS_SCOPE_THREAD;
 		pthreads_base_ctor(thread, entry TSRMLS_CC);
@@ -352,7 +352,7 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 /* {{{ worker object constructor */
 zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD worker = calloc(1, sizeof(*worker));
+	PTHREAD worker = pthreads_globals_object_alloc(sizeof(*worker) TSRMLS_CC);
 	if (worker) {
 		worker->scope = PTHREADS_SCOPE_WORKER;
 		pthreads_base_ctor(worker, entry TSRMLS_CC);
@@ -370,7 +370,7 @@ zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 /* {{{ threaded object constructor */
 zend_object_value pthreads_threaded_ctor(zend_class_entry *entry TSRMLS_DC) {
 	zend_object_value attach;
-	PTHREAD threaded = calloc(1, sizeof(*threaded));
+	PTHREAD threaded = pthreads_globals_object_alloc(sizeof(*threaded) TSRMLS_CC);
 	if (threaded) {
 		threaded->scope = PTHREADS_SCOPE_THREADED;
 		pthreads_base_ctor(threaded, entry TSRMLS_CC);
@@ -553,10 +553,9 @@ static void pthreads_base_free(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 	if (base) {
 	    if (PTHREADS_IS_NOT_DETACHED(base)) {
-	        free(
-		        base
-	        );
-	        base = NULL;
+	    	if (pthreads_globals_object_delete(base TSRMLS_CC)) {
+	    		base = NULL;
+	    	}
 	    }
 	}	
 } /* }}} */
@@ -664,40 +663,45 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC) {
 	PTHREAD address = NULL;
 	pid_t pid = 0L;
+	zend_ulong len = sscanf(
+		(const char*)buffer, 
+		"%lu:%lu", 
+		(long unsigned int *)&pid, (long unsigned int *)&address);
+	
+    if (len) {
+        pid_t mpid = PTHREADS_PID();
+        
+        if (address && pthreads_globals_object_validate(address TSRMLS_CC)) {
+            if (pid == mpid) {
+            	if (object_init_ex(
+					*object, ce
+				)==SUCCESS) {
+					pthreads_connect(
+		                	address, 
+		                	PTHREADS_FETCH_FROM(*object) TSRMLS_CC);
 
-	if (object_init_ex(
-		    *object, ce
-	    )==SUCCESS) {
-        zend_ulong len = sscanf((const char*)buffer, "%lu:%lu", (long unsigned int *)&pid, (long unsigned int *)&address);
-        if (len) {
-            pid_t mpid = PTHREADS_PID();
-            
-	        if (address && address->std.ce) {
-	            if (pid == mpid) {
-	                PTHREAD destination = PTHREADS_FETCH_FROM(*object);
-                    if (destination) {
-                        pthreads_connect(address, destination TSRMLS_CC);
-                    }
-                    return SUCCESS;
-	            } else {
-	            	zend_throw_exception_ex(
-						spl_ce_RuntimeException, 0 TSRMLS_CC,
-						"pthreads detected an attempt to connect to a %s "
-						"which belongs to another process", Z_OBJCE_PP(object)->name);
-	            }
-	        } else {
-	        	zend_throw_exception_ex(
+		            return SUCCESS;
+				}
+            } else {
+            	zend_throw_exception_ex(
 					spl_ce_RuntimeException, 0 TSRMLS_CC,
 					"pthreads detected an attempt to connect to a %s "
-					"which has already been destroyed", Z_OBJCE_PP(object)->name);
-	        }
+					"which belongs to another process", ce->name);
+            }
         } else {
         	zend_throw_exception_ex(
 				spl_ce_RuntimeException, 0 TSRMLS_CC,
 				"pthreads detected an attempt to connect to a %s "
-				"which has already is corrupted", Z_OBJCE_PP(object)->name);
+				"which has already been destroyed", ce->name);
         }
+    } else {
+    	zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC,
+			"pthreads detected an attempt to connect to a %s "
+			"which has already is corrupted", ce->name);
     }
+	
+	ZVAL_NULL(*object);
 	
 	return FAILURE;
 } /* }}} */
@@ -754,7 +758,7 @@ static void * pthreads_routine(void *arg) {
 		thread->tid = pthreads_self();
 		
 		/* set context the same as parent */
-		SG(server_context)=PTHREADS_SG(thread->cls, server_context);
+		SG(server_context) = PTHREADS_SG(thread->cls, server_context);
 		
 		/* some php globals */
 		PG(expose_php) = 0;

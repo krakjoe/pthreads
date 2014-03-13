@@ -60,6 +60,11 @@ struct _pthreads_globals {
 	* Global/Default Resource Destructor
 	*/
 	dtor_func_t (default_resource_dtor);
+	
+	/*
+	* Objects Cache
+	*/
+	HashTable objects;
 }; /* }}} */
 
 extern struct _pthreads_globals pthreads_globals;
@@ -69,6 +74,15 @@ ZEND_EXTERN_MODULE_GLOBALS(pthreads)
 /* {{{ PTHREADS_G */
 #define PTHREADS_G(v) pthreads_globals.v
 /* }}} */
+
+/* {{{ */
+zend_bool pthreads_globals_object_delete(void *address TSRMLS_DC); /* }}} */
+
+/* {{{ */
+zend_bool pthreads_globals_object_validate(zend_ulong address TSRMLS_DC); /* }}} */
+
+/* {{{ */
+void* pthreads_globals_object_alloc(size_t length TSRMLS_DC); /* }}} */
 
 /* {{{ initialize (true) globals */
 zend_bool pthreads_globals_init(TSRMLS_D); /* }}} */

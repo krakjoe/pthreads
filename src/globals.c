@@ -53,8 +53,10 @@ zend_bool pthreads_globals_init(TSRMLS_D){
 		} else {
 		    zend_hash_init(
 		        &PTHREADS_G(strings), 64, NULL, (dtor_func_t) pthreads_global_string_free, 1);
+		    zend_hash_init(
+		    	&PTHREADS_G(objects), 64, NULL, NULL, 1);
 		}
-			
+
 		return PTHREADS_G(init);
 	} else return 0;
 } /* }}} */
@@ -92,6 +94,61 @@ char *pthreads_global_string(char *strkey, zend_uint keylen, zend_bool lower TSR
     return *created;
 } /* }}} */
 
+/* {{{ pthreads_globals_object */
+void* pthreads_globals_object_alloc(size_t length TSRMLS_DC) {
+	zend_bool locked = 0;
+	void *bucket     = calloc(1, length);
+	
+	if (!bucket)
+		return NULL;
+	
+	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
+		zend_hash_index_update(
+			&PTHREADS_G(objects),
+			(ulong) bucket, (void**)&bucket, length, NULL);
+		
+		pthreads_globals_unlock(locked TSRMLS_CC);
+	}
+	
+	return bucket;
+} /* }}} */
+
+/* {{{ pthreads_globals_validate */
+zend_bool pthreads_globals_object_validate(zend_ulong address TSRMLS_DC) {
+	zend_bool valid = 0;
+	zend_bool locked = 0;
+	if (!address)
+		return valid;
+	
+	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
+		valid = zend_hash_index_exists(
+			&PTHREADS_G(objects), address);
+		pthreads_globals_unlock(locked TSRMLS_CC);
+	}
+	
+	return valid;
+} /* }}} */
+
+/* {{{ pthreads_globals_delete */
+zend_bool pthreads_globals_object_delete(void *address TSRMLS_DC) {
+	zend_bool deleted = 0;
+	zend_bool locked = 0;
+	
+	if (!address)
+		return deleted;
+	
+	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
+		deleted = zend_hash_index_del(
+			&PTHREADS_G(objects), (zend_ulong) address);
+		if (deleted) {
+			free (address);
+		}
+		pthreads_globals_unlock(locked TSRMLS_CC);
+	}
+	
+	return deleted;
+} /* }}} */
+
 /* {{{ shutdown global structures */
 void pthreads_globals_shutdown(TSRMLS_D) {
 	if (PTHREADS_G(init)) {
@@ -101,6 +158,9 @@ void pthreads_globals_shutdown(TSRMLS_D) {
 
 	    zend_hash_destroy(
 	        &PTHREADS_G(strings));
+	    
+	    zend_hash_destroy(
+	    	&PTHREADS_G(objects));
 	    
 		pthreads_lock_free(PTHREADS_G(lock) TSRMLS_CC);
 	}
