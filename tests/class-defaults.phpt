@@ -7,16 +7,42 @@ Class defaults should now initialize defaults properly
 class Test extends Thread {
 
 	public function run(){
-		var_dump($this->test);
+		var_dump($this);
 	}
 	
-	protected $test = "hello world";
+	protected $string = "hello world";
+	protected $array  = array(1, 2, 3);
+	private $pstring  = "world hello";
+	private $parray   = array(3, 2, 1);
 }
 
 $test =new Test();
+$test->string = strrev($test->string);
 $test->start();
 ?>
 --EXPECT--
-string(11) "hello world"
-
+object(Test)#1 (4) {
+  ["string"]=>
+  string(11) "dlrow olleh"
+  ["array"]=>
+  array(3) {
+    [0]=>
+    int(1)
+    [1]=>
+    int(2)
+    [2]=>
+    int(3)
+  }
+  ["pstring"]=>
+  string(11) "world hello"
+  ["parray"]=>
+  array(3) {
+    [0]=>
+    int(3)
+    [1]=>
+    int(2)
+    [2]=>
+    int(1)
+  }
+}
 
