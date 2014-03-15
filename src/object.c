@@ -450,6 +450,42 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 	} else return FAILURE;
 } /* }}} */
 
+/* {{{ pthreads_base_init */
+static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
+	HashPosition position;
+	zend_class_entry *entry = base->std.ce;
+	HashTable *table = &entry->properties_info;
+	zend_property_info *info = NULL;
+	char *class_name = estrndup(
+		entry->name, entry->name_length);
+	char *class_free = class_name;
+	const char *property_name = NULL;
+	int property_name_len = 0;
+	
+	for (zend_hash_internal_pointer_reset_ex(table, &position);
+		 zend_hash_get_current_data_ex(table, (void**) &info, &position) == SUCCESS;
+		 zend_hash_move_forward_ex(table, &position)) {
+
+		zend_unmangle_property_name_ex(
+			info->name, info->name_length,
+			&class_name,
+			&property_name, &property_name_len);
+		
+		if (entry->default_properties_table &&
+			entry->default_properties_table[info->offset]) {
+			pthreads_store_write(
+				base->store,
+				(char*) property_name, property_name_len,
+				&entry->default_properties_table[info->offset] TSRMLS_CC);
+		} else pthreads_store_write(
+				base->store,
+				(char*) property_name, property_name_len,
+				&EG(uninitialized_zval_ptr) TSRMLS_CC);
+	}
+	
+	efree(class_free);
+} /* }}} */
+
 /* {{{ pthreads base constructor */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) {
 	if (base) {
@@ -492,6 +528,8 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
                     base->stack->position = 0L;
 				}	
 			}
+			
+			pthreads_base_init(base TSRMLS_CC);
 		}
 	}
 } /* }}} */
