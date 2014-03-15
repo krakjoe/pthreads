@@ -456,7 +456,7 @@ static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
 	zend_class_entry *entry = base->std.ce;
 	HashTable *table = &entry->properties_info;
 	zend_property_info *info = NULL;
-	char *class_name = estrndup(
+	const char *class_name = estrndup(
 		entry->name, entry->name_length);
 	char *class_free = class_name;
 	const char *property_name = NULL;
@@ -466,11 +466,20 @@ static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
 		 zend_hash_get_current_data_ex(table, (void**) &info, &position) == SUCCESS;
 		 zend_hash_move_forward_ex(table, &position)) {
 
+#if PHP_VERSION_ID >= 50500
 		zend_unmangle_property_name_ex(
 			info->name, info->name_length,
 			&class_name,
 			&property_name, &property_name_len);
-		
+#else
+		zend_unmangle_property_name(
+			info->name, info->name_length,
+			&class_name,
+			&property_name);
+			
+		property_name_len = strlen(property_name);
+#endif
+
 		if (entry->default_properties_table &&
 			entry->default_properties_table[info->offset]) {
 			pthreads_store_write(
@@ -483,7 +492,7 @@ static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
 				&EG(uninitialized_zval_ptr) TSRMLS_CC);
 	}
 	
-	efree(class_free);
+	efree((char*)class_free);
 } /* }}} */
 
 /* {{{ pthreads base constructor */
