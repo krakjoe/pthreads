@@ -14,6 +14,7 @@ class Test extends Thread {
 	protected $array  = array(1, 2, 3);
 	private $pstring  = "world hello";
 	private $parray   = array(3, 2, 1);
+	protected static $nocopy = true;
 }
 
 $test =new Test();
