@@ -549,6 +549,33 @@ int pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			NULL, &included, sizeof(int), 0
 		);
 	}
+	
+	/* inherit globals, I don't like this ... */
+	if (thread->options & PTHREADS_ALLOW_GLOBALS) {
+		HashPosition position;
+		HashTable *tables[] = {&PTHREADS_EG(thread->cls, symbol_table), &EG(symbol_table)};
+		zval **symbol = NULL;
+		
+		for (zend_hash_internal_pointer_reset_ex(tables[0], &position);
+			 zend_hash_get_current_data_ex(tables[0], (void**) &symbol, &position) == SUCCESS;
+			 zend_hash_move_forward_ex(tables[0], &position)) {
+			 char *symname = NULL;
+		 	 int   symlen = 0;
+		 	 zend_ulong symidx = 0L;
+
+			 if (zend_hash_get_current_key_ex(tables[0], &symname, &symlen, &symidx, 0, &position) == HASH_KEY_IS_STRING) {
+			 	zval *separated = NULL;
+			 	
+			 	if (pthreads_store_separate_from(*symbol, &separated, 1, 1, thread->cls TSRMLS_CC) == SUCCESS) {
+		 			Z_SET_REFCOUNT_P(separated, 1);
+			 		Z_SET_ISREF_P(separated);
+			 		zend_hash_update(tables[1], symname, symlen, (void**) &separated, sizeof(zval*), NULL);
+				} else {
+					zval_ptr_dtor(&separated);
+				}
+			 }
+		}
+	}
 
 	/* set sensible resource destructor */
 	if (!PTHREADS_G(default_resource_dtor))
