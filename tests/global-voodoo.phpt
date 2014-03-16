@@ -17,7 +17,7 @@ class Test extends Thread {
 		Thread::globally(Closure::bind(function(){
 			/* we are both in the thread */
 			var_dump($this);
-			/* an in the global scope */
+			/* and in the global scope */
 			var_dump($var);
 		}, $this));
 		
