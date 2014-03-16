@@ -52,6 +52,11 @@ define('PTHREADS_INHERIT_COMMENTS', 0x100000);
 define('PTHREADS_ALLOW_HEADERS', 0x1000000);
 
 /**
+ * Allow global inheritance for new threads
+ */
+define('PTHREADS_ALLOW_GLOBALS', 0x10000000);
+
+/**
  * Threaded class
  *
  * Threaded objects form the basis of pthreads ability to execute user code asynchronously;
@@ -302,6 +307,16 @@ class Thread extends Threaded
      * @return bool A boolean indication of success
      */
     public function start($options = PTHREADS_INHERIT_ALL) {}
+    
+    /**
+     * Will execute the Callable in the global scope
+     *
+     * @param Callable $block   The code to execute
+     * @param ...      $args    Variable length list of arguments to pass to the Callable upon execution
+     * @link http://www.php.net/manual/en/thread.start.php
+     * @return bool A boolean indication of success
+     */
+    public static function globally(Callable $block [, $args]) {}
 }
 
 /**
