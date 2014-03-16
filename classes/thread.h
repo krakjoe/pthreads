@@ -93,7 +93,7 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, getCurrentThreadId, Thread_getCurrentThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Thread, getCurrentThread, Thread_getCurrentThread, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Thread, kill, Thread_kill, ZEND_ACC_PUBLIC)
-	PHP_ME(Thread, globally, Thread_globally, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, globally, Thread_globally, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
 
