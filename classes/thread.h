@@ -33,6 +33,7 @@ PHP_METHOD(Thread, globally);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_globally, 0, 0, 1)
 	ZEND_ARG_INFO(0, block)
+	ZEND_ARG_INFO(0, args)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
