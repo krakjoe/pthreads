@@ -143,9 +143,18 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_threaded_entry->get_iterator = pthreads_object_iterator_ctor;
 	pthreads_threaded_entry->create_object = pthreads_threaded_ctor;
 	zend_class_implements(pthreads_threaded_entry TSRMLS_CC, 1, zend_ce_traversable);
-#ifdef HAVE_SPL
-	zend_class_implements(pthreads_threaded_entry TSRMLS_CC, 1, spl_ce_Countable);
-#endif	
+
+	{
+		/* NOTE: SPL SUCKS ASS */
+		zend_class_entry **spl = NULL;
+
+		if (zend_hash_find(CG(class_table), "countable", sizeof("countable"), (void**) &spl) == SUCCESS) {
+			spl_ce_Countable = *spl;
+
+			zend_class_implements(
+				pthreads_threaded_entry TSRMLS_CC, 1, spl_ce_Countable);
+		}
+	}
 	
 	/* for BC with <= 1* */
 	zend_register_class_alias_ex(
