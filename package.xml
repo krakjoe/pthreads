@@ -47,6 +47,7 @@
    <file name="examples/SQLWorker.php" role="doc" />
    <file name="examples/StackableArray.php" role="doc" />
    <file name="examples/Stacking.php" role="doc" />
+   <file name="examples/stub.php" role="doc" />
    <file name="tests/binding.phpt" role="test" />
    <file name="tests/callstatic-etc.phpt" role="test" />
    <file name="tests/chunk.phpt" role="test" />
