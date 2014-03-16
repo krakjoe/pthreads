@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-wget http://uk3.php.net/get/php-5.5.5.tar.bz2/from/this/mirror -O "php-5.5.5.tar.bz2"
+wget http://uk1.php.net/get/php-5.5.5.tar.bz2/from/this/mirror -O "php-5.5.5.tar.bz2"
 tar -xf php-5.5.5.tar.bz2
 cd php-5.5.5
 cd ext
