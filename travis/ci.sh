@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
-wget http://uk3.php.net/get/php-5.4.7.tar.bz2/from/this/mirror -O "php-5.4.7.tar.bz2"
-tar -xf php-5.4.7.tar.bz2
-cd php-5.4.7
+wget http://uk3.php.net/get/php-5.5.5.tar.bz2/from/this/mirror -O "php-5.5.5.tar.bz2"
+tar -xf php-5.5.5.tar.bz2
+cd php-5.5.5
 cd ext
 git clone https://github.com/krakjoe/pthreads.git
 cd ../
