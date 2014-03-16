@@ -291,7 +291,7 @@ PHP_METHOD(Thread, kill)
 #endif
 } /* }}} */
 
-/* {{{ proto boolean Thread::globally(Callable block)
+/* {{{ proto mixed Thread::globally(Callable block [, ... args])
 	Will execute the block in the global scope */
 PHP_METHOD(Thread, globally) 
 {
