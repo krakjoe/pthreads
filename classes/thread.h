@@ -29,6 +29,11 @@ PHP_METHOD(Thread, getCurrentThreadId);
 PHP_METHOD(Thread, getCurrentThread);
 PHP_METHOD(Thread, getCreatorId);
 PHP_METHOD(Thread, kill);
+PHP_METHOD(Thread, globally);
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_globally, 0, 0, 1)
+	ZEND_ARG_INFO(0, block)
+ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -87,6 +92,7 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, getCurrentThreadId, Thread_getCurrentThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Thread, getCurrentThread, Thread_getCurrentThread, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Thread, kill, Thread_kill, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, globally, Thread_globally, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -282,6 +288,44 @@ PHP_METHOD(Thread, kill)
     		pthread_kill(thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
     }
 #endif
+} /* }}} */
+
+/* {{{ proto boolean Thread::globally(Callable block)
+	Will execute the block in the global scope */
+PHP_METHOD(Thread, globally) 
+{
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+	zval ***argv = NULL;
+	zend_uint argc = 0;
+	zval *retval = NULL;
+	zend_bool failed = 0;
+	HashTable *symbols = EG(active_symbol_table);
+	
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "f|+", &fci, &fcc, &argv, &argc) != SUCCESS) {
+        return;
+    }
+    
+    /* set argc and argv for function call */
+	zend_fcall_info_argp(&fci TSRMLS_CC, argc, argv);
+	
+	fci.retval_ptr_ptr = &retval;
+	fci.symbol_table = &EG(symbol_table);
+	
+	zend_try {
+		zend_call_function(&fci, &fcc TSRMLS_CC);
+	} zend_catch {
+		failed = 1;
+	} zend_end_try();
+	
+	zend_fcall_info_args_clear(&fci, 1);
+	
+	/* return the result */
+	if (!failed && retval) {
+		ZVAL_ZVAL(return_value, retval, 1, 1);
+	} else {
+		ZVAL_NULL(return_value);
+	}
 } /* }}} */
 #	endif
 #endif
