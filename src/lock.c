@@ -35,7 +35,7 @@ pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
 
 		pthread_mutexattr_init(&attr);
 
-#ifdef PTHREAD_MUTEX_RECURSIVE
+#if defined(PTHREAD_MUTEX_RECURSIVE) || defined(__FreeBSD__)
 		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 #else
 		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
