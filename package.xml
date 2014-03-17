@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-03-16</date>
- <time>20:00:00</time>
+ <date>2014-03-17</date>
+ <time>17:00:00</time>
  <version>
-  <release>2.0.1</release>
-  <api>2.0.1</api>
+  <release>2.0.2</release>
+  <api>2.0.2</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,9 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  Add globals inheritance option
-  Add method to execute block in global scope
-  Fix build when SPL is not loaded (spl sucks)
+  Fix build in BSD and other *nix where PTHREAD_MUTEX_RECURSIVE_NP is enum
  </notes>
  <contents>
   <dir name="/">
