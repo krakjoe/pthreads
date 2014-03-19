@@ -70,6 +70,7 @@
    <file name="tests/interface.phpt" role="test" />
    <file name="tests/interfaces.phpt" role="test" />
    <file name="tests/isset-unset.phpt" role="test" />
+   <file name="tests/killed-info.phpt" role="test" />
    <file name="tests/merging-members.phpt" role="test" />
    <file name="tests/merging-range.phpt" role="test" />
    <file name="tests/mutex.phpt" role="test" />
