@@ -249,7 +249,7 @@ class Thread extends Threaded
      *
      * @return static
      */
-    public function getCurrentThread() {}
+    public static function getCurrentThread() {}
 
     /**
      * Will return the identity of the currently executing thread
