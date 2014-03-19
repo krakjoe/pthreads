@@ -775,6 +775,14 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
 static inline void pthreads_kill_handler(int signo) /* {{{ */
 {	
 	TSRMLS_FETCH();
+	PTHREAD current = PTHREADS_ZG(pointer);
+	
+	if (current) {
+		pthreads_state_set(
+		    current->state, PTHREADS_ST_ERROR TSRMLS_CC);
+		pthreads_error_save(current->error TSRMLS_CC);
+	}
+	
 	PTHREADS_ZG(signal) = signo;
 	zend_bailout();
 } /* }}} */
