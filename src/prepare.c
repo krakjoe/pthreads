@@ -562,17 +562,20 @@ int pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			 char *symname = NULL;
 		 	 int   symlen = 0;
 		 	 zend_ulong symidx = 0L;
-
+			 
 			 if (zend_hash_get_current_key_ex(tables[0], &symname, &symlen, &symidx, 0, &position) == HASH_KEY_IS_STRING) {
-			 	zval *separated = NULL;
 			 	
-			 	if (pthreads_store_separate_from(*symbol, &separated, 1, 1, thread->cls TSRMLS_CC) == SUCCESS) {
-		 			Z_SET_REFCOUNT_P(separated, 1);
-			 		Z_SET_ISREF_P(separated);
-			 		zend_hash_update(tables[1], symname, symlen, (void**) &separated, sizeof(zval*), NULL);
-				} else {
-					zval_ptr_dtor(&separated);
-				}
+			 	char *is_excluded_var = strstr(thread->excluded_globals, symname);
+			 	if(is_excluded_var == 0){
+				 	zval *separated = NULL;
+				 	if (pthreads_store_separate_from(*symbol, &separated, 1, 1, thread->cls TSRMLS_CC) == SUCCESS) {
+			 			Z_SET_REFCOUNT_P(separated, 1);
+				 		Z_SET_ISREF_P(separated);
+				 		zend_hash_update(tables[1], symname, symlen, (void**) &separated, sizeof(zval*), NULL);
+					} else {
+						zval_ptr_dtor(&separated);
+					}
+			 	}
 			 }
 		}
 	}

@@ -38,6 +38,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
+    ZEND_ARG_INFO(0, excluded_globals)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
@@ -106,14 +107,19 @@ PHP_METHOD(Thread, start)
 	int result = FAILURE;
 	long options = PTHREADS_INHERIT_ALL;
 	
+	char *excluded_str = NULL;
+    	int excluded_str_len;
 	/* get options */
 	if (ZEND_NUM_ARGS()) {
-	    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &options) != SUCCESS) {
+	    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ls", &options, &excluded_str, &excluded_str_len) != SUCCESS) {
 	        return;
 	    }
 	    
 	    /* set thread options */
 	    thread->options = options;
+	    /* set excluded global vars */
+	    thread->excluded_globals = excluded_str;
+	    thread->excluded_globals_len = excluded_str_len;
 	}
 	
 	/*
