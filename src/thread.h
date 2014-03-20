@@ -103,6 +103,13 @@ typedef struct _pthread_construct {
 	zend_ulong options;
 	
 	/*
+	* Excluded global vars
+	*/
+	char *excluded_globals;
+	
+	int excluded_globals_len;
+	
+	/*
 	*  Thread Lock
 	*/
 	pthreads_lock lock;
