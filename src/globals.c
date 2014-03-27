@@ -42,6 +42,11 @@ void pthreads_global_string_free(void *strkey) {
    free((char*)*((char**)strkey)); 
 } /* }}} */
 
+/* {{{ */
+void pthreads_global_object_free(void *pData) {
+	free(*(void**)pData);
+} /* }}} */
+
 /* {{{ pthreads_globals_init */
 zend_bool pthreads_globals_init(TSRMLS_D){
 	if (!PTHREADS_G(init)&&!PTHREADS_G(failed)) {
@@ -54,7 +59,7 @@ zend_bool pthreads_globals_init(TSRMLS_D){
 		    zend_hash_init(
 		        &PTHREADS_G(strings), 64, NULL, (dtor_func_t) pthreads_global_string_free, 1);
 		    zend_hash_init(
-		    	&PTHREADS_G(objects), 64, NULL, NULL, 1);
+		    	&PTHREADS_G(objects), 64, NULL, (dtor_func_t) pthreads_global_object_free, 1);
 		}
 
 		return PTHREADS_G(init);
@@ -105,7 +110,7 @@ void* pthreads_globals_object_alloc(size_t length TSRMLS_DC) {
 	if (pthreads_globals_lock(&locked TSRMLS_CC)) {
 		zend_hash_index_update(
 			&PTHREADS_G(objects),
-			(ulong) bucket, (void**)&bucket, length, NULL);
+			(ulong) bucket, (void**)&bucket, sizeof(void*), NULL);
 		
 		pthreads_globals_unlock(locked TSRMLS_CC);
 	}
@@ -152,7 +157,6 @@ zend_bool pthreads_globals_object_delete(void *address TSRMLS_DC) {
 /* {{{ shutdown global structures */
 void pthreads_globals_shutdown(TSRMLS_D) {
 	if (PTHREADS_G(init)) {
-	
 	    PTHREADS_G(init)=0;
 	    PTHREADS_G(failed)=0;
 
