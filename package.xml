@@ -93,6 +93,7 @@
    <file name="tests/synchronization.phpt" role="test" />
    <file name="tests/thorn-in-side.phpt" role="test" />
    <file name="tests/thread.phpt" role="test" />
+   <file name="tests/trait-aliases.phpt" role="test" />
    <file name="tests/unset-defaults.phpt" role="test" />
    <file name="tests/waiting-timeouts.phpt" role="test" />
    <file name="tests/wait.phpt" role="test" />
