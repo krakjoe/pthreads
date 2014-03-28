@@ -451,17 +451,40 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ pthreads_base_init */
-static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
-	HashPosition position;
+static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {	
 	zend_class_entry *entry = base->std.ce;
-	HashTable *table = &entry->properties_info;
-	zend_property_info *info = NULL;
+	const char *property_name = NULL;
+	int property_name_len = 0;
 	const char *class_name = estrndup(
 		entry->name, entry->name_length);
 	char *class_free = (char*) class_name;
-	const char *property_name = NULL;
-	int property_name_len = 0;
+	HashPosition position;
 	
+#if PHP_VERSION_ID < 50400
+	zval **property;
+	
+	for (zend_hash_internal_pointer_reset_ex(&entry->default_properties, &position);
+		zend_hash_get_current_data_ex(&entry->default_properties, (void**) &property, &position)==SUCCESS;
+		zend_hash_move_forward_ex(&entry->default_properties, &position)) {
+
+		char *n;
+		ulong i;
+		uint l;
+
+		if (zend_hash_get_current_key_ex(&entry->default_properties, &n, &l, &i, 0, &position)) {
+			zend_unmangle_property_name(
+				n, l,
+				(char**)&class_name,
+				(char**)&property_name);
+			property_name_len = strlen(property_name);
+			pthreads_store_write(base->store, property_name, property_name_len, property TSRMLS_CC);
+			
+		}
+	}
+#else
+	HashTable *table = &entry->properties_info;
+	zend_property_info *info = NULL;
+
 	for (zend_hash_internal_pointer_reset_ex(table, &position);
 		 zend_hash_get_current_data_ex(table, (void**) &info, &position) == SUCCESS;
 		 zend_hash_move_forward_ex(table, &position)) {
@@ -480,10 +503,9 @@ static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
 			info->name, info->name_length,
 			&class_name,
 			&property_name);
-			
+
 		property_name_len = strlen(property_name);
 #endif
-
 		if (entry->default_properties_table &&
 			entry->default_properties_table[info->offset]) {
 			pthreads_store_write(
@@ -495,8 +517,9 @@ static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
 				(char*) property_name, property_name_len,
 				&EG(uninitialized_zval_ptr) TSRMLS_CC);
 	}
-	
-	efree((char*)class_free);
+#endif
+
+	efree((char*)class_free);	
 } /* }}} */
 
 /* {{{ pthreads base constructor */

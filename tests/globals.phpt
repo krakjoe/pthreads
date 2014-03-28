@@ -23,8 +23,8 @@ $test = new Test();
 $test->start(PTHREADS_INHERIT_ALL | PTHREADS_ALLOW_GLOBALS);
 $test->join();
 ?>
---EXPECT--
-object(stdClass)#1 (3) {
+--EXPECTF--
+object(stdClass)#%d (%d) {
   ["one"]=>
   string(3) "one"
   ["two"]=>

@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-03-17</date>
- <time>17:00:00</time>
+ <date>2014-03-27</date>
+ <time>08:00:00</time>
  <version>
-  <release>2.0.2</release>
-  <api>2.0.2</api>
+  <release>2.0.4</release>
+  <api>2.0.4</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  Fix build in BSD and other *nix where PTHREAD_MUTEX_RECURSIVE_NP is enum
+  fix memory errors introduced in 2.0.0
+  fix 5.3 build
+  synchronize versions
  </notes>
  <contents>
   <dir name="/">

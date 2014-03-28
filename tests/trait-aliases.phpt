@@ -1,5 +1,7 @@
 --TEST--
 Test trait aliases
+--SKIPIF--
+<?php if(PHP_VERSION_ID < 50400) die("skip do not run for <5.4"); ?>
 --DESCRIPTION--
 Fix bug #274, trait aliases causing memory errors
 --FILE--
