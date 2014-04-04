@@ -1,16 +1,16 @@
 <?php
 
 class WebWorker extends Worker {
-
+	protected $logger;	
+	
 	public function __construct(SafeLog $logger) {
 		$this->logger = $logger;
 	}
-	
-	protected $loger;	
 }
 
 class WebWork extends Stackable {
-	
+	protected $complete;
+
 	public function isComplete() {
 		return $this->complete;
 	}
@@ -22,8 +22,6 @@ class WebWork extends Stackable {
 				  __CLASS__, $this->worker->getThreadId());
 		$this->complete = true;
 	}
-	
-	protected $complete;
 }
 
 class SafeLog extends Stackable {
@@ -41,7 +39,7 @@ class SafeLog extends Stackable {
 
 $pool = new Pool(8, \WebWorker::class, [new SafeLog()]);
 
-$pool->submit($w=new WebWork());
+$pool->submit(new WebWork());
 $pool->submit(new WebWork());
 $pool->submit(new WebWork());
 $pool->submit(new WebWork());
