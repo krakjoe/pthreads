@@ -113,50 +113,50 @@
                 <p>A good example of using Workers in the real world might be an implementation of asynchronous logging.</p>
                 <p>In the real world, an asynchronous logger would be much more complex than the following example, for the purposes of a tutorial we will just write logs to standard output.</p>
                 <pre class="brush: php">
-                class LogEntry extends Stackable {
-                    public $message;
-                    public $args;
-                    
-                    public function __construct($message, $args = null) {
-                        $this->message = $message;
-                        $this->args = $args;
-                    }
-                    
-                    public function run() {
-                        /* for simplicity */
-                        vprintf(
-                            "{$this->message}\n", $this->args);
-                    }
-                }
-
-                class Logger extends Worker {
-                    static $instance = null;
-                    
-                    public function __construct() {
-                        $this->start();
-                    }
-                    
-                    public static function log($message, $args = null) {
-                        if (self::$instance == null) {
-                            self::$instance = new Logger();
-                        }
-                        
-                        $args = func_get_args();
-                        if ($args) {
-                            self::$instance->stack(
-                                new LogEntry(
-                                    array_shift($args),
-                                    $args
-                                )
-                            );
-                        }
-                    }
-                    
-                    public function run() {}
-                }
-
-                Logger::log("Hello %s", "World");
-                Logger::log("Bye :)");
+				class LogEntry extends Stackable {
+					public $message;
+					public $args;
+					 
+					public function __construct($message, $args = null) {
+						$this->message = $message;
+						$this->args = $args;
+					}
+					 
+					public function run() {
+						/* for simplicity */
+						vprintf(
+							"{$this->message}\n", $this->args);
+					}
+				}
+				 
+				class Logger extends Worker {
+					static $instance = null;
+					static $work = [];
+		
+					public function __construct() {
+						$this->start();
+					}
+					 
+					public static function log($message, $args = null) {
+						if (self::$instance == null) {
+							self::$instance = new Logger();
+						}
+				
+						$args = func_get_args();
+						if ($args) {
+							$wid = count(self::$work);
+							self::$work[$wid]=new LogEntry(
+								array_shift($args),
+								$args
+							);
+							self::$instance->stack(self::$work[$wid]);
+						}
+					}
+					 
+					public function run() {}
+				}
+				Logger::log("Hello %s", "World");
+				Logger::log("Bye :)");
                 </pre>
                 <p>In the example above, it is the Worker that actually performs the writing of logs - however that is performed.</p>
 				<!-- page footer -->
