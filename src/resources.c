@@ -27,6 +27,10 @@
 #	include <src/resources.h>
 #endif
 
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include <src/thread.h>
+#endif
+
 /* {{{ allocate resource structure */
 pthreads_resources pthreads_resources_alloc(TSRMLS_D) {
 	pthreads_resources resources = calloc(1, sizeof(*resources));
@@ -37,12 +41,11 @@ pthreads_resources pthreads_resources_alloc(TSRMLS_D) {
 } /* }}} */
 
 /* {{{ mark a resource for keeping */
-zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_entry *entry, pthreads_resource data TSRMLS_DC) {
-	if (resources) {
-		char *key = (char*) entry;
+zend_bool pthreads_resources_keep(pthreads_resource data TSRMLS_DC) {
+	PTHREAD pointer = (PTHREAD) PTHREADS_ZG(pointer);
+	if (pointer) {
 		if (zend_ts_hash_update(
-			&resources->keep, key, sizeof(key), (void**) &data, sizeof(pthreads_resource), NULL
-		) == SUCCESS) {
+			&pointer->resources->keep, (char*) data->copy, sizeof(void*), (void**) data, sizeof(pthreads_resource), NULL) == SUCCESS) {
 			return 1;
 		}
 	}
@@ -50,16 +53,16 @@ zend_bool pthreads_resources_keep(pthreads_resources resources, zend_rsrc_list_e
 } /* }}} */
 
 /* {{{ tells if a resource is being kept */
-zend_bool pthreads_resources_kept(pthreads_resources resources, zend_rsrc_list_entry *entry TSRMLS_DC) {
-	pthreads_resource *data;
+zend_bool pthreads_resources_kept(zend_rsrc_list_entry *entry TSRMLS_DC) {
 	if (entry) {	
-		char *key = (char*) entry;
-		if (zend_ts_hash_find(&resources->keep, key, sizeof(key), (void**) &data)==SUCCESS) {	
-			pthreads_resource resource = *data;
-
-			if ((EG(scope)!= resource->scope) || (TSRMLS_C != resource->ls)) {
-				return 1;
-			} 
+		PTHREAD pointer = (PTHREAD) PTHREADS_ZG(pointer);
+		if (pointer) {
+			pthreads_resource *data;
+			if (zend_ts_hash_find(&pointer->resources->keep, (char*) entry, sizeof(void*), (void**) &data)==SUCCESS) {	
+				if ((*data)->ls != TSRMLS_C) {
+					return 1;
+				}
+			}
 		}
 	}
 	return 0;
@@ -68,9 +71,7 @@ zend_bool pthreads_resources_kept(pthreads_resources resources, zend_rsrc_list_e
 /* {{{ free resource structure */
 void pthreads_resources_free(pthreads_resources resources TSRMLS_DC) {
 	if (resources) {
-		zend_ts_hash_destroy(
-			&resources->keep
-		);
+		zend_ts_hash_destroy(&resources->keep);
 		free(resources);
 	}
 } /* }}} */

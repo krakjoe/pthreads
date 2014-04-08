@@ -716,19 +716,13 @@ static int pthreads_apply_property_scope(zend_property_info *info TSRMLS_DC) {
 /* {{{ destroy a resource, if we created it ( ie. it is not being kept by another thread ) */
 static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry) {
 	TSRMLS_FETCH();
-	if (EG(This)) {
-		zend_try {
-			PTHREAD object = PTHREADS_ZG(pointer);
-			if (object) {
-				if (object->resources) {
-					if (!pthreads_resources_kept(object->resources, entry TSRMLS_CC)){
-						if (PTHREADS_G(default_resource_dtor))
-							PTHREADS_G(default_resource_dtor)(entry);
-					}
-				}
-			}
-		} zend_end_try();
-	}
+	
+	zend_try {
+		if (!pthreads_resources_kept(entry TSRMLS_CC)){
+			if (PTHREADS_G(default_resource_dtor))
+				PTHREADS_G(default_resource_dtor)(entry);
+		}
+	} zend_end_try();
 } /* }}} */
 
 #endif
