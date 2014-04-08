@@ -542,7 +542,7 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 							
 						    create.type = original->type;
 						    create.ptr = original->ptr;
-						    create.refcount = 1;
+						    create.refcount = original->refcount++;
 						    created=zend_hash_next_free_element(&EG(regular_list));
 
 						    if (zend_hash_index_update(
@@ -704,7 +704,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                                 
                                 /* skip resources */
                                 if (storage->type != IS_RESOURCE) {
-                                
+
                                     /* copy storage */
                                     pthreads_storage copy;
                                     

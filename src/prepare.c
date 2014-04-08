@@ -87,7 +87,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	zend_initialize_class_data(prepared, 1 TSRMLS_CC);
 	
 	zend_hash_index_update(
-		&PTHREADS_ZG(resolve),
+		PTHREADS_ZG(resolve),
 		(zend_ulong) candidate, 
 		(void**)&prepared, sizeof(zend_class_entry*), NULL);
 	
@@ -525,7 +525,7 @@ int pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			
 			if ((*entry)->parent) {
 				zend_class_entry **search = NULL;
-				if (zend_hash_index_find(&PTHREADS_ZG(resolve), (zend_ulong) (*entry)->parent, (void**)&search) == SUCCESS) {
+				if (zend_hash_index_find(PTHREADS_ZG(resolve), (zend_ulong) (*entry)->parent, (void**)&search) == SUCCESS) {
 					(*entry)->parent = *search;
 				}
 			}
@@ -690,7 +690,7 @@ static int pthreads_apply_method_scope(zend_function *function TSRMLS_DC) {
 		
 		if (ops->scope) {
 			zend_class_entry **search = NULL;
-			if (zend_hash_index_find(&PTHREADS_ZG(resolve), (zend_ulong) ops->scope, (void**)&search) == SUCCESS) {
+			if (zend_hash_index_find(PTHREADS_ZG(resolve), (zend_ulong) ops->scope, (void**)&search) == SUCCESS) {
 				ops->scope = *search;
 			}
 		} else ops->scope = NULL;
@@ -705,7 +705,7 @@ static int pthreads_apply_method_scope(zend_function *function TSRMLS_DC) {
 static int pthreads_apply_property_scope(zend_property_info *info TSRMLS_DC) {
 	if (info->ce) {
 		zend_class_entry **search = NULL;
-		if (zend_hash_index_find(&PTHREADS_ZG(resolve), (zend_ulong) info->ce, (void**)&search) == SUCCESS) {
+		if (zend_hash_index_find(PTHREADS_ZG(resolve), (zend_ulong) info->ce, (void**)&search) == SUCCESS) {
 			info->ce = *search;
 		}
 	}
