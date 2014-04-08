@@ -27,53 +27,29 @@
 #	include <src/resources.h>
 #endif
 
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
-#endif
-
-/* {{{ allocate resource structure */
-pthreads_resources pthreads_resources_alloc(TSRMLS_D) {
-	pthreads_resources resources = calloc(1, sizeof(*resources));
-	if (resources) {
-		zend_ts_hash_init(&resources->keep, 3, NULL, NULL, 1);
-	}
-	return resources;
-} /* }}} */
-
 /* {{{ mark a resource for keeping */
 zend_bool pthreads_resources_keep(pthreads_resource data TSRMLS_DC) {
-	PTHREAD pointer = (PTHREAD) PTHREADS_ZG(pointer);
-	if (pointer) {
-		if (zend_ts_hash_update(
-			&pointer->resources->keep, (char*) data->copy, sizeof(void*), (void**) data, sizeof(pthreads_resource), NULL) == SUCCESS) {
-			return 1;
-		}
+	if (zend_hash_update(&PTHREADS_ZG(resources),
+			(char*) data->copy, sizeof(void*),
+			(void**) &data, sizeof(void*), NULL) == SUCCESS) {
+		return 1;
 	}
 	return 0;
 } /* }}} */
 
 /* {{{ tells if a resource is being kept */
 zend_bool pthreads_resources_kept(zend_rsrc_list_entry *entry TSRMLS_DC) {
-	if (entry) {	
-		PTHREAD pointer = (PTHREAD) PTHREADS_ZG(pointer);
-		if (pointer) {
-			pthreads_resource *data;
-			if (zend_ts_hash_find(&pointer->resources->keep, (char*) entry, sizeof(void*), (void**) &data)==SUCCESS) {	
-				if ((*data)->ls != TSRMLS_C) {
-					return 1;
-				}
+	if (entry) {
+		pthreads_resource *data = NULL;
+		if (zend_hash_find(&PTHREADS_ZG(resources), 
+			(char*) entry, sizeof(void*), (void**) &data)==SUCCESS) {	
+			if (data && (*data)->ls != TSRMLS_C) {
+				return 1;
 			}
 		}
 	}
 	return 0;
 } /* }}} */
 
-/* {{{ free resource structure */
-void pthreads_resources_free(pthreads_resources resources TSRMLS_DC) {
-	if (resources) {
-		zend_ts_hash_destroy(&resources->keep);
-		free(resources);
-	}
-} /* }}} */
 #endif
 

@@ -263,10 +263,12 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 
 PHP_RINIT_FUNCTION(pthreads) {
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
+	zend_hash_init(&PTHREADS_ZG(resources), 15, NULL, NULL, 0);
 }
 
 PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(&PTHREADS_ZG(resolve));
+	zend_hash_destroy(&PTHREADS_ZG(resources));
 }
 
 PHP_MINFO_FUNCTION(pthreads)

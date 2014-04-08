@@ -409,7 +409,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 			pthreads_modifiers_free(destination->modifiers TSRMLS_CC);
 			pthreads_store_free(destination->store TSRMLS_CC);
 			pthreads_synchro_free(destination->synchro TSRMLS_CC);
-			pthreads_resources_free(destination->resources TSRMLS_CC);
 			pthreads_address_free(destination->address);
             pthreads_error_free(destination->error TSRMLS_CC);
             
@@ -433,7 +432,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 		destination->tid = source->tid;
 		destination->tls = source->tls;
 		destination->address = source->address;
-		destination->resources = source->resources;
 		destination->lock = source->lock;
 		destination->state = source->state;
 		destination->synchro = source->synchro;
@@ -552,7 +550,6 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->synchro = pthreads_synchro_alloc(TSRMLS_C);
 			base->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
 			base->store = pthreads_store_alloc(TSRMLS_C);
-			base->resources = pthreads_resources_alloc(TSRMLS_C);
             base->error = pthreads_error_alloc(TSRMLS_C);
 			
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
@@ -590,7 +587,6 @@ static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
 	    pthreads_modifiers_free(base->modifiers TSRMLS_CC);
 	    pthreads_store_free(base->store TSRMLS_CC);
 	    pthreads_synchro_free(base->synchro TSRMLS_CC);
-	    pthreads_resources_free(base->resources TSRMLS_CC);
 	    pthreads_address_free(base->address);
         pthreads_error_free(base->error TSRMLS_CC);
         

@@ -142,11 +142,6 @@ typedef struct _pthread_construct {
 	*/
     pthreads_error error;
 
-	/**
-	* Shared Resources
-	**/
-	pthreads_resources resources;
-	
 	/*
 	* Object Handle
 	*/
