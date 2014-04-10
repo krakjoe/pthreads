@@ -867,14 +867,14 @@ static void * pthreads_routine(void *arg) {
 		/* fix php-fpm compatibility */
 		SG(sapi_started)=0;		
 		
+		/* request startup */
+		php_request_startup(TSRMLS_C);
+		
 		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
 			/* do not send headers again */
 			SG(headers_sent)=1;
 			SG(request_info).no_headers = 1;
 		}
-		
-		/* request startup */
-		php_request_startup(TSRMLS_C);
 		
 		/* prepare environment */
 		pthreads_prepare(thread TSRMLS_CC);
