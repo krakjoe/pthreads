@@ -38,6 +38,10 @@
 #	include <src/store.h>
 #endif
 
+#ifndef HAVE_PTHREADS_COPY_H
+#	include <src/copy.h>
+#endif
+
 /* {{{ prepared property info ctor */
 static void pthreads_preparation_property_info_copy_ctor(zend_property_info *pi); /* }}} */
 /* {{{ prepared property info dtor */
@@ -206,7 +210,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	}
 	
 	/* copy function table */
-	zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) function_add_ref, &tf, sizeof(zend_function));
+	zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) pthreads_copy_function, &tf, sizeof(zend_function));
 	
 	/* copy property info structures */
 	if ((thread->options & PTHREADS_INHERIT_COMMENTS)) {
@@ -484,7 +488,7 @@ int pthreads_prepare(PTHREAD thread TSRMLS_DC){
 		zend_hash_merge(
 			EG(function_table),
 			PTHREADS_EG(thread->cls, function_table), 
-			(copy_ctor_func_t) function_add_ref, 
+			(copy_ctor_func_t) pthreads_copy_function, 
 			&function, sizeof(zend_function), 0
 		);
 	}

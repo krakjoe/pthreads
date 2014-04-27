@@ -865,8 +865,8 @@ static void * pthreads_routine(void *arg) {
 #endif
 
 		/* fix php-fpm compatibility */
-		SG(sapi_started)=0;		
-		
+		SG(sapi_started) = 0;
+
 		/* request startup */
 		php_request_startup(TSRMLS_C);
 		
@@ -875,7 +875,7 @@ static void * pthreads_routine(void *arg) {
 			SG(headers_sent)=1;
 			SG(request_info).no_headers = 1;
 		}
-		
+
 		/* prepare environment */
 		pthreads_prepare(thread TSRMLS_CC);
 

@@ -13,8 +13,8 @@
  <date>2014-03-27</date>
  <time>08:00:00</time>
  <version>
-  <release>2.0.4</release>
-  <api>2.0.4</api>
+  <release>2.0.5</release>
+  <api>2.0.5</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,9 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
-  fix memory errors introduced in 2.0.0
-  fix 5.3 build
-  synchronize versions
+  make deep copy of functions
  </notes>
  <contents>
   <dir name="/">
@@ -100,6 +98,7 @@
    <file name="tests/waiting-timeouts.phpt" role="test" />
    <file name="tests/wait.phpt" role="test" />
    <file name="src/pthreads.h" role="src" />
+   <file name="src/copy.h" role="src" />
    <file name="src/globals.c" role="src" />
    <file name="src/globals.h" role="src" />
    <file name="src/handlers.c" role="src" />
