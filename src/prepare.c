@@ -97,6 +97,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	
 	/* set ce flags (reset by initialize) */
 	prepared->ce_flags = candidate->ce_flags;
+	prepared->refcount = 1;
 	
 	/* parents are set late */
 	if (candidate->parent)
