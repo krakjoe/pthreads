@@ -165,15 +165,20 @@ PHP_METHOD(Pool, submit) {
 		clazz = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("class"), 1 TSRMLS_CC);
 		
 		if (Z_TYPE_P(clazz) != IS_STRING) {
+			zend_throw_exception_ex(spl_ce_RuntimeException, 0 TSRMLS_CC,
+				"this Pool has not been initialized properly, Worker class not valid");
+			return;
+		}
+		
+		if (zend_lookup_class(
+			Z_STRVAL_P(clazz), Z_STRLEN_P(clazz), &ce TSRMLS_CC) != SUCCESS) {
 			zend_throw_exception_ex(spl_ce_RuntimeException, 0 TSRMLS_CC, 
-				"this Pool has not been initialized properly");
+				"this Pool has not been initialized properly, the Worker class %s could not be found", 
+				Z_STRVAL_P(clazz));
 			return;
 		}
 		
 		ctor  = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("ctor"), 1 TSRMLS_CC);
-		
-		zend_lookup_class(
-			Z_STRVAL_P(clazz), Z_STRLEN_P(clazz), &ce TSRMLS_CC);
 		
 		MAKE_STD_ZVAL(worker);
 		object_init_ex(worker, *ce);

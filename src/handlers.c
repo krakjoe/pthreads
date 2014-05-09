@@ -408,19 +408,6 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 											scope->name, method);
 										called = FAILURE;
 									} else {
-#if PHP_VERSION_ID > 50399
-										{
-											zend_op_array *ops = (zend_op_array*) call;
-										
-											if (ops && ops->type == ZEND_USER_FUNCTION) {
-												if (ops->run_time_cache) {
-													efree(ops->run_time_cache);
-													ops->run_time_cache = NULL;
-												}
-											}
-										}
-#endif
-                                        
 										if (zresult) {
 										    if (!return_value_used) {
 											    zval_ptr_dtor(&zresult);

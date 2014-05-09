@@ -70,6 +70,7 @@ struct _pthreads_globals {
 extern struct _pthreads_globals pthreads_globals;
 
 ZEND_EXTERN_MODULE_GLOBALS(pthreads)
+ZEND_EXTERN_MODULE_GLOBALS(ps)
 
 /* {{{ PTHREADS_G */
 #define PTHREADS_G(v) pthreads_globals.v
