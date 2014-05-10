@@ -57,6 +57,7 @@
    <file name="tests/counting-members.phpt" role="test" />
    <file name="tests/detach.phpt" role="test" />
    <file name="tests/doc-comments.phpt" role="test" />
+   <file name="tests/exception-handler.phpt" role="test" />
    <file name="tests/foreign-private-members.phpt" role="test" />
    <file name="tests/functions.phpt" role="test" />
    <file name="tests/global-voodoo.phpt" role="test" />

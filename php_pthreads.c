@@ -58,6 +58,10 @@
 #	include <src/globals.h>
 #endif
 
+typedef void (*zend_throw_exception_hook_func)(zval * TSRMLS_DC);
+
+zend_throw_exception_hook_func zend_throw_exception_hook_function = NULL;
+
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,
@@ -123,6 +127,45 @@ static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 	pg->functions = NULL;
 }
 
+void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
+	
+	if (PTHREADS_ZG(pointer)) {
+		if (EG(user_exception_handler)) {
+			zend_fcall_info fci;
+			zend_fcall_info_cache fcc;
+			zval *retval = NULL;
+			zval object = *ex;
+			zval *saved = &object;
+			char *cname = NULL;
+		
+			zval_copy_ctor(saved);
+		
+			if (zend_fcall_info_init(EG(user_exception_handler), IS_CALLABLE_CHECK_SILENT, &fci, &fcc, &cname, NULL TSRMLS_CC) == SUCCESS) {
+				fci.retval_ptr_ptr = &retval;
+
+				EG(exception) = NULL;
+			
+				zend_fcall_info_argn(&fci TSRMLS_CC, 1, &saved);
+				zend_call_function(&fci, &fcc TSRMLS_CC);
+				zend_fcall_info_args_clear(&fci, 1);
+			
+				if (retval) {
+					zval_ptr_dtor(&retval);
+				}
+			}
+		
+			zval_dtor(saved);
+		
+			if (cname)
+				efree(cname);
+		}
+	}
+	
+	if (zend_throw_exception_hook_function) {
+		zend_throw_exception_hook_function(ex TSRMLS_CC);
+	}
+}
+
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry ce;
@@ -138,6 +181,10 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_GLOBALS", PTHREADS_ALLOW_GLOBALS, CONST_CS | CONST_PERSISTENT);
+	
+	/* hook into exceptions */
+	zend_throw_exception_hook_function = zend_throw_exception_hook;
+	zend_throw_exception_hook = pthreads_throw_exception_hook;
 		
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
 	ce.serialize = pthreads_internal_serialize;

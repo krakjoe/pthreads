@@ -940,8 +940,6 @@ static void * pthreads_routine(void *arg) {
 					{
 					    zend_bool terminated = 0;
 					    
-					    EG(current_execute_data) = NULL;
-					    
 						/* graceful fatalities */
 						zend_try {
 						    /* ::run */
@@ -952,10 +950,6 @@ static void * pthreads_routine(void *arg) {
 						} zend_catch {
 						    /* catches fatal errors and uncaught exceptions */
 							terminated = 1;
-							
-							if (EG(exception)) {
-			printf("exception\n");
-		} else printf("no exception but catching ...\n");
 							
 							/* danger lurking ... */
 							if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
