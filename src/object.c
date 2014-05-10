@@ -855,17 +855,20 @@ static void * pthreads_routine(void *arg) {
 		/* some php globals */
 		PG(expose_php) = 0;
 		PG(auto_globals_jit) = 0;
-
-		zend_alter_ini_entry(
-			"session.cache_limiter", 
-			sizeof("session.cache_limiter"), 
-			"nocache", sizeof("nocache")-1, 
-			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
-		zend_alter_ini_entry(
-			"session.use_cookies", 
-			sizeof("session.cache_limiter"), 
-			"0", sizeof("0")-1,
-			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
+		
+		/* fixup sessions for compatibility */
+		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
+			zend_alter_ini_entry(
+				"session.cache_limiter", 
+				sizeof("session.cache_limiter"), 
+				"nocache", sizeof("nocache")-1, 
+				PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
+			zend_alter_ini_entry(
+				"session.use_cookies", 
+				sizeof("session.use_cookies"), 
+				"0", sizeof("0")-1,
+				PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
+		}
 
 		/* fix php-fpm compatibility */
 		SG(sapi_started) = 0;
@@ -949,6 +952,10 @@ static void * pthreads_routine(void *arg) {
 						} zend_catch {
 						    /* catches fatal errors and uncaught exceptions */
 							terminated = 1;
+							
+							if (EG(exception)) {
+			printf("exception\n");
+		} else printf("no exception but catching ...\n");
 							
 							/* danger lurking ... */
 							if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
