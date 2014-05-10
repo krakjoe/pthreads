@@ -11,10 +11,10 @@
   <active>yes</active>
  </lead>
  <date>2014-05-10</date>
- <time>11:00:00</time>
+ <time>11:10:00</time>
  <version>
-  <release>2.0.6</release>
-  <api>2.0.6</api>
+  <release>2.0.7</release>
+  <api>2.0.7</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix build in windows
+ fix regression error in last release
  </notes>
  <contents>
   <dir name="/">
