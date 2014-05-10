@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-05-09</date>
- <time>20:40:00</time>
+ <date>2014-05-10</date>
+ <time>11:00:00</time>
  <version>
-  <release>2.0.5</release>
-  <api>2.0.5</api>
+  <release>2.0.6</release>
+  <api>2.0.6</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,8 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix fault in windows
- fix fault from incorrect efree of run time cache
+ fix build in windows
  </notes>
  <contents>
   <dir name="/">
