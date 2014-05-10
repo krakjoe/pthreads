@@ -944,11 +944,51 @@ static void * pthreads_routine(void *arg) {
 					    
 						/* graceful fatalities */
 						zend_try {
-						    /* ::run */
-							zend_call_method(
-								&ZEG->This, ZEG->scope, NULL, 
-								ZEND_STRL("run"), 
-								&zresult, 0, NULL, NULL TSRMLS_CC);
+							zend_function *fun;
+							if (zend_hash_find(&ZEG->scope->function_table, "run", sizeof("run"), (void**)&fun) == SUCCESS) {
+								if (fun->type == ZEND_USER_FUNCTION) {
+									EG(active_op_array) = (zend_op_array*) fun;
+									EG(scope) = Z_OBJCE_P(ZEG->This);
+									EG(called_scope) = EG(scope);
+									EG(return_value_ptr_ptr) = &zresult;
+									EG(in_execution) = 1;
+									
+									zend_execute
+										((zend_op_array*) fun TSRMLS_CC);
+									
+									if (EG(exception)) {
+										if (EG(user_exception_handler)) {
+											zend_fcall_info fci;
+											zend_fcall_info_cache fcc;
+											zval exception = *EG(exception);
+											zval *ex = &exception;
+											zval *izresult = NULL;
+											
+											zval_copy_ctor(&exception);
+											
+											EG(exception) = NULL;
+												
+											if (zend_fcall_info_init(
+													EG(user_exception_handler), 
+													IS_CALLABLE_CHECK_SILENT, 
+													&fci, &fcc, NULL, NULL TSRMLS_CC) == SUCCESS) {
+												fci.retval_ptr_ptr = &izresult;
+												zend_fcall_info_argn(&fci TSRMLS_CC, 1, &ex);
+												zend_try {
+													zend_call_function(&fci, &fcc TSRMLS_CC);
+												} zend_end_try();
+												zend_fcall_info_args_clear(&fci, 1);
+											}
+											
+											if (izresult) {
+												zval_ptr_dtor(&izresult);
+											}
+											
+											zval_dtor(&exception);
+										}
+									}
+								}
+							}
 						} zend_catch {
 						    /* catches fatal errors and uncaught exceptions */
 							terminated = 1;
