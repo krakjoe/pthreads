@@ -23,6 +23,7 @@
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
  fix regression error in last release
+ fix exception handler bug #280 on github
  </notes>
  <contents>
   <dir name="/">

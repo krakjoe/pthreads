@@ -128,7 +128,6 @@ static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 }
 
 void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
-	
 	if (PTHREADS_ZG(pointer)) {
 		if (EG(user_exception_handler)) {
 			zend_fcall_info fci;
@@ -153,7 +152,7 @@ void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
 					zval_ptr_dtor(&retval);
 				}
 			}
-		
+
 			zval_dtor(saved);
 		
 			if (cname)
@@ -182,10 +181,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_GLOBALS", PTHREADS_ALLOW_GLOBALS, CONST_CS | CONST_PERSISTENT);
 	
-	/* hook into exceptions */
-	zend_throw_exception_hook_function = zend_throw_exception_hook;
-	zend_throw_exception_hook = pthreads_throw_exception_hook;
-		
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
 	ce.serialize = pthreads_internal_serialize;
 	ce.unserialize = pthreads_internal_unserialize;

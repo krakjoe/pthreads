@@ -929,6 +929,8 @@ static void * pthreads_routine(void *arg) {
 				)
 			);
 			
+			EG(in_execution) = 1;
+			
 			/* connect $this */
 			if (pthreads_connect(PTHREADS_ZG(pointer)=thread, PTHREADS_FETCH_FROM(ZEG->This) TSRMLS_CC)==SUCCESS) {
 				/* execute $this */
