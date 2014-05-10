@@ -856,13 +856,16 @@ static void * pthreads_routine(void *arg) {
 		PG(expose_php) = 0;
 		PG(auto_globals_jit) = 0;
 
-#ifdef HAVE_PHP_SESSION
-		/* fixup sessions for compatibility */
-		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-			PS(cache_limiter) = nothing;
-			PS(use_cookies) = 0;
-		}
-#endif
+		zend_alter_ini_entry(
+			"session.cache_limiter", 
+			sizeof("session.cache_limiter"), 
+			"nocache", sizeof("nocache")-1, 
+			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
+		zend_alter_ini_entry(
+			"session.use_cookies", 
+			sizeof("session.cache_limiter"), 
+			"0", sizeof("0")-1,
+			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
 
 		/* fix php-fpm compatibility */
 		SG(sapi_started) = 0;
@@ -933,6 +936,9 @@ static void * pthreads_routine(void *arg) {
 					pthreads_state_set(current->state, PTHREADS_ST_RUNNING TSRMLS_CC);
 					{
 					    zend_bool terminated = 0;
+					    
+					    EG(current_execute_data) = NULL;
+					    
 						/* graceful fatalities */
 						zend_try {
 						    /* ::run */
@@ -976,8 +982,6 @@ static void * pthreads_routine(void *arg) {
 					}
 				} while(worker && pthreads_stack_next(thread, this_ptr TSRMLS_CC));
 			}
-		} zend_catch {
-			/* do something, it's all gone wrong */ 
 		} zend_end_try();
 		
 		/**
