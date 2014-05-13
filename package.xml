@@ -13,8 +13,8 @@
  <date>2014-05-10</date>
  <time>17:10:00</time>
  <version>
-  <release>2.0.7</release>
-  <api>2.0.7</api>
+  <release>2.0.8</release>
+  <api>2.0.8</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix regression error in last release
+ add Collectable class to reduce boilerplate for Pools
  </notes>
  <contents>
   <dir name="/">
@@ -124,6 +124,7 @@
    <file name="classes/worker.h" role="src" />
    <file name="classes/mutex.h" role="src" />
    <file name="classes/cond.h" role="src" />
+   <file name="classes/collectable.h" role="src" />
    <file name="classes/pool.h" role="src" />
    <file name="iterators/iterator.h" role="src" />
    <file name="iterators/default.h" role="src" />
