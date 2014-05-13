@@ -46,6 +46,10 @@ PHP_MINFO_FUNCTION(pthreads);
 #	include <classes/cond.h>
 #endif
 
+#ifndef HAVE_PTHREADS_CLASS_COLLECTABLE_H
+#	include <classes/collectable.h>
+#endif
+
 #ifndef HAVE_PTHREADS_CLASS_POOL_H
 #	include <classes/pool.h>
 #endif

@@ -80,6 +80,7 @@ zend_class_entry *pthreads_thread_entry;
 zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_mutex_entry;
 zend_class_entry *pthreads_condition_entry;
+zend_class_entry *pthreads_collectable_entry;
 zend_class_entry *pthreads_pool_entry;
 
 zend_object_handlers pthreads_handlers;
@@ -230,7 +231,11 @@ PHP_MINIT_FUNCTION(pthreads)
 	ce.unserialize = zend_class_unserialize_deny;
 	pthreads_condition_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	pthreads_condition_entry->ce_flags |= ZEND_ACC_FINAL;
-	
+
+	INIT_CLASS_ENTRY(ce, "Collectable", pthreads_collectable_methods);
+	pthreads_collectable_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry, NULL TSRMLS_CC);
+	zend_declare_property_bool(pthreads_collectable_entry, ZEND_STRL("garbage"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);	
+
 	INIT_CLASS_ENTRY(ce, "Pool", pthreads_pool_methods);
 	pthreads_pool_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	zend_declare_property_long(pthreads_pool_entry, ZEND_STRL("size"), 1, ZEND_ACC_PROTECTED TSRMLS_CC);
@@ -353,6 +358,10 @@ PHP_MINFO_FUNCTION(pthreads)
 
 #ifndef HAVE_PTHREADS_CLASS_COND
 #	include <classes/cond.h>
+#endif
+
+#ifndef HAVE_PTHREADS_CLASS_COLLECTABLE
+#	include <classes/collectable.h>
 #endif
 
 #ifndef HAVE_PTHREADS_CLASS_POOL

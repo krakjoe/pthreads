@@ -1,5 +1,4 @@
 <?php
-
 class WebWorker extends Worker {
 
 	public function __construct(SafeLog $logger) {
@@ -9,21 +8,15 @@ class WebWorker extends Worker {
 	protected $logger;	
 }
 
-class WebWork extends Stackable {
-	
-	public function isComplete() {
-		return $this->complete;
-	}
-	
+/* the collectable class implements machinery for Pool::collect */
+class WebWork extends Collectable {
 	public function run() {
 		$this->worker
 			->logger
 			->log("%s executing in Thread #%lu",
 				  __CLASS__, $this->worker->getThreadId());
-		$this->complete = true;
+		$this->setGarbage();
 	}
-	
-	protected $complete;
 }
 
 class SafeLog extends Stackable {
@@ -37,7 +30,6 @@ class SafeLog extends Stackable {
 		}
 	}
 }
-
 
 $pool = new Pool(8, \WebWorker::class, [new SafeLog()]);
 
@@ -58,7 +50,7 @@ $pool->submit(new WebWork());
 $pool->shutdown();
 
 $pool->collect(function($work){
-	return $work->isComplete();
+	return $work->isGarbage();
 });
 
 var_dump($pool);
