@@ -31,7 +31,7 @@ class SafeLog extends Stackable {
 	}
 }
 
-$pool = new Pool(8, \WebWorker::class, [new SafeLog()]);
+$pool = new Pool(8, 'WebWorker', [new SafeLog()]);
 
 $pool->submit($w=new WebWork());
 $pool->submit(new WebWork());
