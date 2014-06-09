@@ -60,8 +60,12 @@ int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
 	if (timeout>0L) {
 		if (gettimeofday(&time, NULL)==SUCCESS) {
 			time.tv_sec += (timeout / 1000000L);
-    		time.tv_usec += (timeout % 1000000L);
-		} else timeout = 0L;
+			// add extra seconds where they belong
+			time.tv_sec += (time.tv_usec + (timeout % 1000000L)) / 1000000L;
+			// keep the remaining microseonds
+			time.tv_usec = (time.tv_usec + (timeout % 1000000L)) % 1000000L;
+		} else
+			timeout = 0L;
 
 		if (timeout > 0L) {
 			spec.tv_sec = time.tv_sec;
