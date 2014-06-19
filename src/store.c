@@ -351,7 +351,7 @@ int pthreads_store_pop(zval *object, zval **member TSRMLS_DC) {
             char *key;
             uint klen;
             ulong idx;
-            int flag
+            int flag;
             
             pthreads_store_convert(storage, *member TSRMLS_CC);
             
