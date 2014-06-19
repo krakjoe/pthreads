@@ -351,13 +351,12 @@ int pthreads_store_pop(zval *object, zval **member TSRMLS_DC) {
             char *key;
             uint klen;
             ulong idx;
+            int flag
             
             pthreads_store_convert(storage, *member TSRMLS_CC);
             
-            zend_hash_del_key_or_index(
-                table, key, klen, idx, zend_hash_get_current_key_ex(
-                    table, &key, &klen, &idx, 0, &position
-                ) == HASH_KEY_IS_STRING ? HASH_DEL_KEY : HASH_DEL_INDEX);
+            flag = zend_hash_get_current_key_ex(table, &key, &klen, &idx, 0, &position) == HASH_KEY_IS_STRING ? HASH_DEL_KEY : HASH_DEL_INDEX;
+            zend_hash_del_key_or_index(table, key, klen, idx, flag);
             
         } else ZVAL_NULL(*member);
         
