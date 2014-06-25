@@ -304,10 +304,9 @@ int pthreads_store_chunk(zval *object, long size, zend_bool preserve, zval **chu
             
             pthreads_store_convert(storage, member TSRMLS_CC);
             
-            zend_hash_del_key_or_index(
-                table, key, klen, idx, (ktype = zend_hash_get_current_key_ex(
-                    table, &key, &klen, &idx, 0, &position
-                )) == HASH_KEY_IS_STRING ? HASH_DEL_KEY : HASH_DEL_INDEX);
+            ktype = zend_hash_get_current_key_ex(table, &key, &klen, &idx, 0, &position) == HASH_KEY_IS_STRING ?
+            	HASH_DEL_KEY : HASH_DEL_INDEX;
+            zend_hash_del_key_or_index(table, key, klen, idx, ktype);
             
             if (!preserve) {
                 zend_hash_next_index_insert(
