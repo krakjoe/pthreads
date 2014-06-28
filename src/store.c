@@ -34,6 +34,8 @@
 #	include <src/resources.h>
 #endif
 
+#include <Zend/zend_closures.h>
+
 typedef struct _pthreads_storage {
 	zend_uchar 	type;
 	size_t 		length;
@@ -579,6 +581,31 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 }
 /* }}} */
 
+int pthreads_closure_serialize(zval *object, unsigned char **buffer, zend_uint *blength, zend_serialize_data *data TSRMLS_DC)
+{
+	zend_object_handle handle = Z_OBJ_HANDLE_P(object);
+	zend_function *func = (zend_function *)zend_get_closure_method_def(object TSRMLS_CC);
+
+	int size = snprintf(NULL, 0, "%u", handle);
+	(*buffer) = (unsigned char*)emalloc(size+1);
+	(*blength) = sprintf(*buffer, "%u", handle);
+
+	zend_hash_add(EG(function_table), *buffer, *blength, func, sizeof(zend_function), NULL);
+	return SUCCESS;
+}
+
+int pthreads_closure_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC)
+{
+	zend_function *func;
+
+	if (zend_hash_find(EG(function_table), buffer, blength, (void**)&func) == SUCCESS) {
+		zend_create_closure(*object, func, EG(scope), EG(This) TSRMLS_CC);
+		return SUCCESS;
+	}
+
+	return FAILURE;
+}
+
 /* {{{ zval to string */
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex TSRMLS_DC) {
 	int result = FAILURE;
@@ -595,6 +622,9 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 			}
 
 			{
+				void *orig_serialize = zend_ce_closure->serialize;
+				zend_ce_closure->serialize = pthreads_closure_serialize;
+
 				if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
 					(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
 					php_serialize_data_t vars;
@@ -606,6 +636,8 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 					);
 					PHP_VAR_SERIALIZE_DESTROY(vars);
 				}
+
+				zend_ce_closure->serialize = orig_serialize;
 			}
 
 			*slength = psmart->len;
@@ -640,12 +672,16 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength TSRM
 			*/
 			{
 				php_unserialize_data_t vars;
+				void *orig_unserialize = zend_ce_closure->unserialize;
+				zend_ce_closure->unserialize = pthreads_closure_unserialize;
+
 				PHP_VAR_UNSERIALIZE_INIT(vars);
 				if (!php_var_unserialize(&pzval, &pointer, pointer+slength, &vars TSRMLS_CC)) {
 					result = FAILURE;
 					zval_dtor(pzval);
 				}							
 				PHP_VAR_UNSERIALIZE_DESTROY(vars);
+				zend_ce_closure->unserialize = orig_unserialize;
 			}
 			if (pzval && refcount)
 				Z_SET_REFCOUNT_P(pzval, refcount);
