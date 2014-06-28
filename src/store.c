@@ -599,7 +599,6 @@ int pthreads_closure_unserialize(zval **object, zend_class_entry *ce, const unsi
 	zend_function *func;
 
 	if (zend_hash_find(EG(function_table), buffer, blength, (void**)&func) == SUCCESS) {
-		function_add_ref(func);
 		zend_create_closure(*object, func, EG(scope), EG(This) TSRMLS_CC);
 		return SUCCESS;
 	}
