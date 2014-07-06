@@ -870,11 +870,11 @@ static void * pthreads_routine(void *arg) {
 				PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
 		}
 
-		/* fix php-fpm compatibility */
-		SG(sapi_started) = 0;
-
 		/* request startup */
 		php_request_startup(TSRMLS_C);
+
+		/* fix php-fpm compatibility */
+		SG(sapi_started) = 0;
 		
 		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
 			/* do not send headers again */
