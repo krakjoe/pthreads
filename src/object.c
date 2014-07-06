@@ -71,7 +71,7 @@ static inline void pthreads_address_free(pthreads_address address) {
 
 /* {{{ base ctor/clone/dtor/free */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC);
-static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC); 
+static void pthreads_base_dtor(PTHREAD base TSRMLS_DC); 
 static void pthreads_base_free(void *arg TSRMLS_DC);
 static void pthreads_base_clone(void *arg, void **pclone TSRMLS_DC); /* }}} */
 
@@ -340,7 +340,7 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC) {
 		pthreads_base_ctor(thread, entry TSRMLS_CC);
 		thread->handle = zend_objects_store_put(
 			thread,
-			(zend_objects_store_dtor_t) pthreads_base_dtor,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
 			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
@@ -359,7 +359,7 @@ zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC) {
 		pthreads_base_ctor(worker, entry TSRMLS_CC);
 		worker->handle = zend_objects_store_put(
 			worker,
-			(zend_objects_store_dtor_t) pthreads_base_dtor,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
 			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
@@ -378,7 +378,7 @@ zend_object_value pthreads_threaded_ctor(zend_class_entry *entry TSRMLS_DC) {
 		pthreads_base_ctor(threaded, entry TSRMLS_CC);
 		threaded->handle = zend_objects_store_put(
 			threaded,
-			(zend_objects_store_dtor_t) pthreads_base_dtor,
+			(zend_objects_store_dtor_t) zend_objects_destroy_object,
 			(zend_objects_free_object_storage_t) pthreads_base_free,
 			(zend_objects_store_clone_t) pthreads_base_clone TSRMLS_CC
 		);
@@ -516,7 +516,6 @@ static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
 				&EG(uninitialized_zval_ptr) TSRMLS_CC);
 	}
 #endif
-
 	efree((char*)class_free);	
 } /* }}} */
 
@@ -550,15 +549,15 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->synchro = pthreads_synchro_alloc(TSRMLS_C);
 			base->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
 			base->store = pthreads_store_alloc(TSRMLS_C);
-            base->error = pthreads_error_alloc(TSRMLS_C);
+            		base->error = pthreads_error_alloc(TSRMLS_C);
 			
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
 				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
 				if (base->stack) {
-				    zend_hash_init(
-				        &base->stack->objects, 8, NULL, NULL, 1);
-                    base->stack->position = 0L;
+					zend_hash_init(
+						&base->stack->objects, 8, NULL, NULL, 1);
+                    			base->stack->position = 0L;
 				}	
 			}
 			
@@ -568,19 +567,17 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 } /* }}} */
 
 /* {{{ pthreads base destructor */
-static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
-	PTHREAD base = (PTHREAD) arg;
-
+static void pthreads_base_dtor(PTHREAD base TSRMLS_DC) {
 	if (PTHREADS_IS_NOT_CONNECTION(base) && PTHREADS_IS_NOT_DETACHED(base)) {
 	     
-	     assert(base->cls == TSRMLS_C);
+	    assert(base->cls == TSRMLS_C);
 	     
-	     if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
+	    if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
 	        pthread_t *pthread = &base->thread;
 	        if (pthread) {
 		        pthreads_join(base TSRMLS_CC);
 	        }
-        }
+            }
 
 	    pthreads_lock_free(base->lock TSRMLS_CC);
 	    pthreads_state_free(base->state  TSRMLS_CC);
@@ -588,7 +585,7 @@ static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
 	    pthreads_store_free(base->store TSRMLS_CC);
 	    pthreads_synchro_free(base->synchro TSRMLS_CC);
 	    pthreads_address_free(base->address);
-        pthreads_error_free(base->error TSRMLS_CC);
+            pthreads_error_free(base->error TSRMLS_CC);
         
 	    if (PTHREADS_IS_WORKER(base)) {
 		    zend_hash_destroy(
@@ -626,6 +623,8 @@ static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
 static void pthreads_base_free(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
 	if (base) {
+	    pthreads_base_dtor(base TSRMLS_CC);
+
 	    if (PTHREADS_IS_NOT_DETACHED(base)) {
 	    	if (pthreads_globals_object_delete(base TSRMLS_CC)) {
 	    		base = NULL;

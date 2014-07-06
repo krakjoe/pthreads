@@ -17,9 +17,7 @@
  */
 #ifndef HAVE_PTHREADS_CLASS_THREAD_H
 #define HAVE_PTHREADS_CLASS_THREAD_H
-PHP_METHOD(Thread, start); 
-PHP_METHOD(Thread, wait);
-PHP_METHOD(Thread, notify);
+PHP_METHOD(Thread, start);
 PHP_METHOD(Thread, join);
 PHP_METHOD(Thread, detach);
 PHP_METHOD(Thread, isStarted);
