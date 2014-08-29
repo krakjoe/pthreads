@@ -51,11 +51,7 @@ PHP_METHOD(Collectable, isGarbage) {
 	if (!garbage) {
 		RETURN_FALSE;
 	} else {
-#if PHP_VERSION_ID >= 50600
-		if (zend_is_true(garbage TSRMLS_CC)) {
-#else
-		if (zend_is_true(garbage)) {
-#endif
+        if (zend_is_true(garbage)) {
 			RETVAL_BOOL(1);
 		} else RETVAL_BOOL(0);
 	}
