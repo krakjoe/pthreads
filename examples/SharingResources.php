@@ -29,7 +29,7 @@
 *	Please remember that the resources as defined in C were never meant to be shared, they are designed with this in mind, and most
 *	types of resource WILL have problems.
 *
-* The preferable way to use MySQL is MySQLi or PDO, there is a connection-per-thread (much preferred) example using MySQLi in SQLWorker.php
+* The preferable way to use MySQL is MySQLi or PDO, there is a connection-per-thread (much preferred) example using MySQLi in MySQLi.php
 *
 * This code remains to keep history in tact - ish
 */
