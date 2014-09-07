@@ -178,7 +178,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 			if (usources[umethod]) {
 				switch(umethod){
 					/* user internals, I call them uternals */
-					case 0: zend_hash_update(&prepared->function_table, "__construct", sizeof("__construct"), &candidate->constructor, sizeof(zend_function), (void**) &prepared->constructor); break;
+					
 					case 1: zend_hash_update(&prepared->function_table, "__destruct", sizeof("__destruct"), &candidate->destructor, sizeof(zend_function), (void**) &prepared->destructor); break;
 					case 2: zend_hash_update(&prepared->function_table, "__clone", sizeof("__clone"), &candidate->clone, sizeof(zend_function), (void**) &prepared->clone); break;
 					case 3: zend_hash_update(&prepared->function_table, "__get", sizeof("__get"), &candidate->__get, sizeof(zend_function), (void**) &prepared->__get); break;
@@ -208,6 +208,22 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	
 	/* copy function table */
 	zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) function_add_ref, &tf, sizeof(zend_function));
+	
+	{
+	    zend_function *ctor;
+	    
+	    char *lcname = NULL;
+	    
+	    /* not sure why this hack is required, moar research required */
+	    if (!prepared->constructor && zend_hash_num_elements(&prepared->function_table)) {
+	        lcname = zend_str_tolower_dup(prepared->name, prepared->name_length);
+	        if (zend_hash_find(&prepared->function_table, lcname, prepared->name_length+1, (void**)&ctor) == SUCCESS) {
+	            prepared->constructor = ctor;
+	        } else if (zend_hash_find(&prepared->function_table, "__construct", sizeof("__construct"), (void**)&ctor) == SUCCESS) {
+	            prepared->constructor = ctor;
+	        }
+	    }
+	}
 	
 	/* copy property info structures */
 	if ((thread->options & PTHREADS_INHERIT_COMMENTS)) {
