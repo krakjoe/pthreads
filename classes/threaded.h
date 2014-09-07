@@ -32,6 +32,7 @@ PHP_METHOD(Threaded, shift);
 PHP_METHOD(Threaded, chunk);
 PHP_METHOD(Threaded, pop);
 PHP_METHOD(Threaded, count);
+PHP_METHOD(Threaded, extend);
 
 ZEND_BEGIN_ARG_INFO_EX(Threaded_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -79,6 +80,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_count, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Threaded_extend, 0, 0, 1)
+    ZEND_ARG_INFO(0, class)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_threaded_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREADED
@@ -99,6 +104,7 @@ zend_function_entry pthreads_threaded_methods[] = {
 	PHP_ME(Threaded, chunk, Threaded_chunk, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, pop, Threaded_pop, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, count, Threaded_count, ZEND_ACC_PUBLIC)
+	PHP_ME(Threaded, extend, Threaded_extend, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
 
@@ -320,6 +326,44 @@ PHP_METHOD(Threaded, count)
 	
 	pthreads_store_count(
 		getThis(), &Z_LVAL_P(return_value) TSRMLS_CC);
+} /* }}} */
+
+/* {{{ proto bool Threaded::extend(string class) */
+PHP_METHOD(Threaded, extend) {
+    zend_class_entry *ce = NULL;
+    zend_bool is_final = 0;
+    
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "C", &ce) != SUCCESS) {
+        return;
+    }
+    
+    if ((ce->ce_flags & ZEND_ACC_INTERFACE) || (ce->ce_flags & ZEND_ACC_TRAIT)) {
+        zend_throw_exception_ex(spl_ce_RuntimeException, 0 TSRMLS_CC, 
+            "cannot extend %s %s", 
+            ce->ce_flags & ZEND_ACC_INTERFACE ? "interface" : "trait",
+            ce->name);
+        return;
+    }
+    
+    if (ce->parent) {
+        zend_throw_exception_ex(spl_ce_RuntimeException, 0 TSRMLS_CC, 
+            "cannot extend class %s, it already extends %s", 
+            ce->name,
+            ce->parent->name);
+        return;
+    }
+    
+    is_final = ce->ce_flags & ZEND_ACC_FINAL;
+
+    if (is_final)
+        ce->ce_flags = ce->ce_flags &~ ZEND_ACC_FINAL;
+
+    zend_do_inheritance(ce, EG(called_scope) TSRMLS_CC);
+
+    if (is_final)
+        ce->ce_flags |= ZEND_ACC_FINAL;
+
+    RETURN_BOOL(instanceof_function(ce, EG(called_scope) TSRMLS_CC));
 } /* }}} */
 #	endif
 #endif
