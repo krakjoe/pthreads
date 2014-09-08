@@ -60,6 +60,7 @@ struct _pthreads_error {
     unsigned char           *file;
     unsigned char           *clazz;
     unsigned char           *method;
+    char                    *message;
     uint                    line;
 }; /* }}} */
 

@@ -138,7 +138,7 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
         }
         
         /* deal with file stuff */
-        {
+        if (!PG(last_error_message)) {
             const char *tmp;
             
             tmp = zend_get_executed_filename(TSRMLS_C);
@@ -146,7 +146,12 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
                 error->file = (unsigned char *)strdup(tmp);
             
            error->line = zend_get_executed_lineno(TSRMLS_C);
+        } else {
+            error->file = (unsigned char*) strdup(PG(last_error_file));
+            error->line = PG(last_error_lineno);
+            error->message = strdup(PG(last_error_message));
         }
+        
     }
 } /* }}} */
 
@@ -157,6 +162,7 @@ static inline pthreads_error pthreads_error_alloc(TSRMLS_D) {
     error->clazz = NULL;
     error->method = NULL;
     error->file = NULL;
+    error->message = NULL;
     
     return error;
 } /* }}} */
@@ -172,7 +178,10 @@ static inline void pthreads_error_free(pthreads_error error TSRMLS_DC) {
             
         if (error->file)
             free(error->file);
-            
+        
+        if (error->message)
+            free(error->message);    
+        
         free(
             error);
         

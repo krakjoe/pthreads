@@ -219,6 +219,11 @@ PHP_METHOD(Threaded, getTerminationInfo)
 		            return_value, "file", (char *)thread->error->file, 1);
 		        add_assoc_long(return_value, "line", thread->error->line);
 		    }
+		    
+		    if (thread->error->message) {
+		        add_assoc_string(
+		            return_value, "message", (char *)thread->error->message, 1);
+		    }
 		} else {
 		    RETURN_FALSE;
 		}
