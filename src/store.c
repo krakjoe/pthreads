@@ -307,18 +307,13 @@ int pthreads_store_chunk(zval *object, long size, zend_bool preserve, zval **chu
             ktype = zend_hash_get_current_key_ex(table, &key, &klen, &idx, 0, &position);
             zend_hash_del_key_or_index(table, key, klen, idx, ktype == HASH_KEY_IS_STRING ?
             	HASH_DEL_KEY : HASH_DEL_INDEX);
-            
+
             if (!preserve) {
-                zend_hash_next_index_insert(
-                    Z_ARRVAL_PP(chunk), (void**)&member, sizeof(zval), NULL);
+                add_next_index_zval(*chunk, member);
             } else {
                 if (ktype == HASH_KEY_IS_STRING) {
-                    zend_hash_update(
-                        Z_ARRVAL_PP(chunk), key, klen, (void**) &member, sizeof(zval), NULL
-                    );
-                } else zend_hash_index_update(
-                    Z_ARRVAL_PP(chunk), idx, (void**)&member, sizeof(zval), NULL
-                );
+                    add_assoc_zval(*chunk, key, member);
+                } else add_index_zval(*chunk, idx, member);
             }
             
             zend_hash_move_forward_ex(table, &position);
