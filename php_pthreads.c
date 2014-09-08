@@ -317,6 +317,9 @@ PHP_RINIT_FUNCTION(pthreads) {
 
 	ALLOC_HASHTABLE(PTHREADS_ZG(functions));
 	zend_hash_init(PTHREADS_ZG(functions), 15, NULL, NULL, 0);
+	
+	ALLOC_HASHTABLE(PTHREADS_ZG(cache));
+	zend_hash_init(PTHREADS_ZG(cache), 15, NULL, NULL, 0);
 }
 
 PHP_RSHUTDOWN_FUNCTION(pthreads) {
@@ -331,6 +334,9 @@ PHP_RSHUTDOWN_FUNCTION(pthreads) {
 		FREE_HASHTABLE(PTHREADS_ZG(resources));
 		PTHREADS_ZG(resources) = NULL;
 	}
+	
+	zend_hash_destroy(PTHREADS_ZG(cache));
+	FREE_HASHTABLE(PTHREADS_ZG(cache));
 }
 
 PHP_MINFO_FUNCTION(pthreads)

@@ -577,7 +577,7 @@ static void pthreads_base_dtor(PTHREAD base TSRMLS_DC) {
 	        if (pthread) {
 		        pthreads_join(base TSRMLS_CC);
 	        }
-            }
+        }
 
 	    pthreads_lock_free(base->lock TSRMLS_CC);
 	    pthreads_state_free(base->state  TSRMLS_CC);
@@ -585,7 +585,7 @@ static void pthreads_base_dtor(PTHREAD base TSRMLS_DC) {
 	    pthreads_store_free(base->store TSRMLS_CC);
 	    pthreads_synchro_free(base->synchro TSRMLS_CC);
 	    pthreads_address_free(base->address);
-            pthreads_error_free(base->error TSRMLS_CC);
+        pthreads_error_free(base->error TSRMLS_CC);
         
 	    if (PTHREADS_IS_WORKER(base)) {
 		    zend_hash_destroy(
@@ -732,6 +732,23 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint 
 	return FAILURE;
 } /* }}} */
 
+/* {{{ */
+static int pthreads_cache_get(PTHREAD address, zval *handle TSRMLS_DC) {
+    zval *cached;
+    if (zend_hash_index_find(PTHREADS_ZG(cache), (zend_ulong) address, (void**)&cached) == SUCCESS) {
+        ZVAL_ZVAL(handle, cached, 1, 0);
+        return SUCCESS;
+    }
+    return FAILURE;
+}
+
+static void pthreads_cache_set(PTHREAD address, zval *cache TSRMLS_DC) {
+    zval *cached;
+    if (zend_hash_index_update(PTHREADS_ZG(cache), (zend_ulong) address, (void**) cache, sizeof(zval), (void**)&cached) == SUCCESS) {
+        zval_copy_ctor(cache);
+    }
+} /* }}} */
+
 /* {{{ connects to an instance of a threaded object */
 int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC) {
 	PTHREAD address = NULL;
@@ -757,12 +774,17 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
             		return SUCCESS;
             	}
             	
+            	/* try to fetch object from cache */
+            	if (pthreads_cache_get(address, *object TSRMLS_CC) == SUCCESS) {
+            		return SUCCESS;
+            	}
+
             	/* else initialize and connect to the original object */
             	if (object_init_ex(*object, ce) == SUCCESS) {
 					pthreads_connect(
-		                	address, 
+		                	address,
 		                	PTHREADS_FETCH_FROM(*object) TSRMLS_CC);
-
+                    pthreads_cache_set(address, *object TSRMLS_CC);
 		            return SUCCESS;
 				}
             } else {
