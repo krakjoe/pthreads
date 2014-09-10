@@ -368,6 +368,9 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC) {
 
 	zend_bool locked;
 	if (store) {
+	    /* php is reusing this hash and making things misbehave */
+	    zend_hash_clean(hash);
+	    
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
 			HashTable *stored = &store->table;
 			HashPosition position;
