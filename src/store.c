@@ -161,11 +161,13 @@ zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int ha
 	                    isset = 0;
 	                break;
 	            }
-	        } else switch (storage->type) {
-	            case IS_NULL:
-	                isset = 0;
-	            break;
-	        }
+	        } else if (isset) {
+                switch (storage->type) {
+                    case IS_NULL:
+                        isset = 0;
+                    break;
+                }
+            }
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 	}
