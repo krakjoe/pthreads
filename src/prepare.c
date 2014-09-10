@@ -309,6 +309,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 			prepared->default_properties_count = candidate->default_properties_count;
 		} else prepared->default_properties_count = 0;
 		
+		
 		if (candidate->default_static_members_count) {
 			int i;
 			prepared->default_static_members_table = emalloc(
@@ -318,21 +319,34 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 			for (i=0; i<prepared->default_static_members_count; i++) {
 				if (candidate->default_static_members_table[i]) {
 					/* we use real separation for a reason */
-					(prepared->default_static_members_table[i]) = (zval*) emalloc(sizeof(zval));
+					switch (Z_TYPE_P(candidate->default_static_members_table[i])) {
+					    case IS_OBJECT:
+					    case IS_ARRAY:
+					       prepared->default_static_members_table[i] =  
+					            EG(uninitialized_zval_ptr);
+					       Z_ADDREF_P(EG(uninitialized_zval_ptr));
+					    break;
+					    
+					    default: {
+					        prepared->default_static_members_table[i] = (zval*) emalloc(sizeof(zval));
+					        
+					        /* only copy simple variables from statics */
+					        memcpy(
+						        (prepared->default_static_members_table[i]), 
+						        (candidate->default_static_members_table[i]), sizeof(zval));
 					
-					memcpy(
-						(prepared->default_static_members_table[i]), 
-						(candidate->default_static_members_table[i]), sizeof(zval));
-					
-					pthreads_store_separate(
-						prepared->default_static_members_table[i],
-						&prepared->default_static_members_table[i],
-						1, 0 TSRMLS_CC
-					);
+					        pthreads_store_separate(
+						        prepared->default_static_members_table[i],
+						        &prepared->default_static_members_table[i],
+						        1, 0 TSRMLS_CC
+					        );
+					    }
+					}
 				} else prepared->default_static_members_table[i]=NULL;
 			}
 			prepared->static_members_table = prepared->default_static_members_table;
 		} else prepared->default_static_members_count = 0;
+		
 		
 		/* copy user info struct */
 		memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
