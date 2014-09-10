@@ -124,8 +124,48 @@ zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int ha
 	zend_bool locked = 0, isset = 0;
 	if (store) {
 		if (pthreads_lock_acquire(store->lock, &locked TSRMLS_CC)) {
-			isset = zend_hash_exists(
-			    &store->table, key, keyl+1);
+		    pthreads_storage *storage;
+		    
+		    isset = (zend_hash_find(&store->table, key, keyl+1, (void**)&storage) == SUCCESS);
+		    
+		    if (has_set_exists) {
+	            switch (storage->type) {
+	                case IS_LONG:
+	                case IS_BOOL:
+	                    if (storage->simple.lval == 0)
+	                        isset = 0;
+	                break;
+	                
+	                case IS_ARRAY:
+	                    if (storage->length == 0)
+	                        isset = 0;
+	                break;
+	                
+	                case IS_STRING: switch (storage->length) {
+	                    case 0:
+	                        isset = 0;
+	                    break;
+	                    
+	                    case 1:
+	                        if (memcmp(storage->data, "0", 1) == SUCCESS)
+	                            isset = 0;
+	                    break;
+	                } break;
+	                
+	                case IS_DOUBLE:
+	                    if (storage->simple.dval == 0.0)
+	                        isset = 0;
+	                break;
+	                    
+	                case IS_NULL:
+	                    isset = 0;
+	                break;
+	            }
+	        } else switch (storage->type) {
+	            case IS_NULL:
+	                isset = 0;
+	            break;
+	        }
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
 		}
 	}
