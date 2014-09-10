@@ -356,12 +356,11 @@ int pthreads_store_chunk(zval *object, long size, zend_bool preserve, zval **chu
                 } else add_index_zval(*chunk, idx, member);
             }
             
+            zend_hash_move_forward_ex(table, &position);
+            
             zend_hash_del_key_or_index(table, 
                 key, klen, idx, 
                 (ktype == HASH_KEY_IS_STRING) ? HASH_DEL_KEY : HASH_DEL_INDEX);
-            
-            zend_hash_move_forward_ex(table, &position);
-            
         }
         
         pthreads_store_unlock(object TSRMLS_CC);
