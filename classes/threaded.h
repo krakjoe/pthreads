@@ -341,11 +341,18 @@ PHP_METHOD(Threaded, extend) {
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "C", &ce) != SUCCESS) {
         return;
     }
-    
-    if ((ce->ce_flags & ZEND_ACC_INTERFACE) || (ce->ce_flags & ZEND_ACC_TRAIT)) {
+
+#ifdef ZEND_ACC_TRAIT
+    if (ce->ce_flags & ZEND_ACC_TRAIT) {
         zend_throw_exception_ex(spl_ce_RuntimeException, 0 TSRMLS_CC, 
-            "cannot extend %s %s", 
-            ce->ce_flags & ZEND_ACC_INTERFACE ? "interface" : "trait",
+            "cannot extend trait %s", ce->name);
+        return;
+    }
+#endif
+
+    if (ce->ce_flags & ZEND_ACC_INTERFACE) {
+        zend_throw_exception_ex(spl_ce_RuntimeException, 0 TSRMLS_CC, 
+            "cannot extend interface %s", 
             ce->name);
         return;
     }
