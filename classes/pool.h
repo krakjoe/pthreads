@@ -234,6 +234,7 @@ PHP_METHOD(Pool, submit) {
 	
 	zend_hash_next_index_insert(
 		Z_ARRVAL_P(work), (void**) &task, sizeof(zval*), (void**)&working);
+	Z_OBJ_HT_P(task)->add_ref(task TSRMLS_CC);
 	Z_SET_ISREF_P(task);
 	Z_ADDREF_P(task);
 	
