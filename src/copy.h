@@ -1,6 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | uopz                                                                 |
+  | pthreads                                                             |
   +----------------------------------------------------------------------+
   | Copyright (c) Joe Watkins 2012 - 2014                                |
   +----------------------------------------------------------------------+
@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author: Joe Watkins <krakjoe@php.net>                                |
+  | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
   +----------------------------------------------------------------------+
  */
 #ifndef HAVE_PTHREADS_COPY_H
@@ -173,14 +173,7 @@ static void pthreads_copy_function(zend_function *function) {
 		zend_compiled_variable *variables = op_array->vars;
 		zend_literal  *literals = op_array->literals;
 		zend_arg_info *arg_info = op_array->arg_info;
-		TSRMLS_FETCH();
 		
-		if (zend_hash_index_find(PTHREADS_ZG(functions), (zend_ulong) function, (void**)&copied) == SUCCESS) {
-			*function = *copied;
-			function_add_ref(function);
-			return;
-		}
-
 		op_array->function_name = estrdup(op_array->function_name);
 		op_array->refcount = emalloc(sizeof(zend_uint));
 		(*op_array->refcount) = 1;
@@ -201,7 +194,6 @@ static void pthreads_copy_function(zend_function *function) {
 		op_array->brk_cont_array = pthreads_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont);
 		
 		*function = copy;
-		zend_hash_index_update(PTHREADS_ZG(functions), (zend_ulong) function, (void**) &function, sizeof(zend_function), NULL);
 	}
 } /* }}} */
 #endif

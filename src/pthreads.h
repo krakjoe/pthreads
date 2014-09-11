@@ -92,7 +92,6 @@ ZEND_BEGIN_MODULE_GLOBALS(pthreads)
 	void *pointer;
 	HashTable *resolve;
 	HashTable *resources;
-	HashTable *functions;
 	HashTable *cache;
 ZEND_END_MODULE_GLOBALS(pthreads)
 #	define PTHREADS_ZG(v) TSRMG(pthreads_globals_id, zend_pthreads_globals *, v)

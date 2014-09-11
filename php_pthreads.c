@@ -125,7 +125,6 @@ static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 	pg->signal = 0;
 	pg->resources = NULL;
 	pg->resolve = NULL;
-	pg->functions = NULL;
 }
 
 void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
@@ -314,9 +313,6 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 PHP_RINIT_FUNCTION(pthreads) {
 	ALLOC_HASHTABLE(PTHREADS_ZG(resolve));
 	zend_hash_init(PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
-
-	ALLOC_HASHTABLE(PTHREADS_ZG(functions));
-	zend_hash_init(PTHREADS_ZG(functions), 15, NULL, NULL, 0);
 	
 	ALLOC_HASHTABLE(PTHREADS_ZG(cache));
 	zend_hash_init(PTHREADS_ZG(cache), 15, NULL, NULL, 0);
@@ -325,9 +321,6 @@ PHP_RINIT_FUNCTION(pthreads) {
 PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(PTHREADS_ZG(resolve));
 	FREE_HASHTABLE(PTHREADS_ZG(resolve));
-
-	zend_hash_destroy(PTHREADS_ZG(functions));
-	FREE_HASHTABLE(PTHREADS_ZG(functions));
 
 	if (PTHREADS_ZG(resources)) {
 		zend_hash_destroy(PTHREADS_ZG(resources));	
