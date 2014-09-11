@@ -150,22 +150,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	/* copy uternals ! */
 	{
 		zend_uint umethod = 0;
-		void *usources[18] = {
-			candidate->constructor,
-			candidate->destructor,
-			candidate->clone,
-
-			candidate->__get,
-			candidate->__set,
-			candidate->__unset,
-			candidate->__isset,
-			candidate->__call,
-			candidate->__callstatic,
-			candidate->__tostring,
-
-			candidate->serialize_func,
-			candidate->unserialize_func,
-
+		void *usources[7] = {
 			candidate->create_object,
 			candidate->serialize,
 			candidate->unserialize,
@@ -177,52 +162,59 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 		do {
 			if (usources[umethod]) {
 				switch(umethod){
-					/* user internals, I call them uternals */
-					
-					case 1: zend_hash_update(&prepared->function_table, "__destruct", sizeof("__destruct"), &candidate->destructor, sizeof(zend_function), (void**) &prepared->destructor); break;
-					case 2: zend_hash_update(&prepared->function_table, "__clone", sizeof("__clone"), &candidate->clone, sizeof(zend_function), (void**) &prepared->clone); break;
-					case 3: zend_hash_update(&prepared->function_table, "__get", sizeof("__get"), &candidate->__get, sizeof(zend_function), (void**) &prepared->__get); break;
-					case 4: zend_hash_update(&prepared->function_table, "__set", sizeof("__set"), &candidate->__set, sizeof(zend_function), (void**) &prepared->__set); break;
-					case 5: zend_hash_update(&prepared->function_table, "__unset", sizeof("__unset"), &candidate->__unset, sizeof(zend_function), (void**) &prepared->__unset); break;
-					case 6: zend_hash_update(&prepared->function_table, "__isset", sizeof("__isset"), &candidate->__isset, sizeof(zend_function), (void**) &prepared->__isset); break;
-					case 7: zend_hash_update(&prepared->function_table, "__call", sizeof("__call"), &candidate->__call, sizeof(zend_function), (void**) &prepared->__call); break;
-					case 8: zend_hash_update(&prepared->function_table, "__callstatic", sizeof("__callstatic"), &candidate->__callstatic, sizeof(zend_function), (void**) &prepared->__callstatic); break;
-					case 9: zend_hash_update(&prepared->function_table, "__tostring", sizeof("__tostring"), &candidate->__tostring, sizeof(zend_function), (void**) &prepared->__tostring); break;
-					
-					case 10: zend_hash_update(&prepared->function_table, "serialize", sizeof("serialize"), &candidate->serialize_func, sizeof(zend_function), (void**) &prepared->serialize_func); break;
-					case 11: zend_hash_update(&prepared->function_table, "unserialize", sizeof("unserialize"), &candidate->unserialize_func, sizeof(zend_function), (void**) &prepared->unserialize_func); break;
-					/* handlers */
-					case 12: prepared->create_object = candidate->create_object; break;
-					case 13: prepared->serialize = candidate->serialize; break;
-					case 14: prepared->unserialize = candidate->unserialize; break;
-					case 15: {
+					case 0: prepared->create_object = candidate->create_object; break;
+					case 1: prepared->serialize = candidate->serialize; break;
+					case 2: prepared->unserialize = candidate->unserialize; break;
+					case 3: {
 						prepared->get_iterator = candidate->get_iterator;
 						prepared->iterator_funcs = candidate->iterator_funcs;
 					} break;
-					case 16: prepared->interface_gets_implemented = candidate->interface_gets_implemented; break;
-					case 17: prepared->get_static_method = candidate->get_static_method; break;
+					case 4: prepared->interface_gets_implemented = candidate->interface_gets_implemented; break;
+					case 5: prepared->get_static_method = candidate->get_static_method; break;
 				}
 			}
-		} while(++umethod < 18);
+		} while(++umethod < 7);
 	}
 	
 	/* copy function table */
 	zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) function_add_ref, &tf, sizeof(zend_function));
 	
 	{
-	    zend_function *ctor;
+	    zend_function *func;
 	    char *lcname = NULL;
 	    
-	    /* not sure why this hack is required, moar research required */
 	    if (!prepared->constructor && zend_hash_num_elements(&prepared->function_table)) {
 	        lcname = zend_str_tolower_dup(prepared->name, prepared->name_length);
-	        if (zend_hash_find(&prepared->function_table, lcname, prepared->name_length+1, (void**)&ctor) == SUCCESS) {
-	            prepared->constructor = ctor;
-	        } else if (zend_hash_find(&prepared->function_table, "__construct", sizeof("__construct"), (void**)&ctor) == SUCCESS) {
-	            prepared->constructor = ctor;
+	        if (zend_hash_find(&prepared->function_table, lcname, prepared->name_length+1, (void**)&func) == SUCCESS) {
+	            prepared->constructor = func;
+	        } else if (zend_hash_find(&prepared->function_table, "__construct", sizeof("__construct"), (void**)&func) == SUCCESS) {
+	            prepared->constructor = func;
 	        }
 	        efree(lcname);
 	    }
+	    
+#define FIND_AND_SET(f, n) do {\
+    if (!prepared->f && zend_hash_num_elements(&prepared->function_table)) { \
+        if (zend_hash_find(&prepared->function_table, n, sizeof(n), (void**)&func) == SUCCESS) { \
+            prepared->f = func; \
+        } \
+    } \
+} \
+while(0)
+        
+        FIND_AND_SET(clone, "__clone");
+        FIND_AND_SET(__get, "__get");
+        FIND_AND_SET(__set, "__set");
+        FIND_AND_SET(__unset, "__unset");
+        FIND_AND_SET(__isset, "__isset");
+        FIND_AND_SET(__call, "__call");
+        FIND_AND_SET(__callstatic, "__callstatic");
+        FIND_AND_SET(serialize_func, "serialize");
+        FIND_AND_SET(unserialize_func, "unserialize");
+        FIND_AND_SET(__tostring, "__tostring");
+        FIND_AND_SET(destructor, "__destruct");
+        
+#undef FIND_AND_SET
 	}
 	
 	/* copy property info structures */
