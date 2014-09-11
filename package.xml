@@ -31,6 +31,7 @@
    <file name="examples/Fetch.php" role="doc" />
    <file name="examples/KeepAliveSession.php" role="doc" />
    <file name="examples/Mutexes.php" role="doc" />
+   <file name="examples/MySQLi.php" role="doc" />
    <file name="examples/NewSynchronization.php" role="doc" />
    <file name="examples/Notifications.php" role="doc" />
    <file name="examples/ObjectsAsParameters.php" role="doc" />
@@ -49,6 +50,7 @@
    <file name="tests/binding.phpt" role="test" />
    <file name="tests/callstatic-etc.phpt" role="test" />
    <file name="tests/chunk.phpt" role="test" />
+   <file name="tests/class-defaults.phpt" role="test" />
    <file name="tests/complex-statics.phpt" role="test" />
    <file name="tests/complex-statics-set-null.phpt" role="test" />
    <file name="tests/conditions.phpt" role="test" />
@@ -59,9 +61,9 @@
    <file name="tests/doc-comments.phpt" role="test" />
    <file name="tests/foreign-private-members.phpt" role="test" />
    <file name="tests/functions.phpt" role="test" />
-   <file name="tests/global-voodoo.phpt" role="test" />
-   <file name="tests/globals.phpt" role="test" />
    <file name="tests/global-constants.phpt" role="test" />
+   <file name="tests/globals.phpt" role="test" />
+   <file name="tests/global-voodoo.phpt" role="test" />
    <file name="tests/gone.phpt" role="test" />
    <file name="tests/graceful-fatalities.phpt" role="test" />
    <file name="tests/included-files.phpt" role="test" />
@@ -69,6 +71,7 @@
    <file name="tests/ini.phpt" role="test" />
    <file name="tests/interface.phpt" role="test" />
    <file name="tests/interfaces.phpt" role="test" />
+   <file name="tests/isset-empty-compat.phpt" role="test" />
    <file name="tests/isset-unset.phpt" role="test" />
    <file name="tests/killed-info.phpt" role="test" />
    <file name="tests/merging-members.phpt" role="test" />
@@ -79,17 +82,19 @@
    <file name="tests/normal-reads.phpt" role="test" />
    <file name="tests/null-member-crash.phpt" role="test" />
    <file name="tests/oomethods.phpt" role="test" />
-   <file name="tests/pools.phpt" role="test" />
    <file name="tests/pools-default.phpt" role="test" />
+   <file name="tests/pools.phpt" role="test" />
+   <file name="tests/runtime-inheritance.phpt" role="test" />
    <file name="tests/selective-inheritance.phpt" role="test" />
    <file name="tests/shift-pop.phpt" role="test" />
    <file name="tests/shutdown-handler.phpt" role="test" />
-   <file name="tests/stateful-fatalities.phpt" role="test" />
-   <file name="tests/stack-by-reference.phpt" role="test" />
    <file name="tests/stack-by-reference-pass.phpt" role="test" />
+   <file name="tests/stack-by-reference.phpt" role="test" />
+   <file name="tests/stateful-fatalities.phpt" role="test" />
    <file name="tests/staticmethods.phpt" role="test" />
    <file name="tests/static-resolution.phpt" role="test" />
    <file name="tests/statics.phpt" role="test" />
+   <file name="tests/statics-thorn-in-other-side.phpt" role="test" />
    <file name="tests/synchronization.phpt" role="test" />
    <file name="tests/thorn-in-side.phpt" role="test" />
    <file name="tests/thread.phpt" role="test" />
@@ -98,6 +103,7 @@
    <file name="tests/waiting-timeouts.phpt" role="test" />
    <file name="tests/wait.phpt" role="test" />
    <file name="src/pthreads.h" role="src" />
+   <file name="src/copy.h" role="src" />
    <file name="src/globals.c" role="src" />
    <file name="src/globals.h" role="src" />
    <file name="src/handlers.c" role="src" />
