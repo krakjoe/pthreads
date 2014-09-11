@@ -11,7 +11,7 @@ class Test extends Other {
 }
 
 /* force zend to declare Other extends Threaded */
-Threaded::extend(Other::class);
+Threaded::extend("Other");
 
 $test = new Test();
 
