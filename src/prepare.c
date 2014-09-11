@@ -211,7 +211,6 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	
 	{
 	    zend_function *ctor;
-	    
 	    char *lcname = NULL;
 	    
 	    /* not sure why this hack is required, moar research required */
@@ -222,6 +221,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	        } else if (zend_hash_find(&prepared->function_table, "__construct", sizeof("__construct"), (void**)&ctor) == SUCCESS) {
 	            prepared->constructor = ctor;
 	        }
+	        efree(lcname);
 	    }
 	}
 	
