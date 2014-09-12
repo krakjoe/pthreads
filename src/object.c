@@ -151,7 +151,6 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
             error->line = PG(last_error_lineno);
             error->message = strdup(PG(last_error_message));
         }
-        
     }
 } /* }}} */
 
@@ -159,6 +158,9 @@ static inline void pthreads_error_save(pthreads_error error TSRMLS_DC) {
 static inline pthreads_error pthreads_error_alloc(TSRMLS_D) {
     pthreads_error error = calloc(1, sizeof(*error));
     
+    if (!error)
+        return NULL;
+
     error->clazz = NULL;
     error->method = NULL;
     error->file = NULL;
@@ -558,8 +560,8 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 			base->synchro = pthreads_synchro_alloc(TSRMLS_C);
 			base->modifiers = pthreads_modifiers_alloc(TSRMLS_C);
 			base->store = pthreads_store_alloc(TSRMLS_C);
-            		base->error = pthreads_error_alloc(TSRMLS_C);
-			
+            base->error = pthreads_error_alloc(TSRMLS_C);
+
 			pthreads_modifiers_init(base->modifiers, entry TSRMLS_CC);
 			if (PTHREADS_IS_WORKER(base)) {
 				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
@@ -569,7 +571,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
                     			base->stack->position = 0L;
 				}	
 			}
-			
+
 			pthreads_base_init(base TSRMLS_CC);
 		}
 	}
@@ -578,9 +580,9 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 /* {{{ pthreads base destructor */
 static void pthreads_base_dtor(PTHREAD base TSRMLS_DC) {
 	if (PTHREADS_IS_NOT_CONNECTION(base) && PTHREADS_IS_NOT_DETACHED(base)) {
-	     
+
 	    assert(base->cls == TSRMLS_C);
-	     
+
 	    if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
 	        pthread_t *pthread = &base->thread;
 	        if (pthread) {
@@ -595,7 +597,7 @@ static void pthreads_base_dtor(PTHREAD base TSRMLS_DC) {
 	    pthreads_synchro_free(base->synchro TSRMLS_CC);
 	    pthreads_address_free(base->address);
         pthreads_error_free(base->error TSRMLS_CC);
-        
+
 	    if (PTHREADS_IS_WORKER(base)) {
 		    zend_hash_destroy(
 			    &base->stack->objects
@@ -603,7 +605,7 @@ static void pthreads_base_dtor(PTHREAD base TSRMLS_DC) {
 		    free(base->stack);
 	    }
 	}
-    
+
 #if PHP_VERSION_ID > 50399
 	{
 		zend_object *object = &base->std;

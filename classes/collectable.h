@@ -55,9 +55,6 @@ PHP_METHOD(Collectable, isGarbage) {
 			RETVAL_BOOL(1);
 		} else RETVAL_BOOL(0);
 	}
-	
-	zval_ptr_dtor(&garbage);
-	FREE_ZVAL(garbage);
 } /* }}} */
 
 /* {{{ proto bool Collectable::setGarbage(void)
