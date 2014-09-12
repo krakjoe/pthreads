@@ -21,7 +21,7 @@ This project provides multi-threading that is compatible with PHP based on Posix
 * Mutex ( direct, subset )
 * Conditions ( direct, subset )
 
-pthreads was written with simplicity, compatibility and efficiency in mind, it's performance beggars belief !!
+pthreads was written with simplicity, compatibility and efficiency in mind, its performance beggars belief !!
 
 ## Requirements
 
@@ -81,8 +81,8 @@ PHP is awesomely powerful, but the simple fact of the matter is, the number of e
 We only have about one or two seconds to send a page to a user, in practice we end up picking and choosing which of PHP's features we will use because time is always a factor. Enterprising applications usually have to look to Java or the .NET
 framework if they are designed to do heavy lifting, aggregation, mathematics or the like. 
 
-No man is an island: today's websites have to interact with several sources of data - from reference databases, to social networking API's and content feeds ... and everything inbetween ... they have to use and reuse caches, update those caches and then, log all about it, they have to do this several hundred million times a week, if your startup is successful. 
-PHP excells at all of those tasks; but having to execute them synchronously will often mean that when you do start getting the traffic you want to your new project, things are a bit shaky, and from that moment on you're looking to replace the perfectly good code that you "made it" with, or even worse you're looking for features to remove ! 
+No man is an island: today's websites have to interact with several sources of data - from reference databases, to social networking APIs and content feeds ... and everything inbetween ... they have to use and reuse caches, update those caches and then, log all about it, they have to do this several hundred million times a week, if your startup is successful. 
+PHP excels at all of those tasks; but having to execute them synchronously will often mean that when you do start getting the traffic you want to your new project, things are a bit shaky, and from that moment on you're looking to replace the perfectly good code that you "made it" with, or even worse you're looking for features to remove ! 
 Bringing threads to PHP stretches your two seconds as far as it will go; and I believe allow you to design your applications to do more than you would if Threads were not available; and allow you to develop much faster than
 you can in Java or .NET, or any other language ( perhaps ), and as a result, you will be a happier human being, as will your boss, and your projects have virtually no limits ...
 
