@@ -299,8 +299,7 @@ PHP_METHOD(Thread, globally)
 	zend_uint argc = 0;
 	zval *retval = NULL;
 	zend_bool failed = 0;
-	HashTable *symbols = EG(active_symbol_table);
-	
+
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "f|+", &fci, &fcc, &argv, &argc) != SUCCESS) {
         return;
     }

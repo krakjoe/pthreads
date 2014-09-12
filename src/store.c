@@ -219,10 +219,11 @@ int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write
 			if (zend_hash_update(
 			    &store->table, key, keyl+1, (void**) &storage, sizeof(pthreads_storage), NULL)==SUCCESS) {
 				result = SUCCESS;
-			} else free(store);
+			} else pthreads_store_storage_dtor(&storage);
 			pthreads_lock_release(store->lock, locked TSRMLS_CC);
-		}
+		} else pthreads_store_storage_dtor(&storage);
 	}
+	
 	return result;
 } /* }}} */
 

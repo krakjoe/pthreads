@@ -422,14 +422,14 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination TSRMLS_DC) {
 			pthreads_synchro_free(destination->synchro TSRMLS_CC);
 			pthreads_address_free(destination->address);
             pthreads_error_free(destination->error TSRMLS_CC);
-            
+
 			if (PTHREADS_IS_WORKER(destination)) {
 				zend_hash_destroy(
 				    &destination->stack->objects
 				);
 				free(destination->stack);
 			}
-			
+
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
 			
 			return pthreads_connect
@@ -843,7 +843,6 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 static void * pthreads_routine(void *arg) {
 	/* passed the object as argument */
 	PTHREAD thread = (PTHREAD) arg;
-	char nothing[] = {0,};
 	
 #ifdef PTHREADS_KILL_SIGNAL
 	/* installed to support a graceful-ish kill function */

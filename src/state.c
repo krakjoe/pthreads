@@ -36,10 +36,16 @@ pthreads_state pthreads_state_alloc(int mask TSRMLS_DC) {
 	pthreads_state state = calloc(1, sizeof(*state));
 	if (state != NULL) {
 		state->bits |= mask;
-		if (!(state->lock = pthreads_lock_alloc(TSRMLS_C)))
-			return NULL;
-		if (!(state->synchro = pthreads_synchro_alloc(TSRMLS_C)))
-			return NULL;
+		if (!(state->lock = pthreads_lock_alloc(TSRMLS_C))) {
+		    free(state);
+		    return NULL;
+		}
+			
+		if (!(state->synchro = pthreads_synchro_alloc(TSRMLS_C))) {
+		    free(state);
+		    return NULL;
+		}
+
 		return state;
 	}
 	return NULL;
