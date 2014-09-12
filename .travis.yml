@@ -1,3 +1,16 @@
-language: c
+language: php
+php:
+  - 5.4
+  - 5.5
+  - 5.6
 
-script: ./travis/ci.sh
+before_script:
+  - sudo apt-get update -qq
+  - sudo apt-get install scan-build
+
+script:
+  - phpize
+  - ./configure
+  - make distclean
+  - scan-build make
+  - make test
