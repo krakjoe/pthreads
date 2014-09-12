@@ -4,13 +4,8 @@ php:
   - 5.5
   - 5.6
 
-before_script:
-  - sudo apt-get update -qq
-  - sudo apt-get install scan-build
-
 script:
   - phpize
   - ./configure
-  - make distclean
-  - scan-build make
+  - make
   - make test
