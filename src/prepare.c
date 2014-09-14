@@ -267,8 +267,16 @@ while(0)
 				zval *separated;
 
 				if (zend_hash_get_current_key_ex(&candidate->default_static_members, &n, &l, &i, 0, &position)) {
-					if (pthreads_store_separate(*property, &separated, 1, 0 TSRMLS_CC)==SUCCESS) {
-						zend_hash_update(&prepared->default_static_members, n, l, (void**) &separated, sizeof(zval*), NULL);
+					switch (Z_TYPE_PP(property)) {
+					    case IS_ARRAY:
+					    case IS_OBJECT:
+					        zend_hash_update(&prepared->default_static_members, n, l, (void**) &EG(uninitialized_zval_ptr), sizeof(zval*), NULL);
+					        Z_ADDREF_P(EG(uninitialized_zval_ptr));
+					    break;
+					    
+					    default: if (pthreads_store_separate(*property, &separated, 1, 0 TSRMLS_CC)==SUCCESS) {
+						    zend_hash_update(&prepared->default_static_members, n, l, (void**) &separated, sizeof(zval*), NULL);
+					    }
 					}
 				}
 			}

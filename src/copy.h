@@ -78,6 +78,7 @@ static zend_brk_cont_element* pthreads_copy_brk(zend_brk_cont_element *old, int 
 	return brk_cont;
 } /* }}} */
 
+#if PHP_VERSION_ID >= 50400
 /* {{{ */
 static zend_literal* pthreads_copy_literals(zend_literal *old, int end) {
 	zend_literal *literals = safe_emalloc(end, sizeof(zend_literal), 0);
@@ -91,21 +92,31 @@ static zend_literal* pthreads_copy_literals(zend_literal *old, int end) {
 	
 	return literals;
 } /* }}} */
+#endif
 
 /* {{{ */
+#if PHP_VERSION_ID >= 50400
 static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zend_literal *literals) {
 	zend_literal *literal;
+#else
+static zend_op* pthreads_copy_opcodes(zend_op_array *op_array) {
+#endif
 	zend_uint it = 0;
 	zend_op *copy = safe_emalloc(op_array->last, sizeof(zend_op), 0);
 	
 	while (it < op_array->last) {
 		copy[it] = op_array->opcodes[it];
 
+#if PHP_VERSION_ID >= 50400
 		if (copy[it].op1_type == IS_CONST) {
 			literal = 
 				(zend_literal*)(op_array->opcodes[it].op1.zv);
 			copy[it].op1.zv = 
 				&op_array->literals[literal - literals].constant;
+#else
+		if (copy[it].op1.op_type == IS_CONST) {
+            zval_copy_ctor(&copy[it].op1.u.constant);
+#endif
 		} else {
 			switch (copy[it].opcode) {
 				case ZEND_GOTO:
@@ -113,17 +124,27 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zend_literal *lit
 #ifdef ZEND_FAST_CALL
 				case ZEND_FAST_CALL:
 #endif
+#if PHP_VERSION_ID >= 50400
 					copy[it].op1.jmp_addr = copy + 
 						(op_array->opcodes[it].op1.jmp_addr - op_array->opcodes);
+#else
+					copy[it].op1.u.jmp_addr = copy + 
+						(op_array->opcodes[it].op1.u.jmp_addr - op_array->opcodes);
+#endif
 				break;
 			}
 		}
 
+#if PHP_VERSION_ID >= 50400
 		if (copy[it].op2_type == IS_CONST) {
 			literal = 
 				(zend_literal*)(op_array->opcodes[it].op2.zv);
 			copy[it].op2.zv = 
 				&op_array->literals[literal - literals].constant;
+#else
+        if (copy[it].op2.op_type == IS_CONST) {
+            zval_copy_ctor(&copy[it].op2.u.constant);
+#endif
 		} else {
 			switch (copy[it].opcode) {
 				case ZEND_JMPZ:
@@ -131,9 +152,16 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zend_literal *lit
 				case ZEND_JMPZ_EX:
 				case ZEND_JMPNZ_EX:
 				case ZEND_JMP_SET:
+#ifdef ZEND_JMP_SET_VAR
 				case ZEND_JMP_SET_VAR:
-					copy[it].op2.jmp_addr = copy +
+#endif
+#if PHP_VERSION_ID >= 50400
+                    copy[it].op2.jmp_addr = copy +
 						(op_array->opcodes[it].op2.jmp_addr - op_array->opcodes);
+#else
+                    copy[it].op2.u.jmp_addr = copy +
+						(op_array->opcodes[it].op2.u.jmp_addr - op_array->opcodes);
+#endif
 				break;
 			}
 		}
@@ -171,14 +199,18 @@ static void pthreads_copy_function(zend_function *function) {
 		
 		zend_op_array *op_array = &copy.op_array;
 		zend_compiled_variable *variables = op_array->vars;
+#if PHP_VERSION_ID >= 50400
 		zend_literal  *literals = op_array->literals;
+#endif
 		zend_arg_info *arg_info = op_array->arg_info;
 		
 		op_array->function_name = estrdup(op_array->function_name);
 		op_array->refcount = emalloc(sizeof(zend_uint));
 		(*op_array->refcount) = 1;
 		op_array->prototype = function;
+#if PHP_VERSION_ID >= 50400
 		op_array->run_time_cache = NULL;
+#endif
 		
 		if (op_array->doc_comment) {
 			op_array->doc_comment = estrndup
@@ -187,9 +219,15 @@ static void pthreads_copy_function(zend_function *function) {
 		
 		op_array->static_variables = pthreads_copy_statics(op_array->static_variables);
 		op_array->vars = pthreads_copy_variables(variables, op_array->last_var);
+#if PHP_VERSION_ID >= 50400
 		op_array->literals = pthreads_copy_literals (literals, op_array->last_literal);
+#endif
 		op_array->arg_info = pthreads_copy_arginfo(arg_info, op_array->num_args);
+#if PHP_VERSION_ID >= 50400
 		op_array->opcodes = pthreads_copy_opcodes(op_array, literals);
+#else
+		op_array->opcodes = pthreads_copy_opcodes(op_array);
+#endif
 		op_array->try_catch_array = pthreads_copy_try(op_array->try_catch_array, op_array->last_try_catch);
 		op_array->brk_cont_array = pthreads_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont);
 		

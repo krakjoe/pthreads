@@ -29,7 +29,7 @@ $stdObject = new standard;
 
 $threaded = new threadedObject;
 
-foreach ([
+foreach (array(
     't_false',
     't_null',
     't_emptyStr',
@@ -37,7 +37,7 @@ foreach ([
     't_zero2',
     't_zero3',
     't_notSet',
-    't_notEmpty'] as $prop) {
+    't_notEmpty') as $prop) {
     
     printf("%s:\n", $prop);
     var_dump(isset($stdObject->$prop) == isset($threaded->$prop));
