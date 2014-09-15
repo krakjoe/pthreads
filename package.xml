@@ -10,8 +10,8 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-05-10</date>
- <time>17:10:00</time>
+ <date>2014-09-15</date>
+ <time>06:10:00</time>
  <version>
   <release>2.0.8</release>
   <api>2.0.8</api>
@@ -22,7 +22,20 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- add Collectable class to reduce boilerplate for Pools
+ resolve bugs in static class members
+ resolve bug in property table write failure causing fault
+ introduce Collectable convenience class for Pools
+ get deep copying of functions working
+ add message to termination info
+ make consistent isset/empty behaviour on Threaded objects
+ add Threaded::extend voodoo method
+ solve system memory leaks in windows
+ introduce object cache, saving on allocation for access to all members
+ fix crash when class has legacy ctor
+ fix fault in ::chunk
+ fix fault in fpm
+ fix overflow in ::wait
+ various other stability improvements
  </notes>
  <contents>
   <dir name="/">
@@ -59,6 +72,7 @@
    <file name="tests/counting-members.phpt" role="test" />
    <file name="tests/detach.phpt" role="test" />
    <file name="tests/doc-comments.phpt" role="test" />
+   <file name="tests/exception-handler.phpt" role="test" />
    <file name="tests/foreign-private-members.phpt" role="test" />
    <file name="tests/functions.phpt" role="test" />
    <file name="tests/global-constants.phpt" role="test" />
@@ -74,6 +88,7 @@
    <file name="tests/isset-empty-compat.phpt" role="test" />
    <file name="tests/isset-unset.phpt" role="test" />
    <file name="tests/killed-info.phpt" role="test" />
+   <file name="tests/legacy-ctor.phpt" role="test" />
    <file name="tests/merging-members.phpt" role="test" />
    <file name="tests/merging-range.phpt" role="test" />
    <file name="tests/mutex.phpt" role="test" />
