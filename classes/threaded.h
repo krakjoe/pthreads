@@ -86,7 +86,9 @@ ZEND_BEGIN_ARG_INFO_EX(Threaded_extend, 0, 0, 1)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Threaded_from, 0, 0, 1)
-    ZEND_ARG_INFO(0, closure)
+    ZEND_ARG_OBJ_INFO(0, run, Closure, 0)
+    ZEND_ARG_OBJ_INFO(0, construct, Closure, 1)
+    ZEND_ARG_INFO(0, args)
 ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_threaded_methods[];
@@ -384,20 +386,20 @@ PHP_METHOD(Threaded, extend) {
     RETURN_BOOL(instanceof_function(ce, EG(called_scope) TSRMLS_CC));
 } /* }}} */
 
-/* {{{ proto Threaded Threaded::from(Closure closure) */
+/* {{{ proto Threaded Threaded::from(Closure closure [, Closure ctor [, array args = []]]) */
 PHP_METHOD(Threaded, from)
 {
-    zval *zclosure;
-    const zend_function *run;
-    zend_function *runnable;
+    zval *zrun, *zconstruct = NULL, *zargs = NULL;
+    zend_function *run, *construct;
+    zend_function *prun, *pconstruct;
     zend_class_entry *zce;
     PTHREAD threaded;
     
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &zclosure, zend_ce_closure) != SUCCESS) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O|Oa", &zrun, zend_ce_closure, &zconstruct, zend_ce_closure, &zargs) != SUCCESS) {
         return;
     }
     
-    run = zend_get_closure_method_def(zclosure TSRMLS_CC);
+    run = (zend_function*) zend_get_closure_method_def(zrun TSRMLS_CC);
     
     if (run->common.num_args > 0) {
         zend_throw_exception_ex(
@@ -414,14 +416,32 @@ PHP_METHOD(Threaded, from)
     zend_initialize_class_data(zce, 1 TSRMLS_CC);
     zce->refcount = 1;
     
-    if (zend_hash_update(&zce->function_table, "run", sizeof("run"), (void**)run, sizeof(zend_function), (void**)&runnable) != SUCCESS) {
+    if (zconstruct) {
+        construct = (zend_function*) zend_get_closure_method_def(zconstruct TSRMLS_CC);
+        
+        if (zend_hash_update(&zce->function_table, "__construct", sizeof("__construct"), (void**) construct, sizeof(zend_function), (void**)&pconstruct) != SUCCESS) {
+            zend_throw_exception_ex(
+			    spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			    "pthreads has experienced an internal error while injecting the constructor function for %s", zce->name);
+	        efree((char*)zce->name);
+	        efree(zce);
+	        return;
+        }
+        
+        zce->constructor = pconstruct;
+        function_add_ref(pconstruct);
+    }
+    
+    if (zend_hash_update(&zce->function_table, "run", sizeof("run"), (void**)run, sizeof(zend_function), (void**)&prun) != SUCCESS) {
         zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0 TSRMLS_CC, 
 			"pthreads has experienced an internal error while injecting the run function for %s", zce->name);
 	    efree((char*)zce->name);
 	    efree(zce);
 	    return;
-    } else function_add_ref(runnable);
+    }
+    
+    function_add_ref(prun);
     
     if (zend_hash_update(EG(class_table), zce->name, zce->name_length, (void**)&zce, sizeof(zend_class_entry*), NULL) != SUCCESS) {
         zend_throw_exception_ex(
@@ -436,6 +456,48 @@ PHP_METHOD(Threaded, from)
     zce->ce_flags |= ZEND_ACC_FINAL;
     
     object_init_ex(return_value, zce);
+    
+    if (zconstruct) {
+        zend_class_entry *scope = EG(scope);
+		zend_function *constructor = NULL;
+		zval *retval = NULL;
+		
+		EG(scope) = zce;
+		constructor = Z_OBJ_HT_P(return_value)->get_constructor(return_value TSRMLS_CC);
+		
+		if (constructor) {
+			zend_fcall_info fci;
+			zend_fcall_info_cache fcc;
+			
+			memset(&fci, 0, sizeof(zend_fcall_info));
+			memset(&fcc, 0, sizeof(zend_fcall_info_cache));
+			
+			fci.size = sizeof(zend_fcall_info);
+			fci.function_table = EG(function_table);
+			fci.object_ptr = return_value;
+			fci.retval_ptr_ptr = &retval;
+			fci.no_separation = 1;
+			
+			fcc.initialized = 1;
+			fcc.function_handler = constructor;
+			fcc.calling_scope = EG(scope);
+			fcc.called_scope = Z_OBJCE_P(return_value);
+			fcc.object_ptr = return_value;
+			
+			if (zargs)
+				zend_fcall_info_args(&fci, zargs TSRMLS_CC);
+			
+			zend_call_function(&fci, &fcc TSRMLS_CC);
+			
+			if (zargs)
+				zend_fcall_info_args_clear(&fci, 1);
+			
+			if (retval)
+				zval_ptr_dtor(&retval);
+		}
+		
+	    EG(scope) = scope;
+    }
 } /* }}} */
 #	endif
 #endif

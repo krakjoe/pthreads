@@ -17,6 +17,18 @@ $pool->submit(Collectable::from(function(){
     var_dump($this);
 }));
 $pool->shutdown();
+
+$test = new Threaded();
+
+$threaded = Thread::from(function() {
+    var_dump($this->test);
+}, function($test) {
+    $this->test = $test;
+}, [$test]);
+
+$threaded->start();
+$threaded->join();
+
 --EXPECTF--
 object(ThreadClosure@%s)#%d (1) {
   ["test"]=>
@@ -29,3 +41,6 @@ object(CollectableClosure@%s)#%d (2) {
   object(Worker)#3 (0) {
   }
 }
+object(Threaded)#%d (0) {
+}
+
