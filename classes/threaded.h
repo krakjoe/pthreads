@@ -389,6 +389,7 @@ PHP_METHOD(Threaded, from)
 {
     zval *zclosure;
     const zend_function *run;
+    zend_function *runnable;
     zend_class_entry *zce;
     PTHREAD threaded;
     
@@ -406,14 +407,14 @@ PHP_METHOD(Threaded, from)
     zend_initialize_class_data(zce, 1 TSRMLS_CC);
     zce->refcount = 1;
     
-    if (zend_hash_update(&zce->function_table, "run", sizeof("run"), (void**)run, sizeof(zend_function), NULL) != SUCCESS) {
+    if (zend_hash_update(&zce->function_table, "run", sizeof("run"), (void**)run, sizeof(zend_function), (void**)&runnable) != SUCCESS) {
         zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0 TSRMLS_CC, 
 			"pthreads has experienced an internal error while injecting the run function for %s", zce->name);
 	    efree((char*)zce->name);
 	    efree(zce);
 	    return;
-    }
+    } else function_add_ref(runnable);
     
     if (zend_hash_update(EG(class_table), zce->name, zce->name_length, (void**)&zce, sizeof(zend_class_entry*), NULL) != SUCCESS) {
         zend_throw_exception_ex(
