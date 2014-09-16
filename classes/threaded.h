@@ -399,6 +399,13 @@ PHP_METHOD(Threaded, from)
     
     run = zend_get_closure_method_def(zclosure TSRMLS_CC);
     
+    if (run->common.num_args > 0) {
+        zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error, %s::run must not have arguments", EG(called_scope)->name);
+	    return;
+    }
+    
     zce = (zend_class_entry*) ecalloc(1, sizeof(zend_class_entry));
     zce->name_length = spprintf
         ((char**)&zce->name, 0, "%sClosure@%p", EG(called_scope)->name, ((zend_op_array*) run)->opcodes);
