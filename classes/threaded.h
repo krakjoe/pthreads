@@ -436,6 +436,9 @@ PHP_METHOD(Threaded, from)
         zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0 TSRMLS_CC, 
 			"pthreads has experienced an internal error while injecting the run function for %s", zce->name);
+	    if (zconstruct) {
+	        destroy_op_array((zend_op_array*)pconstruct TSRMLS_CC);
+	    }
 	    efree((char*)zce->name);
 	    efree(zce);
 	    return;
@@ -447,6 +450,10 @@ PHP_METHOD(Threaded, from)
         zend_throw_exception_ex(
             spl_ce_RuntimeException, 0 TSRMLS_CC, 
             "pthreads has experienced an internal error while registering the class entry for %s", zce->name);
+        if (zconstruct) {
+	        destroy_op_array((zend_op_array*)pconstruct TSRMLS_CC);
+	    }
+	    destroy_op_array((zend_op_array*)prun TSRMLS_CC);
         efree((char*)zce->name);
         efree(zce);
         return;
