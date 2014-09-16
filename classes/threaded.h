@@ -33,6 +33,7 @@ PHP_METHOD(Threaded, chunk);
 PHP_METHOD(Threaded, pop);
 PHP_METHOD(Threaded, count);
 PHP_METHOD(Threaded, extend);
+PHP_METHOD(Threaded, from);
 
 ZEND_BEGIN_ARG_INFO_EX(Threaded_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -84,6 +85,10 @@ ZEND_BEGIN_ARG_INFO_EX(Threaded_extend, 0, 0, 1)
     ZEND_ARG_INFO(0, class)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Threaded_from, 0, 0, 1)
+    ZEND_ARG_INFO(0, closure)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_threaded_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREADED
@@ -105,6 +110,7 @@ zend_function_entry pthreads_threaded_methods[] = {
 	PHP_ME(Threaded, pop, Threaded_pop, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, count, Threaded_count, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, extend, Threaded_extend, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	PHP_ME(Threaded, from, Threaded_from, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
 
@@ -376,6 +382,52 @@ PHP_METHOD(Threaded, extend) {
         ce->ce_flags |= ZEND_ACC_FINAL;
 
     RETURN_BOOL(instanceof_function(ce, EG(called_scope) TSRMLS_CC));
+} /* }}} */
+
+/* {{{ proto Threaded Threaded::from(Closure closure) */
+PHP_METHOD(Threaded, from)
+{
+    zval *zclosure;
+    const zend_function *run;
+    zend_class_entry *zce;
+    PTHREAD threaded;
+    
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &zclosure, zend_ce_closure) != SUCCESS) {
+        return;
+    }
+    
+    run = zend_get_closure_method_def(zclosure TSRMLS_CC);
+    
+    zce = (zend_class_entry*) ecalloc(1, sizeof(zend_class_entry));
+    zce->name_length = spprintf
+        ((char**)&zce->name, 0, "%sClosure@%p", EG(called_scope)->name, ((zend_op_array*) run)->opcodes);
+    zce->type = ZEND_USER_CLASS;
+    
+    zend_initialize_class_data(zce, 1 TSRMLS_CC);
+    zce->refcount = 1;
+    
+    if (zend_hash_update(&zce->function_table, "run", sizeof("run"), (void**)run, sizeof(zend_function), NULL) != SUCCESS) {
+        zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			"pthreads has experienced an internal error while injecting the run function for %s", zce->name);
+	    efree((char*)zce->name);
+	    efree(zce);
+	    return;
+    }
+    
+    if (zend_hash_update(EG(class_table), zce->name, zce->name_length, (void**)&zce, sizeof(zend_class_entry*), NULL) != SUCCESS) {
+        zend_throw_exception_ex(
+            spl_ce_RuntimeException, 0 TSRMLS_CC, 
+            "pthreads has experienced an internal error while registering the class entry for %s", zce->name);
+        efree((char*)zce->name);
+        efree(zce);
+        return;
+    }
+
+    zend_do_inheritance(zce, EG(called_scope) TSRMLS_CC);
+    zce->ce_flags |= ZEND_ACC_FINAL;
+    
+    object_init_ex(return_value, zce);
 } /* }}} */
 #	endif
 #endif
