@@ -524,7 +524,8 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 			        const zend_function *def = 
 			            zend_get_closure_method_def(unstore TSRMLS_CC);
 			        storage->type = IS_CLOSURE;
-			        storage->data = (zend_function*) malloc(sizeof(zend_function));
+			        storage->data = 
+			            (zend_function*) malloc(sizeof(zend_function));
 			        memcpy(storage->data, def, sizeof(zend_function));
 			        break;
 			    }
