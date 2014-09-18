@@ -34,6 +34,10 @@
 #	include <src/resources.h>
 #endif
 
+#ifndef HAVE_PTHREADS_COPY_H
+#	include <src/copy.h>
+#endif
+
 typedef struct _pthreads_storage {
 	zend_uchar 	type;
 	size_t 		length;
@@ -516,6 +520,15 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 			break;
 			
 			case IS_OBJECT:
+			    if (instanceof_function(Z_OBJCE_P(unstore), zend_ce_closure TSRMLS_CC)) {
+			        const zend_function *def = 
+			            zend_get_closure_method_def(unstore TSRMLS_CC);
+			        storage->type = IS_CLOSURE;
+			        storage->data = (zend_function*) malloc(sizeof(zend_function));
+			        memcpy(storage->data, def, sizeof(zend_function));
+			        break;
+			    }
+			    
 			case IS_ARRAY: {
 				if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length, complex TSRMLS_CC)==SUCCESS) {
 					if (storage->type==IS_ARRAY) {
@@ -599,6 +612,30 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 					zend_list_addref(Z_RESVAL_P(pzval));
 				}
 			} break;
+			
+			case IS_CLOSURE: {
+			    char *name;
+			    int name_len;
+			    
+			    zend_function *closure = (zend_function*) storage->data;
+                
+                pthreads_copy_function(closure);
+
+			    zend_create_closure(
+			        pzval, closure, EG(scope), EG(This) TSRMLS_CC);
+			    
+			    closure = (zend_function*) zend_get_closure_method_def(pzval TSRMLS_CC);
+			    
+			    name_len = spprintf(&name, 0, "Closure@%p", closure);
+			    
+			    zend_hash_update(
+			        EG(function_table), name, name_len, (void**)closure, sizeof(zend_function), NULL);
+			    
+			    result = SUCCESS;
+			    
+			    efree(name);
+			} break;
+			
 			case IS_ARRAY:
 			case IS_OBJECT: {
 				result = pthreads_store_tozval(
@@ -902,6 +939,7 @@ static int pthreads_store_remove_complex_recursive(zval **pzval TSRMLS_DC) {
 static void pthreads_store_storage_dtor (pthreads_storage *storage){
 	if (storage) {
 		switch (storage->type) {
+		    case IS_CLOSURE:
 			case IS_OBJECT:
 			case IS_STRING:
 			case IS_ARRAY:

@@ -30,6 +30,8 @@
 #	include <src/lock.h>
 #endif
 
+#define IS_CLOSURE IS_CALLABLE
+
 /* {{{ buffer structure */
 typedef struct _pthreads_store {
 	HashTable         table;
