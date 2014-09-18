@@ -535,9 +535,6 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 					if (storage->type==IS_ARRAY) {
 						storage->exists = zend_hash_num_elements(
 						    Z_ARRVAL_P(unstore));
-					} else {
-						Z_OBJ_HT_P(unstore)->add_ref(
-						    unstore TSRMLS_CC);
 					}
 				}
 			} break;
