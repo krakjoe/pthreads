@@ -31,7 +31,7 @@ class T extends Thread {
         
         /* wait for new closure execution */
         $this->synchronized(function(){
-            if (!$this->used)
+            while (!$this->used)
                 $this->wait();
         });
     }
@@ -47,7 +47,7 @@ $t->start();
 
 /* wait for new closure */
 $t->synchronized(function() use($t) {
-    if (!$t->set)
+    while (!$t->set)
         $t->wait();
 });
 
