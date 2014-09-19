@@ -486,8 +486,7 @@ static inline void pthreads_base_init(PTHREAD base TSRMLS_DC) {
 				(char**)&class_name,
 				(char**)&property_name);
 			property_name_len = strlen(property_name);
-			pthreads_store_write(base->store, property_name, property_name_len, property TSRMLS_CC);
-			
+			pthreads_store_write(base->store, (char*) property_name, property_name_len, property TSRMLS_CC);
 		}
 	}
 #else

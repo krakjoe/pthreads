@@ -619,8 +619,11 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
                 
                 pthreads_copy_function(closure);
 
-			    zend_create_closure(
-			        pzval, closure, EG(scope), EG(This) TSRMLS_CC);
+#if PHP_VERSION_ID >= 50400
+                zend_create_closure(pzval, closure, EG(scope), EG(This) TSRMLS_CC);
+#else
+                zend_create_closure(pzval, closure TSRMLS_CC);
+#endif
 			    
 			    closure = (zend_function*) zend_get_closure_method_def(pzval TSRMLS_CC);
 			    

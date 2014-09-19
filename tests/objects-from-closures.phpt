@@ -24,7 +24,7 @@ $threaded = Thread::from(function() {
     var_dump($this->test);
 }, function($test) {
     $this->test = $test;
-}, [$test]);
+}, array($test));
 
 $threaded->start();
 $threaded->join();
