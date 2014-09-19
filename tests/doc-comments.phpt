@@ -26,23 +26,15 @@ class T extends Thread {
     * @subpackage subpackage
     */
     public function run() {
-       $reflect = new ReflectionClass("T");
-       var_dump($reflect);
-       var_dump($reflect->getDocComment());
-       
        $reflect = new ReflectionMethod("T", "run");
        var_dump($reflect);
        var_dump($reflect->getDocComment());
-       
     }
 }
 
 $t = new T();
 $t->start();
 $t->join();
-$reflect = new ReflectionClass("T");
-var_dump($reflect);
-var_dump($reflect->getDocComment());
 
 $reflect = new ReflectionMethod("T", "run");
 var_dump($reflect);
@@ -50,14 +42,7 @@ var_dump($reflect->getDocComment());
 
 ?>
 --EXPECT--
-object(ReflectionClass)#2 (1) {
-  ["name"]=>
-  string(1) "T"
-}
-string(16) "/**
-* Comment
-*/"
-object(ReflectionMethod)#3 (2) {
+object(ReflectionMethod)#2 (2) {
   ["name"]=>
   string(3) "run"
   ["class"]=>
@@ -69,14 +54,7 @@ string(102) "/**
     * @package package
     * @subpackage subpackage
     */"
-object(ReflectionClass)#2 (1) {
-  ["name"]=>
-  string(1) "T"
-}
-string(16) "/**
-* Comment
-*/"
-object(ReflectionMethod)#3 (2) {
+object(ReflectionMethod)#2 (2) {
   ["name"]=>
   string(3) "run"
   ["class"]=>
