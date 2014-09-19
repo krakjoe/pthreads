@@ -203,7 +203,7 @@ static inline int pthreads_equal_func(void **first, void **second){
 #ifdef _WIN32
 #	define PTHREADS_KILL_SIGNAL			SIGBREAK
 #else
-#	define PTHREADS_KILL_SIGNAL			SIGUSR1
+#	define PTHREADS_KILL_SIGNAL			SIGINT
 #endif
 #endif
 
