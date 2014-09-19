@@ -279,7 +279,7 @@ PHP_METHOD(Thread, kill)
     if (zend_parse_parameters_none() != SUCCESS) {
         return;
     }
-#ifdef PTHREADS_KILL_SIGNAL
+#if defined(PTHREADS_KILL_SIGNAL)
     {
     	PTHREAD thread = PTHREADS_FETCH;
     	/* allowing sending other signals here is just too dangerous */
