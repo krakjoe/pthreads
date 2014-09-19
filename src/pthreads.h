@@ -27,6 +27,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #else
+#define _XOPEN_SOURCE
 #include <pthread.h>
 #include <signal.h>
 #endif
