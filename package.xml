@@ -10,11 +10,11 @@
   <email>pthreads@pthreads.org</email>
   <active>yes</active>
  </lead>
- <date>2014-09-15</date>
- <time>06:10:00</time>
+ <date>2014-09-24</date>
+ <time>18:40:00</time>
  <version>
-  <release>2.0.8</release>
-  <api>2.0.8</api>
+  <release>2.0.9</release>
+  <api>2.0.9</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,20 +22,9 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- resolve bugs in static class members
- resolve bug in property table write failure causing fault
- introduce Collectable convenience class for Pools
- get deep copying of functions working
- add message to termination info
- make consistent isset/empty behaviour on Threaded objects
- add Threaded::extend voodoo method
- solve system memory leaks in windows
- introduce object cache, saving on allocation for access to all members
- fix crash when class has legacy ctor
- fix fault in ::chunk
- fix fault in fpm
- fix overflow in ::wait
- various other stability improvements
+ add support for closures as members
+ add support for creating anonymous objects from closures
+ fix referencing issue
  </notes>
  <contents>
   <dir name="/">
@@ -64,6 +53,7 @@
    <file name="tests/callstatic-etc.phpt" role="test" />
    <file name="tests/chunk.phpt" role="test" />
    <file name="tests/class-defaults.phpt" role="test" />
+   <file name="tests/closures-as-members.phpt" role="test" />
    <file name="tests/complex-statics.phpt" role="test" />
    <file name="tests/complex-statics-set-null.phpt" role="test" />
    <file name="tests/conditions.phpt" role="test" />
@@ -97,6 +87,7 @@
    <file name="tests/normal-reads.phpt" role="test" />
    <file name="tests/null-member-crash.phpt" role="test" />
    <file name="tests/oomethods.phpt" role="test" />
+   <file name="tests/objects-from-closures.phpt" role="test" />
    <file name="tests/pools-default.phpt" role="test" />
    <file name="tests/pools.phpt" role="test" />
    <file name="tests/runtime-inheritance.phpt" role="test" />
