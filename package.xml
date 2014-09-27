@@ -13,8 +13,8 @@
  <date>2014-09-24</date>
  <time>18:40:00</time>
  <version>
-  <release>2.0.9</release>
-  <api>2.0.9</api>
+  <release>2.0.10</release>
+  <api>2.0.10</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,9 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- add support for closures as members
- add support for creating anonymous objects from closures
- fix referencing issue
+ fix crash when sending SIGINT, clashed with ::kill
  </notes>
  <contents>
   <dir name="/">
