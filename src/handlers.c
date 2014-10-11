@@ -95,7 +95,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 		key = NULL;
 #endif
 	}
-	
+
 	if (Z_TYPE_P(member)==IS_STRING) {
 		pthreads_store_read(pthreads->store, Z_STRVAL_P(member), Z_STRLEN_P(member), &value TSRMLS_CC);
 	} else {

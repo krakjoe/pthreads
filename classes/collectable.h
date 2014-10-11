@@ -49,12 +49,16 @@ PHP_METHOD(Collectable, isGarbage) {
 	garbage = zend_read_property(pobject->std.ce, getThis(), ZEND_STRL("garbage"), 1 TSRMLS_CC);
 	
 	if (!garbage) {
-		RETURN_FALSE;
+		RETVAL_BOOL(0);
 	} else {
         if (zend_is_true(garbage)) {
 			RETVAL_BOOL(1);
 		} else RETVAL_BOOL(0);
 	}
+	
+	/* these properties are returned with no references */
+	zval_ptr_dtor(&garbage);
+	FREE_ZVAL(garbage);
 } /* }}} */
 
 /* {{{ proto bool Collectable::setGarbage(void)
