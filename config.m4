@@ -5,7 +5,7 @@ PHP_ARG_ENABLE(pthreads-pedantic, whether to enable pedantic locking,
 
 if test "$PHP_PTHREADS" != "no"; then
 	AC_DEFINE(HAVE_PTHREADS, 1, [Wether you have user-land threading support])
-	AC_MSG_CHECKING([checking for ZTS])   
+	AC_MSG_CHECKING([for ZTS])   
 	if test "$PHP_THREAD_SAFETY" != "no"; then
 		AC_MSG_RESULT([ok])
 	else
