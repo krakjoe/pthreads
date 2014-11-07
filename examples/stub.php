@@ -316,7 +316,7 @@ class Thread extends Threaded
      * @link http://www.php.net/manual/en/thread.start.php
      * @return bool A boolean indication of success
      */
-    public static function globally(Callable $block [, $args]) {}
+    public static function globally(Callable $block, $args) {}
 }
 
 /**
