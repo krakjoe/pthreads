@@ -640,3 +640,30 @@ class Pool
      */
     public function submitTo($worker, Threaded $task) {}
 }
+
+/**
+ * Collectable Class
+ *
+ * Represents a garbage-collectable object.
+ *
+ * Collectable objects are intended to be used by the Pool class, replacing Threaded objects as the unit of work.
+ * They provide methods to set and detect the collectability of an object.
+ *
+ * @link http://www.php.net/manual/en/class.collectable.php
+ */
+class Collectable extends Threaded
+{
+	/**
+	 * Determine whether an object has been marked as garbage
+	 *
+	 * @return bool Whether the referenced object is marked as garbage
+	 */
+	public function isGarbage() {}
+
+	/**
+	 * Mark an object as garbage
+	 *
+	 * @return void
+	 */
+	public function setGarbage() {}
+}
