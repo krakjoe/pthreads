@@ -141,19 +141,18 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 		
 		if (candidate->trait_precedences) {
 			size_t precedence = 0;
-
-                        while (candidate->trait_precedences[precedence]) {
-                            precedence++;
-                        }
-                        precedence = 0;
-
-                        prepared->trait_precedences = emalloc(sizeof(zend_trait_precedence*) * (precedence+1));
-                        while (candidate->trait_precedences[precedence]) {
-				prepared->trait_precedences[precedence] = pthreads_preparation_copy_trait_precedence(
-					thread, candidate->trait_precedences[precedence] TSRMLS_CC
-				);
-				precedence++;
-			}
+            while (candidate->trait_precedences[precedence]) {
+                precedence++;
+            }
+            
+            prepared->trait_precedences = emalloc(sizeof(zend_trait_precedence*) * (precedence+1));
+            precedence = 0;
+            while (candidate->trait_precedences[precedence]) {
+	            prepared->trait_precedences[precedence] = pthreads_preparation_copy_trait_precedence(
+		            thread, candidate->trait_precedences[precedence] TSRMLS_CC
+	            );
+	            precedence++;
+            }
 			prepared->trait_precedences[precedence]=NULL;
 		} else prepared->trait_precedences = NULL;
 	} else {
@@ -489,39 +488,51 @@ int pthreads_prepare(PTHREAD thread TSRMLS_DC){
 	if (thread->options & PTHREADS_INHERIT_CONSTANTS) {
 		zend_constant *zconstant;
 		HashTable *table[2] = {PTHREADS_EG(thread->cls, zend_constants), EG(zend_constants)};
+		char *cname;
+		int cname_len;
+		zend_ulong cname_idx;
 		
 		for(zend_hash_internal_pointer_reset_ex(table[0], &position);
 			zend_hash_get_current_data_ex(table[0], (void**) &zconstant, &position)==SUCCESS;
 			zend_hash_move_forward_ex(table[0], &position)) {
-			if (strncmp(zconstant->name, "STDIN", zconstant->name_len-1)==0||
-				strncmp(zconstant->name, "STDOUT", zconstant->name_len-1)==0||
-				strncmp(zconstant->name, "STDERR", zconstant->name_len-1)==0){
-				continue;
-			} else {
-				zend_constant constant;
+			
+			zend_hash_get_current_key_ex(
+			    table[0], 
+			    &cname, &cname_len, &cname_idx, 
+			    0, &position);
+			
+			if (zconstant->name_len) {
+			    if (strncmp(cname, "STDIN", cname_len-1)==0||
+				    strncmp(cname, "STDOUT", cname_len-1)==0||
+				    strncmp(cname, "STDERR", cname_len-1)==0){
+				    continue;
+			    } else {
+				    zend_constant constant;
 
-				if (!pthreads_constant_exists(zconstant->name, zconstant->name_len-1 TSRMLS_CC)) {
+				    if (!pthreads_constant_exists(cname, cname_len-1 TSRMLS_CC)) {
 
-					constant.flags = zconstant->flags;
-					constant.module_number = zconstant->module_number;
-					constant.name = zend_strndup(zconstant->name, zconstant->name_len);
-					constant.name_len = zconstant->name_len;
+					    constant.flags = zconstant->flags;
+					    constant.module_number = zconstant->module_number;
+					    constant.name = zend_strndup(cname, cname_len);
+					    constant.name_len = cname_len;
 				
-					switch((Z_TYPE(constant.value)=Z_TYPE(zconstant->value))) {
-						case IS_BOOL:
-						case IS_LONG: {
-							Z_LVAL(constant.value)=Z_LVAL(zconstant->value);
-						} break;
-						case IS_DOUBLE: Z_DVAL(constant.value)=Z_DVAL(zconstant->value); break;
-						case IS_STRING: {
-							Z_STRVAL(constant.value)=estrndup(Z_STRVAL(zconstant->value), Z_STRLEN(zconstant->value)); 
-							Z_STRLEN(constant.value)=Z_STRLEN(zconstant->value);
-						} break;
-					}
+					    switch((Z_TYPE(constant.value)=Z_TYPE(zconstant->value))) {
+						    case IS_BOOL:
+						    case IS_LONG: {
+							    Z_LVAL(constant.value)=Z_LVAL(zconstant->value);
+						    } break;
+						    case IS_DOUBLE: Z_DVAL(constant.value)=Z_DVAL(zconstant->value); break;
+						    case IS_STRING: {
+							    Z_STRVAL(constant.value)=estrndup(Z_STRVAL(zconstant->value), Z_STRLEN(zconstant->value)); 
+							    Z_STRLEN(constant.value)=Z_STRLEN(zconstant->value);
+						    } break;
+					    }
 				
-					zend_register_constant(&constant TSRMLS_CC);
-				}
+					    zend_register_constant(&constant TSRMLS_CC);
+				    }
+			    }
 			}
+			
 		}
 	}
 	
