@@ -124,11 +124,11 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 		if (candidate->trait_aliases) {
 			size_t alias = 0;
 
-                        while (candidate->trait_aliases[alias]) {
-                            alias++;
-                        }
-                        prepared->trait_aliases = emalloc(sizeof(zend_trait_alias*) * (alias+1));
-                        alias = 0;
+			while (candidate->trait_aliases[alias]) {
+				alias++;
+			}
+			prepared->trait_aliases = emalloc(sizeof(zend_trait_alias*) * (alias+1));
+			alias = 0;
 
 			while (candidate->trait_aliases[alias]) {
 				prepared->trait_aliases[alias] = pthreads_preparation_copy_trait_alias(
