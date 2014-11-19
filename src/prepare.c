@@ -124,11 +124,11 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 		if (candidate->trait_aliases) {
 			size_t alias = 0;
 
-                        while (candidate->trait_aliases[alias]) {
-                            alias++;
-                        }
-                        prepared->trait_aliases = emalloc(sizeof(zend_trait_alias*) * (alias+1));
-                        alias = 0;
+			while (candidate->trait_aliases[alias]) {
+				alias++;
+			}
+			prepared->trait_aliases = emalloc(sizeof(zend_trait_alias*) * (alias+1));
+			alias = 0;
 
 			while (candidate->trait_aliases[alias]) {
 				prepared->trait_aliases[alias] = pthreads_preparation_copy_trait_alias(
@@ -142,13 +142,13 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 		if (candidate->trait_precedences) {
 			size_t precedence = 0;
 
-                        while (candidate->trait_precedences[precedence]) {
-                            precedence++;
-                        }
-                        precedence = 0;
+			while (candidate->trait_precedences[precedence]) {
+				precedence++;
+			}
+			prepared->trait_precedences = emalloc(sizeof(zend_trait_precedence*) * (precedence+1));
+			precedence = 0;
 
-                        prepared->trait_precedences = emalloc(sizeof(zend_trait_precedence*) * (precedence+1));
-                        while (candidate->trait_precedences[precedence]) {
+			while (candidate->trait_precedences[precedence]) {
 				prepared->trait_precedences[precedence] = pthreads_preparation_copy_trait_precedence(
 					thread, candidate->trait_precedences[precedence] TSRMLS_CC
 				);
