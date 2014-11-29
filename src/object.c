@@ -623,6 +623,11 @@ static void pthreads_base_dtor(PTHREAD base TSRMLS_DC) {
 			zend_hash_destroy(object->properties);
 			FREE_HASHTABLE(object->properties);
 		}
+		
+		if (object->guards) {
+		    zend_hash_destroy(object->guards);
+		    FREE_HASHTABLE(object->guards);
+		}
 	}
 #else
 	zend_object_std_dtor(&(base->std) TSRMLS_CC);

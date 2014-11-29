@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix crash when sending SIGINT, clashed with ::kill
+ add support for magic methods on threaded objects
  </notes>
  <contents>
   <dir name="/">
@@ -77,6 +77,8 @@
    <file name="tests/isset-unset.phpt" role="test" />
    <file name="tests/killed-info.phpt" role="test" />
    <file name="tests/legacy-ctor.phpt" role="test" />
+   <file name="tests/magic-methods-get-set.phpt" role="test" />
+   <file name="tests/magic-methods-isset-unset.phpt" role="test" />
    <file name="tests/merging-members.phpt" role="test" />
    <file name="tests/merging-range.phpt" role="test" />
    <file name="tests/mutex.phpt" role="test" />
