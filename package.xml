@@ -28,6 +28,7 @@
   <dir name="/">
    <file name="examples/Benchmark.php" role="doc" />
    <file name="examples/CallAnyFunction.php" role="doc" />
+   <file name="examples/ChannelsAndMagic.php" role="doc" />
    <file name="examples/Fetch.php" role="doc" />
    <file name="examples/KeepAliveSession.php" role="doc" />
    <file name="examples/Mutexes.php" role="doc" />
