@@ -6,58 +6,53 @@
  *   and language level support.
  *  We can't have language level support easily, but we can implement channels using magic PHP.
  */
- 
-/*
- * A channel needs a pool to execute, and a routine definition
- */
-abstract class Channel extends Threaded {
 
-    public function __construct(Pool $pool) {
-        $pool->submit($this);
-    }
-    
-    public function __set($key, $value) {
+class Channel extends Threaded {
+    /* setting a value on the channel shall cause waiters to wake up */
+    final public function __set($key, $value) {
         return $this->synchronized(function() use ($key, $value) {
             $this[$key] = $value;
             return $this->notify();
         });
     }
     
-    public function __get($key) {
+    /* getting a value on the channel shall cause callers to wait until it's available */
+    final public function __get($key) {
         return $this->synchronized(function() use($key) {
             while (!isset($this[$key]))
                 $this->wait();
             return $this[$key];
         });
     }
-    
-    public function run() { $this->routine(); }
-    
-    abstract public function routine();
 }
 
-###################################################################################################
-
-class TestChannel extends Channel {
-
-    public function routine() {
-        /* sending data on the channel will take care of synchronization */
-        $this["message"] = "Hello World";
-        $this["gold"] = 3.462;
+class Routine extends Threaded {
+    public function __construct(Channel $channel) {
+        $this->channel = $channel;
     }
+    
+    public function run() {
+        /* sending on the channel */
+        $this
+            ->channel["message"] = "Hello World";
+        $this
+            ->channel["gold"] = 3.462;
+    }
+    
+    protected $channel;
 }
+
+$channel = new Channel();
 
 $pool = new Pool(4);
 
-$channel = new TestChannel($pool);
+$pool->submit(
+    new Routine($channel));
 
-/* recving data from the channel will take care of synchronization */
-
+/* recving on the channel */
 printf("Message: %s, Gold: %.3f\n", 
     $channel["message"], 
     $channel["gold"]);
-
-/* collect, sometime !! */
 
 $pool->shutdown();
 ?>
