@@ -141,12 +141,13 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 		
 		if (candidate->trait_precedences) {
 			size_t precedence = 0;
+			            
             while (candidate->trait_precedences[precedence]) {
                 precedence++;
             }
-            
             prepared->trait_precedences = emalloc(sizeof(zend_trait_precedence*) * (precedence+1));
             precedence = 0;
+            
             while (candidate->trait_precedences[precedence]) {
 	            prepared->trait_precedences[precedence] = pthreads_preparation_copy_trait_precedence(
 		            thread, candidate->trait_precedences[precedence] TSRMLS_CC
