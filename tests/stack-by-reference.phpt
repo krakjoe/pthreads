@@ -16,13 +16,13 @@ class W extends Worker {
 
 $t = new W();
 $t->start();
-$t->stack(new T());
+try {
+    $t->stack(new T());
+} catch(Exception $ex) {
+    echo $ex->getMessage();
+}
 $t->shutdown();
 ?>
---EXPECTF--
-Fatal error: Uncaught exception 'InvalidArgumentException' with message 'Worker::stack expects $work to be a reference' in %s:%d
-Stack trace:
-#0 %s(%d): Worker->stack(Object(T))
-#1 {main}
-  thrown in %s on line %d
+--EXPECT--
+Worker::stack expects $work to be a reference
 
