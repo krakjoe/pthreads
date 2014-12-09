@@ -15,11 +15,12 @@ $cond = Cond::Create();
 class RandomNumbersGenerator extends Thread {
 	public function run() {
 		/* Generate 20 random numbers */
-		for($i = 0; $i < 20; ++$i)
+		for($i = 0; $i < 20; ++$i){
+			/* Some expensive equations (0.1-2s) */
+			usleep(mt_rand(100,2000)*1000);
+			
 			$this->update( mt_rand(0, 100) );
-		
-		/* "magic number" */
-		$this->update( -1 );
+		}
 	}
 	public function update($number){
 		/* Require PTHREADS_ALLOW_GLOBALS flag */
@@ -42,21 +43,36 @@ $thread->start(PTHREADS_INHERIT_ALL | PTHREADS_ALLOW_GLOBALS);
 /* You must lock Mutex before use Cond::wait() - Mutex protect Cond variable itself */
 Mutex::lock($mutex);
 
+$iterations = 0;
+
 while(1) {
-	if(!count($thread))
-		/* Wait for signal if there is no more numbers to shift */
-		Cond::wait($cond, $mutex);
+	/* Cond can unblock prematurely */
+	while(!count($thread)){
+		++$iterations;
+		
+		/* Don't wait for not working thread */
+		if(!$thread->isRunning())
+			/* Break both loops */
+			break 2;
+		
+		/*  When there is no more numbers to shift:
+			wait for signal or 1s whichever comes first */
+		try {
+			Cond::wait($cond, $mutex, 1 * 1000000);
+		} catch(RuntimeException $e) {
+			/* Timeout */
+			continue;
+		}
+	}
 	
 	/* Get my lucky number */
 	$number = $thread->shift();
 	
-	/* Break on "magic number" */
-	if($number === -1)
-		break;
-	
 	echo "Your lucky number is {$number}\n";
 }
-echo "I'm done here...\n";
+echo "Total iterations: {$iterations}\nI'm done here...\n";
+
+$thread->join();
 
 /* Remove Cond */
 Cond::destroy($cond);
