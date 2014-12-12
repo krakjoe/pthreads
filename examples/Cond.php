@@ -5,6 +5,9 @@
 	
 	When use?
 	Cond can be helpful when one thread is waiting for some data from another. You can waste CPU cycles with normal while(true) or make while wait for signals.
+	
+	Notice:
+	If you are using timeout in Cond::wait, you can drop Mutex::lock and Mutex::unlock. Sometime you can avoid stuck at locking.
 */
 
 
@@ -40,9 +43,6 @@ class RandomNumbersGenerator extends Thread {
 $thread = new RandomNumbersGenerator();
 $thread->start(PTHREADS_INHERIT_ALL | PTHREADS_ALLOW_GLOBALS);
 
-/* You must lock Mutex before use Cond::wait() - Mutex protect Cond variable itself */
-Mutex::lock($mutex);
-
 $iterations = 0;
 
 while(1) {
@@ -58,11 +58,15 @@ while(1) {
 		/*  When there is no more numbers to shift:
 			wait for signal or 1s whichever comes first */
 		try {
+			/* You must lock Mutex before use Cond::wait() */
+			Mutex::lock($mutex);
 			Cond::wait($cond, $mutex, 1 * 1000000);
 		} catch(RuntimeException $e) {
 			/* Timeout */
+			Mutex::unlock($mutex);
 			continue;
 		}
+		Mutex::unlock($mutex);
 	}
 	
 	/* Get my lucky number */
@@ -74,8 +78,7 @@ echo "Total iterations: {$iterations}\nI'm done here...\n";
 
 $thread->join();
 
-/* Remove Cond */
+/* Remove Cond and Mutex */
 Cond::destroy($cond);
-/* Unlock and remove Mutex */
-Mutex::unlock($mutex, true);
+Mutex::destroy($mutex);
 
