@@ -41,6 +41,9 @@ object(Pool)#%d (%d) {
   }
   ["ctor":protected]=>
   NULL
+  ["options":protected]=>
+  array(0) {
+  }
   ["last":protected]=>
   int(1)
 }
