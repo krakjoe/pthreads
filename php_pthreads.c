@@ -242,6 +242,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("workers"), ZEND_ACC_PROTECTED TSRMLS_CC);
 	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("work"),    ZEND_ACC_PROTECTED TSRMLS_CC);
 	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("ctor"),    ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_null(pthreads_pool_entry, ZEND_STRL("options"), ZEND_ACC_PROTECTED TSRMLS_CC);
 	zend_declare_property_long(pthreads_pool_entry, ZEND_STRL("last"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
 
 	/*

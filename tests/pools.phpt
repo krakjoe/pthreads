@@ -81,7 +81,7 @@ WebWork executing in Thread #%d
 WebWork executing in Thread #%d
 WebWork executing in Thread #%d
 WebWork executing in Thread #%d
-object(Pool)#%d (6) {
+object(Pool)#%d (7) {
   ["size":protected]=>
   int(8)
   ["class":protected]=>
@@ -97,6 +97,9 @@ object(Pool)#%d (6) {
     [0]=>
     object(SafeLog)#%d (0) {
     }
+  }
+  ["options":protected]=>
+  array(0) {
   }
   ["last":protected]=>
   int(6)

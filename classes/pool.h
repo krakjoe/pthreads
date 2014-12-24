@@ -28,10 +28,12 @@ ZEND_BEGIN_ARG_INFO_EX(Pool___construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, size)
 	ZEND_ARG_INFO(0, class)
 	ZEND_ARG_INFO(0, ctor)
+	ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_resize, 0, 0, 1)
 	ZEND_ARG_INFO(0, size)
+	ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_submit, 0, 0, 1)
@@ -64,7 +66,7 @@ zend_function_entry pthreads_pool_methods[] = {
 	{NULL, NULL, NULL}
 };
 
-/* {{{ proto Pool Pool::__construct(integer size, [class worker, [array $ctor]]) 	
+/* {{{ proto Pool Pool::__construct(integer size, [class worker, [array $ctor, [array $options]]]) 	
 	Construct a pool ready to create a maximum of $size workers of class $worker
 	$ctor will be used as arguments to constructor when spawning workers */
 PHP_METHOD(Pool, __construct) 
@@ -72,8 +74,9 @@ PHP_METHOD(Pool, __construct)
 	long size = 0;
 	zend_class_entry *clazz = NULL;
 	zval *ctor = NULL;
+	zval* options = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|Ca", &size, &clazz, &ctor) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|Caa", &size, &clazz, &ctor, &options) != SUCCESS) {
 		return;
 	}
 	
@@ -85,6 +88,13 @@ PHP_METHOD(Pool, __construct)
 			"The class provided (%s) does not extend Worker", clazz->name);
 	}
 	
+	if (options == NULL || Z_TYPE_P(options) == IS_NULL) {
+		options = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("options"), 1 TSRMLS_CC);
+		array_init_size(options, size);
+	} else {
+		zend_update_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("options"), options TSRMLS_CC);
+	}
+	
 	zend_update_property_long(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"), size TSRMLS_CC);
 	zend_update_property_stringl(
 		Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("class"), clazz->name, clazz->name_length TSRMLS_CC);
@@ -92,15 +102,17 @@ PHP_METHOD(Pool, __construct)
 		zend_update_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("ctor"), ctor TSRMLS_CC);
 } /* }}} */
 
-/* {{{ proto void Pool::resize(integer size) 
+/* {{{ proto void Pool::resize(integer size, [array $options]) 
 	Resize the pool to the given number of workers, if the pool size is being reduced 
 	then the last workers started will be shutdown until the pool is the requested size */
 PHP_METHOD(Pool, resize) {
 	long newsize = 0;
+	zval *newoptions = NULL;
 	zval *workers = NULL;
 	zval *size = NULL;
+	zval *options = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &newsize) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|a", &newsize, &newoptions) != SUCCESS) {
 		return;
 	}
 	
@@ -124,6 +136,12 @@ PHP_METHOD(Pool, resize) {
 		} while (zend_hash_num_elements(Z_ARRVAL_P(workers)) != newsize);
 	}
 	
+	if (newoptions != NULL && Z_TYPE_P(newoptions) == IS_ARRAY) {
+		options = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("options"), 1 TSRMLS_CC);
+		zent_ptr_dtor(options);
+		zend_update_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("options"), newoptions TSRMLS_CC);
+	}
+	
 	ZVAL_LONG(size, newsize);
 } /* }}} */
 
@@ -137,6 +155,7 @@ PHP_METHOD(Pool, submit) {
 	zval *worker = NULL;
 	zval *clazz = NULL;
 	zval *ctor = NULL;
+	zval *options = NULL;
 	zval *work = NULL;
 	zval **working = NULL;
 	zval **selected = NULL;
@@ -179,6 +198,7 @@ PHP_METHOD(Pool, submit) {
 		}
 		
 		ctor  = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("ctor"), 1 TSRMLS_CC);
+		options = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("options"), 1 TSRMLS_CC);
 		
 		MAKE_STD_ZVAL(worker);
 		object_init_ex(worker, *ce);
@@ -223,7 +243,14 @@ PHP_METHOD(Pool, submit) {
 					zval_ptr_dtor(&retval);
 			}
 			
-			zend_call_method(&worker, Z_OBJCE_P(worker), NULL, ZEND_STRL("start"), NULL, 0, NULL, NULL TSRMLS_CC);
+			zval **workeroptions = NULL;
+			
+			if (zend_hash_index_find(
+				Z_ARRVAL_P(options), last, (void**)&workeroptions) == SUCCESS) {
+				zend_call_method(&worker, Z_OBJCE_P(worker), NULL, ZEND_STRL("start"), NULL, 1, *workeroptions, NULL TSRMLS_CC);
+			} else {
+				zend_call_method(&worker, Z_OBJCE_P(worker), NULL, ZEND_STRL("start"), NULL, 0, NULL, NULL TSRMLS_CC);
+			}
 		}
 		
 		zend_hash_index_update(
