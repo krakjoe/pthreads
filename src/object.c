@@ -1058,8 +1058,14 @@ static void * pthreads_routine(void *arg) {
 		pthreads_globals_lock(&glocked TSRMLS_CC);
 #endif
 		/* shutdown request */
-	    php_request_shutdown(TSRMLS_C);
-	    
+
+		/* TOFIX: php_request_shutdown() destroyes PTHREADS_ZG(resources)
+		 * before destroying EG(symbol_table): resources marked for keeping will
+		 * be destroyed if stored in local variables inside ::run() and not
+		 * destroyed in userland.
+		 */
+		php_request_shutdown(TSRMLS_C);
+
 #ifdef PTHREADS_PEDANTIC
 		/* release global lock */
 		pthreads_globals_unlock(glocked TSRMLS_CC);

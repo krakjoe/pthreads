@@ -780,7 +780,10 @@ static void pthreads_prepared_resource_dtor(zend_rsrc_list_entry *entry) {
 		if (!pthreads_resources_kept(entry TSRMLS_CC)){
 			if (PTHREADS_G(default_resource_dtor))
 				PTHREADS_G(default_resource_dtor)(entry);
-		}
+		} else if (PTHREADS_ZG(resources)) {
+                    /* the resource was marked for keeping but we no longer have any reference to it */
+                    zend_hash_del(PTHREADS_ZG(resources), (char*)entry, sizeof(void*));
+                }
 	} zend_end_try();
 } /* }}} */
 
