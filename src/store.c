@@ -569,25 +569,26 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 				if (resource->ls != TSRMLS_C && zend_hash_index_find(&PTHREADS_EG(resource->ls, regular_list), storage->simple.lval, (void**)&original)==SUCCESS) {
 				
 					zend_bool found = 0;
-					int existed = 0;
+					ulong existing;
 					{
 						zend_rsrc_list_entry *search;
 						HashPosition position;
 						for(zend_hash_internal_pointer_reset_ex(&EG(regular_list), &position);
-							zend_hash_get_current_data_ex(&EG(regular_list), (void**) &search, &position)==SUCCESS;
-							zend_hash_move_forward_ex(&EG(regular_list), &position)) {			
+								zend_hash_get_current_data_ex(&EG(regular_list), (void**) &search, &position)==SUCCESS;
+								zend_hash_move_forward_ex(&EG(regular_list), &position)) {
+
 							if (search->ptr == original->ptr) {
 								found=1;
-								existed++;
+								existing = position->h;
 								break;
-							} else ++existed;
+							}
 						}
 					}
 					
 					if (!found) {
 					    zend_rsrc_list_entry create;
 					    {
-						    int created;
+						    ulong created;
 							
 						    create.type = original->type;
 						    create.ptr = original->ptr;
@@ -602,7 +603,7 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval TSRMLS_
 						    } else ZVAL_NULL(pzval);
 					    }
 					} else {
-						ZVAL_RESOURCE(pzval, existed);
+						ZVAL_RESOURCE(pzval, existing);
 						zend_list_addref(Z_RESVAL_P(pzval));
 					}
 				} else {
