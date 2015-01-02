@@ -306,7 +306,13 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 	if (pthreads_instance == TSRMLS_C) {
 		pthreads_globals_shutdown(TSRMLS_C);
 	}
-	
+
+	if (PTHREADS_ZG(resources)) {
+		zend_hash_destroy(PTHREADS_ZG(resources));
+		FREE_HASHTABLE(PTHREADS_ZG(resources));
+		PTHREADS_ZG(resources) = NULL;
+	}
+
 	return SUCCESS;
 }
 
@@ -326,12 +332,6 @@ PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(PTHREADS_ZG(resolve));
 	FREE_HASHTABLE(PTHREADS_ZG(resolve));
 
-	if (PTHREADS_ZG(resources)) {
-		zend_hash_destroy(PTHREADS_ZG(resources));	
-		FREE_HASHTABLE(PTHREADS_ZG(resources));
-		PTHREADS_ZG(resources) = NULL;
-	}
-	
 	zend_hash_destroy(PTHREADS_ZG(cache));
 	FREE_HASHTABLE(PTHREADS_ZG(cache));
 }
