@@ -31,7 +31,7 @@
 zend_bool pthreads_resources_keep(pthreads_resource data TSRMLS_DC) {
 	if (!PTHREADS_ZG(resources)) {
 		ALLOC_HASHTABLE(PTHREADS_ZG(resources));
-		zend_hash_init(PTHREADS_ZG(resources), 15, NULL, NULL, 0);
+		zend_hash_init(PTHREADS_ZG(resources), 15, NULL, NULL, 1);
 	}
 	
 	if (zend_hash_update(PTHREADS_ZG(resources),

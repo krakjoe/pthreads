@@ -72,7 +72,9 @@ zend_module_entry pthreads_module_entry = {
   PHP_RSHUTDOWN(pthreads),
   PHP_MINFO(pthreads),
   PHP_PTHREADS_VERSION,
-  STANDARD_MODULE_PROPERTIES
+  NO_MODULE_GLOBALS,
+  ZEND_MODULE_POST_ZEND_DEACTIVATE_N(pthreads),
+  STANDARD_MODULE_PROPERTIES_EX
 };
 
 zend_class_entry *pthreads_threaded_entry;
@@ -306,7 +308,20 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 	if (pthreads_instance == TSRMLS_C) {
 		pthreads_globals_shutdown(TSRMLS_C);
 	}
-	
+
+	return SUCCESS;
+}
+
+ZEND_MODULE_POST_ZEND_DEACTIVATE_D(pthreads)
+{
+	TSRMLS_FETCH();
+
+	if (PTHREADS_ZG(resources)) {
+		zend_hash_destroy(PTHREADS_ZG(resources));
+		FREE_HASHTABLE(PTHREADS_ZG(resources));
+		PTHREADS_ZG(resources) = NULL;
+	}
+
 	return SUCCESS;
 }
 
@@ -326,12 +341,6 @@ PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(PTHREADS_ZG(resolve));
 	FREE_HASHTABLE(PTHREADS_ZG(resolve));
 
-	if (PTHREADS_ZG(resources)) {
-		zend_hash_destroy(PTHREADS_ZG(resources));	
-		FREE_HASHTABLE(PTHREADS_ZG(resources));
-		PTHREADS_ZG(resources) = NULL;
-	}
-	
 	zend_hash_destroy(PTHREADS_ZG(cache));
 	FREE_HASHTABLE(PTHREADS_ZG(cache));
 }
