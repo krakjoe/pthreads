@@ -6,14 +6,27 @@ This test verifies that ::kill sets state and error information
 <?php
 class TestThread extends Thread
 {
+    public $started = false;
+
     public function run()
     {
+        $this->synchronized(function($that) {
+            $that->started = true;
+            $that->notify();
+        }, $this);
+
         sleep(5);
     }
 }
 
 $t = new TestThread();
 $t->start();
+
+$t->synchronized(function($that) {
+    while (! $that->started)
+        $that->wait();
+}, $t);
+
 $t->kill();
 $t->join();
 
