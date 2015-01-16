@@ -351,7 +351,7 @@ PHP_METHOD(Threaded, extend) {
     }
 
 #ifdef ZEND_ACC_TRAIT
-    if (ce->ce_flags & ZEND_ACC_TRAIT) {
+    if ((ce->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT) {
         zend_throw_exception_ex(spl_ce_RuntimeException, 0 TSRMLS_CC, 
             "cannot extend trait %s", ce->name);
         return;
