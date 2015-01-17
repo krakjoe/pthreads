@@ -91,6 +91,7 @@
    <file name="tests/objects-from-closures.phpt" role="test" />
    <file name="tests/pools-default.phpt" role="test" />
    <file name="tests/pools.phpt" role="test" />
+   <file name="tests/resource-keeping.phpt" role="test" />
    <file name="tests/runtime-inheritance.phpt" role="test" />
    <file name="tests/selective-inheritance.phpt" role="test" />
    <file name="tests/shift-pop.phpt" role="test" />
