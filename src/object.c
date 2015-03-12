@@ -1062,13 +1062,13 @@ static void * pthreads_routine(void *arg) {
 		/* shutdown request */
 		php_request_shutdown(TSRMLS_C);
 
-		/* free interpreter */
-		tsrm_free_interpreter_context(tsrm_ls);
-
 #ifdef PTHREADS_PEDANTIC
 		/* release global lock */
 		pthreads_globals_unlock(glocked TSRMLS_CC);
 #endif
+
+		/* free interpreter */
+		tsrm_free_interpreter_context(tsrm_ls);
 
 		/**
 		* Shutdown Block End
