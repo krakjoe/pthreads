@@ -846,10 +846,12 @@ static void * pthreads_routine(void *arg) {
 		/**
 		* Startup Block Begin
 		**/
-		TSRMLS_FETCH();
-		
-		/* set thread local storage */
-		thread->tls = TSRMLS_C;
+		/* create new context */
+		void ***tsrm_ls = NULL;
+		thread->tls = tsrm_ls = tsrm_new_interpreter_context();
+
+		/* set interpreter context */
+		tsrm_set_interpreter_context(tsrm_ls);
 		
 #ifdef PTHREADS_PEDANTIC
 		/* acquire a global lock */
@@ -1064,6 +1066,9 @@ static void * pthreads_routine(void *arg) {
 		/* release global lock */
 		pthreads_globals_unlock(glocked TSRMLS_CC);
 #endif
+
+		/* free interpreter */
+		tsrm_free_interpreter_context(tsrm_ls);
 
 		/**
 		* Shutdown Block End
