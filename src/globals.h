@@ -37,30 +37,35 @@
 /* {{{ pthreads_globals */
 struct _pthreads_globals {
 	/*
+	* Global LS
+	*/
+	void*** global_tls;
+
+	/*
 	* Initialized flag
 	*/
 	zend_bool init;
-	
+
 	/*
 	* Failed flag
 	*/
 	zend_bool failed;
-	
+
 	/*
 	* Globals Mutex
 	*/
 	pthreads_lock lock;
-	
+
 	/*
 	* Global Strings
 	*/
 	HashTable strings;
-    
+
 	/*
 	* Global/Default Resource Destructor
 	*/
 	dtor_func_t (default_resource_dtor);
-	
+
 	/*
 	* Objects Cache
 	*/

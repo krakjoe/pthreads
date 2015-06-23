@@ -12,8 +12,10 @@ class ThreadTesting extends Thread {
 		$this->other = $other;
 	}
 	public function run(){
-		$this->done = true;
-		$this->notify();
+		$this->synchronized(function($that) {
+			$that->done = true;
+			$that->notify();
+		}, $this);
 	}
 }
 
@@ -25,8 +27,10 @@ class ThreadTest extends Thread {
 		$this->other = $other;
 	}
 	public function run(){
-		$this->done = true;
-		$this->notify();
+		$this->synchronized(function($that) {
+			$that->done = true;
+			$that->notify();
+		}, $this);
 	}
 }
 
