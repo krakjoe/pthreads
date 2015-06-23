@@ -138,30 +138,30 @@ void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
 			zval object = *ex;
 			zval *saved = &object;
 			char *cname = NULL;
-		
+
 			zval_copy_ctor(saved);
-		
+
 			if (zend_fcall_info_init(EG(user_exception_handler), IS_CALLABLE_CHECK_SILENT, &fci, &fcc, &cname, NULL TSRMLS_CC) == SUCCESS) {
 				fci.retval_ptr_ptr = &retval;
 
 				EG(exception) = NULL;
-			
+
 				zend_fcall_info_argn(&fci TSRMLS_CC, 1, &saved);
 				zend_call_function(&fci, &fcc TSRMLS_CC);
 				zend_fcall_info_args_clear(&fci, 1);
-			
+
 				if (retval) {
 					zval_ptr_dtor(&retval);
 				}
 			}
 
 			zval_dtor(saved);
-		
+
 			if (cname)
 				efree(cname);
 		}
 	}
-	
+
 	if (zend_throw_exception_hook_function) {
 		zend_throw_exception_hook_function(ex TSRMLS_CC);
 	}
@@ -170,7 +170,7 @@ void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry ce;
-	
+
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_ALL", PTHREADS_INHERIT_ALL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_NONE", PTHREADS_INHERIT_NONE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_INI", PTHREADS_INHERIT_INI, CONST_CS | CONST_PERSISTENT);
@@ -182,7 +182,7 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_GLOBALS", PTHREADS_ALLOW_GLOBALS, CONST_CS | CONST_PERSISTENT);
-	
+
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
 	ce.serialize = pthreads_internal_serialize;
 	ce.unserialize = pthreads_internal_unserialize;
@@ -202,7 +202,7 @@ PHP_MINIT_FUNCTION(pthreads)
 				pthreads_threaded_entry TSRMLS_CC, 1, spl_ce_Countable);
 		}
 	}
-	
+
 	/* for BC with <= 1* */
 	zend_register_class_alias_ex(
 		ZEND_STRL("Stackable"), pthreads_threaded_entry TSRMLS_CC);
@@ -213,7 +213,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_thread_entry=zend_register_internal_class_ex(&ce, pthreads_threaded_entry, NULL TSRMLS_CC);
 	pthreads_thread_entry->get_iterator = pthreads_object_iterator_ctor;
 	pthreads_thread_entry->create_object = pthreads_thread_ctor;
-	
+
 	INIT_CLASS_ENTRY(ce, "Worker", pthreads_worker_methods);
 	ce.serialize = pthreads_internal_serialize;
 	ce.unserialize = pthreads_internal_unserialize;
@@ -226,7 +226,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	ce.unserialize = zend_class_unserialize_deny;
 	pthreads_mutex_entry=zend_register_internal_class(&ce TSRMLS_CC);
 	pthreads_mutex_entry->ce_flags |= ZEND_ACC_FINAL;
-	
+
 	INIT_CLASS_ENTRY(ce, "Cond", pthreads_condition_methods);
 	ce.serialize = zend_class_serialize_deny;
 	ce.unserialize = zend_class_unserialize_deny;
@@ -235,7 +235,7 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	INIT_CLASS_ENTRY(ce, "Collectable", pthreads_collectable_methods);
 	pthreads_collectable_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry, NULL TSRMLS_CC);
-	zend_declare_property_bool(pthreads_collectable_entry, ZEND_STRL("garbage"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);	
+	zend_declare_property_bool(pthreads_collectable_entry, ZEND_STRL("garbage"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
 
 	INIT_CLASS_ENTRY(ce, "Pool", pthreads_pool_methods);
 	pthreads_pool_entry=zend_register_internal_class(&ce TSRMLS_CC);
@@ -250,32 +250,32 @@ PHP_MINIT_FUNCTION(pthreads)
 	* Setup standard and pthreads object handlers
 	*/
 	zend_handlers = zend_get_std_object_handlers();
-	
+
 	memcpy(&pthreads_handlers, zend_handlers, sizeof(zend_object_handlers));
 
     pthreads_handlers.cast_object = pthreads_cast_object;
     pthreads_handlers.count_elements = pthreads_count_properties;
-    
-	pthreads_handlers.get_debug_info = pthreads_read_debug;	
+
+	pthreads_handlers.get_debug_info = pthreads_read_debug;
 	pthreads_handlers.get_properties = pthreads_read_properties;
-	
+
 	pthreads_handlers.get_method = pthreads_get_method;
 	pthreads_handlers.call_method = pthreads_call_method;
-	
+
 	pthreads_handlers.read_property = pthreads_read_property;
 	pthreads_handlers.write_property = pthreads_write_property;
 	pthreads_handlers.has_property = pthreads_has_property;
 	pthreads_handlers.unset_property = pthreads_unset_property;
-	
+
 	pthreads_handlers.read_dimension = pthreads_read_dimension;
 	pthreads_handlers.write_dimension = pthreads_write_dimension;
 	pthreads_handlers.has_dimension = pthreads_has_dimension;
 	pthreads_handlers.unset_dimension = pthreads_unset_dimension;
-	
+
 	pthreads_handlers.get_property_ptr_ptr = NULL;
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
-	
+
 #if PHP_VERSION_ID > 50399
     /* when the gc runs, it will fetch properties, every time */
     /* so we pass in a dummy function to control memory usage */
@@ -283,15 +283,15 @@ PHP_MINIT_FUNCTION(pthreads)
     pthreads_handlers.get_gc = NULL;
 #endif
 
-	pthreads_handlers.clone_obj = pthreads_clone_object; 
+	pthreads_handlers.clone_obj = pthreads_clone_object;
 
-	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
+	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);
 
 	if (pthreads_globals_init(TSRMLS_C)) {
 		/*
 		* Global Init
 		*/
-		pthreads_instance = TSRMLS_C;
+		PTHREADS_G(global_tls) = pthreads_instance = TSRMLS_C;
 	}
 
 #ifndef HAVE_SPL
@@ -299,7 +299,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	spl_ce_Countable                = zend_exception_get_default(TSRMLS_C);
 	spl_ce_RuntimeException			= zend_exception_get_default(TSRMLS_C);
 #endif
-	
+
 	return SUCCESS;
 }
 
@@ -332,7 +332,7 @@ static inline void pthreads_registered_dtor(void *ptr) {
 PHP_RINIT_FUNCTION(pthreads) {
 	ALLOC_HASHTABLE(PTHREADS_ZG(resolve));
 	zend_hash_init(PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
-	
+
 	ALLOC_HASHTABLE(PTHREADS_ZG(cache));
 	zend_hash_init(PTHREADS_ZG(cache), 15, NULL, NULL, 0);
 }
