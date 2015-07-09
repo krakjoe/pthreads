@@ -589,6 +589,8 @@ static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
 		        pthreads_join(base TSRMLS_CC);
 	        }
         }
+	    // call userland destructor if any
+	    zend_objects_destroy_object(arg, handle TSRMLS_CC);
 
 	    pthreads_lock_free(base->lock TSRMLS_CC);
 	    pthreads_state_free(base->state  TSRMLS_CC);
@@ -604,8 +606,6 @@ static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
 		    );
 		    free(base->stack);
 	    }
-
-	    zend_objects_destroy_object(arg, handle TSRMLS_CC);
 	}
 } /* }}} */
 

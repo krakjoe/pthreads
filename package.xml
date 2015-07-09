@@ -89,6 +89,7 @@
    <file name="tests/null-member-crash.phpt" role="test" />
    <file name="tests/oomethods.phpt" role="test" />
    <file name="tests/objects-from-closures.phpt" role="test" />
+   <file name="tests/orderly-destruction.phpt" role="test" />
    <file name="tests/pools-default.phpt" role="test" />
    <file name="tests/pools.phpt" role="test" />
    <file name="tests/resource-keeping.phpt" role="test" />
