@@ -198,7 +198,7 @@ int pthreads_store_read(pthreads_store store, zend_string *key, zval *read) {
 
 		if (result == SUCCESS) {
 			if (Z_REFCOUNTED_P(read))
-				Z_SET_REFCOUNT_P(read, 0);
+				Z_SET_REFCOUNT_P(read, 1);
 		} else {
 			ZVAL_NULL(read);
 		}
