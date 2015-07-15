@@ -135,7 +135,7 @@ zend_bool pthreads_store_isset(pthreads_store store, zend_string *key, int has_s
 		    
 		    isset = (storage = zend_hash_find_ptr(&store->table, key)) != NULL;
 		    
-		    if (has_set_exists) {
+		    if (has_set_exists && storage) {
 			    switch (storage->type) {
 			        case IS_LONG:
 			        case IS_TRUE:
@@ -169,13 +169,13 @@ zend_bool pthreads_store_isset(pthreads_store store, zend_string *key, int has_s
 			            isset = 0;
 			        break;
 			    }
-	        } else if (isset) {
-		        switch (storage->type) {
-		            case IS_NULL:
-		                isset = 0;
-		            break;
-		        }
-            	}
+			} else if (isset) {
+				switch (storage->type) {
+				    case IS_NULL:
+				        isset = 0;
+				    break;
+				}
+		    	}
 		pthreads_lock_release(store->lock, locked);
 		}
 	}

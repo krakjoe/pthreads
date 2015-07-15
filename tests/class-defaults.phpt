@@ -20,6 +20,7 @@ class Test extends Thread {
 $test =new Test();
 $test->string = strrev($test->string);
 $test->start();
+$test->join();
 ?>
 --EXPECT--
 object(Test)#1 (4) {

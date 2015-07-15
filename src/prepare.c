@@ -266,10 +266,12 @@ while(0)
 		int i;
 		prepared->default_properties_table = emalloc(
 			sizeof(zval) * candidate->default_properties_count);
+
 		memcpy(
 			prepared->default_properties_table,
 			candidate->default_properties_table,
 			sizeof(zval) * candidate->default_properties_count);
+
 		for (i=0; i<candidate->default_properties_count; i++) {
 			if (Z_REFCOUNTED(prepared->default_properties_table[i])) {
 				/* we use real separation for a reason */
