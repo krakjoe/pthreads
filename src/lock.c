@@ -26,9 +26,9 @@
 #	include <src/thread.h>
 #endif
 
-/* {{{ proto pthreads_lock pthreads_lock_alloc(TSRMLS_D)
+/* {{{ proto pthreads_lock pthreads_lock_alloc()
 	shall allocate and initialize a pthreads lock */
-pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
+pthreads_lock pthreads_lock_alloc() {
 	pthreads_lock lock = calloc(1, sizeof(*lock));
 	if (lock) {	
 		pthread_mutexattr_t attr;
@@ -52,19 +52,19 @@ pthreads_lock pthreads_lock_alloc(TSRMLS_D) {
 	return NULL;
 } /* }}} */
 
-/* {{{ proto zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC)
+/* {{{ proto zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired)
 	shall attempt to acquire the referenced lock, setting acquired and returning true on success 
 	if the lock is already held by the caller, the lock count is increased, acquired is not set,
 	and true is still returned ( since the caller still owns the lock, and has the privilege to
 	carry out whatever action they were acqiuring the lock for ) */
-zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC) {
+zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired) {
 	zend_bool locked = 0;
 	if (lock) {
 		lock->locks++;
 		switch (pthread_mutex_lock(&lock->mutex)) {
 			case SUCCESS:
 				locked = (((*acquired)=1)==1);
-				lock->owner = TSRMLS_C;
+				lock->owner = TSRMLS_CACHE;
 			break;
 			
 			default: {
@@ -76,11 +76,11 @@ zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_D
 	return locked;
 } /* }}} */
 
-/* {{{ proto zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC)
+/* {{{ proto zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired)
 	acquired should have been set by the accompanying call to pthreads_lock_acquire
 	if acquired is set true then the lock shall be released, resetting the owner and decremeneting the count 
 	if acquired is set false then the counter shall be decremented without unlocking taking place */
-zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC) {
+zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired) {
 	zend_bool released = 1;
 	if (lock) {
 		switch (pthread_mutex_unlock(&lock->mutex)) {
@@ -98,9 +98,9 @@ zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC
 	return released;
 } /* }}} */
 
-/* {{{ proto void pthreads_lock_free(pthreads_lock lock TSRMLS_DC) 
+/* {{{ proto void pthreads_lock_free(pthreads_lock lock) 
 	shall deinitialize and free the memory associated with the referenced lock */
-void pthreads_lock_free(pthreads_lock lock TSRMLS_DC) {
+void pthreads_lock_free(pthreads_lock lock) {
 	if (lock) {
 		pthread_mutex_destroy(&lock->mutex);
 		

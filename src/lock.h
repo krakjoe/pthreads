@@ -36,14 +36,14 @@ typedef struct {
 } *pthreads_lock;
 
 /* {{{ allocate a lock */
-pthreads_lock pthreads_lock_alloc(TSRMLS_D); /* }}} */
+pthreads_lock pthreads_lock_alloc(); /* }}} */
 
 /* {{{ acquire a lock */
-zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired TSRMLS_DC); /* }}} */
+zend_bool pthreads_lock_acquire(pthreads_lock lock, zend_bool *acquired); /* }}} */
 
 /* {{{ release a lock */
-zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired TSRMLS_DC); /* }}} */
+zend_bool pthreads_lock_release(pthreads_lock lock, zend_bool acquired); /* }}} */
 
 /* {{{ free a lock */
-void pthreads_lock_free(pthreads_lock lock TSRMLS_DC); /* }}} */
+void pthreads_lock_free(pthreads_lock lock); /* }}} */
 #endif

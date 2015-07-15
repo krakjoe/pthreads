@@ -66,7 +66,7 @@ zend_function_entry pthreads_condition_methods[] = {
 PHP_METHOD(Cond, __construct) 
 {
 	zend_throw_exception_ex(
-		spl_ce_RuntimeException, 0 TSRMLS_CC, 
+		spl_ce_RuntimeException, 0, 
 		"pthreads has detected an attempt to incorrectly create a Condition, please refer to the PHP manual");
 } /* }}} */
 
@@ -85,27 +85,27 @@ PHP_METHOD(Cond, create)
 			
 			case EAGAIN:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EAGAIN TSRMLS_CC,
+					spl_ce_RuntimeException, EAGAIN,
 					"pthreads detected that the system lacks the necessary resources (other than memory) to initialise another condition");
 				free(condition);
 			break;
 			
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, ENOMEM TSRMLS_CC,
+					spl_ce_RuntimeException, ENOMEM,
 					"pthreads detected that the system lacks the necessary memory to initialise another condition");
 				free(condition);
 			break;
 			
 			default:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC,
+					spl_ce_RuntimeException, rc,
 					"pthreads detected an internal error while initializing new condition"); 
 				free(condition);
 		}
 	} else {
 		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0 TSRMLS_CC,
+			spl_ce_RuntimeException, 0,
 			"pthreads failed to allocate memory for new condition"); 
 	}
 	RETURN_FALSE;
@@ -118,19 +118,19 @@ PHP_METHOD(Cond, signal)
 	pthread_cond_t *condition;
 	int rc = SUCCESS;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition) == SUCCESS && condition) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &condition) == SUCCESS && condition) {
 		switch ((rc = pthread_cond_signal(condition))) {
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EINVAL:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EINVAL TSRMLS_CC,
+					spl_ce_RuntimeException, EINVAL,
 					"pthreads has detected the condition referenced does not refer to a valid condition"); 
 			break;
 			
 			default:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC,
+					spl_ce_RuntimeException, rc,
 					"pthreads detected an internal error while signaling condition");
 		}
 	}
@@ -143,19 +143,19 @@ PHP_METHOD(Cond, broadcast)
 	pthread_cond_t *condition;
 	int rc = SUCCESS;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &condition)==SUCCESS && condition) {
 		switch ((rc = pthread_cond_broadcast(condition))) {
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EINVAL:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EINVAL TSRMLS_CC,
+					spl_ce_RuntimeException, EINVAL,
 					"pthreads has detected the condition referenced does not refer to a valid condition");
 			break;
 			
 			default:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC,
+					spl_ce_RuntimeException, rc,
 					"pthreads detected an internal error while broadcasting condition");
 		}
 	}
@@ -171,7 +171,7 @@ PHP_METHOD(Cond, wait)
 	long timeout = 0L;
 	int rc = SUCCESS;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll|l", &condition, &mutex, &timeout)==SUCCESS && condition && mutex) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll|l", &condition, &mutex, &timeout)==SUCCESS && condition && mutex) {
 		if (timeout > 0L) {
 			struct timeval time;				
 			struct timespec spec;
@@ -192,19 +192,19 @@ PHP_METHOD(Cond, wait)
 				case SUCCESS: RETURN_TRUE; break;
 				case EINVAL: 
 					zend_throw_exception_ex(
-						spl_ce_RuntimeException, EINVAL TSRMLS_CC,
+						spl_ce_RuntimeException, EINVAL,
 						"pthreads has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
 				break;
 				
 				case ETIMEDOUT: 
 					zend_throw_exception_ex(
-						spl_ce_RuntimeException, ETIMEDOUT TSRMLS_CC,
+						spl_ce_RuntimeException, ETIMEDOUT,
 						"pthreads detected a timeout while waiting for condition");
 				break;
 				
 				default:
 					zend_throw_exception_ex(
-						spl_ce_RuntimeException, rc TSRMLS_CC,
+						spl_ce_RuntimeException, rc,
 						"pthreads detected an internal error while waiting for condition");
 			}
 		} else {
@@ -213,13 +213,13 @@ PHP_METHOD(Cond, wait)
 				
 				case EINVAL: 
 					zend_throw_exception_ex(
-						spl_ce_RuntimeException, EINVAL TSRMLS_CC,
+						spl_ce_RuntimeException, EINVAL,
 						"pthreads has detected that the condition you are attempting to wait on does not refer to a valid condition variable");
 				break;
 				
 				default:
 					zend_throw_exception_ex(
-						spl_ce_RuntimeException, rc TSRMLS_CC,
+						spl_ce_RuntimeException, rc,
 						"pthreads detected an internal error while waiting for condition");
 			}
 		}
@@ -233,7 +233,7 @@ PHP_METHOD(Cond, destroy)
 	pthread_cond_t *condition;
 	int rc = SUCCESS;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &condition)==SUCCESS && condition) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &condition)==SUCCESS && condition) {
 		switch ((rc = pthread_cond_destroy(condition))) {
 			case SUCCESS: 
 				free(condition);
@@ -242,19 +242,19 @@ PHP_METHOD(Cond, destroy)
 			
 			case EINVAL: 
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EINVAL TSRMLS_CC,
+					spl_ce_RuntimeException, EINVAL,
 					"pthreads has detected the condition referenced does not refer to a valid condition variable");
 			break;
 			
 			case EBUSY:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EBUSY TSRMLS_CC,
+					spl_ce_RuntimeException, EBUSY,
 					"pthreads has detected an attempt to destroy the object referenced by condition while it is referenced by another thread");
 			break;
 			
 			default:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC,
+					spl_ce_RuntimeException, rc,
 					"pthreads detected an internal error while destroying condition");
 		}
 	}

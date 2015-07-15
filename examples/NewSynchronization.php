@@ -18,17 +18,12 @@ class Test extends Thread {
 	public $done = false;
 	
 	public function run(){
-		/* some code here */
-
-		/* in 5.4, referencing $this is possible */
-		/* in 5.3, you cannot "use" $this */
-		/* making the following the most compatible synchronized block */
-		$this->synchronized(function($self){
-			printf("%s(%lu) going to wait ...\n", __CLASS__, $self->getThreadId());
-			$self->wait();
-			printf("%s(%lu) woken\n", __CLASS__, $self->getThreadId());
-			$self->done = true;
-		}, $this);
+		$this->synchronized(function(){
+			printf("%s(%lu) going to wait ...\n", __CLASS__, $this->getThreadId());
+			$this->wait();
+			printf("%s(%lu) woken\n", __CLASS__, $this->getThreadId());
+			$this->done = true;
+		});
 
 		/* some more here */
 	}

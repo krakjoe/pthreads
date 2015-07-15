@@ -27,9 +27,14 @@ $t->join();
 var_dump($t->o);
 ?>
 --EXPECTF--
-Fatal error: Uncaught exception 'RuntimeException' with message 'pthreads detected an attempt to connect to a O which has already been destroyed' in %s:%d
+Fatal error: Uncaught %s: pthreads detected an attempt to connect to a %s which has already been destroyed in %s:14
 Stack trace:
-#0 %s(%d): unknown()
+#0 [internal function]: T->run()
 #1 {main}
-  thrown in %s on line %d
+  thrown in %s on line 14
+
+Fatal error: Uncaught %s: pthreads detected an attempt to connect to a %s which has already been destroyed in %s:22
+Stack trace:
+#0 {main}
+  thrown in %s on line 22
 

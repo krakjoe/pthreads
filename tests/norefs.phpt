@@ -19,12 +19,10 @@ class T extends Thread {
 var_dump(new T());
 ?>
 --EXPECTF--
-object(T)#1 (1) {
-  ["t"]=>
-  NULL
+object(T)#1 (0) {
 }
 
-Fatal error: Uncaught exception 'RuntimeException' with message 'pthreads detected an attempt to connect to a O which has already been destroyed' in %s:%d
+Fatal error: Uncaught %s: pthreads detected an attempt to connect to a %s which has already been destroyed in %s:%d
 Stack trace:
 #0 %s(%d): var_dump(Object(T))
 #1 {main}

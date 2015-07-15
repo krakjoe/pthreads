@@ -31,11 +31,11 @@
 #endif
 
 /* {{{ statics */
-static void pthreads_modifiers_modifiers_dtor(void **element);
-static void pthreads_modifiers_protection_dtor(void **element); /* }}} */
+static void pthreads_modifiers_modifiers_dtor(zval *element);
+static void pthreads_modifiers_protection_dtor(zval *element); /* }}} */
 
 /* {{{ allocate modifiers */
-pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D) {
+pthreads_modifiers pthreads_modifiers_alloc() {
 	pthreads_modifiers modifiers = calloc(1, sizeof(*modifiers));
 	
 	if (modifiers) {
@@ -50,89 +50,77 @@ pthreads_modifiers pthreads_modifiers_alloc(TSRMLS_D) {
 } /* }}} */
 
 /* {{{ initialize pthreads modifiers using the referenced class entry */
-void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *entry TSRMLS_DC) {
+void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *entry) {
 	HashPosition position;
 	zend_function *method;
+	zend_string   *name;
 
-	for (zend_hash_internal_pointer_reset_ex(&entry->function_table, &position);
-		 zend_hash_get_current_data_ex(&entry->function_table, (void**)&method, &position) == SUCCESS;
-		 zend_hash_move_forward_ex(&entry->function_table, &position)) {
-		if (method && (method->type != ZEND_INTERNAL_FUNCTION)) {
-			if (method->common.fn_flags & ZEND_ACC_PRIVATE){
-				pthreads_modifiers_set(
-					modifiers,
-					method->common.function_name,
-					ZEND_ACC_PRIVATE TSRMLS_CC
-				);
-			}
-			
-			if (method->common.fn_flags & ZEND_ACC_PROTECTED) {
-				pthreads_modifiers_set(
-					modifiers,
-					method->common.function_name,
-					ZEND_ACC_PROTECTED TSRMLS_CC
-				);
-			}
+#define SET(m) 	pthreads_modifiers_set(modifiers, name, m) 
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&entry->function_table, name, method) {
+		if (method->type != ZEND_USER_FUNCTION)
+			continue;
+
+		switch (method->common.fn_flags & ZEND_ACC_PPP_MASK) {
+			case ZEND_ACC_PRIVATE: SET(ZEND_ACC_PRIVATE); break;
+			case ZEND_ACC_PROTECTED: SET(ZEND_ACC_PROTECTED); break;
 		}
-	}
+		
+	} ZEND_HASH_FOREACH_END();
+#undef SET
 } /* }}} */
 
 /* {{{ set access modifier for method */
-int pthreads_modifiers_set(pthreads_modifiers modifiers, const char *method, zend_uint modify TSRMLS_DC) {
-	size_t mlength = strlen(method);
-	if (zend_hash_add(
-		&modifiers->modified, 
-		method, mlength, 
-		(void**) &modify, sizeof(zend_uint), 
-		NULL
-	)==SUCCESS) {
-		pthreads_lock lock = pthreads_lock_alloc(TSRMLS_C);
+int pthreads_modifiers_set(pthreads_modifiers modifiers, zend_string *method, int32_t modify) {
+	int32_t *modified = 
+		(int32_t*) malloc(sizeof(int32_t));
+	
+	memcpy(modified, &modify, sizeof(int32_t));
+
+	if (zend_hash_add_ptr(
+		&modifiers->modified, method, modified)) {
+		pthreads_lock lock = pthreads_lock_alloc();
 		if (lock) {
-			return zend_hash_add(
-				&modifiers->protection, 
-				method, mlength, 
-				(void**) &lock, sizeof(*lock), 
-				NULL
-			);
+			if (zend_hash_add_ptr(
+				&modifiers->protection, method, lock)) {
+				return SUCCESS;
+			}
 		}
+
+		zend_hash_del(&modifiers->modified, method);
 	}
+
+	free(modified);
+	
 	return FAILURE;
 } /* }}} */
 
 /* {{{ get access modifier for method */
-zend_uint pthreads_modifiers_get(pthreads_modifiers modifiers, const char *method TSRMLS_DC) {
-	zend_uint *modified;
-	size_t mlength = strlen(method);
-	if (zend_hash_find(
-			&modifiers->modified,
-			method, mlength, 
-			(void*) &modified
-		)==SUCCESS) {
+int32_t pthreads_modifiers_get(pthreads_modifiers modifiers, zend_string *method) {
+	int32_t *modified;
+	if ((modified = zend_hash_find_ptr(&modifiers->modified, method))) {
 		return *modified;
 	}
 	return 0;
 } /* }}} */
 
 /* {{{ protect a method call */
-zend_bool pthreads_modifiers_protect(pthreads_modifiers modifiers, const char *method, zend_bool *unprotect TSRMLS_DC) {
+zend_bool pthreads_modifiers_protect(pthreads_modifiers modifiers, zend_string *method, zend_bool *unprotect) {
 	pthreads_lock *protection;
-	size_t mlength = strlen(method);
-	if (zend_hash_find(&modifiers->protection, method, mlength, (void**)&protection)==SUCCESS) {
-		return pthreads_lock_acquire(*protection, unprotect TSRMLS_CC);
+	if ((protection = zend_hash_find_ptr(&modifiers->protection, method))) {
+		return pthreads_lock_acquire(*protection, unprotect);
 	} else return 0;
 } /* }}} */
 
 /* {{{ unprotect a method call */
-zend_bool pthreads_modifiers_unprotect(pthreads_modifiers modifiers, const char *method, zend_bool unprotect TSRMLS_DC) {
+zend_bool pthreads_modifiers_unprotect(pthreads_modifiers modifiers, zend_string *method, zend_bool unprotect) {
 	pthreads_lock *protection;
-	size_t mlength = strlen(method);
-	if (zend_hash_find(&modifiers->protection, method, mlength, (void**)&protection)==SUCCESS) {
-		return pthreads_lock_release(*protection, unprotect TSRMLS_CC);
+	if ((protection = zend_hash_find_ptr(&modifiers->protection, method))) {
+		return pthreads_lock_release(*protection, unprotect);
 	} else return 0;
 } /* }}} */
 
 /* {{{ free modifiers */
-void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC) {
+void pthreads_modifiers_free(pthreads_modifiers modifiers) {
 	if (modifiers) {
 	    zend_hash_destroy(&modifiers->modified);
 	    zend_hash_destroy(&modifiers->protection);
@@ -141,15 +129,13 @@ void pthreads_modifiers_free(pthreads_modifiers modifiers TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ destructor callback for modifiers (definition) hash table */
-static void pthreads_modifiers_modifiers_dtor(void **element) {
-	
+static void pthreads_modifiers_modifiers_dtor(zval *zv) {
+	free(Z_PTR_P(zv));	
 } /* }}} */
 
 /* {{{ destructor callback for modifiers (protection) hash table */
-static void pthreads_modifiers_protection_dtor(void **element) {
-	TSRMLS_FETCH();
-	
-	pthreads_lock_free((pthreads_lock) (*element) TSRMLS_CC);
+static void pthreads_modifiers_protection_dtor(zval *zv) {
+	pthreads_lock_free((pthreads_lock) Z_PTR_P(zv));
 } /* }}} */
 
 #endif

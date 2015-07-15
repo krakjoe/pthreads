@@ -31,14 +31,8 @@ class WebWork extends Threaded {
 }
 
 class SafeLog extends Threaded {
-	
-	protected function log($message, $args = array()) {
-		$args = func_get_args();	
-		
-		if (($message = array_shift($args))) {
-			echo vsprintf(
-				"{$message}\n", $args);
-		}
+	protected function log($message, ... $args) {
+		echo vsprintf("{$message}\n", $args);
 	}
 }
 

@@ -43,7 +43,6 @@ class Routine extends Threaded {
 }
 
 $channel = new Channel();
-
 $pool = new Pool(4);
 
 $pool->submit(
@@ -55,4 +54,6 @@ printf("Message: %s, Gold: %.3f\n",
     $channel["gold"]);
 
 $pool->shutdown();
+
+
 ?>

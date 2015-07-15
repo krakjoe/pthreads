@@ -30,73 +30,43 @@
 #	include <src/store.h>
 #endif
 
-#define PTHREADS_CAST_PASSTHRU_D zval *from, zval *to, int type TSRMLS_DC
-#define PTHREADS_CAST_PASSTHRU_C from, to, type TSRMLS_CC
-#define PTHREADS_COUNT_PASSTHRU_D zval *object, long *count TSRMLS_DC
-#define PTHREADS_COUNT_PASSTHRU_C object, count TSRMLS_CC
-#define PTHREADS_CLONE_PASSTHRU_D zval *object TSRMLS_DC
-#define PTHREADS_CLONE_PASSTHRU_C object TSRMLS_CC
+#define PTHREADS_CAST_PASSTHRU_D zval *from, zval *to, int type
+#define PTHREADS_CAST_PASSTHRU_C from, to, type
+#define PTHREADS_COUNT_PASSTHRU_D zval *object, long *count
+#define PTHREADS_COUNT_PASSTHRU_C object, count
+#define PTHREADS_CLONE_PASSTHRU_D zval *object
+#define PTHREADS_CLONE_PASSTHRU_C object
 
-/* {{{ these resolve differences in 5.3 and 5.4 object handling API */
-#if PHP_VERSION_ID > 50399
-#	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
-#	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
-#	define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object TSRMLS_DC
-#	define PTHREADS_READ_PROPERTIES_PASSTHRU_C object TSRMLS_CC
-#	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type, const struct _zend_literal *key TSRMLS_DC
-#	define PTHREADS_READ_DIMENSION_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
-#	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type, key TSRMLS_CC
-#	define PTHREADS_READ_DIMENSION_PASSTHRU_C object, member, type, NULL TSRMLS_CC
+/* {{{  */
+#define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp
+#define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp
+#define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object
+#define PTHREADS_READ_PROPERTIES_PASSTHRU_C object
+#define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type, void **cache, zval *rv
+#define PTHREADS_READ_DIMENSION_PASSTHRU_D zval *object, zval *member, int type, zval *rv
+#define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type, cache, rv
+#define PTHREADS_READ_DIMENSION_PASSTHRU_C object, member, type, NULL, rv
 
-#	define PTHREADS_WRITE_PROPERTY_PASSTHRU_D zval *object, zval *member, zval *value, const struct _zend_literal *key TSRMLS_DC
-#	define PTHREADS_WRITE_DIMENSION_PASSTHRU_D zval *object, zval *member, zval *value TSRMLS_DC
-#	define PTHREADS_WRITE_PROPERTY_PASSTHRU_C object, member, value, key TSRMLS_CC
-#	define PTHREADS_WRITE_DIMENSION_PASSTHRU_C object, member, value, NULL TSRMLS_CC
+#define PTHREADS_WRITE_PROPERTY_PASSTHRU_D zval *object, zval *member, zval *value, void **cache
+#define PTHREADS_WRITE_DIMENSION_PASSTHRU_D zval *object, zval *member, zval *value
+#define PTHREADS_WRITE_PROPERTY_PASSTHRU_C object, member, value, cache
+#define PTHREADS_WRITE_DIMENSION_PASSTHRU_C object, member, value, NULL
 
-#	define PTHREADS_HAS_PROPERTY_PASSTHRU_D zval *object, zval *member, int has_set_exists, const struct _zend_literal *key TSRMLS_DC
-#	define PTHREADS_HAS_DIMENSION_PASSTHRU_D zval *object, zval *member, int has_set_exists TSRMLS_DC
-#	define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists, key TSRMLS_CC
-#	define PTHREADS_HAS_DIMENSION_PASSTHRU_C object, member, has_set_exists, NULL TSRMLS_CC
+#define PTHREADS_HAS_PROPERTY_PASSTHRU_D zval *object, zval *member, int has_set_exists, void **cache
+#define PTHREADS_HAS_DIMENSION_PASSTHRU_D zval *object, zval *member, int has_set_exists
+#define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists, cache
+#define PTHREADS_HAS_DIMENSION_PASSTHRU_C object, member, has_set_exists, NULL
 
-#	define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member, const struct _zend_literal *key TSRMLS_DC
-#	define PTHREADS_UNSET_DIMENSION_PASSTHRU_D zval *object, zval *member TSRMLS_DC
-#	define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member, key TSRMLS_CC
-#	define PTHREADS_UNSET_DIMENSION_PASSTHRU_C object, member, NULL TSRMLS_CC
+#define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member, void **cache
+#define PTHREADS_UNSET_DIMENSION_PASSTHRU_D zval *object, zval *member
+#define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member, cache
+#define PTHREADS_UNSET_DIMENSION_PASSTHRU_C object, member, NULL
 
-#	define PTHREADS_GET_METHOD_PASSTHRU_D zval **pobject, char *method, int methodl, const struct _zend_literal *key TSRMLS_DC
-#	define PTHREADS_GET_METHOD_PASSTHRU_C pobject, method, methodl, key TSRMLS_CC
-#	define PTHREADS_CALL_METHOD_PASSTHRU_D const char *method, INTERNAL_FUNCTION_PARAMETERS
-#	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
-#else
-#	define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp TSRMLS_DC
-#	define PTHREADS_READ_DEBUG_PASSTHRU_C object, is_temp TSRMLS_CC
-#	define PTHREADS_READ_PROPERTIES_PASSTHRU_D zval *object TSRMLS_DC
-#	define PTHREADS_READ_PROPERTIES_PASSTHRU_C object TSRMLS_CC
-#	define PTHREADS_READ_PROPERTY_PASSTHRU_D zval *object, zval *member, int type TSRMLS_DC
-#	define PTHREADS_READ_DIMENSION_PASSTHRU_D PTHREADS_READ_PROPERTY_PASSTHRU_D
-#	define PTHREADS_READ_PROPERTY_PASSTHRU_C object, member, type TSRMLS_CC
-#	define PTHREADS_READ_DIMENSION_PASSTHRU_C PTHREADS_READ_PROPERTY_PASSTHRU_C
-
-#	define PTHREADS_WRITE_PROPERTY_PASSTHRU_D zval *object, zval *member, zval *value TSRMLS_DC
-#	define PTHREADS_WRITE_DIMENSION_PASSTHRU_D PTHREADS_WRITE_PROPERTY_PASSTHRU_D
-#	define PTHREADS_WRITE_PROPERTY_PASSTHRU_C object, member, value TSRMLS_CC
-#	define PTHREADS_WRITE_DIMENSION_PASSTHRU_C PTHREADS_WRITE_PROPERTY_PASSTHRU_C
-
-#	define PTHREADS_HAS_PROPERTY_PASSTHRU_D zval *object, zval *member, int has_set_exists TSRMLS_DC
-#	define PTHREADS_HAS_DIMENSION_PASSTHRU_D PTHREADS_HAS_PROPERTY_PASSTHRU_D
-#	define PTHREADS_HAS_PROPERTY_PASSTHRU_C object, member, has_set_exists TSRMLS_CC
-#	define PTHREADS_HAS_DIMENSION_PASSTHRU_C PTHREADS_HAS_PROPERTY_PASSTHRU_C
-
-#	define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member TSRMLS_DC
-#	define PTHREADS_UNSET_DIMENSION_PASSTHRU_D PTHREADS_UNSET_PROPERTY_PASSTHRU_D
-#	define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member TSRMLS_CC
-#	define PTHREADS_UNSET_DIMENSION_PASSTHRU_C PTHREADS_UNSET_PROPERTY_PASSTHRU_C
-
-#	define PTHREADS_GET_METHOD_PASSTHRU_D zval **pobject, char *method, int methodl TSRMLS_DC
-#	define PTHREADS_GET_METHOD_PASSTHRU_C pobject, method, methodl TSRMLS_CC
-#	define PTHREADS_CALL_METHOD_PASSTHRU_D char *method, INTERNAL_FUNCTION_PARAMETERS
-#	define PTHREADS_CALL_METHOD_PASSTHRU_C method, INTERNAL_FUNCTION_PARAM_PASSTHRU
-#endif /* }}} */
+#define PTHREADS_GET_METHOD_PASSTHRU_D zend_object **object, zend_string *method, const zval *key
+#define PTHREADS_GET_METHOD_PASSTHRU_C object, method, key
+#define PTHREADS_CALL_METHOD_PASSTHRU_D zend_string *method, zend_object *object, INTERNAL_FUNCTION_PARAMETERS
+#define PTHREADS_CALL_METHOD_PASSTHRU_C method, object, INTERNAL_FUNCTION_PARAM_PASSTHRU
+/* }}} */
 
 /* {{{ read proeprties from storage */
 HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D); /* }}} */
@@ -133,5 +103,5 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D); /* }}} */
 int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D); /* }}} */
 
 /* {{{ clone object handler */
-zend_object_value pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D); /* }}} */
+zend_object* pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D); /* }}} */
 #endif

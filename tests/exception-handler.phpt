@@ -19,19 +19,19 @@ class ExceptionThread extends Thread
 	}
     public function run()
     {
-        set_exception_handler(
-        	array("ExceptionHandler", "handle"));
-
         $this->traceable();
     }
 }
+
+/* this is now copied from parent, as you would expect it to be */
+set_exception_handler(array("ExceptionHandler", "handle"));
 
 $t = new ExceptionThread();
 $t->start();
 $t->join();
 ?>
 --EXPECTF--
-object(Exception)#2 (7) {
+object(Exception)#2 (%d) {
   ["message":protected]=>
   string(0) ""
   ["string":"Exception":private]=>
@@ -41,17 +41,29 @@ object(Exception)#2 (7) {
   ["file":protected]=>
   string(%d) "%s"
   ["line":protected]=>
-  int(%d)
+  int(13)
   ["trace":"Exception":private]=>
-  array(1) {
+  array(2) {
     [0]=>
     array(6) {
       ["file"]=>
-      string(%s) "%s"
+      string(%d) "%s"
       ["line"]=>
-      int(%d)
+      int(17)
       ["function"]=>
       string(9) "traceable"
+      ["class"]=>
+      string(15) "ExceptionThread"
+      ["type"]=>
+      string(2) "->"
+      ["args"]=>
+      array(0) {
+      }
+    }
+    [1]=>
+    array(4) {
+      ["function"]=>
+      string(3) "run"
       ["class"]=>
       string(15) "ExceptionThread"
       ["type"]=>

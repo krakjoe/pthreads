@@ -10,7 +10,7 @@
 	
 	I don't have words to explain it, read on ...
 */
-class GlobalStorage extends Stackable {
+class GlobalStorage extends Threaded {
 	public $id;
 	
 	public function __construct(){
@@ -103,7 +103,7 @@ class GlobalWorker extends Worker {
 	/* some useful methods for stackables to fetch connections and whatever here */
 }
 
-class MyWork extends Stackable {
+class MyWork extends Threaded {
 	public $stored;
 	public $thread;
 	public $storage;
@@ -116,6 +116,7 @@ class MyWork extends Stackable {
 	
 	public function run(){
 		/* read once, see above ... */
+		var_dump($this);
 		if (($storage = $this->storage)) {
 			$this->stored = $storage->getUniqueId();
 			$storage->addToObject(

@@ -11,29 +11,25 @@ class WebWorker extends Worker {
 /* the collectable class implements machinery for Pool::collect */
 class WebWork extends Collectable {
 	public function run() {
-		$this->worker
+		try {
+			$this->worker
 			->logger
 			->log("%s executing in Thread #%lu",
 				  __CLASS__, $this->worker->getThreadId());
+		} catch(Throwable $thrown) { var_dump($thrown); }
 		$this->setGarbage();
 	}
 }
 
-class SafeLog extends Stackable {
-	
-	protected function log($message, $args = []) {
-		$args = func_get_args();	
-		
-		if (($message = array_shift($args))) {
-			echo vsprintf(
-				"{$message}\n", $args);
-		}
+class SafeLog extends Threaded {
+	protected function log($message, ... $args) {
+		echo vsprintf("{$message}\n", $args);
 	}
 }
 
 $pool = new Pool(8, 'WebWorker', [new SafeLog()]);
 
-$pool->submit($w=new WebWork());
+$pool->submit(new WebWork());
 $pool->submit(new WebWork());
 $pool->submit(new WebWork());
 $pool->submit(new WebWork());

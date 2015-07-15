@@ -12,8 +12,13 @@ class TestThread extends Thread {
 }
 $test = new TestThread();
 $test->start();
-usleep(100000);
-var_dump($test->isRunning());
+$test->join();
+var_dump($test->isTerminated());
 ?>
 --EXPECTF--
-bool(false)
+Fatal error: Uncaught Error: Class 'MY' not found in %s:5
+Stack trace:
+#0 [internal function]: TestThread->run()
+#1 {main}
+  thrown in %s on line 5
+bool(true)

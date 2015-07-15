@@ -33,10 +33,10 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_isWorking, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_stack, 0, 0, 1)
-	ZEND_ARG_INFO(1, work)
+	ZEND_ARG_INFO(0, work)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_unstack, 0, 0, 0)
-	ZEND_ARG_INFO(1, work)
+	ZEND_ARG_INFO(0, work)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -63,24 +63,20 @@ PHP_METHOD(Worker, stack)
 	zval 	*work;
 	
 	if (thread) {
-		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC)) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_threaded_entry)==SUCCESS) {
-				if (Z_REFCOUNT_P(work) < 2) {
-					zend_throw_exception(
-						spl_ce_InvalidArgumentException, "Worker::stack expects $work to be a reference", 0 TSRMLS_CC);
-					return;
-				}
+		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_threaded_entry)==SUCCESS) {
 				
-				RETURN_LONG(pthreads_stack_push(thread, work TSRMLS_CC));
+				
+				RETURN_LONG(pthreads_stack_push(thread, work));
 			}
 		} else {
 			zend_throw_exception_ex(
-				spl_ce_RuntimeException, 0 TSRMLS_CC, 
+				spl_ce_RuntimeException, 0, 
 				"pthreads has detected an attempt to stack onto %s (%lu) which has already been shutdown", PTHREADS_FRIENDLY_NAME);
 		}
 	} else {
 		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			spl_ce_RuntimeException, 0, 
 			"pthreads has experienced an internal error while stacking onto %s (%lu)", PTHREADS_FRIENDLY_NAME);
 	}
 	RETURN_FALSE;
@@ -95,19 +91,19 @@ PHP_METHOD(Worker, unstack)
 	
 	if (thread) {
 		if (ZEND_NUM_ARGS() > 0) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O", &work, pthreads_threaded_entry)==SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_threaded_entry)==SUCCESS) {
 				if (Z_REFCOUNT_P(work) < 2) {
 					zend_throw_exception(
-						spl_ce_InvalidArgumentException, "Worker::unstack expects $work to be a reference", 0 TSRMLS_CC);
+						spl_ce_InvalidArgumentException, "Worker::unstack expects $work to be a reference", 0);
 					return;
 				}
 				
-				RETURN_LONG(pthreads_stack_pop(thread, PTHREADS_FETCH_FROM(work) TSRMLS_CC));
+				RETURN_LONG(pthreads_stack_pop(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(work))));
 			}
-		} else RETURN_LONG(pthreads_stack_pop(thread, NULL TSRMLS_CC));
+		} else RETURN_LONG(pthreads_stack_pop(thread, NULL));
 	} else {
 		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			spl_ce_RuntimeException, 0, 
 			"pthreads has experienced an internal error while unstacking from %s (%lu)", PTHREADS_FRIENDLY_NAME);	
 	}
 	RETURN_FALSE;
@@ -120,10 +116,10 @@ PHP_METHOD(Worker, getStacked)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		RETURN_LONG(pthreads_stack_length(thread TSRMLS_CC));
+		RETURN_LONG(pthreads_stack_length(thread));
 	} else {
 		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			spl_ce_RuntimeException, 0, 
 			"pthreads has experienced an internal error while getting the stack length of %s (%lu)", PTHREADS_FRIENDLY_NAME);
 	}
 	RETURN_FALSE;
@@ -136,10 +132,10 @@ PHP_METHOD(Worker, isShutdown)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED TSRMLS_CC));
+		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED));
 	} else {
 		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			spl_ce_RuntimeException, 0, 
 			"pthreads has experienced an internal error while determining the state of %s (%lu)", PTHREADS_FRIENDLY_NAME);
 	}
 } /* }}} */
@@ -151,10 +147,10 @@ PHP_METHOD(Worker, isWorking)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING TSRMLS_CC));
+		RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
 	} else {
 		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			spl_ce_RuntimeException, 0, 
 			"pthreads has experienced an internal error while determining the state of %s (%lu)", PTHREADS_FRIENDLY_NAME);
 	}
 } /* }}} */
@@ -169,10 +165,10 @@ PHP_METHOD(Worker, shutdown)
 	* Check that we are in the correct context
 	*/
 	if (PTHREADS_IN_CREATOR(thread)) {
-		RETURN_BOOL((pthreads_join(thread TSRMLS_CC)==SUCCESS));
+		RETURN_BOOL((pthreads_join(thread)==SUCCESS));
 	} else {	
 		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0 TSRMLS_CC, 
+			spl_ce_RuntimeException, 0, 
 			"pthreads has detected an attempt to shutdown %s (%lu) from an incorrect context", PTHREADS_FRIENDLY_NAME);
 	}
 } /* }}} */
@@ -181,14 +177,14 @@ PHP_METHOD(Worker, shutdown)
 	Will return the identifier of the referenced Worker */
 PHP_METHOD(Worker, getThreadId)
 {
-	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->tid);
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->tid);
 } /* }}} */
 
 /* {{{ proto long Worker::getCreatorId() 
 	Will return the identifier of the thread ( or process ) that created the referenced Worker */
 PHP_METHOD(Worker, getCreatorId)
 {
-	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(getThis()))->cid);
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->cid);
 } /* }}} */
 #	endif
 #endif

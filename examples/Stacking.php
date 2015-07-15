@@ -1,11 +1,10 @@
 <?php
 /*
 * Advancements in worker threads and stacking ...
-* You can now stack anything that extends stackable ... so your tasks can be completely different
-* You can synchronize with individual stackables being executed in a worker ...
-* Worker has a specific definition rather than being built into every Thread as earlier versions were ...
+* You can stack anything that extends threaded ... so your tasks can be completely different
+* You can synchronize with individual objects being executed in a worker ...
 */
-class Work extends Stackable {
+class Work extends Threaded {
 	
 	public function __construct($data) {
 		$this->local = $data;

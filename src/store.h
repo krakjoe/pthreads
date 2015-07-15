@@ -44,50 +44,47 @@ typedef struct _pthreads_store {
 } *pthreads_store; /* }}} */
 
 /* {{{ allocate and initialize buffers */
-pthreads_store pthreads_store_alloc(TSRMLS_D); /* }}} */
+pthreads_store pthreads_store_alloc(); /* }}} */
 
 /* {{{ lock storage, userland only */
-zend_bool pthreads_store_lock(zval *this_ptr TSRMLS_DC); /* }}} */
+zend_bool pthreads_store_lock(zval *this_ptr); /* }}} */
 
 /* {{{ unlock storage, userland only */
-zend_bool pthreads_store_unlock(zval *this_ptr TSRMLS_DC); /* }}} */
+zend_bool pthreads_store_unlock(zval *this_ptr); /* }}} */
 
 /* {{{ merges the properties/elements of from into destination */
-int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRMLS_DC); /* }}} */
+int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite); /* }}} */
 
 /* {{{ delete a value from the buffer */
-int pthreads_store_delete(pthreads_store store, char *key, int keyl TSRMLS_DC); /* }}} */
+int pthreads_store_delete(pthreads_store store, zend_string *key); /* }}} */
 
 /* {{{ read value from buffer */
-int pthreads_store_read(pthreads_store store, char *key, int keyl, zval **read TSRMLS_DC); /* }}} */
+int pthreads_store_read(pthreads_store store, zend_string *key, zval *read); /* }}} */
 
 /* {{{ see if a value isset in buffer */
-zend_bool pthreads_store_isset(pthreads_store store, char *key, int keyl, int has_set_exists TSRMLS_DC); /* }}} */
+zend_bool pthreads_store_isset(pthreads_store store, zend_string *key, int has_set_exists); /* }}} */
 
 /* {{{ write value to buffer */
-int pthreads_store_write(pthreads_store store, char *key, int keyl, zval **write TSRMLS_DC); /* }}} */
+int pthreads_store_write(pthreads_store store, zend_string *key, zval *write); /* }}} */
 
 /* {{{ separate a zval using internals */
-int pthreads_store_separate(zval * pzval, zval **seperated, zend_bool allocate, zend_bool complex TSRMLS_DC); /* }}} */
-
-/* {{{ separate a zval using internals */
-int pthreads_store_separate_from(zval * pzval, zval **separated, zend_bool allocate, zend_bool complex, void ***parent TSRMLS_DC); /* }}} */
+int pthreads_store_separate(zval *pzval, zval *seperated, zend_bool complex); /* }}} */
 
 /* {{{ copy store to hashtable */
-void pthreads_store_tohash(pthreads_store store, HashTable *hash TSRMLS_DC); /* }}} */
+void pthreads_store_tohash(pthreads_store store, HashTable *hash); /* }}} */
 
 /* {{{ store shift */
-int pthreads_store_shift(zval *object, zval **member TSRMLS_DC); /* }}} */
+int pthreads_store_shift(zval *object, zval *member); /* }}} */
 
 /* {{{ store chunk */
-int pthreads_store_chunk(zval *object, long size, zend_bool preserve, zval **chunk TSRMLS_DC); /* }}} */
+int pthreads_store_chunk(zval *object, long size, zend_bool preserve, zval *chunk); /* }}} */
 
 /* {{{ store pop */
-int pthreads_store_pop(zval *object, zval **member TSRMLS_DC); /* }}} */
+int pthreads_store_pop(zval *object, zval *member); /* }}} */
 
 /* {{{ count properties */
-int pthreads_store_count(zval *object, long *count TSRMLS_DC); /* }}} */
+int pthreads_store_count(zval *object, long *count); /* }}} */
 
 /* {{{ free buffers */
-void pthreads_store_free(pthreads_store store TSRMLS_DC); /* }}} */
+void pthreads_store_free(pthreads_store store); /* }}} */
 #endif

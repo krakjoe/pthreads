@@ -33,27 +33,27 @@ typedef struct _pthreads_synchro {
 } *pthreads_synchro;
 
 /* {{{ allocate synchronization object */
-pthreads_synchro pthreads_synchro_alloc(TSRMLS_D); /* }}} */
+pthreads_synchro pthreads_synchro_alloc(); /* }}} */
 
 /* {{{ lock synchronzation object */ 
-int pthreads_synchro_lock(pthreads_synchro sync TSRMLS_DC); /* }}} */
+int pthreads_synchro_lock(pthreads_synchro sync); /* }}} */
 
 /* {{{ unlock synchronization object */
-int pthreads_synchro_unlock(pthreads_synchro sync TSRMLS_DC); /* }}} */
+int pthreads_synchro_unlock(pthreads_synchro sync); /* }}} */
 
 /* {{{ wait for notification */
-int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC); /* }}} */
+int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout); /* }}} */
 
 /* {{{ wait for notification */
-int pthreads_synchro_wait(pthreads_synchro sync TSRMLS_DC); /* }}} */
+int pthreads_synchro_wait(pthreads_synchro sync); /* }}} */
 
 /* {{{ send notification */
-int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC); /* }}} */
+int pthreads_synchro_notify(pthreads_synchro sync); /* }}} */
 
 /* {{{ execute a block of code synchronized */
-void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_info_cache *cache, uint argc, zval ***argv, zval *return_value TSRMLS_DC); /* }}} */
+void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_info_cache *cache, uint argc, zval *argv, zval *return_value); /* }}} */
 
 /* {{{ free synchronization object */
-void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC); /* }}} */
+void pthreads_synchro_free(pthreads_synchro sync); /* }}} */
 
 #endif

@@ -39,26 +39,23 @@ zend_function_entry pthreads_collectable_methods[] = {
 /* {{{ proto bool Collectable::isGarbage(void)
 	Can be called in Pool::collect to determine if this object is garbage */
 PHP_METHOD(Collectable, isGarbage) {
-	zval *garbage = NULL;
+	zval garbage;
 	PTHREAD pobject = PTHREADS_FETCH;
-		
+	
 	if (zend_parse_parameters_none() != SUCCESS) {
 		return;
 	}
 	
-	garbage = zend_read_property(pobject->std.ce, getThis(), ZEND_STRL("garbage"), 1 TSRMLS_CC);
-	
-	if (!garbage) {
+	if (!zend_read_property(pobject->std.ce, getThis(), ZEND_STRL("garbage"), 1, &garbage)) {
 		RETVAL_BOOL(0);
 	} else {
-        if (zend_is_true(garbage)) {
+        if (zend_is_true(&garbage)) {
 			RETVAL_BOOL(1);
 		} else RETVAL_BOOL(0);
 	}
 	
 	/* these properties are returned with no references */
-	zval_ptr_dtor(&garbage);
-	FREE_ZVAL(garbage);
+	zval_dtor(&garbage);
 } /* }}} */
 
 /* {{{ proto bool Collectable::setGarbage(void)
@@ -70,7 +67,7 @@ PHP_METHOD(Collectable, setGarbage) {
 		return;
 	}
 	
-	zend_update_property_bool(pobject->std.ce, getThis(), ZEND_STRL("garbage"), 1 TSRMLS_CC);
+	zend_update_property_bool(pobject->std.ce, getThis(), ZEND_STRL("garbage"), 1);
 } /* }}} */
 #	endif
 #endif

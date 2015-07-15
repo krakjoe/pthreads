@@ -35,15 +35,15 @@
 #endif
 
 /* {{{ allocate (and initialize) a synchronization object */
-pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
+pthreads_synchro pthreads_synchro_alloc() {
 	pthreads_synchro sync = (pthreads_synchro) calloc(1, sizeof(*sync));
 	
 	if (sync) {
-		if ((sync->lock = pthreads_lock_alloc(TSRMLS_C))) {
+		if ((sync->lock = pthreads_lock_alloc())) {
 			if (pthread_cond_init(&sync->notify, NULL)==SUCCESS) {
 				return sync;
 			}
-			pthreads_lock_free(sync->lock TSRMLS_CC);
+			pthreads_lock_free(sync->lock);
 		}
 		free(sync);
 	}
@@ -52,7 +52,7 @@ pthreads_synchro pthreads_synchro_alloc(TSRMLS_D) {
 } /* }}} */
 
 /* {{{ wait for notification on synchronization object */
-int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
+int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout) {
 	int result = FAILURE;
 	struct timeval time;
 	struct timespec spec;
@@ -83,12 +83,12 @@ int pthreads_synchro_wait_ex(pthreads_synchro sync, long timeout TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ wait for notification on synchronization object */
-int pthreads_synchro_wait(pthreads_synchro sync TSRMLS_DC) {
-	return pthreads_synchro_wait_ex(sync, 0L TSRMLS_CC);
+int pthreads_synchro_wait(pthreads_synchro sync) {
+	return pthreads_synchro_wait_ex(sync, 0L);
 } /* }}} */
 
 /* {{{ send notification to synchronization object */
-int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
+int pthreads_synchro_notify(pthreads_synchro sync) {
 	int result = FAILURE;
 	if (sync) {
 		if ((result = pthread_cond_broadcast(&sync->notify))!=SUCCESS) {
@@ -99,60 +99,52 @@ int pthreads_synchro_notify(pthreads_synchro sync TSRMLS_DC) {
 } /* }}} */
 
 /* {{{ the ability to execute a block of code truly synchronized */
-void pthreads_synchro_block(zval *this_ptr, zend_fcall_info *info, zend_fcall_info_cache *cache, uint argc, zval ***argv, zval *return_value TSRMLS_DC) {
-	zval *retval = NULL;
+void pthreads_synchro_block(zval *this, zend_fcall_info *info, zend_fcall_info_cache *cache, uint argc, zval *argv, zval *return_value) {
+	PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(this));
 	zend_bool failed = 0;
-	
-	PTHREAD pobject = PTHREADS_FETCH_FROM(getThis());	
-	
-	if (!pobject)
-		return;
-	
+
 	/* set argc and argv for function call */
-	zend_fcall_info_argp(info TSRMLS_CC, argc, argv);
+	zend_fcall_info_argp(info, argc, argv);
 	
 	/* set local return value */
-	info->retval_ptr_ptr = &retval;
-	
+	info->retval = return_value;
+	info->object = &pobject->std;
+	cache->object = &pobject->std;
+
 	/* acquire synchronization lock and execute function synchronized */
 	{
-		pthreads_synchro_lock(pobject->synchro TSRMLS_CC);
+		pthreads_synchro_lock(pobject->synchro);
 		zend_try {
 			/* call the closure */
-			zend_call_function(
-				info, 
-				cache 
-				TSRMLS_CC);
+			zend_call_function(info, cache);
 		} zend_catch {
 			failed = 1;
 		} zend_end_try ();
-		pthreads_synchro_unlock(pobject->synchro TSRMLS_CC);
+		pthreads_synchro_unlock(pobject->synchro);
 	}
 	
 	zend_fcall_info_args_clear(info, 1);
 	
 	/* return the result */
-	if (!failed && retval) {
-		ZVAL_ZVAL(return_value, retval, 1, 1);
-	} else {
-		ZVAL_NULL(return_value);
+	if (failed) {
+		ZVAL_UNDEF(return_value);
 	}
 } /* }}} */
 
 /* {{{ free synchronization object */
-void pthreads_synchro_free(pthreads_synchro sync TSRMLS_DC) {
+void pthreads_synchro_free(pthreads_synchro sync) {
 	pthread_cond_destroy(&sync->notify);
-	pthreads_lock_free(sync->lock TSRMLS_CC);
+	pthreads_lock_free(sync->lock);
 	free(sync);
 } /* }}} */
 
 /* {{{ acquire lock internally for userland synchronization */
-int pthreads_synchro_lock(pthreads_synchro sync TSRMLS_DC) {
+int pthreads_synchro_lock(pthreads_synchro sync) {
 	return pthread_mutex_lock(&sync->lock->mutex);
 } /* }}} */
 
 /* {{{ release lock internally for userland synchronization */
-int pthreads_synchro_unlock(pthreads_synchro sync TSRMLS_DC) {
+int pthreads_synchro_unlock(pthreads_synchro sync) {
 	return pthread_mutex_unlock(&sync->lock->mutex);
 } /* }}} */
 

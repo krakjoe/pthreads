@@ -1,10 +1,9 @@
 <?php
 /*
-* Because we plan for two contexts to manipulate this object we extend the stackable declaration
+* Because we plan for two contexts to manipulate this object we extend the Threaded declaration
 * This connects automatically the reference in the creating context and the reference in the threading context
-* Think of stackable as a threaded stdClass
 */
-class Response extends Stackable {
+class Response extends Threaded {
 	
 	public function __construct($url){
 		$this->url = $url;
@@ -52,7 +51,7 @@ class Request extends Thread {
 		* Referencing threaded objects inside a thread:
 		*	If you plan to heavily manipulate any object then retain a reference in the method scope
 		*	Anytime you read and write the object context of a threaded object locking occurs
-		*	Retaining method scope references avoids some locking and allocation
+		*	Retaining method scope references avoids some
 		*	$response retains the connection to the reference in the thread that created the request
 		* If you have a threaded member that you only plan to execute ONE time:
 		*	(isWaiting/isRunning for example) then it is acceptable to reference the member via the object context
@@ -96,4 +95,5 @@ if($request->start()){
 	*/
 	printf(" got %d bytes in %f seconds\n", $response->getLength(), $response->getDuration());
 }
+$request->join();
 ?>

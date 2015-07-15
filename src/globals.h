@@ -76,27 +76,27 @@ ZEND_EXTERN_MODULE_GLOBALS(pthreads)
 /* }}} */
 
 /* {{{ */
-zend_bool pthreads_globals_object_delete(void *address TSRMLS_DC); /* }}} */
+zend_bool pthreads_globals_object_delete(void *address); /* }}} */
 
 /* {{{ */
-zend_bool pthreads_globals_object_validate(zend_ulong address TSRMLS_DC); /* }}} */
+zend_bool pthreads_globals_object_validate(zend_ulong address); /* }}} */
 
 /* {{{ */
-void* pthreads_globals_object_alloc(size_t length TSRMLS_DC); /* }}} */
+void* pthreads_globals_object_alloc(size_t length); /* }}} */
 
 /* {{{ initialize (true) globals */
-zend_bool pthreads_globals_init(TSRMLS_D); /* }}} */
+zend_bool pthreads_globals_init(); /* }}} */
 
 /* {{{ acquire global lock */
-zend_bool pthreads_globals_lock(zend_bool *locked TSRMLS_DC); /* }}} */
+zend_bool pthreads_globals_lock(zend_bool *locked); /* }}} */
 
 /* {{{ release global lock */
-void pthreads_globals_unlock(zend_bool locked TSRMLS_DC); /* }}} */
+void pthreads_globals_unlock(zend_bool locked); /* }}} */
 
 /* {{{ copy string to globals */
-char *pthreads_global_string(char *strkey, zend_uint keylen, zend_bool lower TSRMLS_DC); /* }}} */
+char *pthreads_global_string(char *strkey, int32_t keylen, zend_bool lower); /* }}} */
 
 /* {{{ shutdown global structures */
-void pthreads_globals_shutdown(TSRMLS_D); /* }}} */
+void pthreads_globals_shutdown(); /* }}} */
 
 #endif /* HAVE_PTHREADS_GLOBAL_H */

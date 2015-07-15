@@ -28,12 +28,12 @@
 
 typedef struct {
 	int type;
-	void *original;
+	zend_resource *original;
 	void *copy;
 	void ***ls;
 } *pthreads_resource;
 
-zend_bool pthreads_resources_keep(pthreads_resource data TSRMLS_DC);
-zend_bool pthreads_resources_kept(zend_rsrc_list_entry *entry TSRMLS_DC);
+zend_bool pthreads_resources_keep(pthreads_resource data);
+zend_bool pthreads_resources_kept(zend_resource *entry);
 #endif
 

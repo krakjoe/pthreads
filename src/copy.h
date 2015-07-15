@@ -23,31 +23,26 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 	HashTable *statics = NULL;
 	
 	if (old) {
-		zval *tmp;
-	
 		ALLOC_HASHTABLE(statics);
 		zend_hash_init(statics,
 			zend_hash_num_elements(old), 
 			NULL, ZVAL_PTR_DTOR, 0);
 		zend_hash_copy(
 			statics, 
-			old, (copy_ctor_func_t) zval_add_ref, 
-			(void*)&tmp, sizeof(zval*));
+			old, (copy_ctor_func_t) zval_add_ref);
 	}
 	
 	return statics;
 } /* }}} */
 
 /* {{{ */
-static zend_compiled_variable* pthreads_copy_variables(zend_compiled_variable *old, int end) {
-	zend_compiled_variable *variables = safe_emalloc(end, sizeof(zend_compiled_variable), 0);
+static zend_string** pthreads_copy_variables(zend_string **old, int end) {
+	zend_string **variables = safe_emalloc(end, sizeof(zend_string*), 0);
 	int it = 0;
 	
 	while (it < end) {
-		variables[it] = old[it];
-		variables[it].name = estrndup(
-			variables[it].name, 
-			variables[it].name_len);
+		variables[it] = 
+			zend_string_new(old[it]);
 		it++;
 	}
 	
@@ -78,93 +73,74 @@ static zend_brk_cont_element* pthreads_copy_brk(zend_brk_cont_element *old, int 
 	return brk_cont;
 } /* }}} */
 
-#if PHP_VERSION_ID >= 50400
 /* {{{ */
-static zend_literal* pthreads_copy_literals(zend_literal *old, int end) {
-	zend_literal *literals = safe_emalloc(end, sizeof(zend_literal), 0);
+static zval* pthreads_copy_literals(zval *old, int end) {
+	zval *literals = (zval*) safe_emalloc(end, sizeof(zval), 0);
 	int it = 0;
 	
 	while (it < end) {
-		literals[it] = old[it];
-		zval_copy_ctor(&literals[it].constant);
+		memcpy(&literals[it], &old[it], sizeof(zval));
+		
+		switch (Z_TYPE(old[it])) {
+			case IS_CONSTANT:
+			case IS_STRING:
+				ZVAL_NEW_STR(&literals[it], zend_string_new(Z_STR(literals[it])));	
+			break;
+
+			case IS_ARRAY:
+				pthreads_store_separate(&old[it], &literals[it], 1);
+			break;
+			
+			/* TODO deal with constant AST and arrays (?) */
+		}
 		it++;
 	}
 	
 	return literals;
 } /* }}} */
-#endif
 
 /* {{{ */
-#if PHP_VERSION_ID >= 50400
-static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zend_literal *literals) {
-	zend_literal *literal;
-#else
-static zend_op* pthreads_copy_opcodes(zend_op_array *op_array) {
-#endif
-	zend_uint it = 0;
-	zend_op *copy = safe_emalloc(op_array->last, sizeof(zend_op), 0);
-	
+static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
+	zval *literal;
+	uint32_t it = 0;
+	zend_op *copy = safe_emalloc(
+		op_array->last, sizeof(zend_op), 0);
+
+	memcpy(copy, op_array->opcodes, sizeof(zend_op) * op_array->last);
+
 	while (it < op_array->last) {
-		copy[it] = op_array->opcodes[it];
+#if ZEND_USE_ABS_CONST_ADDR || ZEND_USE_ABS_JMP_ADDR
+#if ZEND_USE_ABS_CONST_ADDR
+		if (copy[it].op1_type == IS_CONST)
+			copy[it].op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
+		if (copy[it].op2_type == IS_CONST) 
+			copy[it].op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
+#endif
+#if ZEND_USE_ABS_JMP_ADDR
+		switch (copy[it].opcode) {
+			case ZEND_JMP:
+			case ZEND_FAST_CALL:
+			case ZEND_DECLARE_ANON_CLASS:
+			case ZEND_DECLARE_ANON_INHERITED_CLASS:
+				 copy[it].op1.jmp_addr = &copy[copy[it].op1.jmp_addr - op_array->opcodes];
+			break;
 
-#if PHP_VERSION_ID >= 50400
-		if (copy[it].op1_type == IS_CONST) {
-			literal = 
-				(zend_literal*)(op_array->opcodes[it].op1.zv);
-			copy[it].op1.zv = 
-				&op_array->literals[literal - literals].constant;
-#else
-		if (copy[it].op1.op_type == IS_CONST) {
-            zval_copy_ctor(&copy[it].op1.u.constant);
-#endif
-		} else {
-			switch (copy[it].opcode) {
-				case ZEND_GOTO:
-				case ZEND_JMP:
-#ifdef ZEND_FAST_CALL
-				case ZEND_FAST_CALL:
-#endif
-#if PHP_VERSION_ID >= 50400
-					copy[it].op1.jmp_addr = copy + 
-						(op_array->opcodes[it].op1.jmp_addr - op_array->opcodes);
-#else
-					copy[it].op1.u.jmp_addr = copy + 
-						(op_array->opcodes[it].op1.u.jmp_addr - op_array->opcodes);
-#endif
-				break;
-			}
+			case ZEND_JMPZNZ:
+			case ZEND_JMPZ:
+			case ZEND_JMPNZ:
+			case ZEND_JMPZ_EX:
+			case ZEND_JMPNZ_EX:
+			case ZEND_JMP_SET:
+			case ZEND_COALESCE:
+			case ZEND_NEW:
+			case ZEND_FE_RESET_R:
+			case ZEND_FE_RESET_RW:
+			case ZEND_ASSERT_CHECK:
+			    copy[it].op2.jmp_addr = &copy[copy[it].op2.jmp_addr - op_array->opcodes];
+			break;
 		}
-
-#if PHP_VERSION_ID >= 50400
-		if (copy[it].op2_type == IS_CONST) {
-			literal = 
-				(zend_literal*)(op_array->opcodes[it].op2.zv);
-			copy[it].op2.zv = 
-				&op_array->literals[literal - literals].constant;
-#else
-        if (copy[it].op2.op_type == IS_CONST) {
-            zval_copy_ctor(&copy[it].op2.u.constant);
 #endif
-		} else {
-			switch (copy[it].opcode) {
-				case ZEND_JMPZ:
-				case ZEND_JMPNZ:
-				case ZEND_JMPZ_EX:
-				case ZEND_JMPNZ_EX:
-				case ZEND_JMP_SET:
-#ifdef ZEND_JMP_SET_VAR
-				case ZEND_JMP_SET_VAR:
 #endif
-#if PHP_VERSION_ID >= 50400
-                    copy[it].op2.jmp_addr = copy +
-						(op_array->opcodes[it].op2.jmp_addr - op_array->opcodes);
-#else
-                    copy[it].op2.u.jmp_addr = copy +
-						(op_array->opcodes[it].op2.u.jmp_addr - op_array->opcodes);
-#endif
-				break;
-			}
-		}
 
 		it++;
 	}
@@ -173,67 +149,97 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array) {
 } /* }}} */
 
 /* {{{ */
-static zend_arg_info* pthreads_copy_arginfo(zend_arg_info *old, zend_uint end) {
+static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_info *old, uint32_t end) {
 	zend_arg_info *info = safe_emalloc(end, sizeof(zend_arg_info), 0);
-	zend_uint it = 0;	
-	
+	uint32_t it = 0;	
+
+	if (op_array->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
+		old--;
+		end++;
+	}
+
+	if (op_array->fn_flags & ZEND_ACC_VARIADIC) {
+		end++;
+	}	
+
 	while (it < end) {
-		info[it] = old[it];
-		info[it].name = estrndup(
-			info[it].name, info[it].name_len);
+		memcpy(&info[it], &old[it], sizeof(zend_arg_info));
+		info[it].name = zend_string_new(old[it].name);
 		if (info[it].class_name) {
-			info[it].class_name = estrndup(
-				info[it].class_name, info[it].class_name_len);
+			info[it].class_name = zend_string_new(old[it].class_name);
 		}
 		it++;
+	}
+	
+	if (op_array->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
+		info++;
 	}
 	
 	return info;
 } /* }}} */
 
-/* {{{ */
-static void pthreads_copy_function(zend_function *function) {
-	if (function->type == ZEND_USER_FUNCTION) {
-		zend_function copy = *function;
-		zend_function *copied = NULL;
-		
-		zend_op_array *op_array = &copy.op_array;
-		zend_compiled_variable *variables = op_array->vars;
-#if PHP_VERSION_ID >= 50400
-		zend_literal  *literals = op_array->literals;
-#endif
-		zend_arg_info *arg_info = op_array->arg_info;
-		
-		op_array->function_name = estrdup(op_array->function_name);
-		op_array->refcount = emalloc(sizeof(zend_uint));
-		(*op_array->refcount) = 1;
-		op_array->prototype = function;
-#if PHP_VERSION_ID >= 50400
-		op_array->run_time_cache = NULL;
-#endif
-		
-		if (op_array->doc_comment) {
-			op_array->doc_comment = estrndup
-				(op_array->doc_comment, op_array->doc_comment_len);
-		}
-		
-		op_array->static_variables = pthreads_copy_statics(op_array->static_variables);
-		op_array->vars = pthreads_copy_variables(variables, op_array->last_var);
-#if PHP_VERSION_ID >= 50400
-		op_array->literals = pthreads_copy_literals (literals, op_array->last_literal);
-#endif
-		op_array->arg_info = pthreads_copy_arginfo(arg_info, op_array->num_args);
-#if PHP_VERSION_ID >= 50400
-		op_array->opcodes = pthreads_copy_opcodes(op_array, literals);
-#else
-		op_array->opcodes = pthreads_copy_opcodes(op_array);
-#endif
-		op_array->try_catch_array = pthreads_copy_try(op_array->try_catch_array, op_array->last_try_catch);
-		op_array->brk_cont_array = pthreads_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont);
-		
-		*function = copy;
+static inline zend_function* pthreads_copy_user_function(zend_function *function) {
+	zend_function  *copy;	
+	zend_op_array  *op_array;
+	zend_string   **variables;
+	zval           *literals;
+	zend_arg_info  *arg_info;
+	
+	copy = (zend_function*) 
+		zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
+	memcpy(copy, function, sizeof(zend_op_array));
+	
+	op_array = &copy->op_array;
+	variables = op_array->vars;
+	literals = op_array->literals;
+	arg_info = op_array->arg_info;
+	
+	op_array->function_name = zend_string_new(op_array->function_name);
+	op_array->prototype = copy;
+	op_array->refcount = emalloc(sizeof(uint32_t));
+	(*op_array->refcount) = 1;
+	
+	if (op_array->doc_comment) {
+		op_array->doc_comment = zend_string_new(op_array->doc_comment);
 	}
+	
+	if (op_array->literals) op_array->literals = pthreads_copy_literals (literals, op_array->last_literal);
+
+	op_array->opcodes = pthreads_copy_opcodes(op_array, literals);
+
+	if (op_array->arg_info) 	op_array->arg_info = pthreads_copy_arginfo(op_array, arg_info, op_array->num_args);
+	if (op_array->brk_cont_array) 	op_array->brk_cont_array = pthreads_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont);
+	if (op_array->try_catch_array)  op_array->try_catch_array = pthreads_copy_try(op_array->try_catch_array, op_array->last_try_catch);
+	if (op_array->vars) 		op_array->vars = pthreads_copy_variables(variables, op_array->last_var);
+	if (op_array->static_variables) op_array->static_variables = pthreads_copy_statics(op_array->static_variables);
+
+	return copy;
+}
+
+static inline zend_function* pthreads_copy_internal_function(zend_function *function) {
+	zend_internal_function *copy = 
+		(zend_internal_function*) malloc(sizeof(zend_function));
+	memcpy(copy, function, sizeof(zend_internal_function));
+	copy->function_name = zend_string_new(function->common.function_name);
+	return (zend_function*) copy;
+}
+
+/* {{{ */
+static zend_function* pthreads_copy_function(zend_function *function) {
+	zend_function *copy;
+
+	if (function->type == ZEND_USER_FUNCTION) {
+		copy = pthreads_copy_user_function(function);
+	} else {
+		copy = pthreads_copy_internal_function(function);
+	}
+
+	return copy;
+} /* }}} */
+
+/* {{{ */
+static void pthreads_copy_function_ctor(zval *bucket) {
+	Z_PTR_P(bucket) = pthreads_copy_function(Z_PTR_P(bucket));
 } /* }}} */
 #endif
-
 

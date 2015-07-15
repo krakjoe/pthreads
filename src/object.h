@@ -37,9 +37,10 @@
 #endif
 
 /* {{{ object creation and destruction */
-zend_object_value pthreads_threaded_ctor(zend_class_entry *entry TSRMLS_DC);
-zend_object_value pthreads_worker_ctor(zend_class_entry *entry TSRMLS_DC);
-zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC);
+zend_object* pthreads_threaded_ctor(zend_class_entry *entry);
+zend_object* pthreads_worker_ctor(zend_class_entry *entry);
+zend_object* pthreads_thread_ctor(zend_class_entry *entry);
+void        pthreads_base_free(zend_object *object);
 /* }}} */
 
 /*
@@ -49,32 +50,32 @@ zend_object_value pthreads_thread_ctor(zend_class_entry *entry TSRMLS_DC);
 */
 
 /* {{{ state and stack management */
-zend_bool pthreads_set_state_ex(PTHREAD thread, int state, long timeout TSRMLS_DC);
-zend_bool pthreads_set_state(PTHREAD thread, int state TSRMLS_DC);
-zend_bool pthreads_unset_state(PTHREAD thread, int state TSRMLS_DC);
-size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work TSRMLS_DC);
-size_t pthreads_stack_push(PTHREAD thread, zval *work TSRMLS_DC);
-size_t pthreads_stack_next(PTHREAD thread, zval *this_ptr TSRMLS_DC);
-size_t pthreads_stack_length(PTHREAD thread TSRMLS_DC);
+zend_bool pthreads_set_state_ex(PTHREAD thread, int state, long timeout);
+zend_bool pthreads_set_state(PTHREAD thread, int state);
+zend_bool pthreads_unset_state(PTHREAD thread, int state);
+size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work);
+size_t pthreads_stack_push(PTHREAD thread, zval *work);
+size_t pthreads_stack_next(zval *that);
+size_t pthreads_stack_length(PTHREAD thread);
 /* }}} */
 
 /* {{{ MISC */
-void pthreads_current_thread(zval **return_value TSRMLS_DC);
+void pthreads_current_thread(zval *return_value);
 /* }}} */
 
 /* {{{ start/join */
-int pthreads_start(PTHREAD thread TSRMLS_DC);
-int pthreads_join(PTHREAD thread TSRMLS_DC);
-int pthreads_detach(PTHREAD thread TSRMLS_DC);
+int pthreads_start(PTHREAD thread);
+int pthreads_join(PTHREAD thread);
+int pthreads_detach(PTHREAD thread);
 /* }}} */
 
 /* {{{ synchronization heplers */
-zend_bool pthreads_wait_member(PTHREAD thread, zval *member TSRMLS_DC);
-zend_bool pthreads_wait_member_ex(PTHREAD thread, zval *member, ulong timeout TSRMLS_DC); /* }}} */
+zend_bool pthreads_wait_member(PTHREAD thread, zval *member);
+zend_bool pthreads_wait_member_ex(PTHREAD thread, zval *member, ulong timeout); /* }}} */
 
 /* {{{ serialize/unserialize threaded objects */
-int pthreads_internal_serialize(zval *object, unsigned char **buffer, zend_uint *blength, zend_serialize_data *data TSRMLS_DC);
-int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const unsigned char *buffer, zend_uint blength, zend_unserialize_data *data TSRMLS_DC); /* }}} */
+int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *blength, zend_serialize_data *data);
+int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t blength, zend_unserialize_data *data); /* }}} */
 
 /* {{{ TSRM manipulation */
 #define PTHREADS_FETCH_ALL(ls, id, type) ((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
@@ -83,20 +84,15 @@ int pthreads_internal_unserialize(zval **object, zend_class_entry *ce, const uns
 #define PTHREADS_CG_ALL(ls) PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
 #define PTHREADS_EG(ls, v) PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
 #define PTHREADS_SG(ls, v) PTHREADS_FETCH_CTX(ls, sapi_globals_id, sapi_globals_struct*, v)
+#define PTHREADS_PG(ls, v) PTHREADS_FETCH_CTX(ls, core_globals_id, php_core_globals*, v)
 #define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*) 
 /* }}} */
 
-/* {{{ fetches a PTHREAD from a specific object in a specific context */
-#define PTHREADS_FETCH_FROM_EX(object, ls) (PTHREAD) zend_object_store_get_object(object, ls) /* }}} */
-
 /* {{{ fetches a PTHREAD from a specific object in the current context */
-#define PTHREADS_FETCH_FROM(object) (PTHREAD) zend_object_store_get_object(object TSRMLS_CC) /* }}} */
+#define PTHREADS_FETCH_FROM(object) (PTHREAD) (((char*)object) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
 
 /* {{{ fetches the current PTHREAD from $this */
-#define PTHREADS_FETCH (PTHREAD) zend_object_store_get_object(this_ptr TSRMLS_CC) /* }}} */
-
-/* {{{ fetches a PTHREAD from object store using handle */
-#define PTHREADS_FROM_HANDLE(h) (PTHREAD) zend_object_store_get_object_by_handle(h TSRMLS_CC) /* }}} */
+#define PTHREADS_FETCH (PTHREAD) ((char*) Z_OBJ(EX(This)) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
 
 /* {{{ handlers included here for access to macros above */
 #ifndef HAVE_PTHREADS_HANDLERS_H

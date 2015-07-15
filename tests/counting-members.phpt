@@ -1,7 +1,7 @@
 --TEST--
 Testing member count
 --DESCRIPTION--
-This test verifies that getting member counts works without effort
+This test verifies that getting member counts works
 --FILE--
 <?php
 class Test extends Threaded {

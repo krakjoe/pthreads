@@ -14,6 +14,10 @@ $pool = new Pool(1);
 $pool->submit(new Work());
 $pool->shutdown();
 
+$pool->collect(function(Work $work) {
+	return true;
+});
+
 var_dump($pool);
 ?>
 --EXPECTF--
@@ -31,17 +35,12 @@ object(Pool)#%d (%d) {
   array(0) {
   }
   ["work":protected]=>
-  array(1) {
-    [0]=>
-    object(Work)#%d (%d) {
-      ["worker"]=>
-      object(Worker)#%d (%d) {
-      }
-    }
+  array(0) {
   }
   ["ctor":protected]=>
   NULL
   ["last":protected]=>
   int(1)
 }
+
 

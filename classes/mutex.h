@@ -67,7 +67,7 @@ zend_function_entry pthreads_mutex_methods[] = {
 PHP_METHOD(Mutex, __construct) 
 {
 	zend_throw_exception_ex(
-		spl_ce_RuntimeException, 0 TSRMLS_CC, 
+		spl_ce_RuntimeException, 0, 
 		"pthreads has detected an attempt to incorrectly create a Mutex, please refer to the PHP manual");
 } /* }}} */
 
@@ -84,54 +84,54 @@ PHP_METHOD(Mutex, create)
 		switch((rc = pthread_mutex_init(mutex, NULL))){
 			case SUCCESS: 
 				if (ZEND_NUM_ARGS()) {		
-					if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &lock)==SUCCESS) {
+					if (zend_parse_parameters(ZEND_NUM_ARGS(), "b", &lock)==SUCCESS) {
 						if (lock) {
 							switch((rc = pthread_mutex_lock(mutex))){
-								case SUCCESS: RETURN_LONG((ulong)mutex); break;
-								case EDEADLK: RETURN_LONG((ulong)mutex); break;
+								case SUCCESS: RETURN_LONG((zend_long)mutex); break;
+								case EDEADLK: RETURN_LONG((zend_long)mutex); break;
 								
 								default:
 									zend_throw_exception_ex(
-										spl_ce_RuntimeException, rc TSRMLS_CC,
+										spl_ce_RuntimeException, rc,
 										"pthreads detected an internal error while attempting to lock new mutex");
 									pthread_mutex_destroy(mutex);
 									free(mutex);
 							}
-						} else { RETURN_LONG((ulong)mutex); }
+						} else { RETURN_LONG((zend_long)mutex); }
 					}
-				} else { RETURN_LONG((ulong)mutex); }
+				} else { RETURN_LONG((zend_long)mutex); }
 			break;
 		
 			case EAGAIN:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EAGAIN TSRMLS_CC, 
+					spl_ce_RuntimeException, EAGAIN, 
 					"pthreads detected that the system lacks the necessary resources (other than memory) to initialise another mutex");
 				free(mutex);
 			break;
 			
 			case ENOMEM: /* I would imagine we would fail to write this message to output if we are really out of memory */
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, ENOMEM TSRMLS_CC, 
+					spl_ce_RuntimeException, ENOMEM, 
 					"pthreads detected that the system lacks the necessary memory to initialise another mutex");
 				free(mutex);
 			break;
 			
 			case EPERM:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EPERM TSRMLS_CC, 
+					spl_ce_RuntimeException, EPERM, 
 					"pthreads detected that the caller does not have permission to initialize mutex");
 				free(mutex);
 			break;
 			
 			default: 
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC, 
+					spl_ce_RuntimeException, rc, 
 					"pthreads detected an internal error while attempting to initialize mutex");
 				free(mutex);
 		}
 	} else {
 		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0 TSRMLS_CC,
+			spl_ce_RuntimeException, 0,
 			"pthreads failed to allocate memory for new mutex"); 
 	}
 } /* }}} */
@@ -142,26 +142,26 @@ PHP_METHOD(Mutex, lock)
 {
 	pthread_mutex_t *mutex;
 	int rc = SUCCESS;
-	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &mutex)==SUCCESS) {
 		switch ((rc = pthread_mutex_lock(mutex))) {
 			case SUCCESS: RETURN_TRUE; break;
 			
 			case EINVAL:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EINVAL TSRMLS_CC, 
+					spl_ce_RuntimeException, EINVAL, 
 					"pthreads has detected that the variable passed is not a valid mutex");
 			break;
 			
 			case EAGAIN: 
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EAGAIN TSRMLS_CC,
+					spl_ce_RuntimeException, EAGAIN,
 					"The mutex could not be acquired because the maximum number of recursive locks for mutex has been exceeded");
 			break;
 			
 			default: 
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC,
+					spl_ce_RuntimeException, rc,
 					"pthreads detected an internal error while locking mutex");
 		}
 	}
@@ -174,26 +174,26 @@ PHP_METHOD(Mutex, trylock)
 	pthread_mutex_t *mutex;
 	int rc = SUCCESS;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &mutex)==SUCCESS && mutex) {
 		switch ((rc = pthread_mutex_trylock(mutex))) {
 			case SUCCESS: RETURN_TRUE; break;
 			case EBUSY: RETURN_FALSE; break;
 			
 			case EINVAL: 
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EINVAL TSRMLS_CC, 
+					spl_ce_RuntimeException, EINVAL, 
 					"pthreads has detected that the variable passed is not a valid mutex");
 			break;
 			
 			case EAGAIN: 
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EAGAIN TSRMLS_CC, 
+					spl_ce_RuntimeException, EAGAIN, 
 					"pthreads detected that the mutex could not be acquired because the maximum number of recursive locks has been exceeded");
 			break;
 			
 			default:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC, 
+					spl_ce_RuntimeException, rc, 
 					"pthreads detected an internal error while trying to lock mutex");
 		}
 	}
@@ -207,7 +207,7 @@ PHP_METHOD(Mutex, unlock)
 	zend_bool destroy = 0;
 	int rc = SUCCESS;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l|b", &mutex, &destroy)==SUCCESS && mutex) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|b", &mutex, &destroy)==SUCCESS && mutex) {
 		switch ((rc = pthread_mutex_unlock(mutex))) {
 			case SUCCESS: 
 				if (destroy > 0) {
@@ -220,19 +220,19 @@ PHP_METHOD(Mutex, unlock)
 			
 			case EINVAL: 
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EINVAL TSRMLS_CC, 
+					spl_ce_RuntimeException, EINVAL, 
 					"pthreads has detected that the variable passed is not a valid mutex");
 			break;
 			
 			case EPERM:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EPERM TSRMLS_CC, 
+					spl_ce_RuntimeException, EPERM, 
 					"pthreads has detected that the calling thread does not own the mutex");
 			break;
 			
 			default:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC, 
+					spl_ce_RuntimeException, rc, 
 					"pthreads detected an internal error while unlocking mutex");
 		}
 	}
@@ -245,7 +245,7 @@ PHP_METHOD(Mutex, destroy)
 	pthread_mutex_t *mutex;
 	int rc = SUCCESS;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &mutex)==SUCCESS && mutex) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &mutex)==SUCCESS && mutex) {
 		switch ((rc = pthread_mutex_destroy(mutex))) {
 			case SUCCESS: 
 				free(mutex);
@@ -254,19 +254,19 @@ PHP_METHOD(Mutex, destroy)
 			
 			case EINVAL:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EINVAL TSRMLS_CC, 
+					spl_ce_RuntimeException, EINVAL, 
 					"pthreads has detected that the variable passed is not a valid mutex");
 			break;
 			
 			case EBUSY:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, EBUSY TSRMLS_CC, 
+					spl_ce_RuntimeException, EBUSY, 
 					"pthreads has detected an attempt to destroy mutex while it is locked or referenced");
 			break;
 			
 			default:
 				zend_throw_exception_ex(
-					spl_ce_RuntimeException, rc TSRMLS_CC, 
+					spl_ce_RuntimeException, rc, 
 					"pthreads detected an internal error while attempting to destroy mutex");
 		}
 	}

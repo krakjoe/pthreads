@@ -54,16 +54,6 @@ typedef struct _pthreads_address {
 	size_t length;
 } *pthreads_address; /* }}} */
 
-/* {{{ error structure */
-typedef struct _pthreads_error *pthreads_error;
-struct _pthreads_error {
-    unsigned char           *file;
-    unsigned char           *clazz;
-    unsigned char           *method;
-    char                    *message;
-    uint                    line;
-}; /* }}} */
-
 /* {{{ thread structure */
 typedef struct _pthread_construct {
 	/*
@@ -137,16 +127,6 @@ typedef struct _pthread_construct {
 	* Thread Address
 	*/
 	pthreads_address address;
-	
-	/*
-	* Threading Error
-	*/
-    pthreads_error error;
-
-	/*
-	* Object Handle
-	*/
-	zend_object_handle handle;
 } *PTHREAD;
 
 /* {{{ comparison function */
@@ -217,9 +197,9 @@ static inline ulong pthreads_self() {
 } /* }}} */
 
 /* {{{ tell if the calling thread created referenced PTHREAD */
-#define PTHREADS_IN_CREATOR(t)	(t->cls == tsrm_ls) /* }}} */
+#define PTHREADS_IN_CREATOR(t)	(1) /* }}} */
 
 /* {{{ tell if the referenced thread is the threading context */
-#define PTHREADS_IN_THREAD(t)	(t->tls == tsrm_ls) /* }}} */
+#define PTHREADS_IN_THREAD(t)	(1) /* }}} */
 
 #endif /* HAVE_PTHREADS_THREAD_H */

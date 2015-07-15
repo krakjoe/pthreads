@@ -22,15 +22,11 @@
 # include <iterators/iterator.h>
 #endif
 
-static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator TSRMLS_DC);
-static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator TSRMLS_DC);
-static inline void pthreads_object_iterator_current_data(zend_object_iterator* iterator, zval ***data TSRMLS_DC);
-#if PHP_VERSION_ID >= 50500
-static inline void pthreads_object_iterator_current_key(zend_object_iterator* iterator, zval *key TSRMLS_DC);
-#else
-static inline int pthreads_object_iterator_current_key(zend_object_iterator* iterator, char **key, uint *klen, ulong *ukey TSRMLS_DC);
-#endif
-static inline void pthreads_object_iterator_move_forward(zend_object_iterator* iterator TSRMLS_DC);
+static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator);
+static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator);
+static inline zval* pthreads_object_iterator_current_data(zend_object_iterator* iterator);
+static inline void pthreads_object_iterator_current_key(zend_object_iterator* iterator, zval *key);
+static inline void pthreads_object_iterator_move_forward(zend_object_iterator* iterator);
 
 zend_object_iterator_funcs pthreads_object_iterator_funcs = {
     pthreads_object_iterator_dtor,
@@ -41,19 +37,18 @@ zend_object_iterator_funcs pthreads_object_iterator_funcs = {
     NULL  
 };
 
-static inline zend_object_iterator* pthreads_object_iterator_ctor(zend_class_entry *ce, zval *object, int by_ref TSRMLS_DC) {
+static inline zend_object_iterator* pthreads_object_iterator_ctor(zend_class_entry *ce, zval *object, int by_ref) {
     pobject_iterator_t *iterator = emalloc(sizeof(pobject_iterator_t));
     
-    iterator->zit.funcs = &pthreads_object_iterator_funcs;  
-    
+    zend_iterator_init((zend_object_iterator*)iterator);
     zend_hash_init(
         &iterator->properties, 8, NULL, ZVAL_PTR_DTOR, 0);
 
     {
-        PTHREAD pobject = PTHREADS_FETCH_FROM(object);
-                
+        PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+         
         pthreads_store_tohash(
-            pobject->store, &iterator->properties TSRMLS_CC);
+            pobject->store, &iterator->properties);
         
         zend_hash_internal_pointer_reset_ex(
             &iterator->properties, &iterator->position);
@@ -61,10 +56,12 @@ static inline zend_object_iterator* pthreads_object_iterator_ctor(zend_class_ent
         iterator->end = 0;
     }
 
+    iterator->zit.funcs = &pthreads_object_iterator_funcs;  
+
     return (zend_object_iterator*) iterator;
 }
 
-static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator TSRMLS_DC) {
+static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator) {
     pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
     
     {
@@ -76,7 +73,7 @@ static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator 
     efree(intern);
 }
 
-static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator TSRMLS_DC) {
+static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator) {
    pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
    
    if (zend_hash_num_elements(&intern->properties)) {
@@ -84,28 +81,28 @@ static inline int pthreads_object_iterator_validate(zend_object_iterator* iterat
    } else return FAILURE;
 }
 
-static inline void pthreads_object_iterator_current_data(zend_object_iterator* iterator, zval ***data TSRMLS_DC) {
+static inline zval* pthreads_object_iterator_current_data(zend_object_iterator* iterator) {
     pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-    
+    zval *data = NULL;
+
     if (!intern->end) {
-        if (zend_hash_get_current_data_ex(  
-            &intern->properties, (void**) data, &intern->position) != SUCCESS) {
+        if (!(data = zend_hash_get_current_data_ex(&intern->properties, &intern->position))) {
             intern->end = 1;
-        }        
+        }
     }
+
+    return data;
 }
 
-#if PHP_VERSION_ID >= 50500
-static inline void pthreads_object_iterator_current_key(zend_object_iterator* iterator, zval* key TSRMLS_DC) {
+static inline void pthreads_object_iterator_current_key(zend_object_iterator* iterator, zval* key) {
     pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-    char *skey = NULL;
-    uint sklen;
+    zend_string *skey = NULL;
     ulong ukey;
     
     switch (zend_hash_get_current_key_ex(
-        &intern->properties, &skey, &sklen, &ukey, 0, &intern->position)) {
+        &intern->properties, &skey, &ukey, &intern->position)) {
         case HASH_KEY_IS_STRING: {
-            ZVAL_STRINGL(key, skey, sklen - 1, 1);
+            ZVAL_STRINGL(key, skey->val, skey->len - 1);
         } break;
             
         case HASH_KEY_IS_LONG: {
@@ -117,34 +114,15 @@ static inline void pthreads_object_iterator_current_key(zend_object_iterator* it
         }    
     }
 }
-#else
-static inline int pthreads_object_iterator_current_key(zend_object_iterator* iterator, char **key, uint *klen, ulong *ukey TSRMLS_DC) {
-    pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-    
-    switch (zend_hash_get_current_key_ex(
-        &intern->properties, key, klen, ukey, 1, &intern->position)) {
-        case HASH_KEY_IS_STRING:
-            return HASH_KEY_IS_STRING;
-        case HASH_KEY_IS_LONG:
-            return HASH_KEY_IS_LONG;
-            
-        default: {
-            intern->end = 1;
-        }    
-    }
-    return FAILURE;
-}
-#endif
 
-static inline void pthreads_object_iterator_move_forward(zend_object_iterator* iterator TSRMLS_DC) {
+static inline void pthreads_object_iterator_move_forward(zend_object_iterator* iterator) {
     pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
     
     if (!intern->end) {
         zend_hash_move_forward_ex(
             &intern->properties, &intern->position);
         {
-            if (zend_hash_get_current_data_ex(
-                &intern->properties, (void**) &intern->zit.data, &intern->position) != SUCCESS) {
+            if (!zend_hash_get_current_data_ex(&intern->properties, &intern->position)) {
                 intern->end = 1;
             }
         }
