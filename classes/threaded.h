@@ -123,7 +123,7 @@ PHP_METHOD(Threaded, run) {} /* }}} */
 PHP_METHOD(Threaded, wait)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	long timeout = 0L;
+	zend_long timeout = 0L;
 	
 	if (thread) {
 		if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &timeout)==SUCCESS) {
@@ -259,7 +259,7 @@ PHP_METHOD(Threaded, shift)
 	Will shift the first member from the object */
 PHP_METHOD(Threaded, chunk) 
 {
-    long size;
+    zend_long size;
     zend_bool preserve = 0;
     
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|b", &size, &preserve) != SUCCESS) {

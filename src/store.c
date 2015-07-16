@@ -44,8 +44,8 @@ typedef struct _pthreads_storage {
 	size_t 		length;
 	zend_bool 	exists;
 	union {
-	    long    lval;
-	    double  dval;
+	    zend_long   lval;
+	    double     dval;
 	} simple;
 	void    *data;
 } pthreads_storage;
@@ -249,7 +249,7 @@ int pthreads_store_separate(zval * pzval, zval *separated, zend_bool complex) {
 } /* }}} */
 
 /* {{{ count properties */
-int pthreads_store_count(zval *object, long *count) {
+int pthreads_store_count(zval *object, zend_long *count) {
    PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
    
    if (pthreads) {
@@ -291,7 +291,7 @@ int pthreads_store_shift(zval *object, zval *member) {
 } /* }}} */
 
 /* {{{ store chunk */
-int pthreads_store_chunk(zval *object, long size, zend_bool preserve, zval *chunk) {
+int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval *chunk) {
    PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
    
    if (pthreads_store_lock(object)) {

@@ -94,7 +94,7 @@ class GlobalWorker extends Worker {
 	
 	public function run() {
 		/* setup some connections and whatever */
-		while(++$o<20)
+		while(@++$o<20)
 			$a[$o]=rand()*1009;
 		/* this works, incase anyone cares */
 		$this["storage"][__CLASS__]=$a;
@@ -158,6 +158,7 @@ $worker->start();
 
 /* random array of work to populate some storage from the worker */
 $work = array();
+$o = 0;
 while(++$o<10) {
 	/* items stacked could be using resources available in worker */
 	$work[]=new MyWork($storage);

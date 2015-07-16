@@ -156,8 +156,6 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 			"pthreads detected an attempt to use an unsupported key type %s", Z_OBJCE_P(object)->name);
 	}
 	
-	
-
 	if (Z_TYPE(mstring) != IS_UNDEF) {
 		zval_ptr_dtor(&mstring);
 	}

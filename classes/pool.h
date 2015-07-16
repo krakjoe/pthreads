@@ -69,7 +69,7 @@ zend_function_entry pthreads_pool_methods[] = {
 	$ctor will be used as arguments to constructor when spawning workers */
 PHP_METHOD(Pool, __construct) 
 {
-	long size = 0;
+	zend_long size = 0;
 	zend_class_entry *clazz = NULL;
 	zval *ctor = NULL;
 	
@@ -95,7 +95,7 @@ PHP_METHOD(Pool, __construct)
 	Resize the pool to the given number of workers, if the pool size is being reduced 
 	then the last workers started will be shutdown until the pool is the requested size */
 PHP_METHOD(Pool, resize) {
-	long newsize = 0;
+	zend_long newsize = 0;
 	zval *workers = NULL;
 	zval *size = NULL;
 	
@@ -110,7 +110,7 @@ PHP_METHOD(Pool, resize) {
 		newsize < zend_hash_num_elements(Z_ARRVAL_P(workers))) {
 		do {
 			zval *worker = NULL;
-			long top = zend_hash_num_elements(Z_ARRVAL_P(workers));
+			zend_long top = zend_hash_num_elements(Z_ARRVAL_P(workers));
 			
 			if ((worker = zend_hash_index_find(
 				Z_ARRVAL_P(workers), top-1))) {
@@ -244,7 +244,7 @@ PHP_METHOD(Pool, submit) {
 PHP_METHOD(Pool, submitTo) {
 	zval *task = NULL;
 	zval *workers = NULL;
-	long worker = 0;
+	zend_long worker = 0;
 	zval *work = NULL;
 	zval *selected = NULL;
 	

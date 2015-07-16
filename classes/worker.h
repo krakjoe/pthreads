@@ -65,8 +65,6 @@ PHP_METHOD(Worker, stack)
 	if (thread) {
 		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
 			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_threaded_entry)==SUCCESS) {
-				
-				
 				RETURN_LONG(pthreads_stack_push(thread, work));
 			}
 		} else {

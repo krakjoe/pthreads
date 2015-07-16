@@ -80,7 +80,7 @@ PHP_METHOD(Cond, create)
 	if ((condition=(pthread_cond_t*) calloc(1, sizeof(pthread_cond_t)))!=NULL) {
 		switch ((rc = pthread_cond_init(condition, NULL))) {
 			case SUCCESS: 
-				RETURN_LONG((ulong)condition); 
+				RETURN_LONG((zend_ulong)condition); 
 			break;
 			
 			case EAGAIN:
@@ -168,7 +168,7 @@ PHP_METHOD(Cond, wait)
 {
 	pthread_cond_t *condition;
 	pthread_mutex_t *mutex;
-	long timeout = 0L;
+	zend_long timeout = 0L;
 	int rc = SUCCESS;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll|l", &condition, &mutex, &timeout)==SUCCESS && condition && mutex) {

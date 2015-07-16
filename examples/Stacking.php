@@ -89,4 +89,5 @@ while($i++<20){
 $worker->shutdown();
 printf("Result: %d/%d\n", $worker->getAttempts(), $worker->getStacked());
 print_r($worker->getData());
+var_dump($work);
 ?>

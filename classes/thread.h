@@ -95,7 +95,7 @@ PHP_METHOD(Thread, start)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	int result = FAILURE;
-	long options = PTHREADS_INHERIT_ALL;
+	zend_long options = PTHREADS_INHERIT_ALL;
 	
 	/* get options */
 	if (ZEND_NUM_ARGS()) {
