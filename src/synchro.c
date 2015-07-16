@@ -105,9 +105,11 @@ void pthreads_synchro_block(zval *this, zend_fcall_info *info, zend_fcall_info_c
 
 	/* set argc and argv for function call */
 	zend_fcall_info_argp(info, argc, argv);
-	
+
 	/* set local return value */
 	info->retval = return_value;
+
+	info->no_separation = 1;
 	info->object = &pobject->std;
 	cache->object = &pobject->std;
 

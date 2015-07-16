@@ -73,7 +73,7 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 int pthreads_modifiers_set(pthreads_modifiers modifiers, zend_string *method, int32_t modify) {
 	int32_t *modified = 
 		(int32_t*) malloc(sizeof(int32_t));
-	
+
 	memcpy(modified, &modify, sizeof(int32_t));
 
 	if (zend_hash_add_ptr(
@@ -95,9 +95,11 @@ int pthreads_modifiers_set(pthreads_modifiers modifiers, zend_string *method, in
 } /* }}} */
 
 /* {{{ get access modifier for method */
-int32_t pthreads_modifiers_get(pthreads_modifiers modifiers, zend_string *method) {
+int32_t pthreads_modifiers_get(pthreads_modifiers modifiers, zend_string *method, zend_string **lowered) {
 	int32_t *modified;
-	if ((modified = zend_hash_find_ptr(&modifiers->modified, method))) {
+	if (*lowered == NULL)
+		*lowered = zend_string_tolower(method);
+	if ((modified = zend_hash_find_ptr(&modifiers->modified, *lowered))) {
 		return *modified;
 	}
 	return 0;

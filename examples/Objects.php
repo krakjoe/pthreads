@@ -57,12 +57,7 @@ class MyThread extends Thread {
 	}
 	
 	public function run(){
-		/* it's possible to reference the stackable directly from the object scope for every call */
-		/* but this will incur unecessary locking and allocation */
-		/* if logic requires reuse of a reference then pull it into the method scope */
-		/* a stackable does NOT need to be written back to the method scope for changes to data to be visible in other contexts */
-		/* ANY other type of object DOES */
-		if ($this->storage) {
+		if (($storage = $this->storage)) {
 			printf("%s (%lu) STORAGE AVAILABLE\n", __METHOD__, $this->getThreadId());
 			$this->stored = $this->storage->getUniqueId();
 			$this->storage->addToObject(
@@ -74,7 +69,6 @@ class MyThread extends Thread {
 				if (!$this->worker->isShutdown()){
 					$work = new MyWork($this->storage);
 					$this->worker->stack($work);
-					print_r($work);
 				} else printf("%s (%lu) WORKER SHUTDOWN\n", __METHOD__, $this->getThreadId());
 			} else printf("NO WORKER !!\n");
 			printf("%s (%lu) STORED %s@%s\n", __METHOD__, $this->getThreadId(), $this->storage->fetch($this->stored), $this->getStorageId());
@@ -113,10 +107,9 @@ class MyWork extends Threaded {
 		$this->storage = $storage;
 		$this->tstored = null;
 	}
-	
+
 	public function run(){
 		/* read once, see above ... */
-		var_dump($this);
 		if (($storage = $this->storage)) {
 			$this->stored = $storage->getUniqueId();
 			$storage->addToObject(

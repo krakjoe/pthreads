@@ -41,7 +41,7 @@ void pthreads_modifiers_init(pthreads_modifiers modifiers, zend_class_entry *ent
 int pthreads_modifiers_set(pthreads_modifiers modifiers, zend_string *method, int32_t modify); /* }}} */
 
 /* {{{ get modifiers for a method */
-int32_t pthreads_modifiers_get(pthreads_modifiers modifiers, zend_string *method); /* }}} */
+int32_t pthreads_modifiers_get(pthreads_modifiers modifiers, zend_string *method, zend_string **lowered); /* }}} */
 
 /* {{{ protect a method call */
 zend_bool pthreads_modifiers_protect(pthreads_modifiers modifiers, zend_string *method, zend_bool *unprotect); /* }}} */

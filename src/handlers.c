@@ -377,17 +377,15 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 	zend_class_entry *scope;
 	zend_function *call;
 	zend_function *callable;
-	zend_string *lcname;
+	zend_string *lcname = NULL;
 	int access = 0;
 	PTHREAD thread = PTHREADS_FETCH_FROM(*object);
 	
 	if (thread) {
-		switch((access=pthreads_modifiers_get(thread->modifiers, method))){
+		switch((access=pthreads_modifiers_get(thread->modifiers, method, &lcname))){
 			case ZEND_ACC_PRIVATE:
 			case ZEND_ACC_PROTECTED:
 				scope = thread->std.ce;
-				lcname =  zend_string_tolower(method);
-				
 				if (!(call = zend_hash_find_ptr(&scope->function_table, lcname))) {
 					callable = (zend_function*) emalloc(sizeof(zend_function));
 					callable->type = ZEND_OVERLOADED_FUNCTION;
@@ -407,6 +405,7 @@ zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D) {
 			default:
 				call = zend_handlers->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
 		}
+		zend_string_release(lcname);
 	} else call = zend_handlers->get_method(PTHREADS_GET_METHOD_PASSTHRU_C);
 	
 	return call;
@@ -421,12 +420,12 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 	zend_fcall_info_cache	cache;
 	zend_class_entry		*scope;
 	int 					called = -1, argc = ZEND_NUM_ARGS(), access = ZEND_ACC_PUBLIC, mlength = 0;
-	zend_string				*lcname;
+	zend_string				*lcname = NULL;
 	zend_bool				unprotect;
 	PTHREAD                                 thread = PTHREADS_FETCH_FROM(object);
 	
 	if (thread) {
-		switch((access=pthreads_modifiers_get(thread->modifiers, method))){
+		switch((access=pthreads_modifiers_get(thread->modifiers, method, &lcname))){
 			case ZEND_ACC_PRIVATE:
 			case ZEND_ACC_PROTECTED: {
 				scope = Z_OBJCE_P(getThis());
@@ -456,10 +455,8 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 					}
 				}
 
-				lcname =  zend_string_tolower(method);
-				
 				if ((call = zend_hash_find_ptr(&scope->function_table, lcname))) {
-					if (access != ZEND_ACC_PROTECTED || pthreads_modifiers_protect(thread->modifiers, method, &unprotect)) {
+					if (access != ZEND_ACC_PROTECTED || pthreads_modifiers_protect(thread->modifiers, lcname, &unprotect)) {
 						ZVAL_STR(&zmethod, method);
 						ZVAL_UNDEF(&zresult);
 
@@ -493,7 +490,7 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 						}
 					
 						if (access == ZEND_ACC_PROTECTED) {
-							pthreads_modifiers_unprotect(thread->modifiers, method, unprotect);
+							pthreads_modifiers_unprotect(thread->modifiers, lcname, unprotect);
 						}
 					} else {
 						zend_throw_exception_ex(
@@ -519,10 +516,12 @@ int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D) {
 				if (argc) {
 					efree(argv);
 				}
-				free(lcname);
+				zend_string_release(lcname);				
 				return called;
 			} break;
 		}
+
+		zend_string_release(lcname);
 	}
 	
 	switch (called) {

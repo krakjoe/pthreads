@@ -280,6 +280,8 @@ typedef struct _pool_call_t {
 	zend_fcall_info_cache fcc;
 } pool_call_t; /* }}} */
 
+#define POOL_CALL_EMPTY {empty_fcall_info, empty_fcall_info_cache}
+
 /* {{{ */
 static inline int pool_collect_function(zval *task, void *argument) {
 	pool_call_t *call = (pool_call_t*) argument;
@@ -294,7 +296,9 @@ static inline int pool_collect_function(zval *task, void *argument) {
 
 	if (zend_call_function(&call->fci, &call->fcc) == SUCCESS) {
 		if (Z_TYPE(remove) != IS_UNDEF) {
-			result = zend_is_true(&remove);
+			result = zend_is_true(&remove) ?
+				ZEND_HASH_APPLY_REMOVE :
+				ZEND_HASH_APPLY_KEEP;
 		}
 	}
 	
@@ -322,7 +326,7 @@ PHP_METHOD(Pool, collect) {
 	work = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"), 1, work);
 	
 	if (Z_TYPE_P(work) == IS_ARRAY && zend_hash_num_elements(Z_ARRVAL_P(work))) {
-		pool_call_t call;
+		pool_call_t call = POOL_CALL_EMPTY;
 		
 		call.fci = fci;
 		call.fcc = fcc;

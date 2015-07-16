@@ -555,22 +555,6 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *bl
 	return FAILURE;
 } /* }}} */
 
-/* {{{ */
-static int pthreads_cache_get(PTHREAD address, zval *handle) {
-    zval *cached;
-    if ((cached = zend_hash_index_find(&PTHREADS_ZG(cache), (zend_ulong) address))) {       
-	ZVAL_COPY(handle, cached);
-        return SUCCESS;
-    }
-    return FAILURE;
-}
-
-static void pthreads_cache_set(PTHREAD address, zval *cache) {
-    if (zend_hash_index_update(&PTHREADS_ZG(cache), (zend_ulong) address, cache)) {
-        Z_ADDREF_P(cache);
-    }
-} /* }}} */
-
 /* {{{ connects to an instance of a threaded object */
 int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t blength, zend_unserialize_data *data) {
 	PTHREAD address = NULL;
@@ -580,49 +564,41 @@ int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsi
 		"%lu:%lu", 
 		(long unsigned int *)&pid, (long unsigned int *)&address);
 	
-    if (len) {
-        pid_t mpid = PTHREADS_PID();
-        
-        if (address && pthreads_globals_object_validate((zend_ulong)address)) {
-            if (pid == mpid) {
+	if (len) {
+		pid_t mpid = PTHREADS_PID();
 
-            	/*if we already own this object do not create another handle */
-            	if (address->cls == TSRMLS_CACHE) {
-			ZVAL_OBJ(object, &address->std);
-            		return SUCCESS;
-            	}
-            	
-            	/* try to fetch object from cache */
-            	if (pthreads_cache_get(address, object) == SUCCESS) {
-            		return SUCCESS;
-            	}
+		if (address && pthreads_globals_object_validate((zend_ulong)address)) {
+			if (pid == mpid) {
+				/*if we already own this object do not create another handle */
+				if (address->cls == TSRMLS_CACHE) {
+					ZVAL_OBJ(object, &address->std);
+					Z_ADDREF_P(object);
+					return SUCCESS;
+				}
 
-            	/* else initialize and connect to the original object */
-            	if (object_init_ex(object, ce) == SUCCESS) {
-			pthreads_connect(
-		        	address,
-		        	PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
-                    	pthreads_cache_set(address, object);
-			return SUCCESS;
-		}
-            } else {
-            	zend_throw_exception_ex(
+				/* else initialize and connect to the original object */
+				if (object_init_ex(object, ce) == SUCCESS) {
+					pthreads_connect(address, PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
+					return SUCCESS;
+				}
+			} else {
+				zend_throw_exception_ex(
 					spl_ce_RuntimeException, 0,
 					"pthreads detected an attempt to connect to a %s "
 					"which belongs to another process", ce->name->val);
-            }
-        } else {
-        	zend_throw_exception_ex(
+			}
+		} else {
+			zend_throw_exception_ex(
 				spl_ce_RuntimeException, 0,
 				"pthreads detected an attempt to connect to a %s "
 				"which has already been destroyed", ce->name->val);
-        }
-    } else {
-    	zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0,
-			"pthreads detected an attempt to connect to a %s "
-			"which is corrupted", ce->name->val);
-    }
+		}
+	} else {
+		zend_throw_exception_ex(
+		spl_ce_RuntimeException, 0,
+		"pthreads detected an attempt to connect to a %s "
+		"which is corrupted", ce->name->val);
+	}
 	
 	ZVAL_NULL(object);
 	
@@ -773,7 +749,7 @@ static void * pthreads_routine(void *arg) {
 									fci.size = sizeof(zend_fcall_info);
 								    	fci.retval = &zresult;
 									fci.object = Z_OBJ(that);
-									
+									fci.no_separation = 1;
 									fcc.initialized = 1;
 									fcc.object = Z_OBJ(that);
 									fcc.calling_scope = Z_OBJCE(that);
@@ -785,7 +761,7 @@ static void * pthreads_routine(void *arg) {
 									zend_call_function(&fci, &fcc);
 								}
 							}
-							zend_string_free(method);
+							//zend_string_free(method);
 						} zend_catch {
 						    /* catches fatal errors and uncaught exceptions */
 						    pthreads_state_set(

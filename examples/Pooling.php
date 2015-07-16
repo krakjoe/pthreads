@@ -28,7 +28,6 @@ class SafeLog extends Threaded {
 }
 
 $pool = new Pool(8, 'WebWorker', [new SafeLog()]);
-
 $pool->submit(new WebWork());
 $pool->submit(new WebWork());
 $pool->submit(new WebWork());

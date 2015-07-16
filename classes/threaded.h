@@ -208,8 +208,6 @@ PHP_METHOD(Threaded, synchronized)
 	zend_fcall_info_cache fcc = empty_fcall_info_cache;
 	uint argc = 0;
 	zval *argv = NULL;
-
-	fci.no_separation = 1;	
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f|+", &fci, &fcc, &argv, &argc) == SUCCESS) {
 		pthreads_synchro_block(getThis(), &fci, &fcc, argc, argv, return_value);
