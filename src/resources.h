@@ -29,7 +29,6 @@
 typedef struct {
 	int type;
 	zend_resource *original;
-	void *copy;
 	void ***ls;
 } *pthreads_resource;
 

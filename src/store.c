@@ -197,8 +197,13 @@ int pthreads_store_read(pthreads_store store, zend_string *key, zval *read) {
 		}
 
 		if (result == SUCCESS) {
-			if (Z_REFCOUNTED_P(read))
-				Z_SET_REFCOUNT_P(read, 1);
+			switch (Z_TYPE_P(read)) {
+				case IS_ARRAY: Z_SET_REFCOUNT_P(read, 1); break;
+				
+				case IS_OBJECT: if (IS_PTHREADS_OBJECT(read)) {
+					Z_SET_REFCOUNT_P(read, 2);
+				} else Z_SET_REFCOUNT_P(read, 1); break;
+			}	
 		} else {
 			ZVAL_NULL(read);
 		}
@@ -528,11 +533,12 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 					
 					if (!found) {
 						ZVAL_RES(pzval, stored->original);
-						if (zend_hash_next_index_insert(&EG(regular_list), pzval)==SUCCESS) {
+						if (zend_hash_next_index_insert(&EG(regular_list), pzval)) {
 						    Z_ADDREF_P(pzval);
+						    pthreads_resources_keep(stored);
 						} else ZVAL_NULL(pzval);
 					} else {
-						ZVAL_COPY(pzval, search);
+						ZVAL_COPY_VALUE(pzval, search);
 						Z_ADDREF_P(pzval);
 					}
 				} else {
@@ -642,7 +648,7 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength) {
 				PHP_VAR_UNSERIALIZE_INIT(vars);
 				if (!php_var_unserialize(pzval, &pointer, pointer+slength, &vars)) {
 					result = FAILURE;
-					zval_dtor(pzval);
+					//zval_ptr_dtor(pzval);
 				}							
 				PHP_VAR_UNSERIALIZE_DESTROY(vars);
 			}

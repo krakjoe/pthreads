@@ -28,16 +28,30 @@
 #endif
 
 /* {{{ mark a resource for keeping */
-zend_bool pthreads_resources_keep(pthreads_resource data) {
+zend_bool pthreads_resources_keep(pthreads_resource res) {
+	if (!PTHREADS_ZG(resources)) {
+		ALLOC_HASHTABLE(PTHREADS_ZG(resources));
+		zend_hash_init(PTHREADS_ZG(resources), 15, NULL, NULL, 0);
+	}
 	
+	if (zend_hash_index_update_ptr(PTHREADS_ZG(resources), (zend_long) res->original, &res)) {
+		return 1;
+	}
 	return 0;
 } /* }}} */
 
 /* {{{ tells if a resource is being kept */
 zend_bool pthreads_resources_kept(zend_resource *entry) {
-	
+	if (PTHREADS_ZG(resources)) {
+		pthreads_resource *data = zend_hash_index_find_ptr(PTHREADS_ZG(resources), (zend_long) entry);
+		if (data) {
+			TSRMLS_CACHE_UPDATE();
+			if ((*data)->ls != TSRMLS_CACHE) {
+				return 1;
+			}
+		}
+	}
 	return 0;
 } /* }}} */
-
 #endif
 

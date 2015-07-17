@@ -653,14 +653,14 @@ static int pthreads_apply_property_scope(zend_property_info *info) {
 
 /* {{{ destroy a resource, if we created it ( ie. it is not being kept by another thread ) */
 static void pthreads_prepared_resource_dtor(zval *zv) {
-	/*zend_try {
+	zend_try {
 		if (!pthreads_resources_kept(Z_RES_P(zv))){
 			if (PTHREADS_G(default_resource_dtor))
 				PTHREADS_G(default_resource_dtor)(zv);
 		} else if (PTHREADS_ZG(resources)) {
                 
                 }
-	} zend_end_try();*/
+	} zend_end_try();
 } /* }}} */
 
 #endif

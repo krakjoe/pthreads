@@ -45,8 +45,6 @@ static inline pthreads_address pthreads_address_alloc(PTHREAD object) {
 	pthreads_address address = (pthreads_address) calloc(1, sizeof(*address));
 	if (address) {
 	    pid_t pid = PTHREADS_PID();
-	    
-		/* add the space for null here, once */
 		address->length = snprintf(
 			NULL, 0, "%lu:%lu", (long)pid, (long) object
 		);
@@ -548,7 +546,7 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *bl
 			(char*)threaded->address->serial, 
 			threaded->address->length
 		);
-		(*blength) = threaded->address->length+1;
+		(*blength) = threaded->address->length + 1;
 		
 		return SUCCESS;
 	}
@@ -559,12 +557,12 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *bl
 int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t blength, zend_unserialize_data *data) {
 	PTHREAD address = NULL;
 	pid_t pid = 0L;
-	size_t len = sscanf(
+	size_t scanned = sscanf(
 		(const char*)buffer, 
 		"%lu:%lu", 
 		(long unsigned int *)&pid, (long unsigned int *)&address);
 	
-	if (len) {
+	if (scanned) {
 		pid_t mpid = PTHREADS_PID();
 
 		if (address && pthreads_globals_object_validate((zend_ulong)address)) {

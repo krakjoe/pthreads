@@ -100,7 +100,7 @@ void* pthreads_globals_object_alloc(size_t length) {
 	if (pthreads_globals_lock(&locked)) {
 		zend_hash_index_update_ptr(
 			&PTHREADS_G(objects),
-			(ulong) bucket, bucket);
+			(zend_ulong) bucket, bucket);
 		
 		pthreads_globals_unlock(locked);
 	}

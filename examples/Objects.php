@@ -36,13 +36,6 @@ class GlobalStorage extends Threaded {
 	
 	public function run(){
 		/* we won't do anything to keep the example simple */
-		/* 	
-			 in the real world this kind of object would be executed:
-				for example, at the beginning of the request
-				to retrieve
-				and at the end
-				to save
-		*/
 	}
 }
 class MyThread extends Thread {
