@@ -55,7 +55,7 @@ typedef struct _pthreads_storage {
 #endif
 
 /* {{{ statics */
-static void pthreads_store_create(pthreads_storage *storage, zval *pzval, zend_bool complex);
+static pthreads_storage pthreads_store_create(zval *pzval, zend_bool complex);
 static int pthreads_store_convert(pthreads_storage *storage, zval *pzval);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength);
@@ -214,20 +214,18 @@ int pthreads_store_write(pthreads_store store, zend_string *key, zval *write) {
 	zend_bool locked;
 	
 	if (store) {
-		pthreads_storage storage;
 		zend_string *keyed = zend_string_init(key->val, key->len, 1);
+		pthreads_storage storage = pthreads_store_create(write, 1);
 
-		pthreads_store_create(&storage, write, 1);
-		
 		if (pthreads_lock_acquire(store->lock, &locked)) {
 			if (zend_hash_update_mem(&store->table, keyed, &storage, sizeof(pthreads_storage))) {
 				pthreads_lock_release(store->lock, locked);
 				zend_string_release(keyed);
 				return SUCCESS;
-			} else pthreads_store_storage_dtor(&storage);
+			}
 			pthreads_lock_release(store->lock, locked);
-		} else pthreads_store_storage_dtor(&storage);
-
+		}
+		pthreads_store_storage_dtor(&storage);
 		zend_string_release(keyed);
 	}
 	
@@ -240,12 +238,12 @@ int pthreads_store_separate(zval * pzval, zval *separated, zend_bool complex) {
 	pthreads_storage storage;
 	
 	if (pzval) {
-        	pthreads_store_create(&storage, pzval, complex);
+        	storage = pthreads_store_create(pzval, complex);		
 		result = pthreads_store_convert(&storage, separated);
 		if (result == SUCCESS)
 			pthreads_store_storage_dtor(&storage);
-	    else ZVAL_UNDEF(separated);
-	} else ZVAL_UNDEF(separated);
+	    	else ZVAL_NULL(separated);
+	} else ZVAL_NULL(separated);
 	
 	return result;
 } /* }}} */
@@ -407,38 +405,33 @@ void pthreads_store_free(pthreads_store store){
 } /* }}} */
 
 /* {{{ Will storeize the zval into a newly allocated buffer which must be free'd by the caller */
-static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend_bool complex){					
-	
+static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex){					
+	pthreads_storage storage;
+
 	if (unstore) {
 		/*
 		* Make an exact copy of the store data for internal storage
 		*/
-		storage->length = 0;
-		storage->exists = 0;
-		storage->data = NULL;
+		memset(&storage, 0, sizeof(pthreads_storage));
 
-		switch((storage->type = Z_TYPE_P(unstore))){
-			case IS_NULL: { /* nothing to do */ } break;
-
+		switch((storage.type = Z_TYPE_P(unstore))){
 			case IS_INDIRECT: {
-				pthreads_store_create(storage, Z_INDIRECT_P(unstore), 1);
+				return pthreads_store_create(Z_INDIRECT_P(unstore), 1);
 			} break;
 
 			case IS_STRING: {
-				if ((storage->length = Z_STRLEN_P(unstore))) {
-					storage->data = (char*) malloc(storage->length+1);
+				if ((storage.length = Z_STRLEN_P(unstore))) {
+					storage.data = (char*) malloc(storage.length+1);
 					memcpy(
-						storage->data, (const void*) Z_STRVAL_P(unstore), storage->length
+						storage.data, (const void*) Z_STRVAL_P(unstore), storage.length
 					);
 				}
 			} break;
 			
-			case IS_TRUE: storage->simple.lval = 1; break;
-			case IS_FALSE: storage->simple.lval = 0; break;
-
-			case IS_LONG: {
-				storage->simple.lval = Z_LVAL_P(unstore);
-			} break;
+			case IS_TRUE: storage.simple.lval = 1; break;
+			case IS_FALSE: storage.simple.lval = 0; break;
+			case IS_DOUBLE: storage.simple.dval = Z_DVAL_P(unstore); break;
+			case IS_LONG: storage.simple.lval = Z_LVAL_P(unstore); break;
 
 			case IS_RESOURCE: {
 				if (complex) {
@@ -449,43 +442,36 @@ static void pthreads_store_create(pthreads_storage *storage, zval *unstore, zend
 						resource->original = Z_RES_P(unstore);
 						resource->ls = TSRMLS_CACHE;
 						
-						storage->data = resource;
+						storage.data = resource;
 						Z_ADDREF_P(unstore);
 					}
 				} else {
-					storage->type = IS_NULL;
+					storage.type = IS_NULL;
 				}
 			} break;
-			
-			case IS_DOUBLE:
-			    storage->simple.dval = Z_DVAL_P(unstore);
-			break;
 			
 			case IS_OBJECT:
 			    if (instanceof_function(Z_OBJCE_P(unstore), zend_ce_closure)) {
 			        const zend_function *def = 
 			            zend_get_closure_method_def(unstore);
-			        storage->type = IS_CLOSURE;
-			        storage->data = 
+			        storage.type = IS_CLOSURE;
+			        storage.data = 
 			            (zend_function*) malloc(sizeof(zend_op_array));
-			        memcpy(storage->data, def, sizeof(zend_op_array));
+			        memcpy(storage.data, def, sizeof(zend_op_array));
 			        break;
 			    }
 			    
 			case IS_ARRAY: {
-				if (pthreads_store_tostring(unstore, (char**) &storage->data, &storage->length, complex)==SUCCESS) {
-					if (storage->type==IS_ARRAY) {
-						storage->exists = zend_hash_num_elements(
+				if (pthreads_store_tostring(unstore, (char**) &storage.data, &storage.length, complex)==SUCCESS) {
+					if (storage.type==IS_ARRAY) {
+						storage.exists = zend_hash_num_elements(
 						    Z_ARRVAL_P(unstore));
 					}
 				}
 			} break;
-			
-			default: {
-			    storage->exists = 0;
-			}
 		}
 	}
+	return storage;
 }
 /* }}} */
 
@@ -585,34 +571,30 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex) {
 	int result = FAILURE;
 	if (pzval && (Z_TYPE_P(pzval) != IS_NULL)) {
-		smart_str *psmart = (smart_str*) ecalloc(1, sizeof(smart_str));
-		
-		if (psmart) {
-			if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
-				(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
-				php_serialize_data_t vars;
-				PHP_VAR_SERIALIZE_INIT(vars);
-				php_var_serialize(						
-					psmart,
-					pzval, 
-					&vars
-				);
-				PHP_VAR_SERIALIZE_DESTROY(vars);
-			}
+		smart_str smart;
 
-			*slength = psmart->s->len;
-			if (psmart->s->len) {
-				*pstring = malloc(psmart->s->len+1);
-				if (*pstring) {
-					memcpy(
-						(char*) *pstring, (const void*) psmart->s->val, psmart->s->len
-					);
-					result = SUCCESS;
-				}
-			} else *pstring = NULL;
-			smart_str_free(psmart);	
-			efree(psmart);
+		memset(&smart, 0, sizeof(smart_str));
+		
+		if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
+			(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
+			php_serialize_data_t vars;
+
+			PHP_VAR_SERIALIZE_INIT(vars);
+			php_var_serialize(&smart, pzval, &vars);
+			PHP_VAR_SERIALIZE_DESTROY(vars);
 		}
+
+		*slength = smart.s->len;
+		if (*slength) {
+			*pstring = malloc(*slength+1);
+			if (*pstring) {
+				memcpy(
+					(char*) *pstring, (const void*) smart.s->val, smart.s->len
+				);
+				result = SUCCESS;
+			}
+		} else *pstring = NULL;
+		smart_str_free(&smart);	
 	} else {
 	    *slength = 0;
 	    *pstring = NULL;
