@@ -59,9 +59,6 @@ static void pthreads_store_create(pthreads_storage *storage, zval *pzval, zend_b
 static int pthreads_store_convert(pthreads_storage *storage, zval *pzval);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength);
-static int pthreads_store_remove_complex_recursive(zval *pzval);
-static int pthreads_store_validate_object(zval *pzval);
-static int pthreads_store_remove_complex(zval *pzval);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
 /* }}} */
 
@@ -587,31 +584,22 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 /* {{{ zval to string */
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex) {
 	int result = FAILURE;
-	if (pzval && 
-	    (Z_TYPE_P(pzval) != IS_NULL) && 
-	    (Z_TYPE_P(pzval) != IS_OBJECT || pthreads_store_validate_object(pzval))) {
-	    
+	if (pzval && (Z_TYPE_P(pzval) != IS_NULL)) {
 		smart_str *psmart = (smart_str*) ecalloc(1, sizeof(smart_str));
 		
 		if (psmart) {
-			if (!complex && 
-			    (Z_TYPE_P(pzval) == IS_OBJECT || Z_TYPE_P(pzval) == IS_ARRAY)) {
-				//pthreads_store_remove_complex_recursive(pzval);
+			if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
+				(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
+				php_serialize_data_t vars;
+				PHP_VAR_SERIALIZE_INIT(vars);
+				php_var_serialize(						
+					psmart,
+					pzval, 
+					&vars
+				);
+				PHP_VAR_SERIALIZE_DESTROY(vars);
 			}
 
-			{
-				if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
-					(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
-					php_serialize_data_t vars;
-					PHP_VAR_SERIALIZE_INIT(vars);
-					php_var_serialize(						
-						psmart,
-						pzval, 
-						&vars
-					);
-					PHP_VAR_SERIALIZE_DESTROY(vars);
-				}
-			}
 			*slength = psmart->s->len;
 			if (psmart->s->len) {
 				*pstring = malloc(psmart->s->len+1);
@@ -807,48 +795,6 @@ next:
     return SUCCESS;
 } /* }}} */
 
-/* {{{ set resources to NULL for non-complex types; helper-function for pthreads_store_remove_complex_recursive */
-static int pthreads_store_remove_complex(zval *pzval) {
-	if (Z_TYPE_P(pzval) == IS_RESOURCE) {
-		ZVAL_UNDEF(pzval);
-		return ZEND_HASH_APPLY_REMOVE;
-	}
-	return pthreads_store_remove_complex_recursive(pzval);
-} /* }}} */
-
-/* {{{ check a handle is valid before reading it */
-static int pthreads_store_validate_object(zval *pzval) {
-	return 1;
-} /* }}} */
-
-/* {{{ set corrupt objects (like mysqli after thread duplication) to NULL and recurse */
-static int pthreads_store_remove_complex_recursive(zval *pzval) {
-	int is_temp;
-
-	HashTable *thash = NULL;
-	
-	switch (Z_TYPE_P(pzval)) {
-		case IS_ARRAY:
-			thash = Z_ARRVAL_P(pzval);
-
-		case IS_OBJECT:
-			if (thash == NULL) {
-				if (!pthreads_store_validate_object(pzval)) {
-					GC_REMOVE_ZVAL_FROM_BUFFER(pzval);
-					ZVAL_UNDEF(pzval);
-					return ZEND_HASH_APPLY_KEEP;
-				}
-				thash = Z_OBJDEBUG_P(pzval, is_temp);
-			}
-
-			if (thash) {
-				zend_hash_apply(thash, (apply_func_t)pthreads_store_remove_complex);
-			}
-			
-		break;
-	}
-	return ZEND_HASH_APPLY_KEEP;
-} /* }}} */
 
 /* {{{ Will free store element */
 static void pthreads_store_storage_dtor (pthreads_storage *storage){
