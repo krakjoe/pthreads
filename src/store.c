@@ -635,7 +635,6 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 /* {{{ string to zval */
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength) {
 	int result = SUCCESS;
-	uint refcount = Z_REFCOUNTED_P(pzval) ? Z_REFCOUNT_P(pzval) : 0;
 	
 	if (pstring) {
 		const unsigned char* pointer = (const unsigned char*) pstring;
@@ -655,7 +654,7 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength) {
 			
 			if (result != FAILURE) {
 				if (Z_REFCOUNTED_P(pzval)) {
-					Z_SET_REFCOUNT_P(pzval, refcount);
+					Z_SET_REFCOUNT_P(pzval, 1);
 				}
 			} else ZVAL_NULL(pzval);
 		} else result = FAILURE;
