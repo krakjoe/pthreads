@@ -51,10 +51,9 @@
 #endif
 
 #if COMPILE_DL_PTHREADS
+	ZEND_TSRMLS_CACHE_DEFINE();
 	ZEND_GET_MODULE(pthreads)
 #endif
-
-ZEND_TSRMLS_CACHE_DEFINE();
 
 #ifndef HAVE_PTHREADS_GLOBALS_H
 #	include <src/globals.h>

@@ -27,7 +27,6 @@
 #endif
 
 typedef struct {
-	int type;
 	zend_resource *original;
 	void ***ls;
 } *pthreads_resource;

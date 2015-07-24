@@ -50,6 +50,7 @@ class myWorker extends Worker {
 class Work extends Threaded {
 
     public function run () {
+	$foreignResource = $this->worker->foreignResource;
 
         var_dump(array(
             'Foreign resource is accessible from task:',

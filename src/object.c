@@ -759,7 +759,7 @@ static void * pthreads_routine(void *arg) {
 									zend_call_function(&fci, &fcc);
 								}
 							}
-							//zend_string_free(method);
+							zend_string_free(method);
 						} zend_catch {
 						    /* catches fatal errors and uncaught exceptions */
 						    pthreads_state_set(
@@ -779,6 +779,7 @@ static void * pthreads_routine(void *arg) {
 
 						/* deal with references to stacked objects */
 						if (!terminated) {
+							Z_SET_REFCOUNT(that, 0);
 							zval_dtor(&that);
 						}
 
