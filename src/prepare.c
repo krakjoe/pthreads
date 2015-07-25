@@ -190,7 +190,17 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	}
 	
 	/* copy function table */
-	zend_hash_copy(&prepared->function_table, &candidate->function_table, (copy_ctor_func_t) pthreads_copy_function_ctor);
+	{
+		zend_string *key;
+		zend_function *value;
+
+		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->function_table, key, value) {
+			value = pthreads_copy_function(value);
+			key = zend_string_new(key);
+			zend_hash_add_ptr(&prepared->function_table, key, value);
+			zend_string_release(key);		
+		} ZEND_HASH_FOREACH_END();
+	}
 	
 	{
 	    zend_function *func;
@@ -506,9 +516,16 @@ int pthreads_prepare(PTHREAD thread){
 
 	/* inherit function table from parent ... */
 	if (thread->options & PTHREADS_INHERIT_FUNCTIONS) {
-		
-		zend_hash_merge(CG(function_table), PTHREADS_CG(thread->cls, function_table),
-			pthreads_copy_function_ctor, 0);
+		zend_string *key;
+		zend_function *value;
+
+		ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->cls, function_table), key, value) {
+			key = zend_string_new(key);
+			value = pthreads_copy_function(value);
+			zend_hash_add_ptr(
+				CG(function_table), key, value);
+			zend_string_release(key);
+		} ZEND_HASH_FOREACH_END();
 
 	}
 
