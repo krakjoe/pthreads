@@ -19,7 +19,6 @@
 #define HAVE_PTHREADS_CLASS_THREAD_H
 PHP_METHOD(Thread, start);
 PHP_METHOD(Thread, join);
-PHP_METHOD(Thread, detach);
 PHP_METHOD(Thread, isStarted);
 PHP_METHOD(Thread, isJoined);
 PHP_METHOD(Thread, getThreadId);
@@ -36,9 +35,6 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_join, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_detach, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_getThreadId, 0, 0, 0)
@@ -77,7 +73,6 @@ extern zend_function_entry pthreads_thread_methods[];
 zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, start, Thread_start, ZEND_ACC_PUBLIC)
 	PHP_ME(Thread, join, Thread_join, ZEND_ACC_PUBLIC)
-    PHP_ME(Thread, detach, Thread_detach, ZEND_ACC_PUBLIC)
 	PHP_ME(Thread, isStarted, Thread_isStarted, ZEND_ACC_PUBLIC)
 	PHP_ME(Thread, isJoined, Thread_isJoined, ZEND_ACC_PUBLIC)
 	PHP_ME(Thread, getThreadId, Thread_getThreadId, ZEND_ACC_PUBLIC)
@@ -213,28 +208,6 @@ PHP_METHOD(Thread, join)
 			"pthreads has detected an attempt to shutdown %s (%lu) from an incorrect context", PTHREADS_FRIENDLY_NAME);
 		RETURN_FALSE;
 	}
-} /* }}} */
-
-/* {{{ proto boolean Thread::detach()
-        Will return a boolean indication of success */
-PHP_METHOD(Thread, detach)
-{
-    PTHREAD thread = PTHREADS_FETCH;
-    int result = FAILURE;
-
-    if (thread) {
-        result = pthreads_detach(thread);
-
-        if (result != SUCCESS) {
-            RETURN_FALSE;
-        }
-        
-        RETURN_TRUE;
-    } else {
-    	zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0,
-			"pthreads has experienced an internal error while preparing to detach a %s", PTHREADS_NAME);
-    }
 } /* }}} */
 
 /* {{{ proto long Thread::getThreadId()

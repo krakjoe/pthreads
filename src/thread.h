@@ -149,12 +149,11 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_ALLOW_HEADERS	   0x10000000 /* }}} */
 
 /* {{{ scope constants */
-#define PTHREADS_SCOPE_UNKNOWN     0
-#define PTHREADS_SCOPE_THREADED    1
-#define PTHREADS_SCOPE_THREAD      2
-#define PTHREADS_SCOPE_WORKER      4
-#define PTHREADS_SCOPE_CONNECTION  8
-#define PTHREADS_SCOPE_DETACHED    16 /* }}} */
+#define PTHREADS_SCOPE_UNKNOWN     (0)
+#define PTHREADS_SCOPE_THREADED    (1<<1)
+#define PTHREADS_SCOPE_THREAD      (1<<2)
+#define PTHREADS_SCOPE_WORKER      (1<<3)
+#define PTHREADS_SCOPE_CONNECTION  (1<<4) /* }}} */
 
 /* {{{ scope macros */
 #define PTHREADS_IS_KNOWN_ENTRY(t)      ((t)->scope)
@@ -165,10 +164,7 @@ static inline int pthreads_equal_func(void **first, void **second){
 #define PTHREADS_IS_WORKER(t)           ((t)->scope & PTHREADS_SCOPE_WORKER)
 #define PTHREADS_IS_NOT_WORKER(t)       (!PTHREADS_IS_WORKER(t))
 #define PTHREADS_IS_THREADED(t)         ((t)->scope & PTHREADS_SCOPE_THREADED)
-#define PTHREADS_IS_NOT_THREADED(t)     (!PTHREADS_IS_THREADED(t))
-#define PTHREADS_IS_DETACHED(t)         ((t)->scope & PTHREADS_SCOPE_DETACHED)
-#define PTHREADS_IS_NOT_DETACHED(t)     (!PTHREADS_IS_DETACHED(t))
-/* }}} */
+#define PTHREADS_IS_NOT_THREADED(t)     (!PTHREADS_IS_THREADED(t)) /* }}} */
 
 #ifdef HAVE_SIGNAL_H
 #ifdef _WIN32

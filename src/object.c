@@ -335,10 +335,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 		destination->store = source->store;
 		destination->stack = source->stack;
 		
-		if (PTHREADS_IS_DETACHED(source)) {
-		    destination->scope |= PTHREADS_SCOPE_DETACHED;
-		}
-		
 		return SUCCESS;
 	} else return FAILURE;
 } /* }}} */
@@ -408,7 +404,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 void pthreads_base_free(zend_object *object) {
 	PTHREAD base = PTHREADS_FETCH_FROM(object);
 
-	if (PTHREADS_IS_NOT_CONNECTION(base) && PTHREADS_IS_NOT_DETACHED(base)) {
+	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
 			pthread_t *pthread = &base->thread;
 			if (pthread) {
@@ -499,34 +495,6 @@ int pthreads_join(PTHREAD thread) {
 	} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
 	
 	return dojoin ? pthread_join(thread->thread, NULL) 	: FAILURE;
-} /* }}} */
-
-/* {{{ detach a thread */
-int pthreads_detach(PTHREAD thread) {
-
-    if (PTHREADS_IS_NOT_DETACHED(thread)) {
-        if ((pthread_detach(thread->thread) == SUCCESS)) {
-            thread->scope |= PTHREADS_SCOPE_DETACHED;
-            
-            return SUCCESS;
-        }
-    }
-    
-    return FAILURE;
-} /* }}} */
-
-/* {{{ synchronization helper */
-zend_bool pthreads_wait_member_ex(PTHREAD thread, zval *member, ulong timeout) {
-	if (!pthreads_store_isset(thread->store, Z_STR_P(member), 2)) {
-		if (pthreads_synchro_wait_ex(thread->synchro, timeout))
-			return pthreads_store_isset(thread->store, Z_STR_P(member), 2);
-		else return 0;
-	} else return 1;
-} /* }}} */
-
-/* {{{ synchronization helper */
-zend_bool pthreads_wait_member(PTHREAD thread, zval *member) {
-	return pthreads_wait_member_ex(thread, member, 0L);
 } /* }}} */
 
 /* {{{ serialize an instance of a threaded object for connection in another thread */

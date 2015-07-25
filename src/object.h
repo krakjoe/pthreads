@@ -66,7 +66,6 @@ void pthreads_current_thread(zval *return_value);
 /* {{{ start/join */
 int pthreads_start(PTHREAD thread);
 int pthreads_join(PTHREAD thread);
-int pthreads_detach(PTHREAD thread);
 /* }}} */
 
 /* {{{ synchronization heplers */
