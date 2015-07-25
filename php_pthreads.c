@@ -288,8 +288,6 @@ PHP_MINIT_FUNCTION(pthreads)
 		pthreads_instance = TSRMLS_CACHE;
 	}
 
-	CG(compiler_options) |= ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | ZEND_COMPILE_IGNORE_USER_FUNCTIONS;
-
 #ifndef HAVE_SPL
 	spl_ce_InvalidArgumentException = zend_exception_get_default();
 	spl_ce_Countable                = zend_exception_get_default();
