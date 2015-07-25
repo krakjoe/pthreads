@@ -570,6 +570,13 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 } /* }}} */
 #endif
 
+static inline int pthreads_resources_cleanup(zval *bucket) {
+	TSRMLS_CACHE_UPDATE();
+	if (pthreads_resources_kept(Z_RES_P(bucket))) {
+		return ZEND_HASH_APPLY_REMOVE;
+	} else return ZEND_HASH_APPLY_KEEP;
+}
+
 /* {{{ */
 static void * pthreads_routine(void *arg) {
 	PTHREAD thread = (PTHREAD) arg;
@@ -721,6 +728,8 @@ static void * pthreads_routine(void *arg) {
 		* Shutdown Block Begin
 		**/
 		PG(report_memleaks) = 0;
+
+		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);
 		
 #ifdef PTHREADS_PEDANTIC
 		pthreads_globals_lock(&glocked);
