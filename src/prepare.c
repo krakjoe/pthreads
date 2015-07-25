@@ -324,10 +324,25 @@ while(0)
 		prepared->info.user.filename = zend_string_new(candidate->info.user.filename);
 	
 	/* copy constants */
-	zend_hash_copy(
-	    &prepared->constants_table, &candidate->constants_table, (copy_ctor_func_t) pthreads_store_separate_zval);
+	{
+		zend_string *key;
+		zval *value;
 
-    return prepared;
+		ZEND_HASH_FOREACH_STR_KEY_VAL(&candidate->constants_table, key, value) {
+			zend_string *name = 
+				zend_string_new(key);
+			if (Z_REFCOUNTED_P(value)) {
+				zval separated;
+				if (pthreads_store_separate(value, &separated, 1) == SUCCESS) {
+					zend_hash_add(&prepared->constants_table, name, &separated);					
+				}
+			} else zend_hash_add(&prepared->constants_table, name, value);
+			zend_string_release(name);
+		} ZEND_HASH_FOREACH_END();
+
+	}
+
+	return prepared;
 }
 
 static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int argc, va_list argv, zend_hash_key *key) {

@@ -176,6 +176,9 @@ PHP_MINIT_FUNCTION(pthreads)
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_GLOBALS", PTHREADS_ALLOW_GLOBALS, CONST_CS | CONST_PERSISTENT);
 
+	
+	
+
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
 	ce.serialize = pthreads_internal_serialize;
 	ce.unserialize = pthreads_internal_unserialize;
@@ -247,10 +250,10 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.free_obj = pthreads_base_free;
 	pthreads_handlers.cast_object = pthreads_cast_object;
 	pthreads_handlers.count_elements = pthreads_count_properties;
-    
+
 	pthreads_handlers.get_debug_info = pthreads_read_debug;	
 	pthreads_handlers.get_properties = pthreads_read_properties;
-
+	
 	pthreads_handlers.read_property = pthreads_read_property;
 	pthreads_handlers.write_property = pthreads_write_property;
 	pthreads_handlers.has_property = pthreads_has_property;
@@ -284,6 +287,8 @@ PHP_MINIT_FUNCTION(pthreads)
 		*/
 		pthreads_instance = TSRMLS_CACHE;
 	}
+
+	CG(compiler_options) |= ZEND_COMPILE_IGNORE_INTERNAL_FUNCTIONS | ZEND_COMPILE_IGNORE_USER_FUNCTIONS;
 
 #ifndef HAVE_SPL
 	spl_ce_InvalidArgumentException = zend_exception_get_default();

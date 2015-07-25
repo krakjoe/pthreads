@@ -23,11 +23,24 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 	HashTable *statics = NULL;
 	
 	if (old) {
+		zend_string *key;
+		zval *value;
+
 		ALLOC_HASHTABLE(statics);
 		zend_hash_init(statics,
-			zend_hash_num_elements(old), 
+			zend_hash_num_elements(old),
 			NULL, ZVAL_PTR_DTOR, 0);
-		zend_hash_copy(statics, old, pthreads_store_separate_zval);
+
+		ZEND_HASH_FOREACH_STR_KEY_VAL(old, key, value) {
+			zend_string *name = zend_string_new(key);
+			if (Z_REFCOUNTED_P(value)) {
+				zval separated;
+				if (pthreads_store_separate(value, &separated, 1) == SUCCESS) {
+					zend_hash_add(statics, name, &separated);					
+				}
+			} else zend_hash_add(statics, name, value);
+			zend_string_release(name);
+		} ZEND_HASH_FOREACH_END();
 	}
 	
 	return statics;
