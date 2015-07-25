@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | pthreads                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2012 - 2014                                |
+  | Copyright (c) Joe Watkins 2012 - 2015                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -12,17 +12,11 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
+  | Author: Joe Watkins <krakjoe@php.net>                                |
   +----------------------------------------------------------------------+
  */
 #ifndef HAVE_PTHREADS_OBJECT_H
 #define HAVE_PTHREADS_OBJECT_H
-
-/*
-* @TODO
-*	implement verbose debugging mode in threads
-*	try and find a way a thread can throw an exception in cid so that ThreadingException can be implemented and not just cause deadlocks
-*/
 
 #ifdef HAVE_CONFIG_H
 #	include <config.h>

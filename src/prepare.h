@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | pthreads                                                             |
   +----------------------------------------------------------------------+
-  | Copyright (c) Joe Watkins 2012 - 2014                                |
+  | Copyright (c) Joe Watkins 2012 - 2015                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author: Joe Watkins <joe.watkins@live.co.uk>                         |
+  | Author: Joe Watkins <krakjoe@php.net>                                |
   +----------------------------------------------------------------------+
  */
 #ifndef HAVE_PTHREADS_PREPARE_H
@@ -27,8 +27,8 @@
 #endif
 
 /* {{{ fetch prepared class entry */
-zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate ); /* }}} */
+zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate); /* }}} */
 
 /* {{{ prepare for execution in context */
-int pthreads_prepare(PTHREAD thread ); /* }}} */
+int pthreads_prepare(PTHREAD thread); /* }}} */
 #endif
