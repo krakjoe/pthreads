@@ -22,8 +22,10 @@ class WebWork extends Collectable {
 }
 
 class SafeLog extends Threaded {
-	protected function log($message, ... $args) {
-		echo vsprintf("{$message}\n", $args);
+	public function log($message, ... $args) {
+		$this->synchronized(function($message, ... $args){
+			echo vsprintf("{$message}\n", ... $args);
+		}, $message, $args);
 	}
 }
 
