@@ -719,7 +719,9 @@ static void * pthreads_routine(void *arg) {
 		} zend_end_try();
 
 		zval_ptr_dtor_nogc(&PTHREADS_ZG(this));
-		
+
+		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
+
 		/**
 		* Thread Block End
 		**/
@@ -728,8 +730,6 @@ static void * pthreads_routine(void *arg) {
 		* Shutdown Block Begin
 		**/
 		PG(report_memleaks) = 0;
-
-		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);
 		
 #ifdef PTHREADS_PEDANTIC
 		pthreads_globals_lock(&glocked);
