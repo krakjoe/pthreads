@@ -42,43 +42,13 @@
 #   include <src/copy.h>
 #endif
 
-/* {{{ prepared property info ctor */
-static void pthreads_preparation_property_info_copy_ctor(zval *); /* }}} */
-
-/* {{{ prepared property info dummy ctor */
-static void pthreads_preparation_property_info_dummy_ctor(zval *); /* }}} */
-/* {{{ prepared property info dummy dtor */
-static void pthreads_preparation_property_info_dummy_dtor(zval *); /* }}} */
-
-#if PHP_VERSION_ID < 50400
-/* {{{ default property ctor for 5.3 */
-static void pthreads_preparation_default_properties_ctor(zval **property); /* }}} */
-/* {{{ default property dtor for 5.3 */
-static void pthreads_preparation_default_properties_dtor(zval *property); /* }}} */
-#else
-/* {{{ trail alias copy for 5.4 */
-static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, zend_trait_alias *alias); /* }}} */
-/* {{{ trait precendence for 5.4 */
-static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREAD thread, zend_trait_precedence *precedence); /* }}} */
-/* {{{ method reference copy for traits */
-static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference); /* }}} */
-#endif
-
-/* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
-static int pthreads_apply_method_scope(zend_function *function); /* }}} */
-
-/* {{{ fix the scope of methods such that self:: and parent:: work everywhere */
-static int pthreads_apply_property_scope(zend_property_info *info); /* }}} */
-
-/* {{{ prepared resource destructor */
+/* {{{ */
+static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, zend_trait_alias *alias); 
+static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREAD thread, zend_trait_precedence *precedence);
+static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference);
 static void pthreads_prepared_resource_dtor(zval *zv); /* }}} */
 
-static void pthreads_function_add_ref(zval *bucket) {
-	zend_function *function = Z_PTR_P(bucket);
-	
-	function_add_ref(function);
-}
-
+/* {{{ */
 static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *candidate) {
 	zend_class_entry *prepared = NULL;
 
@@ -205,7 +175,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	{
 	    zend_function *func;
 	    zend_string *name;
-		
+
 	    if (!prepared->constructor && zend_hash_num_elements(&prepared->function_table)) {
 	        if ((func = zend_hash_str_find_ptr(&prepared->function_table, "__construct", sizeof("__construct")-1))) {
 	            prepared->constructor = func;
@@ -238,7 +208,6 @@ while(0)
         FIND_AND_SET(unserialize_func, "unserialize");
         FIND_AND_SET(__tostring, "__tostring");
         FIND_AND_SET(destructor, "__destruct");
-        
 #undef FIND_AND_SET
 	}
 
@@ -353,8 +322,9 @@ while(0)
 	}
 
 	return prepared;
-}
+} /* }}} */
 
+/* {{{ */
 static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int argc, va_list argv, zend_hash_key *key) {
 	zend_function *function = (zend_function*) Z_PTR_P(bucket);
 	PTHREAD thread = va_arg(argv, PTHREAD);	
@@ -380,9 +350,9 @@ static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int arg
 		}
 	}
 	return ZEND_HASH_APPLY_KEEP;
-}
+} /* }}} */
 
-/* {{{ fetch prepared class entry */
+/* {{{ */
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate) {
 	zend_class_entry *prepared = NULL;
 	zend_string *lookup = NULL;
@@ -420,6 +390,7 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 	return prepared;
 } /* }}} */
 
+/* {{{ */
 static inline zend_bool pthreads_constant_exists(zend_string *name) {
     int retval = 1;
     zend_string *lookup;
@@ -431,12 +402,10 @@ static inline zend_bool pthreads_constant_exists(zend_string *name) {
     }
 
     return retval;
-}
+} /* }}} */
 
 /* {{{ prepares the current context to execute the referenced thread */
 int pthreads_prepare(PTHREAD thread){
-	//TSRMLS_CACHE_UPDATE();
-
 	/* inherit ini entries from parent ... */
 	if (thread->options & PTHREADS_INHERIT_INI) {
 		zend_ini_entry *entry[2];
@@ -603,13 +572,7 @@ int pthreads_prepare(PTHREAD thread){
 	return SUCCESS;
 } /* }}} */
 
-/* {{{ copy property info dummy ctor */
-static void pthreads_preparation_property_info_dummy_ctor(zval *bucket) {} /* }}} */
-
-/* {{{ destroy property info dummy dtor */
-static void pthreads_preparation_property_info_dummy_dtor(zval *bucket) {} /* }}} */
-
-/* {{{ trail alias copy for 5.4 */
+/* {{{ */
 static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, zend_trait_alias *alias) {
 	zend_trait_alias *copy = ecalloc(1, sizeof(zend_trait_alias));
 	if (copy) {
@@ -623,7 +586,7 @@ static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, 
 	return copy;
 } /* }}} */
 
-/* {{{ trait precendence for 5.4+ */
+/* {{{ */
 static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREAD thread, zend_trait_precedence *precedence) {
 	zend_trait_precedence *copy = ecalloc(1, sizeof(zend_trait_precedence));
 	if (copy) {
@@ -639,7 +602,7 @@ static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREA
 	return copy;
 } /* }}} */
 
-/* {{{ method reference copy for traits */
+/* {{{  */
 static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference) {
 	zend_trait_method_reference *copy = ecalloc(1, sizeof(zend_trait_method_reference));
 	if (copy) {
@@ -653,36 +616,6 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 	return copy;
 } /* }}} */
 
-/* {{{ fix method scope for prepared entries, enabling self:: and parent:: to work */
-/*static int pthreads_apply_method_scope(zend_function *function) {
-	if (function && function->type == ZEND_USER_FUNCTION) {
-		zend_op_array *ops = &function->op_array;
-		
-		if (ops->scope) {
-			zend_class_entry *search = NULL;
-			if ((search = zend_hash_index_find_ptr(PTHREADS_ZG(resolve), (zend_ulong) ops->scope))) {
-				ops->scope = search;
-			} else ops->scope = NULL;
-		} else ops->scope = NULL;
-		
-		function->common.prototype = NULL;
-	}
-	
-	return ZEND_HASH_APPLY_KEEP;
-} */ /* }}} */
-
-/* {{{ fix scope for prepared entry properties, enabling private members in foreign objects to work */
-static int pthreads_apply_property_scope(zend_property_info *info) {
-	if (info->ce) {
-		zend_class_entry *search = NULL;
-		if ((search = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) info->ce))) {
-			info->ce = search;
-		} else info->ce = NULL;
-	}
-	
-	return ZEND_HASH_APPLY_KEEP;
-} /* }}} */
-
 /* {{{ destroy a resource, if we created it ( ie. it is not being kept by another thread ) */
 static void pthreads_prepared_resource_dtor(zval *zv) {
 	zend_try {
@@ -694,7 +627,5 @@ static void pthreads_prepared_resource_dtor(zval *zv) {
                 }
 	} zend_end_try();
 } /* }}} */
-
 #endif
-
 
