@@ -207,7 +207,7 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	    zend_string *name;
 		
 	    if (!prepared->constructor && zend_hash_num_elements(&prepared->function_table)) {
-	        if ((func = zend_hash_str_find_ptr(&prepared->function_table, "__construct", sizeof("__construct")))) {
+	        if ((func = zend_hash_str_find_ptr(&prepared->function_table, "__construct", sizeof("__construct")-1))) {
 	            prepared->constructor = func;
 	        } else {
 			name = zend_string_tolower(prepared->name);

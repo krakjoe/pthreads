@@ -26,12 +26,14 @@ class GlobalStorage extends Threaded {
 	}
 	
 	/* note that members must be strings */
-	protected function getUniqueId(){
-		$id = $this->id++;
-		if (!$id)
-			return "unknown";
-		printf("Returning %d\n", $id);
-		return "{$id}";
+	public function getUniqueId(){
+		return $this->synchronized(function(){
+			$id = $this->id++;
+			if (!$id)
+				return "unknown";
+			printf("Returning %d\n", $id);
+			return "{$id}";
+		});
 	}
 	
 	public function run(){
