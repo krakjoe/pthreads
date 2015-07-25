@@ -102,7 +102,7 @@ static inline void pthreads_object_iterator_current_key(zend_object_iterator* it
     switch (zend_hash_get_current_key_ex(
         &intern->properties, &skey, &ukey, &intern->position)) {
         case HASH_KEY_IS_STRING: {
-            ZVAL_STRINGL(key, skey->val, skey->len - 1);
+            ZVAL_STRINGL(key, skey->val, skey->len);
         } break;
             
         case HASH_KEY_IS_LONG: {
