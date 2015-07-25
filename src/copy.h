@@ -27,9 +27,7 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 		zend_hash_init(statics,
 			zend_hash_num_elements(old), 
 			NULL, ZVAL_PTR_DTOR, 0);
-		zend_hash_copy(
-			statics, 
-			old, (copy_ctor_func_t) zval_add_ref);
+		zend_hash_copy(statics, old, pthreads_store_separate_zval);
 	}
 	
 	return statics;

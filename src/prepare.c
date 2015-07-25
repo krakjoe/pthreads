@@ -320,12 +320,12 @@ while(0)
     	}
 	
 	/* always copy filename so that errors make sense (and don't corrupt heap) */
-	//if (prepared->info.user.filename)
-	//	prepared->info.user.filename = zend_string_new(candidate->info.user.filename);
+	if (prepared->info.user.filename)
+		prepared->info.user.filename = zend_string_new(candidate->info.user.filename);
 	
 	/* copy constants */
-	//zend_hash_copy(
-	//    &prepared->constants_table, &candidate->constants_table, (copy_ctor_func_t) zval_add_ref);
+	zend_hash_copy(
+	    &prepared->constants_table, &candidate->constants_table, (copy_ctor_func_t) pthreads_store_separate_zval);
 
     return prepared;
 }

@@ -30,10 +30,6 @@
 #	include <src/state.h>
 #endif
 
-#ifndef HAVE_PTHREADS_MODIFIERS_H
-#	include <src/modifiers.h>
-#endif
-
 #ifndef HAVE_PTHREADS_STORE_H
 #	include <src/store.h>
 #endif
@@ -107,11 +103,6 @@ typedef struct _pthread_construct {
 	* Thread Sync
 	*/
 	pthreads_synchro synchro;
-	
-	/*
-	* Method modifiers
-	*/
-	pthreads_modifiers modifiers;
 	
 	/*
 	* Serial Buffers

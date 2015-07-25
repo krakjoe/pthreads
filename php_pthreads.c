@@ -100,10 +100,6 @@ zend_class_entry *spl_ce_RuntimeException;
 #	include <src/object.h>
 #endif
 
-#ifndef HAVE_PTHREADS_MODIFIERS_H
-#	include <src/modifiers.h>
-#endif
-
 #ifndef PTHREADS_NAME
 #	define PTHREADS_NAME Z_OBJCE_P(getThis())->name
 #endif
@@ -167,7 +163,7 @@ void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry ce;
-	
+
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_ALL", PTHREADS_INHERIT_ALL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_NONE", PTHREADS_INHERIT_NONE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_INI", PTHREADS_INHERIT_INI, CONST_CS | CONST_PERSISTENT);
@@ -179,7 +175,7 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_GLOBALS", PTHREADS_ALLOW_GLOBALS, CONST_CS | CONST_PERSISTENT);
-	
+
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
 	ce.serialize = pthreads_internal_serialize;
 	ce.unserialize = pthreads_internal_unserialize;
@@ -254,10 +250,7 @@ PHP_MINIT_FUNCTION(pthreads)
     
 	pthreads_handlers.get_debug_info = pthreads_read_debug;	
 	pthreads_handlers.get_properties = pthreads_read_properties;
-	
-	pthreads_handlers.get_method = pthreads_get_method;
-	pthreads_handlers.call_method = pthreads_call_method;
-	
+
 	pthreads_handlers.read_property = pthreads_read_property;
 	pthreads_handlers.write_property = pthreads_write_property;
 	pthreads_handlers.has_property = pthreads_has_property;

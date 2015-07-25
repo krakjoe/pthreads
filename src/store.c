@@ -50,9 +50,7 @@ typedef struct _pthreads_storage {
 	void    *data;
 } pthreads_storage;
 
-#ifndef Z_OBJ_P
-#	define Z_OBJ_P(zval_p) ((zend_object*)(EG(objects_store).object_buckets[Z_OBJ_HANDLE_P(zval_p)].bucket.obj.object))
-#endif
+#define PTHREADS_STORAGE_EMPTY {0, 0, 0, 0, NULL}
 
 /* {{{ statics */
 static pthreads_storage pthreads_store_create(zval *pzval, zend_bool complex);
@@ -248,6 +246,19 @@ int pthreads_store_separate(zval * pzval, zval *separated, zend_bool complex) {
 	return result;
 } /* }}} */
 
+/* {{{ */
+void pthreads_store_separate_zval(zval *zv) {
+	pthreads_storage storage;
+	zval in = *zv;
+	if (Z_TYPE(in) != IS_NULL) {
+        	storage = pthreads_store_create(&in, 1);
+		if (pthreads_store_convert(&storage, zv) != SUCCESS)
+			ZVAL_NULL(zv);
+
+	    	pthreads_store_storage_dtor(&storage);
+	} else ZVAL_NULL(zv);
+} /* }}} */
+
 /* {{{ count properties */
 int pthreads_store_count(zval *object, zend_long *count) {
    PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
@@ -374,15 +385,17 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash) {
 
 			ZEND_HASH_FOREACH_KEY_PTR(&store->table, idx, name, storage) {
 				zval pzval;
-				ZVAL_UNDEF(&pzval);
+				zend_string *rename;
+				ZVAL_NULL(&pzval);
 
 				if (pthreads_store_convert(storage, &pzval)!=SUCCESS) {
-					ZVAL_UNDEF(&pzval);
 					continue;
 				}
 
-				if (!zend_hash_update(hash, name, &pzval))
-					zval_dtor(&pzval);
+				rename = zend_string_init(name->val, name->len, 0);
+				if (!zend_hash_update(hash, rename, &pzval))
+					zval_dtor_no_gc(&pzval);
+				zend_string_release(rename);
 			} ZEND_HASH_FOREACH_END();
 		
 			pthreads_lock_release(store->lock, locked);
@@ -406,32 +419,27 @@ void pthreads_store_free(pthreads_store store){
 
 /* {{{ Will storeize the zval into a newly allocated buffer which must be free'd by the caller */
 static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex){					
-	pthreads_storage storage;
+	pthreads_storage storage = PTHREADS_STORAGE_EMPTY;
 
 	if (unstore) {
-		/*
-		* Make an exact copy of the store data for internal storage
-		*/
-		memset(&storage, 0, sizeof(pthreads_storage));
-
-		switch((storage.type = Z_TYPE_P(unstore))){
+		switch((storage.type = Z_TYPE_P(unstore))){			
 			case IS_INDIRECT: {
 				return pthreads_store_create(Z_INDIRECT_P(unstore), 1);
 			} break;
 
-			case IS_STRING: {
-				if ((storage.length = Z_STRLEN_P(unstore))) {
-					storage.data = (char*) malloc(storage.length+1);
-					memcpy(
-						storage.data, (const void*) Z_STRVAL_P(unstore), storage.length
-					);
-				}
-			} break;
-			
+			case IS_NULL: /* do nothing */ break;
 			case IS_TRUE: storage.simple.lval = 1; break;
 			case IS_FALSE: storage.simple.lval = 0; break;
 			case IS_DOUBLE: storage.simple.dval = Z_DVAL_P(unstore); break;
 			case IS_LONG: storage.simple.lval = Z_LVAL_P(unstore); break;
+
+			case IS_STRING: {
+				if ((storage.length = Z_STRLEN_P(unstore))) {
+					storage.data = 
+						(char*) malloc(storage.length+1);
+					memcpy(storage.data, Z_STRVAL_P(unstore), storage.length);
+				}
+			} break;
 
 			case IS_RESOURCE: {
 				if (complex) {
@@ -460,13 +468,11 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex){
 			        memcpy(storage.data, def, sizeof(zend_op_array));
 			        break;
 			    }
-			    
+
+			/* break intentionally omitted */
 			case IS_ARRAY: {
 				if (pthreads_store_tostring(unstore, (char**) &storage.data, &storage.length, complex)==SUCCESS) {
-					if (storage.type==IS_ARRAY) {
-						storage.exists = zend_hash_num_elements(
-						    Z_ARRVAL_P(unstore));
-					}
+					storage.exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
 				}
 			} break;
 		}

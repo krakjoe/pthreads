@@ -70,6 +70,9 @@ int pthreads_store_write(pthreads_store store, zend_string *key, zval *write); /
 /* {{{ separate a zval using internals */
 int pthreads_store_separate(zval *pzval, zval *seperated, zend_bool complex); /* }}} */
 
+/* {{{ */
+void pthreads_store_separate_zval(zval *pzval); /* }}} */
+
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash); /* }}} */
 

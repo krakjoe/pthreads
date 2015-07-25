@@ -30,10 +30,6 @@
 #	include <src/prepare.h>
 #endif
 
-#ifndef HAVE_PTHREADS_MODIFIERS_H
-#	include <src/modifiers.h>
-#endif
-
 #ifndef HAVE_PTHREADS_STORE_H
 #	include <src/store.h>
 #endif
@@ -309,7 +305,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
 			pthreads_lock_free(destination->lock);
 			pthreads_state_free(destination->state );
-			pthreads_modifiers_free(destination->modifiers);
 			pthreads_store_free(destination->store);
 			pthreads_synchro_free(destination->synchro);
 			pthreads_address_free(destination->address);
@@ -337,7 +332,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 		destination->lock = source->lock;
 		destination->state = source->state;
 		destination->synchro = source->synchro;
-		destination->modifiers = source->modifiers;
 		destination->store = source->store;
 		destination->stack = source->stack;
 		
@@ -394,10 +388,8 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 			base->lock = pthreads_lock_alloc();
 			base->state = pthreads_state_alloc(0);
 			base->synchro = pthreads_synchro_alloc();
-			base->modifiers = pthreads_modifiers_alloc();
 			base->store = pthreads_store_alloc();
 
-			pthreads_modifiers_init(base->modifiers, entry);
 			if (PTHREADS_IS_WORKER(base)) {
 				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
 				if (base->stack) {
@@ -426,7 +418,6 @@ void pthreads_base_free(zend_object *object) {
 
 		pthreads_lock_free(base->lock);
 		pthreads_state_free(base->state );
-		pthreads_modifiers_free(base->modifiers);
 		pthreads_store_free(base->store);
 		pthreads_synchro_free(base->synchro);
 		pthreads_address_free(base->address);
@@ -598,7 +589,7 @@ int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsi
 		"which is corrupted", ce->name->val);
 	}
 	
-	ZVAL_NULL(object);
+	//ZVAL_NULL(object);
 	
 	return FAILURE;
 } /* }}} */
@@ -743,7 +734,6 @@ static void * pthreads_routine(void *arg) {
 
 							if ((fun = zend_hash_find_ptr(&Z_OBJCE(that)->function_table, method))) {							
 								if (fun->type == ZEND_USER_FUNCTION) {
-									ZVAL_STR(&fci.function_name, method);
 									fci.size = sizeof(zend_fcall_info);
 								    	fci.retval = &zresult;
 									fci.object = Z_OBJ(that);
@@ -754,8 +744,6 @@ static void * pthreads_routine(void *arg) {
 									fcc.called_scope = Z_OBJCE(that);
 									fcc.function_handler = fun;
 									
-									EG(scope) = Z_OBJCE(that);
-
 									zend_call_function(&fci, &fcc);
 								}
 							}

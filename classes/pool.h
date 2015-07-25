@@ -263,7 +263,6 @@ PHP_METHOD(Pool, submitTo) {
 
 	if ((selected = zend_hash_index_find(Z_ARRVAL_P(workers), worker))) {
 		zend_hash_next_index_insert(Z_ARRVAL_P(work), task);
-		Z_SET_ISREF_P(task);
 		Z_ADDREF_P(task);
 	
 		zend_call_method(selected, Z_OBJCE_P(selected), NULL, ZEND_STRL("stack"), NULL, 1, task, NULL);

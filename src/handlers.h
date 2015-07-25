@@ -60,13 +60,7 @@
 #define PTHREADS_UNSET_PROPERTY_PASSTHRU_D zval *object, zval *member, void **cache
 #define PTHREADS_UNSET_DIMENSION_PASSTHRU_D zval *object, zval *member
 #define PTHREADS_UNSET_PROPERTY_PASSTHRU_C object, member, cache
-#define PTHREADS_UNSET_DIMENSION_PASSTHRU_C object, member, NULL
-
-#define PTHREADS_GET_METHOD_PASSTHRU_D zend_object **object, zend_string *method, const zval *key
-#define PTHREADS_GET_METHOD_PASSTHRU_C object, method, key
-#define PTHREADS_CALL_METHOD_PASSTHRU_D zend_string *method, zend_object *object, INTERNAL_FUNCTION_PARAMETERS
-#define PTHREADS_CALL_METHOD_PASSTHRU_C method, object, INTERNAL_FUNCTION_PARAM_PASSTHRU
-/* }}} */
+#define PTHREADS_UNSET_DIMENSION_PASSTHRU_C object, member, NULL /* }}} */
 
 /* {{{ read proeprties from storage */
 HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D); /* }}} */
@@ -92,12 +86,6 @@ void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D); /* }}} */
 
 /* {{{ count properties in storage */
 int pthreads_count_properties(PTHREADS_COUNT_PASSTHRU_D); /* }}} */
-
-/* {{{ fetch a pthreads friendly method */
-zend_function * pthreads_get_method(PTHREADS_GET_METHOD_PASSTHRU_D); /* }}} */
-
-/* {{{ make a pthreads method call */
-int pthreads_call_method(PTHREADS_CALL_METHOD_PASSTHRU_D); /* }}} */
 
 /* {{{ cast an object to a normal array helper */
 int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D); /* }}} */
