@@ -372,7 +372,6 @@ int pthreads_store_pop(zval *object, zval *member) {
 
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash) {
-
 	zend_bool locked;
 	if (store) {
 		/* php is reusing this hash and making things misbehave */

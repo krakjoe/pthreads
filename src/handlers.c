@@ -73,12 +73,12 @@ static inline zend_long *pthreads_get_guard(zend_object *zobj, zend_string *memb
 }
 /* }}} */
 
-/* {{{ counts properties of object */
+/* {{{ */
 int pthreads_count_properties(PTHREADS_COUNT_PASSTHRU_D) {
     return pthreads_store_count(PTHREADS_COUNT_PASSTHRU_C);
 } /* }}} */
 
-/* {{{ reads properties from storage for debug only */
+/* {{{ */
 HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 	HashTable *table = emalloc(sizeof(HashTable));
 	zend_hash_init(table, 8, NULL, ZVAL_PTR_DTOR, 0);
@@ -90,7 +90,7 @@ HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 	return table;
 } /* }}} */
 
-/* {{{ reads properties from storage */
+/* {{{ */
 HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 	PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
@@ -106,7 +106,7 @@ HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 	return pobject->std.properties;
 } /* }}} */
 
-/* {{ reads a property from a thread, wherever it is available */
+/* {{{ */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	zval mstring;
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
@@ -162,7 +162,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 zval* pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthreads_read_property(PTHREADS_READ_DIMENSION_PASSTHRU_C); }
 /* }}} */
 
-/* {{{ writes a property to a thread in the appropriate way */
+/* {{{ */
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zval mstring;
@@ -172,8 +172,6 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	ZVAL_UNDEF(&mstring);	
 
 	if (member == NULL || Z_TYPE_P(member) == IS_NULL) {
-	    /* for anonymous members,
-	        we acquire the lock and increment a counter */
 		pthreads_lock_acquire(pthreads->store->lock, &locked);
 		{
 			ZVAL_LONG(
@@ -248,7 +246,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 void pthreads_write_dimension(PTHREADS_WRITE_DIMENSION_PASSTHRU_D) { pthreads_write_property(PTHREADS_WRITE_DIMENSION_PASSTHRU_C); }
 /* }}} */
 
-/* {{{ check if a thread has a property set, wherever it is available */
+/* {{{ */
 int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	int isset = 0;
 	zval mstring;
@@ -311,7 +309,7 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D) { return pthreads_has_property(PTHREADS_HAS_DIMENSION_PASSTHRU_C); }
 /* }}} */
 
-/* {{{ unset an object property */
+/* {{{ */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	zval mstring;
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
@@ -368,7 +366,7 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); }
 /* }}} */
 
-/* {{{ pthreads_cast_object */
+/* {{{ */
 int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D) {
     switch (type) {
         case IS_ARRAY: {
@@ -381,7 +379,7 @@ int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D) {
     return zend_handlers->cast_object(PTHREADS_CAST_PASSTHRU_C);
 } /* }}} */
 
-/* {{{ clone object handler */
+/* {{{ */
 zend_object* pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D)
 {
 	zend_throw_exception_ex(

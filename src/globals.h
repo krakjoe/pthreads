@@ -50,12 +50,7 @@ struct _pthreads_globals {
 	* Globals Mutex
 	*/
 	pthreads_lock lock;
-	
-	/*
-	* Global Strings
-	*/
-	HashTable strings;
-    
+
 	/*
 	* Global/Default Resource Destructor
 	*/

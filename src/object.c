@@ -34,9 +34,10 @@
 #	include <src/store.h>
 #endif
 
-/* {{{ pthreads module entry */
+/* {{{ */
 extern zend_module_entry pthreads_module_entry; /* }}} */
 
+/* {{{ */
 static inline pthreads_address pthreads_address_alloc(PTHREAD object) {
 	pthreads_address address = (pthreads_address) calloc(1, sizeof(*address));
 	if (address) {
@@ -54,26 +55,27 @@ static inline pthreads_address pthreads_address_alloc(PTHREAD object) {
 		}
 	}
 	return address;
-}
+} /* }}} */
 
+/* {{{ */
 static inline void pthreads_address_free(pthreads_address address) {
 	if (address->serial) {
 		free(address->serial);
 	}
 	free(address);
-}
+} /* }}} */
 
-/* {{{ base ctor/clone/dtor/free */
+/* {{{ */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry);
 static void pthreads_base_clone(void *arg, void **pclone); /* }}} */
 
-/* {{{ connect objects */
+/* {{{ */
 static int pthreads_connect(PTHREAD source, PTHREAD destination); /* }}} */
 
-/* {{{ pthreads routine */
+/* {{{ */
 static void * pthreads_routine(void *arg); /* }}} */
 
-/* {{{ set state bits on a thread, timeout where appropriate/required */
+/* {{{ */
 zend_bool pthreads_set_state_ex(PTHREAD thread, int mask, long timeout) {
 	zend_bool locked, dowait, result;
 	if (mask & PTHREADS_ST_WAITING) {
@@ -93,12 +95,12 @@ zend_bool pthreads_set_state_ex(PTHREAD thread, int mask, long timeout) {
 	return result;
 } /* }}} */
 
-/* {{{ set state bits on a thread */
+/* {{{ */
 zend_bool pthreads_set_state(PTHREAD thread, int mask) {
 	return pthreads_set_state_ex(thread, mask, 0L);
 } /* }}} */
 
-/* {{{ unset state bits on a thread */
+/* {{{ */
 zend_bool pthreads_unset_state(PTHREAD thread, int mask){
 	zend_bool result = 0;
 	
@@ -136,7 +138,7 @@ size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work) {
 	return remain;
 } /* }}} */
 
-/* {{{ push an item onto the work buffer */
+/* {{{ */
 size_t pthreads_stack_push(PTHREAD thread, zval *work) {
 	zend_bool locked;
 	PTHREAD threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(work));
@@ -166,7 +168,7 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work) {
 	return counted;
 } /* }}} */
 
-/* {{{ pop the next item from the work buffer */
+/* {{{ */
 size_t pthreads_stack_next(zval *that) {
 	PTHREAD thread,
 		work;
@@ -189,10 +191,7 @@ burst:
 		if ((bubble=zend_hash_num_elements((HashTable*) thread->stack)) > 0) {
 			if ((work = zend_hash_index_find_ptr((HashTable*) thread->stack, thread->stack->position))) {
 				PTHREAD threaded;
-	
-				/*
-				* Initialize it with the new entry
-				*/
+
 				object_init_ex(
 					that,
 					pthreads_prepared_entry
@@ -201,10 +200,7 @@ burst:
 						work->std.ce
 					)
 				);
-				
-				/*
-				* Setup threaded object for runtime
-				*/	
+
 				if ((threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(that)))) {
 					zend_string *prop = zend_string_init(ZEND_STRL("worker"), 1);
 					
@@ -237,7 +233,7 @@ burst:
 	return bubble;
 } /* }}} */
 
-/* {{{ return the number of items currently stacked */
+/* {{{ */
 size_t pthreads_stack_length(PTHREAD thread) {
 	zend_bool locked;
 	size_t counted = 0;
@@ -249,7 +245,7 @@ size_t pthreads_stack_length(PTHREAD thread) {
 	return counted;
 } /* }}} */
 
-/* {{{ thread object constructor */
+/* {{{ */
 zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 	PTHREAD thread = pthreads_globals_object_alloc(sizeof(*thread));
 	if (!thread) {	
@@ -263,7 +259,7 @@ zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 	return &thread->std;
 } /* }}} */
 
-/* {{{ worker object constructor */
+/* {{{ */
 zend_object* pthreads_worker_ctor(zend_class_entry *entry) {
 	PTHREAD worker = pthreads_globals_object_alloc(sizeof(*worker));
 	if (!worker) {
@@ -277,7 +273,7 @@ zend_object* pthreads_worker_ctor(zend_class_entry *entry) {
 	return &worker->std;
 } /* }}} */
 
-/* {{{ threaded object constructor */
+/* {{{ */
 zend_object* pthreads_threaded_ctor(zend_class_entry *entry) {
 	PTHREAD threaded = pthreads_globals_object_alloc(sizeof(*threaded));
 	if (!threaded) {
@@ -298,7 +294,7 @@ void pthreads_current_thread(zval *return_value) {
 	}
 } /* }}} */
 
-/* {{{ connect pthread objects */
+/* {{{ */
 static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 	if (source && destination) {
 
@@ -339,7 +335,7 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 	} else return FAILURE;
 } /* }}} */
 
-/* {{{ pthreads_base_init */
+/* {{{ */
 static inline void pthreads_base_init(PTHREAD base) {	
 	zend_property_info *info;
 	zend_string *key;
@@ -368,7 +364,7 @@ static inline void pthreads_base_init(PTHREAD base) {
 
 } /* }}} */
 
-/* {{{ pthreads base constructor */
+/* {{{ */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 	if (base) {
 		TSRMLS_CACHE_UPDATE();
@@ -400,7 +396,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 	}
 } /* }}} */
 
-/* {{{ pthreads base destructor */
+/* {{{ */
 void pthreads_base_free(zend_object *object) {
 	PTHREAD base = PTHREADS_FETCH_FROM(object);
 
@@ -441,12 +437,12 @@ void pthreads_base_free(zend_object *object) {
 	pthreads_globals_object_delete(base);
 } /* }}} */
 
-/* {{{ clone object */
+/* {{{ */
 static void pthreads_base_clone(void *arg, void **pclone) {
 	printf("pthreads_base_clone: executing ...\n");
 } /* }}} */
 
-/* {{{ start a pthread */
+/* {{{ */
 int pthreads_start(PTHREAD thread) {
 	int dostart = 0;
 	int started = FAILURE;
@@ -472,7 +468,7 @@ int pthreads_start(PTHREAD thread) {
 	return started;
 } /* }}} */
 
-/* {{{ gracefully join a pthread object */
+/* {{{ */
 int pthreads_join(PTHREAD thread) {
 	int dojoin = 0;
 	int donotify = 0;
@@ -497,7 +493,7 @@ int pthreads_join(PTHREAD thread) {
 	return dojoin ? pthread_join(thread->thread, NULL) 	: FAILURE;
 } /* }}} */
 
-/* {{{ serialize an instance of a threaded object for connection in another thread */
+/* {{{ */
 int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *blength, zend_serialize_data *data) {
 	PTHREAD threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	if (threaded) {
@@ -512,7 +508,7 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *bl
 	return FAILURE;
 } /* }}} */
 
-/* {{{ connects to an instance of a threaded object */
+/* {{{ */
 int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t blength, zend_unserialize_data *data) {
 	PTHREAD address = NULL;
 	pid_t pid = 0L;
@@ -526,14 +522,12 @@ int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsi
 
 		if (address && pthreads_globals_object_validate((zend_ulong)address)) {
 			if (pid == mpid) {
-				/*if we already own this object do not create another handle */
 				if (address->cls == TSRMLS_CACHE) {
 					ZVAL_OBJ(object, &address->std);
 					Z_ADDREF_P(object);
 					return SUCCESS;
 				}
 
-				/* else initialize and connect to the original object */
 				if (object_init_ex(object, ce) == SUCCESS) {
 					pthreads_connect(address, PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
 					return SUCCESS;
@@ -557,8 +551,6 @@ int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsi
 		"which is corrupted", ce->name->val);
 	}
 	
-	//ZVAL_NULL(object);
-	
 	return FAILURE;
 } /* }}} */
 
@@ -578,54 +570,41 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 } /* }}} */
 #endif
 
-/* {{{ this is aptly named ... */
+/* {{{ */
 static void * pthreads_routine(void *arg) {
-	/* passed the object as argument */
 	PTHREAD thread = (PTHREAD) arg;
 	
 #ifdef PTHREADS_KILL_SIGNAL
-	/* installed to support a graceful-ish kill function */
-	signal(
-		PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
+	signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
 #endif
 
 	if (thread) {
 #ifdef PTHREADS_PEDANTIC
-		zend_bool  glocked = 0; /* global lock indicator */
+		zend_bool  glocked = 0;
 #endif
-        zend_bool  worker = 0,  /* worker indicator */
-                   inwork = 0;  /* working indicator */
-		
-		/* $this */
+        	zend_bool  worker = 0,
+                   	   inwork = 0;
+
 		zval that;		
 		
 		/**
 		* Startup Block Begin
 		**/
-		/* create new context */
 		TSRMLS_CACHE = thread->tls 
 			= tsrm_new_interpreter_context();
-
-		/* set interpreter context */
 		tsrm_set_interpreter_context(TSRMLS_CACHE);
 
-
 #ifdef PTHREADS_PEDANTIC
-		/* acquire a global lock */
 		pthreads_globals_lock(&glocked);
 #endif
 
-		/* set thread id for this object */
 		thread->tid = pthreads_self();
 		
-		/* set context the same as parent */
 		SG(server_context) = PTHREADS_SG(thread->cls, server_context);
 		
-		/* some php globals */
 		PG(expose_php) = 0;
 		PG(auto_globals_jit) = 0;
 		
-		/* fixup sessions for compatibility */
 		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
 			/*zend_alter_ini_entry(
 				"session.cache_limiter", 
@@ -639,23 +618,18 @@ static void * pthreads_routine(void *arg) {
 				PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);*/
 		}
 
-		/* request startup */
 		php_request_startup();
 
-		/* fix php-fpm compatibility */
 		SG(sapi_started) = 0;
 		
 		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-			/* do not send headers again */
 			SG(headers_sent)=1;
 			SG(request_info).no_headers = 1;
 		}
 
-		/* prepare environment */
 		pthreads_prepare(thread);
 
 #ifdef PTHREADS_PEDANTIC
-		/* release global lock */
 		pthreads_globals_unlock(glocked);
 #endif
 
@@ -667,23 +641,18 @@ static void * pthreads_routine(void *arg) {
 		* Thread Block Begin
 		**/
 		zend_first_try {
-			/*
-			* Set worker indicator
-			*/
 			worker = PTHREADS_IS_WORKER(thread);
 					
 			EG(current_module) = &pthreads_module_entry;
 
-			/*  */
 			ZVAL_UNDEF(&PTHREADS_ZG(this));		
 			object_init_ex(
 				&PTHREADS_ZG(this),
 				pthreads_prepared_entry(thread, thread->std.ce));
 			ZVAL_COPY(&that, &PTHREADS_ZG(this));
 
-			/* connect $this */
 			if (pthreads_connect(thread, PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this))))==SUCCESS) {
-				/* execute $this */
+
 				do {
 					PTHREAD current = PTHREADS_FETCH_FROM(Z_OBJ(that));
 					zval zresult;					
@@ -693,7 +662,6 @@ static void * pthreads_routine(void *arg) {
 					{
 						zend_bool terminated = 0;
 						
-						/* graceful fatalities */
 						zend_try {
 							zend_function *fun;
 							zend_fcall_info fci = empty_fcall_info;
@@ -717,11 +685,9 @@ static void * pthreads_routine(void *arg) {
 							}
 							zend_string_free(method);
 						} zend_catch {
-						    /* catches fatal errors and uncaught exceptions */
 						    pthreads_state_set(
 							    current->state, PTHREADS_ST_ERROR);				
 
-						    /* danger lurking ... */
 						    if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
 							    /* like, totally bail man ! */
 							    zend_bailout();
@@ -729,17 +695,14 @@ static void * pthreads_routine(void *arg) {
 						} zend_end_try();
 
 						if (current) {
-						    /* unset running for waiters */
 						    pthreads_state_unset(current->state, PTHREADS_ST_RUNNING);
 						}
 
-						/* deal with references to stacked objects */
 						if (!terminated) {
 							Z_SET_REFCOUNT(that, 0);
 							zval_dtor(&that);
 						}
 
-						/* deal with zresult (ignored) */
 						if (Z_TYPE(zresult) != IS_UNDEF) {
 							zval_ptr_dtor(&zresult);
 						}
@@ -747,15 +710,12 @@ static void * pthreads_routine(void *arg) {
 				} while(worker && pthreads_stack_next(&that));
 			}
 		} zend_end_try();
+
+		zval_ptr_dtor_nogc(&PTHREADS_ZG(this));
 		
 		/**
 		* Thread Block End
 		**/
-		
-	        /*
-		* Destroy $this
-		*/
-		zval_ptr_dtor_nogc(&PTHREADS_ZG(this));
 		
 		/**
 		* Shutdown Block Begin
@@ -763,18 +723,13 @@ static void * pthreads_routine(void *arg) {
 		PG(report_memleaks) = 0;
 		
 #ifdef PTHREADS_PEDANTIC
-		/* acquire global lock */
 		pthreads_globals_lock(&glocked);
 #endif
-		/* shutdown request */
 		php_request_shutdown((void*)NULL);
 
 #ifdef PTHREADS_PEDANTIC
-		/* release global lock */
 		pthreads_globals_unlock(glocked);
 #endif
-
-		/* free interpreter */
 		tsrm_free_interpreter_context(TSRMLS_CACHE);
 
 		/**
@@ -785,7 +740,7 @@ static void * pthreads_routine(void *arg) {
 	pthread_exit(NULL);
 	
 #ifdef _WIN32
-	return NULL; /* silence MSVC compiler */
+	return NULL;
 #endif
 } 
 /* }}} */
