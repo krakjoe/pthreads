@@ -13,8 +13,8 @@
  <date>2014-10-01</date>
  <time>07:25:00</time>
  <version>
-  <release>2.0.11</release>
-  <api>2.0.11</api>
+  <release>3.0.0</release>
+  <api>3.0.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- add support for magic methods on threaded objects
+ first PHP7 release
  </notes>
  <contents>
   <dir name="/">
@@ -66,7 +66,6 @@
    <file name="tests/functions.phpt" role="test" />
    <file name="tests/global-constants.phpt" role="test" />
    <file name="tests/globals.phpt" role="test" />
-   <file name="tests/global-voodoo.phpt" role="test" />
    <file name="tests/gone.phpt" role="test" />
    <file name="tests/graceful-fatalities.phpt" role="test" />
    <file name="tests/included-files.phpt" role="test" />
@@ -119,8 +118,6 @@
    <file name="src/handlers.h" role="src" />
    <file name="src/lock.c" role="src" />
    <file name="src/lock.h" role="src" />
-   <file name="src/modifiers.c" role="src" />
-   <file name="src/modifiers.h" role="src" />
    <file name="src/object.c" role="src" />
    <file name="src/object.h" role="src" />
    <file name="src/prepare.c" role="src" />
@@ -154,7 +151,7 @@
  <dependencies>
   <required>
    <php>
-    <min>5.3.0</min>
+    <min>7.0.0</min>
    </php>
    <pearinstaller>
     <min>1.4.0b1</min>
