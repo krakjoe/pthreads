@@ -389,7 +389,8 @@ PHP_METHOD(Threaded, from)
         }
         
         zce->constructor = pconstruct;
-        //function_add_ref(pconstruct);
+        
+	function_add_ref(pconstruct);
     }
     
     if (!(prun = zend_hash_str_update_ptr(&zce->function_table, "run", sizeof("run")-1, run))) {
@@ -405,7 +406,7 @@ PHP_METHOD(Threaded, from)
     }
 
     prun->common.fn_flags &= ~ZEND_ACC_CLOSURE;
-    //function_add_ref(prun);
+    function_add_ref(prun);
 
     if (!zend_hash_update_ptr(EG(class_table), zce->name, zce)) {
         zend_throw_exception_ex(
