@@ -363,7 +363,7 @@ PHP_METHOD(Threaded, from)
 	    return;
     }
     
-    zce = (zend_class_entry*) zend_arena_alloc(&CG(arena), sizeof(zend_class_entry));
+    zce = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
     zce->type = ZEND_USER_CLASS;
     
     zend_initialize_class_data(zce, 1);
@@ -384,7 +384,7 @@ PHP_METHOD(Threaded, from)
 			    spl_ce_RuntimeException, 0, 
 			    "pthreads has experienced an internal error while injecting the constructor function for %s", zce->name->val);
 	        zend_string_release(zce->name);
-	        zend_arena_release(&CG(arena), zce);
+	        efree(zce);
 	        return;
         }
         
@@ -401,7 +401,7 @@ PHP_METHOD(Threaded, from)
 	        destroy_op_array((zend_op_array*)pconstruct);
 	    }
 	    zend_string_release(zce->name);
-	    zend_arena_release(&CG(arena), zce);
+	    efree(zce);
 	    return;
     }
 
@@ -413,7 +413,7 @@ PHP_METHOD(Threaded, from)
             spl_ce_RuntimeException, 0, 
             "pthreads has experienced an internal error while registering the class entry for %s", zce->name->val);
         zend_string_release(zce->name);
-        zend_arena_release(&CG(arena), zce);
+        efree(zce);
         return;
     }
 
