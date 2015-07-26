@@ -184,7 +184,6 @@ int pthreads_store_read(pthreads_store store, zend_string *key, zval *read) {
 	if (store) {
 		if (pthreads_lock_acquire(store->lock, &locked)) {
 			pthreads_storage *storage = NULL;
-
 			if ((storage = zend_hash_find_ptr(&store->table, key))) {
 				result = pthreads_store_convert(storage, read);
 			}
@@ -194,11 +193,10 @@ int pthreads_store_read(pthreads_store store, zend_string *key, zval *read) {
 		if (result == SUCCESS) {
 			switch (Z_TYPE_P(read)) {
 				case IS_ARRAY: Z_SET_REFCOUNT_P(read, 1); break;
-				
 				case IS_OBJECT: if (IS_PTHREADS_OBJECT(read)) {
 					Z_SET_REFCOUNT_P(read, 2);
 				} else Z_SET_REFCOUNT_P(read, 1); break;
-			}	
+			}
 		} else {
 			ZVAL_NULL(read);
 		}

@@ -174,10 +174,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_COMMENTS", PTHREADS_INHERIT_COMMENTS, CONST_CS | CONST_PERSISTENT);
 
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_GLOBALS", PTHREADS_ALLOW_GLOBALS, CONST_CS | CONST_PERSISTENT);
-
-	
-	
 
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
 	ce.serialize = pthreads_internal_serialize;
@@ -186,18 +182,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_threaded_entry->get_iterator = pthreads_object_iterator_ctor;
 	pthreads_threaded_entry->create_object = pthreads_threaded_ctor;
 	zend_class_implements(pthreads_threaded_entry, 1, zend_ce_traversable);
-
-	{
-		/* NOTE: SPL SUCKS ASS */
-		/*zend_class_entry *spl = NULL;
-		php_printf("class  table: %p\n", EG(class_table));
-		if (CG(class_table) && (spl = zend_hash_str_find_ptr(CG(class_table), "countable", sizeof("countable")) )) {
-			spl_ce_Countable = spl;
-
-			zend_class_implements(
-				pthreads_threaded_entry, 1, spl_ce_Countable);
-		}*/
-	}
 
 	INIT_CLASS_ENTRY(ce, "Thread", pthreads_thread_methods);
 	ce.serialize = pthreads_internal_serialize;

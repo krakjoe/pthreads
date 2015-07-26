@@ -509,24 +509,6 @@ static inline void pthreads_prepare_includes(PTHREAD thread) {
 } /* }}} */
 
 /* {{{ */
-static inline pthreads_prepare_globals(PTHREAD thread) {
-	zval *symbol = NULL;
-	zend_string *name;
-	
-	ZEND_HASH_FOREACH_STR_KEY_VAL(&PTHREADS_EG(thread->cls, symbol_table), name, symbol) {
-		zval separated;
-		if (pthreads_store_separate(symbol, &separated, 1) != SUCCESS) {
-			zval_dtor(&separated);
-			continue;
-		}
-
-		zend_hash_update(&PTHREADS_EG(thread->tls, symbol_table), name, &separated);
-		if (Z_REFCOUNTED(separated))
-			Z_ADDREF(separated);	
-	} ZEND_HASH_FOREACH_END();
-} /* }}} */
-
-/* {{{ */
 static inline void pthreads_prepare_exception_handler(PTHREAD thread) {
 	if (Z_TYPE(PTHREADS_EG(thread->cls, user_exception_handler)) != IS_UNDEF) {
 		pthreads_store_separate(
@@ -558,9 +540,6 @@ int pthreads_prepare(PTHREAD thread){
 
 	if (thread->options & PTHREADS_INHERIT_INCLUDES)
 		pthreads_prepare_includes(thread);
-
-	if (thread->options & PTHREADS_ALLOW_GLOBALS)
-		pthreads_prepare_globals(thread);
 
 	pthreads_prepare_exception_handler(thread);
 	pthreads_prepare_resource_destructor(thread);

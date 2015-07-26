@@ -161,8 +161,8 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 
 /* {{{ */
 static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_info *old, uint32_t end) {
-	zend_arg_info *info = safe_emalloc(end, sizeof(zend_arg_info), 0);
-	uint32_t it = 0;	
+	zend_arg_info *info = safe_emalloc(end+2, sizeof(zend_arg_info), 0);
+	uint32_t it = 0;
 
 	if (op_array->fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
 		old--;
