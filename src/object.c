@@ -182,6 +182,7 @@ size_t pthreads_stack_next(zval *that) {
 burst:
 	if (Z_TYPE_P(that) != IS_UNDEF) {
 		if (Z_OBJ_P(that) != Z_OBJ(PTHREADS_ZG(this))) {
+			Z_SET_REFCOUNT_P(that, 0);
 			zval_dtor(that);
 		}
 		ZVAL_UNDEF(that);
@@ -703,11 +704,6 @@ static void * pthreads_routine(void *arg) {
 
 						if (current) {
 						    pthreads_state_unset(current->state, PTHREADS_ST_RUNNING);
-						}
-
-						if (!terminated) {
-							Z_SET_REFCOUNT(that, 0);
-							zval_dtor(&that);
 						}
 
 						if (Z_TYPE(zresult) != IS_UNDEF) {

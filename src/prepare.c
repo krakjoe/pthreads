@@ -289,12 +289,22 @@ while(0)
 		ZEND_HASH_FOREACH_STR_KEY_VAL(&candidate->constants_table, key, value) {
 			zend_string *name = 
 				zend_string_new(key);
-			if (Z_REFCOUNTED_P(value)) {
-				zval separated;
-				if (pthreads_store_separate(value, &separated, 1) == SUCCESS) {
-					zend_hash_add(&prepared->constants_table, name, &separated);					
-				}
-			} else zend_hash_add(&prepared->constants_table, name, value);
+			zval separated;
+
+			switch (Z_TYPE_P(value)) {
+				case IS_STRING:
+				case IS_ARRAY:
+				case IS_OBJECT: {
+					if (pthreads_store_separate(value, &separated, 1) != SUCCESS) {
+						continue;					
+					}
+				} break;
+
+				default: ZVAL_COPY(&separated, value);	
+			}
+			
+			zend_hash_update(&prepared->constants_table, key, &separated);
+
 			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
 

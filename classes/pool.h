@@ -228,9 +228,11 @@ PHP_METHOD(Pool, submit) {
 		
 		selected = zend_hash_index_update(
 			Z_ARRVAL_P(workers), Z_LVAL_P(last), &worker);
+		Z_ADDREF_P(selected);
 	}
 	
 	zend_hash_next_index_insert(Z_ARRVAL_P(work), task);
+	Z_ADDREF_P(task);
 	Z_ADDREF_P(task);
 	
 	zend_call_method(selected, Z_OBJCE_P(selected), NULL, ZEND_STRL("stack"), NULL, 1, task, NULL);
@@ -264,7 +266,8 @@ PHP_METHOD(Pool, submitTo) {
 	if ((selected = zend_hash_index_find(Z_ARRVAL_P(workers), worker))) {
 		zend_hash_next_index_insert(Z_ARRVAL_P(work), task);
 		Z_ADDREF_P(task);
-	
+		Z_ADDREF_P(task);
+
 		zend_call_method(selected, Z_OBJCE_P(selected), NULL, ZEND_STRL("stack"), NULL, 1, task, NULL);
 		ZVAL_LONG(return_value, worker);
 	} else {
@@ -305,6 +308,9 @@ static inline int pool_collect_function(zval *task, void *argument) {
 	
 	if (Z_TYPE(remove) != IS_UNDEF)
 		zval_dtor(&remove);
+
+	if (result)
+		Z_SET_REFCOUNT_P(task, 0);
 	
 	return result;
 } /* }}} */
