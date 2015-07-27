@@ -616,7 +616,7 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength) {
 			}
 			
 			if (result != FAILURE) {
-				if (Z_REFCOUNTED_P(pzval)) {
+				if (Z_REFCOUNTED_P(pzval) && !IS_PTHREADS_OBJECT(pzval)) {
 					Z_SET_REFCOUNT_P(pzval, 1);
 				}
 			} else ZVAL_NULL(pzval);

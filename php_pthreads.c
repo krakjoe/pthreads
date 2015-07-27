@@ -105,7 +105,7 @@ zend_class_entry *spl_ce_RuntimeException;
 #endif
 
 #ifndef PTHREADS_TID
-#	define PTHREADS_TID thread->tid
+#	define PTHREADS_TID thread->local.id
 #endif
 
 #ifndef PTHREADS_FRIENDLY_NAME
@@ -223,7 +223,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_declare_property_long(pthreads_pool_entry, ZEND_STRL("last"), 0, ZEND_ACC_PROTECTED);
 
 	/*
-	* Setup standard and pthreads object handlers
+	* Setup standard and threaded object handlers
 	*/
 	zend_handlers = zend_get_std_object_handlers();
 	
@@ -247,17 +247,11 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.write_dimension = pthreads_write_dimension;
 	pthreads_handlers.has_dimension = pthreads_has_dimension;
 	pthreads_handlers.unset_dimension = pthreads_unset_dimension;
-	
+
 	pthreads_handlers.get_property_ptr_ptr = NULL;
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
-	
-#if PHP_VERSION_ID > 50399
-    /* when the gc runs, it will fetch properties, every time */
-    /* so we pass in a dummy function to control memory usage */
-    /* properties copied will be destroyed with the object */
-    pthreads_handlers.get_gc = NULL;
-#endif
+	pthreads_handlers.get_gc = NULL;
 
 	pthreads_handlers.clone_obj = pthreads_clone_object; 
 
@@ -310,12 +304,10 @@ ZEND_MODULE_POST_ZEND_DEACTIVATE_D(pthreads)
 
 PHP_RINIT_FUNCTION(pthreads) {
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
-	zend_hash_init(&PTHREADS_ZG(cache), 15, NULL, NULL, 0);
 }
 
 PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(&PTHREADS_ZG(resolve));
-	zend_hash_destroy(&PTHREADS_ZG(cache));
 }
 
 PHP_MINFO_FUNCTION(pthreads)

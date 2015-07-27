@@ -205,8 +205,8 @@ burst:
 				if ((threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(that)))) {
 					zend_string *prop = zend_string_init(ZEND_STRL("worker"), 1);
 					
-					work->tid = thread->tid;
-					work->tls = thread->tls;
+					work->local.id = thread->local.id;
+					work->local.ls = thread->local.ls;
 					
 					pthreads_connect(work, threaded);
 					pthreads_store_write(
@@ -323,8 +323,8 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 		}
 		
 		destination->thread = source->thread;
-		destination->tid = source->tid;
-		destination->tls = source->tls;
+		destination->local.id = source->local.id;
+		destination->local.ls = source->local.ls;
 		destination->address = source->address;
 		destination->lock = source->lock;
 		destination->state = source->state;
@@ -372,8 +372,8 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 		
 		zend_object_std_init(&base->std, entry);
 
-		base->cls = TSRMLS_CACHE;
-		base->cid = pthreads_self();
+		base->creator.ls = TSRMLS_CACHE;
+		base->creator.id = pthreads_self();
 		base->address = pthreads_address_alloc(base);
 		base->options = PTHREADS_INHERIT_ALL;
 
@@ -523,7 +523,7 @@ int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsi
 
 		if (address && pthreads_globals_object_validate((zend_ulong)address)) {
 			if (pid == mpid) {
-				if (address->cls == TSRMLS_CACHE) {
+				if (address->creator.ls == TSRMLS_CACHE) {
 					ZVAL_OBJ(object, &address->std);
 					Z_ADDREF_P(object);
 					return SUCCESS;
@@ -598,7 +598,7 @@ static void * pthreads_routine(void *arg) {
 		/**
 		* Startup Block Begin
 		**/
-		TSRMLS_CACHE = thread->tls 
+		TSRMLS_CACHE = thread->local.ls 
 			= tsrm_new_interpreter_context();
 		tsrm_set_interpreter_context(TSRMLS_CACHE);
 
@@ -606,9 +606,9 @@ static void * pthreads_routine(void *arg) {
 		pthreads_globals_lock(&glocked);
 #endif
 
-		thread->tid = pthreads_self();
+		thread->local.id = pthreads_self();
 		
-		SG(server_context) = PTHREADS_SG(thread->cls, server_context);
+		SG(server_context) = PTHREADS_SG(thread->creator.ls, server_context);
 		
 		PG(expose_php) = 0;
 		PG(auto_globals_jit) = 0;

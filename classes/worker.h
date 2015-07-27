@@ -175,14 +175,14 @@ PHP_METHOD(Worker, shutdown)
 	Will return the identifier of the referenced Worker */
 PHP_METHOD(Worker, getThreadId)
 {
-	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->tid);
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->local.id);
 } /* }}} */
 
 /* {{{ proto long Worker::getCreatorId() 
 	Will return the identifier of the thread ( or process ) that created the referenced Worker */
 PHP_METHOD(Worker, getCreatorId)
 {
-	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->cid);
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->creator.id);
 } /* }}} */
 #	endif
 #endif

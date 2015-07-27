@@ -50,73 +50,25 @@ typedef struct _pthreads_address {
 	size_t length;
 } *pthreads_address; /* }}} */
 
-/* {{{ thread structure */
-typedef struct _pthread_construct {
-	/*
-	* Standard Entry
-	*/
-	zend_object std;
+typedef struct _pthreads_ident {
+	zend_ulong id;
+	void*** ls;
+} pthreads_ident;
 
-	/*
-	* Thread Object
-	*/
+/* {{{ threaded structure */
+typedef struct _pthread_construct {
+	zend_object std;
 	pthread_t thread;
-	
-	/*
-	* Thread Scope
-	*/
 	uint scope;
-	
-	/*
-	* Thread Identity and LS
-	*/
-	ulong tid;
-	void ***tls;
-	
-	/*
-	* Creator Identity and LS
-	*/
-	ulong cid;
-	void ***cls;
-	
-	/*
-	* Store Hold
-	*/
 	zend_bool hold;
-	
-	/*
-	* Options
-	*/
 	zend_ulong options;
-	
-	/*
-	*  Thread Lock
-	*/
+	pthreads_ident creator;
+	pthreads_ident local;
 	pthreads_lock lock;
-	
-	/*
-	* Thread State
-	*/
 	pthreads_state state;
-	
-	/*
-	* Thread Sync
-	*/
 	pthreads_synchro synchro;
-	
-	/*
-	* Serial Buffers
-	*/
 	pthreads_store store;
-	
-	/*
-	* Work List
-	*/
 	pthreads_stack stack;
-	
-	/*
-	* Thread Address
-	*/
 	pthreads_address address;
 } *PTHREAD;
 
@@ -184,9 +136,9 @@ static inline ulong pthreads_self() {
 } /* }}} */
 
 /* {{{ tell if the calling thread created referenced PTHREAD */
-#define PTHREADS_IN_CREATOR(t)	(1) /* }}} */
+#define PTHREADS_IN_CREATOR(t)	((t)->creator.ls == TSRMLS_CACHE) /* }}} */
 
 /* {{{ tell if the referenced thread is the threading context */
-#define PTHREADS_IN_THREAD(t)	(1) /* }}} */
+#define PTHREADS_IN_THREAD(t)	((t)->local.ls == TSRMLS_CACHE) /* }}} */
 
 #endif /* HAVE_PTHREADS_THREAD_H */

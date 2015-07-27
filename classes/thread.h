@@ -214,7 +214,7 @@ PHP_METHOD(Thread, join)
 	Will return the identifier of the referenced Thread */
 PHP_METHOD(Thread, getThreadId)
 {
-	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->tid);
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->local.id);
 } /* }}} */
 
 /* {{{ proto long Thread::getCurrentThreadId()
@@ -235,7 +235,7 @@ PHP_METHOD(Thread, getCurrentThread)
 	Will return the identifier of the thread ( or process ) that created the referenced Thread */
 PHP_METHOD(Thread, getCreatorId)
 {
-	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->cid);
+	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->creator.id);
 } /* }}} */
 
 /* {{{ proto boolean Thread::kill()

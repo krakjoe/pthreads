@@ -76,7 +76,7 @@ extern zend_class_entry *pthreads_condition_entry;
 
 #ifndef IS_PTHREADS_OBJECT
 #define IS_PTHREADS_OBJECT(o)   \
-        (IS_PTHREADS_CLASS(Z_OBJCE_P(o)))
+        (Z_TYPE_P(o) == IS_OBJECT && IS_PTHREADS_CLASS(Z_OBJCE_P(o)))
 #endif
 
 extern zend_object_handlers pthreads_handlers;
@@ -92,7 +92,6 @@ ZEND_BEGIN_MODULE_GLOBALS(pthreads)
 	int   signal;
 	zval  this;
 	HashTable resolve;
-	HashTable cache;
 	HashTable *resources;
 ZEND_END_MODULE_GLOBALS(pthreads)
 #	define PTHREADS_ZG(v) TSRMG(pthreads_globals_id, zend_pthreads_globals *, v)

@@ -392,7 +392,7 @@ static inline zend_bool pthreads_constant_exists(zend_string *name) {
 static inline void pthreads_prepare_ini(PTHREAD thread) {
 	zend_ini_entry *entry[2];
 	zend_string *name;
-	HashTable *table[2] = {PTHREADS_EG(thread->cls, ini_directives), EG(ini_directives)};
+	HashTable *table[2] = {PTHREADS_EG(thread->creator.ls, ini_directives), EG(ini_directives)};
 	
 	ZEND_HASH_FOREACH_STR_KEY_PTR(table[0], name, entry[0]) {
 		if ((entry[1] = zend_hash_find_ptr(table[1], name))) {
@@ -431,7 +431,7 @@ static inline void pthreads_prepare_constants(PTHREAD thread) {
 	zend_constant *zconstant;
 	zend_string *name;
 	
-	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_EG(thread->cls, zend_constants), name, zconstant) {
+	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_EG(thread->creator.ls, zend_constants), name, zconstant) {
 		if (zconstant->name) {
 		    if (strncmp(name->val, "STDIN", name->len-1)==0||
 			    strncmp(name->val, "STDOUT", name->len-1)==0||
@@ -470,7 +470,7 @@ static inline void pthreads_prepare_functions(PTHREAD thread) {
 	zend_string *key;
 	zend_function *value;
 
-	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->cls, function_table), key, value) {
+	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, function_table), key, value) {
 		key = zend_string_new(key);
 		value = pthreads_copy_function(value);
 		zend_hash_add_ptr(
@@ -485,11 +485,11 @@ static inline void pthreads_prepare_classes(PTHREAD thread) {
 	zend_string *name;
 	HashTable inherited;
 
-	zend_hash_init(&inherited, zend_hash_num_elements(PTHREADS_CG(thread->cls, class_table)), NULL, NULL, 0);
+	zend_hash_init(&inherited, zend_hash_num_elements(PTHREADS_CG(thread->creator.ls, class_table)), NULL, NULL, 0);
 
-	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->cls, class_table), name, entry) {
+	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, class_table), name, entry) {
 		if (entry->type == ZEND_USER_CLASS) {
-			if (!zend_hash_exists(PTHREADS_CG(thread->tls, class_table), name)) {
+			if (!zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name)) {
 				prepared = pthreads_prepared_entry(thread, entry);
 				if (!prepared)
 					continue;
@@ -513,17 +513,17 @@ static inline void pthreads_prepare_classes(PTHREAD thread) {
 /* {{{ */
 static inline void pthreads_prepare_includes(PTHREAD thread) {
 	zend_string *file;
-	ZEND_HASH_FOREACH_STR_KEY(&PTHREADS_EG(thread->cls, included_files), file) {
+	ZEND_HASH_FOREACH_STR_KEY(&PTHREADS_EG(thread->creator.ls, included_files), file) {
 		zend_hash_add_empty_element(&EG(included_files), file);
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
 /* {{{ */
 static inline void pthreads_prepare_exception_handler(PTHREAD thread) {
-	if (Z_TYPE(PTHREADS_EG(thread->cls, user_exception_handler)) != IS_UNDEF) {
+	if (Z_TYPE(PTHREADS_EG(thread->creator.ls, user_exception_handler)) != IS_UNDEF) {
 		pthreads_store_separate(
-			&PTHREADS_EG(thread->cls, user_exception_handler), 
-			&PTHREADS_EG(thread->tls, user_exception_handler), 1);
+			&PTHREADS_EG(thread->creator.ls, user_exception_handler), 
+			&PTHREADS_EG(thread->local.ls, user_exception_handler), 1);
 	}
 } /* }}} */
 

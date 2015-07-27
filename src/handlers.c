@@ -94,14 +94,10 @@ HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 	PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
-#if PHP_VERSION_ID > 50399
 	rebuild_object_properties(&pobject->std);
-#endif
 
-	pthreads_store_tohash(
-		pobject->store, 
-		pobject->std.properties
-	);
+	pthreads_store_tohash
+		(pobject->store, pobject->std.properties);
 			
 	return pobject->std.properties;
 } /* }}} */
