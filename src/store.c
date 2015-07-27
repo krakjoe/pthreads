@@ -190,14 +190,7 @@ int pthreads_store_read(pthreads_store store, zend_string *key, zval *read) {
 			pthreads_lock_release(store->lock, locked);
 		}
 
-		if (result == SUCCESS) {
-			switch (Z_TYPE_P(read)) {
-				case IS_ARRAY: Z_SET_REFCOUNT_P(read, 1); break;
-				case IS_OBJECT: if (IS_PTHREADS_OBJECT(read)) {
-					Z_SET_REFCOUNT_P(read, 2);
-				} else Z_SET_REFCOUNT_P(read, 1); break;
-			}
-		} else {
+		if (result != SUCCESS) {
 			ZVAL_NULL(read);
 		}
 	}
@@ -554,13 +547,12 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 					storage->length
 				);
 				if (result == FAILURE) {
-				    /* display error, do something ... ? */
-				    ZVAL_UNDEF(pzval);
+				    ZVAL_NULL(pzval);
 				}
 			} break;
 			
 			default: {
-			    ZVAL_UNDEF(pzval);
+			    ZVAL_NULL(pzval);
 			}
 		}	
 	}

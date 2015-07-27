@@ -343,7 +343,7 @@ PHP_METHOD(Threaded, from)
     zval *zrun, *zconstruct = NULL, *zargs = NULL;
     zend_function *run, *construct;
     zend_function *prun, *pconstruct;
-    zend_class_entry *zce;
+    zend_class_entry zce, *pce;
     PTHREAD threaded;
     char *named;
     size_t nlen;
@@ -363,64 +363,55 @@ PHP_METHOD(Threaded, from)
 	    return;
     }
     
-    zce = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
-    zce->type = ZEND_USER_CLASS;
-    
-    zend_initialize_class_data(zce, 1);
-    zce->refcount = 1;
-
+    zce.type = ZEND_USER_CLASS;
+    zend_initialize_class_data(&zce, 1);
+    zce.refcount = 1;
     nlen = spprintf
         ((char**)&named, 0, "%sClosure@%p", 
 	EX(called_scope)->name->val, ((zend_op_array*) run)->opcodes);
-
-    zce->name = zend_string_init(named, nlen, 0);
+    zce.name = zend_string_init(named, nlen, 0);
     efree(named);
 
     if (zconstruct) {
         construct = (zend_function*) zend_get_closure_method_def(zconstruct);
 
-        if (!(pconstruct = zend_hash_str_update_ptr(&zce->function_table, "__construct", sizeof("__construct")-1, construct))) {
+        if (!(pconstruct = zend_hash_str_update_ptr(&zce.function_table, "__construct", sizeof("__construct")-1, construct))) {
             zend_throw_exception_ex(
 			    spl_ce_RuntimeException, 0, 
-			    "pthreads has experienced an internal error while injecting the constructor function for %s", zce->name->val);
-	        zend_string_release(zce->name);
-	        efree(zce);
+			    "pthreads has experienced an internal error while injecting the constructor function for %s", zce.name->val);
+	        zend_string_release(zce.name);
 	        return;
         }
-        
-        zce->constructor = pconstruct;
-        
+
+        zce.constructor = pconstruct;
 	function_add_ref(pconstruct);
     }
     
-    if (!(prun = zend_hash_str_update_ptr(&zce->function_table, "run", sizeof("run")-1, run))) {
+    if (!(prun = zend_hash_str_update_ptr(&zce.function_table, "run", sizeof("run")-1, run))) {
         zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while injecting the run function for %s", zce->name->val);
+			"pthreads has experienced an internal error while injecting the run function for %s", zce.name->val);
 	    if (zconstruct) {
 	        destroy_op_array((zend_op_array*)pconstruct);
 	    }
-	    zend_string_release(zce->name);
-	    efree(zce);
+	    zend_string_release(zce.name);
 	    return;
     }
 
     prun->common.fn_flags &= ~ZEND_ACC_CLOSURE;
-    function_add_ref(prun);
 
-    if (!zend_hash_update_ptr(EG(class_table), zce->name, zce)) {
+    if (!(pce = zend_hash_add_mem(EG(class_table), zce.name, &zce, sizeof(zend_class_entry)))) {
         zend_throw_exception_ex(
             spl_ce_RuntimeException, 0, 
-            "pthreads has experienced an internal error while registering the class entry for %s", zce->name->val);
-        zend_string_release(zce->name);
-        efree(zce);
+            "pthreads has experienced an internal error while registering the class entry for %s", zce.name->val);
+        zend_string_release(zce.name);
         return;
     }
 
-    zend_do_inheritance(zce, EX(called_scope));
-    zce->ce_flags |= ZEND_ACC_FINAL;
+    zend_do_inheritance(pce, EX(called_scope));
+    pce->ce_flags |= ZEND_ACC_FINAL;
     
-    object_init_ex(return_value, zce);
+    object_init_ex(return_value, pce);
     
     if (zconstruct) {
         zend_class_entry *scope = EG(scope);
@@ -428,7 +419,7 @@ PHP_METHOD(Threaded, from)
 		zval retval;
 
 		ZVAL_UNDEF(&retval);
-		EG(scope) = zce;
+		EG(scope) = pce;
 		constructor = Z_OBJ_HT_P(return_value)->get_constructor(Z_OBJ_P(return_value));
 		
 		if (constructor) {
