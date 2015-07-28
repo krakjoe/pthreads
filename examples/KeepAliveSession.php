@@ -66,7 +66,7 @@ class Test extends Thread
     }
 
     /**
-     * The thread's run() method that runs asynchronously.
+     * The thread's run() method that runs in parallel.
      * 
      * @link http://www.php.net/manual/en/thread.run.php
      */

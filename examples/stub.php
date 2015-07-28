@@ -59,7 +59,7 @@ define('PTHREADS_ALLOW_GLOBALS', 0x10000000);
 /**
  * Threaded class
  *
- * Threaded objects form the basis of pthreads ability to execute user code asynchronously;
+ * Threaded objects form the basis of pthreads ability to execute user code in parallel;
  * they expose and include synchronization methods and various useful interfaces.
  *
  * Threaded objects, most importantly, provide implicit safety for the programmer;
