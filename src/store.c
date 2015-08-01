@@ -579,16 +579,19 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 			PHP_VAR_SERIALIZE_DESTROY(vars);
 		}
 
-		*slength = smart.s->len;
-		if (*slength) {
-			*pstring = malloc(*slength+1);
-			if (*pstring) {
-				memcpy(
-					(char*) *pstring, (const void*) smart.s->val, smart.s->len
-				);
-				result = SUCCESS;
-			}
-		} else *pstring = NULL;
+		if (smart.s) {
+			*slength = smart.s->len;
+			if (*slength) {
+				*pstring = malloc(*slength+1);
+				if (*pstring) {
+					memcpy(
+						(char*) *pstring, (const void*) smart.s->val, smart.s->len
+					);
+					result = SUCCESS;
+				}
+			} else *pstring = NULL;
+		}
+		
 		smart_str_free(&smart);	
 	} else {
 	    *slength = 0;
