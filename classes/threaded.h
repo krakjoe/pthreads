@@ -341,8 +341,7 @@ PHP_METHOD(Threaded, extend) {
 PHP_METHOD(Threaded, from)
 {
     zval *zrun, *zconstruct = NULL, *zargs = NULL;
-    zend_function *run, *construct;
-    zend_function *prun, *pconstruct;
+    zend_function *run, *constructor;
     zend_class_entry zce, *pce;
     PTHREAD threaded;
     char *named;
@@ -354,8 +353,10 @@ PHP_METHOD(Threaded, from)
         return;
     }
     
-    run = pthreads_copy_function((zend_function*)zend_get_closure_method_def(zrun));
-    
+    run = (zend_function*) 
+	zend_get_closure_method_def(zrun);
+    run = pthreads_copy_function(run);
+
     if (run->common.num_args > 0) {
         zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0, 
@@ -373,37 +374,42 @@ PHP_METHOD(Threaded, from)
     efree(named);
 
     if (zconstruct) {
-        construct = pthreads_copy_function((zend_function*)zend_get_closure_method_def(zconstruct));
-
-        if (!(pconstruct = zend_hash_str_update_ptr(&zce.function_table, "__construct", sizeof("__construct")-1, construct))) {
-            zend_throw_exception_ex(
-			    spl_ce_RuntimeException, 0, 
-			    "pthreads has experienced an internal error while injecting the constructor function for %s", zce.name->val);
-	        zend_string_release(zce.name);
-	        return;
+        constructor = (zend_function*) 
+		zend_get_closure_method_def(zconstruct);
+	constructor = pthreads_copy_function(constructor);
+	
+        if (!zend_hash_str_update_ptr(&zce.function_table, "__construct", sizeof("__construct")-1, constructor)) {
+		zend_throw_exception_ex(
+			spl_ce_RuntimeException, 0, 
+			"pthreads has experienced an internal error while injecting the constructor function for %s", zce.name->val);
+		zend_string_release(zce.name);
+		return;
         }
 
-        zce.constructor = pconstruct;
+        zce.constructor = constructor;
     }
     
-    if (!(prun = zend_hash_str_update_ptr(&zce.function_table, "run", sizeof("run")-1, run))) {
-        zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while injecting the run function for %s", zce.name->val);
-	    if (zconstruct) {
-	        destroy_op_array((zend_op_array*)pconstruct);
-	    }
-	    zend_string_release(zce.name);
-	    return;
+    if (!zend_hash_str_update_ptr(&zce.function_table, "run", sizeof("run")-1, run)) {
+	zend_throw_exception_ex(
+		spl_ce_RuntimeException, 0, 
+		"pthreads has experienced an internal error while injecting the run function for %s", zce.name->val);
+	if (zconstruct) {
+		destroy_op_array((zend_op_array*) constructor);
+	}
+	destroy_op_array((zend_op_array*) run);
+	zend_string_release(zce.name);
+	return;
     }
-
-    prun->common.fn_flags &= ~ZEND_ACC_CLOSURE;
 
     if (!(pce = zend_hash_add_mem(EG(class_table), zce.name, &zce, sizeof(zend_class_entry)))) {
         zend_throw_exception_ex(
             spl_ce_RuntimeException, 0, 
             "pthreads has experienced an internal error while registering the class entry for %s", zce.name->val);
         zend_string_release(zce.name);
+	if (zconstruct) {
+		destroy_op_array((zend_op_array*) constructor);
+	}
+	destroy_op_array((zend_op_array*)run);
         return;
     }
 
@@ -413,43 +419,41 @@ PHP_METHOD(Threaded, from)
     object_init_ex(return_value, pce);
     
     if (zconstruct) {
-        zend_class_entry *scope = EG(scope);
-		zend_function *constructor = NULL;
-		zval retval;
+	zend_class_entry *scope = EG(scope);
+	zval retval;
 
-		ZVAL_UNDEF(&retval);
-		EG(scope) = pce;
-		constructor = Z_OBJ_HT_P(return_value)->get_constructor(Z_OBJ_P(return_value));
+	ZVAL_UNDEF(&retval);
+	EG(scope) = pce;
+	
+	if (constructor) {
+		zend_fcall_info fci = empty_fcall_info;
+		zend_fcall_info_cache fcc = empty_fcall_info_cache;
 		
-		if (constructor) {
-			zend_fcall_info fci = empty_fcall_info;
-			zend_fcall_info_cache fcc = empty_fcall_info_cache;
-			
-			fci.size = sizeof(zend_fcall_info);
-			fci.function_table = EG(function_table);
-			fci.object = Z_OBJ_P(return_value);
-			fci.retval = &retval;
-			fci.no_separation = 1;
-			
-			fcc.initialized = 1;
-			fcc.function_handler = constructor;
-			fcc.calling_scope = EG(scope);
-			fcc.called_scope = Z_OBJCE_P(return_value);
-			fcc.object = Z_OBJ_P(return_value);
-			
-			if (zargs)
-				zend_fcall_info_args(&fci, zargs);
-			
-			zend_call_function(&fci, &fcc);
-			
-			if (zargs)
-				zend_fcall_info_args_clear(&fci, 1);
-			
-			if (Z_TYPE(retval) != IS_UNDEF)
-				zval_dtor(&retval);
-		}
+		fci.size = sizeof(zend_fcall_info);
+		fci.function_table = EG(function_table);
+		fci.object = Z_OBJ_P(return_value);
+		fci.retval = &retval;
+		fci.no_separation = 1;
 		
-	    EG(scope) = scope;
+		fcc.initialized = 1;
+		fcc.function_handler = constructor;
+		fcc.calling_scope = EG(scope);
+		fcc.called_scope = Z_OBJCE_P(return_value);
+		fcc.object = Z_OBJ_P(return_value);
+		
+		if (zargs)
+			zend_fcall_info_args(&fci, zargs);
+		
+		zend_call_function(&fci, &fcc);
+		
+		if (zargs)
+			zend_fcall_info_args_clear(&fci, 1);
+		
+		if (Z_TYPE(retval) != IS_UNDEF)
+			zval_dtor(&retval);
+	}
+	
+	EG(scope) = scope;
     }
 } /* }}} */
 #	endif
