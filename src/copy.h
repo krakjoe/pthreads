@@ -209,7 +209,8 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	op_array->prototype = copy;
 	op_array->refcount = emalloc(sizeof(uint32_t));
 	(*op_array->refcount) = 1;
-	
+	op_array->fn_flags &= ~ZEND_ACC_CLOSURE;
+
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_new(op_array->doc_comment);
 	}

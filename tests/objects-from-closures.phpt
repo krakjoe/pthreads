@@ -30,16 +30,18 @@ $threaded->start();
 $threaded->join();
 
 --EXPECTF--
-object(ThreadClosure@%s)#%d (1) {
+object(ThreadClosure@%s)#%d (%d) {
   ["test"]=>
   string(5) "hello"
 }
-object(CollectableClosure@%s)#%d (2) {
+object(CollectableClosure@%s)#%d (%d) {
   ["garbage"]=>
   bool(false)
   ["worker"]=>
   object(Worker)#3 (0) {
   }
+  ["test"]=>
+  string(5) "hello"
 }
 object(Threaded)#%d (0) {
 }

@@ -59,6 +59,10 @@
 #	include <src/globals.h>
 #endif
 
+#ifndef HAVE_PTHREADS_COPY_H
+#	include <src/copy.h>
+#endif
+
 typedef void (*zend_throw_exception_hook_func)(zval * TSRMLS_DC);
 
 zend_throw_exception_hook_func zend_throw_exception_hook_function = NULL;

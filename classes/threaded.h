@@ -354,7 +354,7 @@ PHP_METHOD(Threaded, from)
         return;
     }
     
-    run = (zend_function*) zend_get_closure_method_def(zrun);
+    run = pthreads_copy_function((zend_function*)zend_get_closure_method_def(zrun));
     
     if (run->common.num_args > 0) {
         zend_throw_exception_ex(
@@ -373,7 +373,7 @@ PHP_METHOD(Threaded, from)
     efree(named);
 
     if (zconstruct) {
-        construct = (zend_function*) zend_get_closure_method_def(zconstruct);
+        construct = pthreads_copy_function((zend_function*)zend_get_closure_method_def(zconstruct));
 
         if (!(pconstruct = zend_hash_str_update_ptr(&zce.function_table, "__construct", sizeof("__construct")-1, construct))) {
             zend_throw_exception_ex(
@@ -384,7 +384,6 @@ PHP_METHOD(Threaded, from)
         }
 
         zce.constructor = pconstruct;
-	function_add_ref(pconstruct);
     }
     
     if (!(prun = zend_hash_str_update_ptr(&zce.function_table, "run", sizeof("run")-1, run))) {
