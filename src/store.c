@@ -214,6 +214,7 @@ int pthreads_store_write(pthreads_store store, zend_string *key, zval *write) {
 			}
 			pthreads_lock_release(store->lock, locked);
 		}
+
 		pthreads_store_storage_dtor(&storage);
 		zend_string_release(keyed);
 	}
@@ -462,7 +463,8 @@ static pthreads_storage pthreads_store_create(zval *unstore, zend_bool complex){
 			/* break intentionally omitted */
 			case IS_ARRAY: {
 				if (pthreads_store_tostring(unstore, (char**) &storage.data, &storage.length, complex)==SUCCESS) {
-					storage.exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
+					if (Z_TYPE_P(unstore) == IS_ARRAY)
+						storage.exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
 				}
 			} break;
 		}

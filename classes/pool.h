@@ -136,7 +136,6 @@ PHP_METHOD(Pool, submit) {
 	zval worker;
 	zval *clazz = NULL;
 	zval *ctor = NULL;
-	zval *work = NULL;
 	zval *working = NULL;
 	zval *selected = NULL;
 	
@@ -149,14 +148,10 @@ PHP_METHOD(Pool, submit) {
 	last = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("last"), 1, last);
 	size = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"), 1, size);
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
-	work = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"), 1, work);
 
 	if (Z_TYPE_P(workers) != IS_ARRAY)
 		array_init(workers);
 	
-	if (Z_TYPE_P(work ) != IS_ARRAY)
-		array_init(work);
-
 	if (Z_LVAL_P(last) >= Z_LVAL_P(size)) 
 		ZVAL_LONG(last, 0);
 
@@ -228,17 +223,12 @@ PHP_METHOD(Pool, submit) {
 		
 		selected = zend_hash_index_update(
 			Z_ARRVAL_P(workers), Z_LVAL_P(last), &worker);
-		Z_ADDREF_P(selected);
+		
 	}
-	
-	zend_hash_next_index_insert(Z_ARRVAL_P(work), task);
-	Z_ADDREF_P(task);
-	Z_ADDREF_P(task);
 	
 	zend_call_method(selected, Z_OBJCE_P(selected), NULL, ZEND_STRL("stack"), NULL, 1, task, NULL);
 	ZVAL_LONG(return_value, Z_LVAL_P(last));
 	Z_LVAL_P(last)++;
-	
 } /* }}} */
 
 /* {{{ proto integer Pool::submitTo(integer $worker, Threaded task) 
@@ -247,7 +237,6 @@ PHP_METHOD(Pool, submitTo) {
 	zval *task = NULL;
 	zval *workers = NULL;
 	zend_long worker = 0;
-	zval *work = NULL;
 	zval *selected = NULL;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lO", &worker, &task, pthreads_threaded_entry) != SUCCESS) {
@@ -255,20 +244,14 @@ PHP_METHOD(Pool, submitTo) {
 	}
 	
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
-	work = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"), 1, work);
 
 	if (Z_TYPE_P(workers) != IS_ARRAY)
 		array_init(workers);
 	
-	if (Z_TYPE_P(work ) != IS_ARRAY)
-		array_init(work);
-
 	if ((selected = zend_hash_index_find(Z_ARRVAL_P(workers), worker))) {
-		zend_hash_next_index_insert(Z_ARRVAL_P(work), task);
-		Z_ADDREF_P(task);
-		Z_ADDREF_P(task);
-
-		zend_call_method(selected, Z_OBJCE_P(selected), NULL, ZEND_STRL("stack"), NULL, 1, task, NULL);
+		zend_call_method(selected, 
+			Z_OBJCE_P(selected), NULL, 
+			ZEND_STRL("stack"), NULL, 1, task, NULL);
 		ZVAL_LONG(return_value, worker);
 	} else {
 		zend_throw_exception_ex(NULL, 0, 
@@ -276,72 +259,25 @@ PHP_METHOD(Pool, submitTo) {
 	}
 } /* }}} */
 
-/* {{{ */
-typedef struct _pool_call_t {
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
-} pool_call_t; /* }}} */
-
-#define POOL_CALL_EMPTY {empty_fcall_info, empty_fcall_info_cache}
-
-/* {{{ */
-static inline int pool_collect_function(zval *task, void *argument) {
-	pool_call_t *call = (pool_call_t*) argument;
-	int result = ZEND_HASH_APPLY_KEEP;
-	zval remove;
-
-	ZVAL_UNDEF(&remove);
-
-	call->fci.retval = &remove;
-	
-	zend_fcall_info_argn(&call->fci, 1, task);
-
-	if (zend_call_function(&call->fci, &call->fcc) == SUCCESS) {
-		if (Z_TYPE(remove) != IS_UNDEF) {
-			result = zend_is_true(&remove) ?
-				ZEND_HASH_APPLY_REMOVE :
-				ZEND_HASH_APPLY_KEEP;
-		}
-	}
-	
-	zend_fcall_info_argn(&call->fci, 0);
-	
-	if (Z_TYPE(remove) != IS_UNDEF)
-		zval_dtor(&remove);
-
-	if (result)
-		Z_SET_REFCOUNT_P(task, 0);
-	
-	return result;
-} /* }}} */
-
 /* {{{ proto void Pool::collect(Callable collector)
 	Shall execute the collector on each of the tasks in the working set 
 		removing the task if the collector returns positively
 		the collector should be a function accepting a single task */
 PHP_METHOD(Pool, collect) {
-	zend_fcall_info fci;
-	zend_fcall_info_cache fcc;
-	zval *work = NULL;
+	pthreads_call_t call;
+	zval *workers = NULL,
+	     *worker = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &fci, &fcc) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &call.fci, &call.fcc) != SUCCESS) {
 		return;
 	}
 	
-	work = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("work"), 1, work);
+	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
 	
-	if (Z_TYPE_P(work) == IS_ARRAY && zend_hash_num_elements(Z_ARRVAL_P(work))) {
-		pool_call_t call = POOL_CALL_EMPTY;
-		
-		call.fci = fci;
-		call.fcc = fcc;
-		
-		zend_hash_apply_with_argument(Z_ARRVAL_P(work), pool_collect_function, &call);
-		
-		if (!zend_hash_num_elements(Z_ARRVAL_P(work))) {
-			zend_hash_clean(Z_ARRVAL_P(work));
-		}
-	}
+	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(workers), worker) {
+		pthreads_stack_collect(
+			PTHREADS_FETCH_FROM(Z_OBJ_P(worker)), &call);
+	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
 /* {{{ */

@@ -113,35 +113,27 @@ zend_bool pthreads_unset_state(PTHREAD thread, int mask){
 	return result;
 } /* }}} */
 
-/* {{{ pop for php */
-size_t pthreads_stack_pop(PTHREAD thread, PTHREAD work) {
+/* {{{ */
+zend_bool pthreads_stack_pop(PTHREAD thread, zval *work) {
 	zend_bool locked;
-	int remain = 0;
 	
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
 		if (PTHREADS_IS_WORKER(thread)) {
 			HashTable *stack = &thread->stack->objects;
-			if (work) {
-				HashPosition position;
-				PTHREAD search = NULL;
-				zval *bucket;
-				for (zend_hash_internal_pointer_reset_ex(stack, &position);
-				    (bucket = zend_hash_get_current_data_ex(stack, &position));
-				    zend_hash_move_forward_ex(stack, &position)) {
-				    /* arghhh */
-				}
-			} else zend_hash_destroy(stack);
-			remain = zend_hash_num_elements(stack);
+			if (!work) {
+				zend_hash_destroy(stack);
+				return 1;
+			}
 		}
 		pthreads_lock_release(thread->lock, locked);
-	} else remain = -1;
-	return remain;
+	}
+
+	return 0;
 } /* }}} */
 
 /* {{{ */
 size_t pthreads_stack_push(PTHREAD thread, zval *work) {
 	zend_bool locked;
-	PTHREAD threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(work));
 	size_t counted = 0L;
 	
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
@@ -152,9 +144,12 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work) {
 			    thread->stack->position = 0L;
 			}
 			
-			zend_hash_next_index_insert_ptr(stack, threaded);
-			counted = zend_hash_num_elements(stack);
+			zend_hash_next_index_insert(stack, work);
+			Z_ADDREF_P(work);
+
+			counted = (size_t) zend_hash_num_elements(stack);
 		}
+
 		pthreads_lock_release(thread->lock, locked);
 		
 		if (counted > 0L) {
@@ -169,58 +164,90 @@ size_t pthreads_stack_push(PTHREAD thread, zval *work) {
 } /* }}} */
 
 /* {{{ */
-size_t pthreads_stack_next(zval *that) {
-	PTHREAD thread,
-		work;
-	zend_bool locked;
-	size_t bubble = 0;
-	zend_class_entry *popped;
-	TSRMLS_CACHE_UPDATE();
-	
-	thread = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
+static inline int pthreads_stack_collect_function(zval *collectable, void *argument) {
+	pthreads_call_t *call = (pthreads_call_t*) argument;
+	int apply = ZEND_HASH_APPLY_KEEP;	
+	zval result;
 
-burst:
-	if (Z_TYPE_P(that) != IS_UNDEF) {
-		if (Z_OBJ_P(that) != Z_OBJ(PTHREADS_ZG(this))) {
-			Z_SET_REFCOUNT_P(that, 0);
-			zval_dtor(that);
-		}
-		ZVAL_UNDEF(that);
+	ZVAL_UNDEF(&result);
+
+	call->fci.retval = &result;				
+	call->fci.no_separation = 1;
+
+	zend_fcall_info_argn(&call->fci, 1, collectable);
+
+	if (zend_call_function(&call->fci, &call->fcc) != SUCCESS) {
+		return ZEND_HASH_APPLY_STOP | ZEND_HASH_APPLY_KEEP;
 	}
 	
+	zend_fcall_info_args_clear(&call->fci, 1);
+
+	if (Z_TYPE(result) != IS_UNDEF) {
+		if (zend_is_true(&result)) {
+			apply = ZEND_HASH_APPLY_REMOVE;
+		}
+		zval_dtor(&result);
+	}
+	
+	return apply;
+} /* }}} */
+
+/* {{{ */
+zend_bool pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call) {
+	zend_bool locked;
+	zend_bool waiting;
+	
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
-		if ((bubble=zend_hash_num_elements((HashTable*) thread->stack)) > 0) {
-			if ((work = zend_hash_index_find_ptr((HashTable*) thread->stack, thread->stack->position))) {
-				PTHREAD threaded;
+		zend_hash_apply_with_argument(
+			&thread->stack->objects, 
+			pthreads_stack_collect_function, call);	
+		waiting = (zend_hash_num_elements(&thread->stack->objects) > 0);	
+		pthreads_lock_release(thread->lock, locked);
+	}
 
-				object_init_ex(
-					that,
-					pthreads_prepared_entry
-					(
-						thread, 
-						work->std.ce
-					)
-				);
+	return waiting;
+} /* }}} */
 
-				if ((threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(that)))) {
-					zend_string *prop = zend_string_init(ZEND_STRL("worker"), 1);
-					
-					work->local.id = thread->local.id;
-					work->local.ls = thread->local.ls;
-					
-					pthreads_connect(work, threaded);
-					pthreads_store_write(
-						threaded->store, prop, &PTHREADS_ZG(this));
-					zend_string_release(prop);
-				}
+/* {{{ */
+zend_bool pthreads_stack_next(zval *that) {
+	zval *next = NULL;
+	PTHREAD thread = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this))), 
+		work = NULL;
+	zend_bool locked = 0;
+	
+	if (Z_TYPE_P(that) != IS_UNDEF && Z_OBJ_P(that) != Z_OBJ(PTHREADS_ZG(this))) {
+		zval_ptr_dtor_nogc(that);
+	}
+
+burst:
+	if (pthreads_lock_acquire(thread->lock, &locked)) {
+		if ((next = zend_hash_index_find((HashTable*) thread->stack, (uint32_t) thread->stack->position))) {
+			PTHREAD threaded;
+
+			work = PTHREADS_FETCH_FROM(Z_OBJ_P(next));
+
+			object_init_ex(that, pthreads_prepared_entry(
+				thread, 
+				work->std.ce
+			));
+
+			if ((threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(that)))) {
+				zend_string *prop = zend_string_init(ZEND_STRL("worker"), 1);
+				
+				work->local.id = thread->local.id;
+				work->local.ls = thread->local.ls;
+				
+				pthreads_connect(work, threaded);
+				pthreads_store_write(
+					threaded->store, prop, &PTHREADS_ZG(this));
+				
+				zend_string_release(prop);
 			}
-			
-			zend_hash_index_del(
-			    (HashTable*) thread->stack, thread->stack->position++);
+			thread->stack->position++;
 		}
 		pthreads_lock_release(thread->lock, locked);
 		
-		if (!bubble) {
+		if (!next) {
 			if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
 			    pthreads_synchro_lock(thread->synchro);
 				if (pthreads_set_state(thread, PTHREADS_ST_WAITING)) {
@@ -231,13 +258,13 @@ burst:
 		}
 	}
 	
-	return bubble;
+	return (next != NULL);
 } /* }}} */
 
 /* {{{ */
-size_t pthreads_stack_length(PTHREAD thread) {
+uint32_t pthreads_stack_length(PTHREAD thread) {
 	zend_bool locked;
-	size_t counted = 0;
+	uint32_t counted = 0;
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
 		counted = zend_hash_num_elements(
 		    &thread->stack->objects);
@@ -369,9 +396,9 @@ static inline void pthreads_base_init(PTHREAD base) {
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 	if (base) {
 		TSRMLS_CACHE_UPDATE();
-		
-		zend_object_std_init(&base->std, entry);
 
+		zend_object_std_init(&base->std, entry);
+		//php_printf("ctor %s %p\n", base->std.ce->name->val, base);
 		base->creator.ls = TSRMLS_CACHE;
 		base->creator.id = pthreads_self();
 		base->address = pthreads_address_alloc(base);
@@ -387,7 +414,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
 				if (base->stack) {
 					zend_hash_init(
-						&base->stack->objects, 8, NULL, NULL, 1);
+						&base->stack->objects, 8, NULL, ZVAL_PTR_DTOR, 0);
                     			base->stack->position = 0L;
 				}
 			}
@@ -400,7 +427,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 /* {{{ */
 void pthreads_base_free(zend_object *object) {
 	PTHREAD base = PTHREADS_FETCH_FROM(object);
-
+	//php_printf("free %s %p\n", base->std.ce->name->val, base);
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
 			pthread_t *pthread = &base->thread;
@@ -666,6 +693,7 @@ static void * pthreads_routine(void *arg) {
 					zval zresult;					
 					ZVAL_UNDEF(&zresult);
 
+					
 					pthreads_state_set(current->state, PTHREADS_ST_RUNNING);
 					{
 						zend_bool terminated = 0;
@@ -714,7 +742,7 @@ static void * pthreads_routine(void *arg) {
 			}
 		} zend_end_try();
 
-		zval_ptr_dtor_nogc(&PTHREADS_ZG(this));
+		zval_ptr_dtor(&PTHREADS_ZG(this));
 
 		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
 

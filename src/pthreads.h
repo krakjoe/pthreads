@@ -100,4 +100,12 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 
 #define zend_string_new(s) zend_string_init((s)->val, (s)->len, 0)
 
+/* {{{ */
+typedef struct _pthreads_call_t {
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+} pthreads_call_t; /* }}} */
+
+#define PTHREADS_CALL_EMPTY {empty_fcall_info, empty_fcall_info_cache}
+
 #endif

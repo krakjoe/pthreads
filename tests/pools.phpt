@@ -13,21 +13,15 @@ class WebWorker extends Worker {
 	protected $loger;	
 }
 
-class WebWork extends Threaded {
-	
-	public function isComplete() {
-		return $this->complete;
-	}
+class WebWork extends Collectable {
 	
 	public function run() {
 		$this->worker
 			->logger
 			->log("%s executing in Thread #%lu",
 				  __CLASS__, $this->worker->getThreadId());
-		$this->complete = true;
+		$this->setGarbage();
 	}
-	
-	protected $complete;
 }
 
 class SafeLog extends Threaded {
@@ -57,7 +51,7 @@ $pool->submit(new WebWork());
 $pool->shutdown();
 
 $pool->collect(function($work){
-	return $work->isComplete();
+	return $work->isGarbage();
 });
 
 var_dump($pool);
@@ -77,15 +71,12 @@ WebWork executing in Thread #%d
 WebWork executing in Thread #%d
 WebWork executing in Thread #%d
 WebWork executing in Thread #%d
-object(Pool)#%d (6) {
+object(Pool)#%d (%d) {
   ["size":protected]=>
   int(8)
   ["class":protected]=>
   string(9) "WebWorker"
   ["workers":protected]=>
-  array(0) {
-  }
-  ["work":protected]=>
   array(0) {
   }
   ["ctor":protected]=>

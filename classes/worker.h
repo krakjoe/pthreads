@@ -23,6 +23,7 @@ PHP_METHOD(Worker, isWorking);
 PHP_METHOD(Worker, stack);
 PHP_METHOD(Worker, unstack);
 PHP_METHOD(Worker, getStacked);
+PHP_METHOD(Worker, collect);
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_shutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -40,6 +41,9 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_unstack, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(Worker_collect, 0, 0, 1)
+	ZEND_ARG_INFO(0, function)
+ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_worker_methods[];
 #else
@@ -52,11 +56,12 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, getStacked, Worker_getStacked, ZEND_ACC_PUBLIC)
 	PHP_ME(Worker, isShutdown, Worker_isShutdown, ZEND_ACC_PUBLIC)
 	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC)
+	PHP_ME(Worker, collect, Worker_collect, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
-/* {{{ proto int Worker::stack(Threaded &$work)
-	Pushes an item onto the Thread Stack, returns the size of stack */
+/* {{{ proto int Worker::stack(Collectable $work)
+	Pushes an item onto the stack, returns the size of stack */
 PHP_METHOD(Worker, stack)
 {
 	PTHREAD thread = PTHREADS_FETCH;
@@ -64,7 +69,7 @@ PHP_METHOD(Worker, stack)
 	
 	if (thread) {
 		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_threaded_entry)==SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
 				RETURN_LONG(pthreads_stack_push(thread, work));
 			}
 		} else {
@@ -80,8 +85,8 @@ PHP_METHOD(Worker, stack)
 	RETURN_FALSE;
 } /* }}} */
 
-/* {{{ proto int Worker::unstack([Threaded &$work])
-	Removes an item from the Thread stack, if no item is specified the stack is cleared, returns the size of stack */
+/* {{{ proto int Worker::unstack([Collectable $work])
+	Removes an item from the stack, if no item is specified the stack is cleared, returns the size of stack */
 PHP_METHOD(Worker, unstack)
 {
 	PTHREAD thread = PTHREADS_FETCH;
@@ -89,14 +94,14 @@ PHP_METHOD(Worker, unstack)
 	
 	if (thread) {
 		if (ZEND_NUM_ARGS() > 0) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_threaded_entry)==SUCCESS) {
+			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
 				if (Z_REFCOUNT_P(work) < 2) {
 					zend_throw_exception(
 						spl_ce_InvalidArgumentException, "Worker::unstack expects $work to be a reference", 0);
 					return;
 				}
 				
-				RETURN_LONG(pthreads_stack_pop(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(work))));
+				RETURN_LONG(pthreads_stack_pop(thread, work));
 			}
 		} else RETURN_LONG(pthreads_stack_pop(thread, NULL));
 	} else {
@@ -184,6 +189,18 @@ PHP_METHOD(Worker, getCreatorId)
 {
 	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->creator.id);
 } /* }}} */
+
+/* {{{ proto bool Worker::collect(callable function) */
+PHP_METHOD(Worker, collect) 
+{
+	pthreads_call_t call = PTHREADS_CALL_EMPTY;
+	
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &call.fci, &call.fcc) != SUCCESS) {
+		return;
+	}
+
+	ZVAL_BOOL(return_value, pthreads_stack_collect(PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())), &call));
+}
 #	endif
 #endif
 

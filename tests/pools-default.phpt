@@ -4,7 +4,7 @@ Test pool defaults
 This test verifies pool defaults
 --FILE--
 <?php
-class Work extends Threaded {
+class Work extends Collectable {
 	public function run() {
 		var_dump($this);
 	}
@@ -22,8 +22,10 @@ var_dump($pool);
 ?>
 --EXPECTF--
 object(Work)#%d (%d) {
+  ["garbage"]=>
+  bool(false)
   ["worker"]=>
-  object(Worker)#%d (%d) {
+  object(Worker)#%d (0) {
   }
 }
 object(Pool)#%d (%d) {
@@ -34,13 +36,11 @@ object(Pool)#%d (%d) {
   ["workers":protected]=>
   array(0) {
   }
-  ["work":protected]=>
-  array(0) {
-  }
   ["ctor":protected]=>
   NULL
   ["last":protected]=>
   int(1)
 }
+
 
 
