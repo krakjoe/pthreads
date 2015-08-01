@@ -371,6 +371,8 @@ PHP_METHOD(Threaded, from)
         ((char**)&named, 0, "%sClosure@%p", 
 	EX(called_scope)->name->val, ((zend_op_array*) run)->opcodes);
     zce.name = zend_string_init(named, nlen, 0);
+    zce.info.user.filename = NULL;
+
     efree(named);
 
     if (zconstruct) {
@@ -419,39 +421,38 @@ PHP_METHOD(Threaded, from)
     object_init_ex(return_value, pce);
     
     if (zconstruct) {
+	zend_fcall_info fci = empty_fcall_info;
+	zend_fcall_info_cache fcc = empty_fcall_info_cache;
 	zend_class_entry *scope = EG(scope);
 	zval retval;
 
 	ZVAL_UNDEF(&retval);
 	EG(scope) = pce;
 	
-	if (constructor) {
-		zend_fcall_info fci = empty_fcall_info;
-		zend_fcall_info_cache fcc = empty_fcall_info_cache;
-		
-		fci.size = sizeof(zend_fcall_info);
-		fci.function_table = EG(function_table);
-		fci.object = Z_OBJ_P(return_value);
-		fci.retval = &retval;
-		fci.no_separation = 1;
-		
-		fcc.initialized = 1;
-		fcc.function_handler = constructor;
-		fcc.calling_scope = EG(scope);
-		fcc.called_scope = Z_OBJCE_P(return_value);
-		fcc.object = Z_OBJ_P(return_value);
-		
-		if (zargs)
-			zend_fcall_info_args(&fci, zargs);
-		
-		zend_call_function(&fci, &fcc);
-		
-		if (zargs)
-			zend_fcall_info_args_clear(&fci, 1);
-		
-		if (Z_TYPE(retval) != IS_UNDEF)
-			zval_dtor(&retval);
+	fci.size = sizeof(zend_fcall_info);
+	fci.function_table = EG(function_table);
+	fci.object = Z_OBJ_P(return_value);
+	fci.retval = &retval;
+	fci.no_separation = 1;
+	
+	fcc.initialized = 1;
+	fcc.function_handler = constructor;
+	fcc.calling_scope = EG(scope);
+	fcc.called_scope = Z_OBJCE_P(return_value);
+	fcc.object = Z_OBJ_P(return_value);
+	
+	if (zargs)
+		zend_fcall_info_args(&fci, zargs);
+	
+	if (zend_call_function(&fci, &fcc) != SUCCESS) {
+		return;
 	}
+	
+	if (zargs)
+		zend_fcall_info_args_clear(&fci, 1);
+	
+	if (Z_TYPE(retval) != IS_UNDEF)
+		zval_dtor(&retval);
 	
 	EG(scope) = scope;
     }
