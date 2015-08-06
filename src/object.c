@@ -201,9 +201,25 @@ uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call) {
 	
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
 		zend_hash_apply_with_argument(
-			&thread->stack->objects, 
-			pthreads_stack_collect_function, call);	
+			&thread->stack->objects,
+			pthreads_stack_collect_function, call);
 		waiting = zend_hash_num_elements(&thread->stack->objects);
+		if (waiting == 0) {
+			/* destroy and reset stack to free up unused memory */
+			zend_hash_destroy(&thread->stack->objects);
+			zend_hash_init(
+				&thread->stack->objects, 8, NULL, ZVAL_PTR_DTOR, 0);
+		} else {
+			zend_bool state;
+
+			if (pthreads_state_lock(thread->state, &state)) {
+				if (pthreads_state_check(thread->state, PTHREADS_ST_WAITING)) {
+					pthreads_unset_state(thread, PTHREADS_ST_WAITING);
+				}
+				pthreads_state_unlock(thread->state, state);
+			}
+		}
+
 		pthreads_lock_release(thread->lock, locked);
 	}
 

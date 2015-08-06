@@ -4,7 +4,6 @@ Test pooling
 This test verifies the functionality of selective inheritance
 --FILE--
 <?php
-
 class WebWorker extends Worker {
 	public function __construct(SafeLog $logger) {
 		$this->logger = $logger;
@@ -39,13 +38,7 @@ class SafeLog extends Threaded {
 $pool = new Pool(8, 'WebWorker', array(new SafeLog()));
 while (@$i++<10)
 	$pool->submit(new WebWork($i));
-
-while($pool->collect(function(WebWork $work) : bool {
-	return $work->isGarbage();
-})) continue;
-
 $pool->shutdown();
-
 var_dump($pool);
 ?>
 --EXPECTF--
