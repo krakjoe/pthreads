@@ -213,13 +213,13 @@ uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call) {
 /* {{{ */
 uint32_t pthreads_stack_length(PTHREAD thread) {
 	zend_bool locked;
-	uint32_t counted = 0;
+	uint32_t length = 0;
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
-		counted = zend_hash_num_elements
+		length = zend_hash_num_elements
 			(&thread->stack->objects);
 		pthreads_lock_release(thread->lock, locked);
 	}
-	return counted;
+	return length;
 } /* }}} */
 
 /* {{{ */
