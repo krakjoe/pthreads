@@ -385,7 +385,7 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash) {
 
 				rename = zend_string_init(name->val, name->len, 0);
 				if (!zend_hash_update(hash, rename, &pzval))
-					zval_dtor_no_gc(&pzval);
+					zval_dtor_nogc(&pzval);
 				zend_string_release(rename);
 			} ZEND_HASH_FOREACH_END();
 		
