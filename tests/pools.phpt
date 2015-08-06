@@ -40,8 +40,8 @@ $pool = new Pool(8, 'WebWorker', array(new SafeLog()));
 while (@$i++<10)
 	$pool->submit(new WebWork($i));
 
-$pool->collect(function($work){
-	return !$work->isRunning() && $work->isGarbage();
+$pool->collect(function(WebWork $work){
+	return $work->isGarbage();
 });
 
 $pool->shutdown();
