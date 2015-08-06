@@ -14,14 +14,18 @@ class WebWorker extends Worker {
 }
 
 class WebWork extends Collectable {
-	
+	public function __construct(int $id) {
+		$this->id = $id;
+	}
+
 	public function run() {
 		$this->worker
 			->logger
-			->log("%s executing in Thread #%lu",
-				  __CLASS__, $this->worker->getThreadId());
-		$this->setGarbage();
+			->log("%s(%d) executing in Thread #%lu",
+				  __CLASS__, $this->id, $this->worker->getThreadId());
 	}
+
+	protected $id;
 }
 
 class SafeLog extends Threaded {
@@ -33,44 +37,28 @@ class SafeLog extends Threaded {
 }
 
 $pool = new Pool(8, 'WebWorker', array(new SafeLog()));
-
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->submit(new WebWork());
-$pool->shutdown();
+while (@$i++<10)
+	$pool->submit(new WebWork($i));
 
 $pool->collect(function($work){
-	return $work->isGarbage();
+	return !$work->isRunning() && $work->isGarbage();
 });
+
+$pool->shutdown();
 
 var_dump($pool);
 ?>
 --EXPECTF--
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
-WebWork executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
+WebWork(%d) executing in Thread #%d
 object(Pool)#%d (%d) {
   ["size":protected]=>
   int(8)
@@ -86,6 +74,6 @@ object(Pool)#%d (%d) {
     }
   }
   ["last":protected]=>
-  int(6)
+  int(%d)
 }
 

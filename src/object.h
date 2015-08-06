@@ -47,10 +47,9 @@ void        pthreads_base_free(zend_object *object);
 zend_bool pthreads_set_state_ex(PTHREAD thread, int state, long timeout);
 zend_bool pthreads_set_state(PTHREAD thread, int state);
 zend_bool pthreads_unset_state(PTHREAD thread, int state);
-zend_bool pthreads_stack_pop(PTHREAD thread, zval *work);
-size_t pthreads_stack_push(PTHREAD thread, zval *work);
-zend_bool pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call);
-zend_bool pthreads_stack_next(zval *that);
+uint32_t pthreads_stack_pop(PTHREAD thread, zval *work);
+uint32_t pthreads_stack_push(PTHREAD thread, zval *work);
+uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call);
 uint32_t pthreads_stack_length(PTHREAD thread);
 /* }}} */
 

@@ -267,7 +267,8 @@ PHP_METHOD(Pool, collect) {
 	pthreads_call_t call;
 	zval *workers = NULL,
 	     *worker = NULL;
-	
+	zend_long collected = 0;
+
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &call.fci, &call.fcc) != SUCCESS) {
 		return;
 	}
@@ -275,9 +276,11 @@ PHP_METHOD(Pool, collect) {
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
 	
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(workers), worker) {
-		pthreads_stack_collect(
+		collected += pthreads_stack_collect(
 			PTHREADS_FETCH_FROM(Z_OBJ_P(worker)), &call);
 	} ZEND_HASH_FOREACH_END();
+	
+	RETURN_LONG(collected);
 } /* }}} */
 
 /* {{{ */

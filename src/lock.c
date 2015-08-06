@@ -30,7 +30,7 @@
 	shall allocate and initialize a pthreads lock */
 pthreads_lock pthreads_lock_alloc() {
 	pthreads_lock lock = calloc(1, sizeof(*lock));
-	if (lock) {	
+	if (lock) {
 		pthread_mutexattr_t attr;
 
 		pthread_mutexattr_init(&attr);
@@ -41,7 +41,6 @@ pthreads_lock pthreads_lock_alloc() {
 		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
 #endif
 
-		/* whatever the default type will do */
 		if (pthread_mutex_init(&lock->mutex, &attr)==SUCCESS) {
 			lock->owner = NULL;
 			lock->locks = 0;

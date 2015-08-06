@@ -17,7 +17,6 @@ class WebWork extends Collectable {
 			->log("%s executing in Thread #%lu",
 				  __CLASS__, $this->worker->getThreadId());
 		} catch(Throwable $thrown) { var_dump($thrown); }
-		$this->setGarbage();
 	}
 }
 

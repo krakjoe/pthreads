@@ -27,9 +27,44 @@ ZEND_BEGIN_ARG_INFO_EX(Collectable_setGarbage, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_collectable_methods[];
+
+zend_bool pthreads_collectable_is_garbage(zval *object);
+void pthreads_collectable_set_garbage(zval *object);
+
 #else
 #	ifndef HAVE_PTHREADS_CLASS_COLLECTABLE
 #	define HAVE_PTHREADS_CLASS_COLLECTABLE
+zend_bool pthreads_collectable_is_garbage(zval *object) {
+	PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	zval garbage;
+	zend_bool locked[2], is_garbage = 0;
+	
+	if (pthreads_lock_acquire(pobject->lock, &locked[0])) {
+		if (!pthreads_state_isset(pobject->state, PTHREADS_ST_RUNNING)) {
+			if (zend_read_property(pobject->std.ce, object, ZEND_STRL("garbage"), 1, &garbage)) {
+				is_garbage = 
+					zend_is_true(&garbage);
+				zval_dtor(&garbage);
+			}
+		}
+		pthreads_lock_release(pobject->lock, locked[0]);
+	}
+
+	return is_garbage;
+}
+
+void pthreads_collectable_set_garbage(zval *object) {
+	PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	
+	if (pthreads_collectable_is_garbage(object)) {
+		zend_throw_exception
+			(NULL, "an object cannot be marked as garbage more than once", 0);
+		return;
+	}
+	
+	zend_update_property_bool(pobject->std.ce, object, ZEND_STRL("garbage"), 1);
+}
+
 zend_function_entry pthreads_collectable_methods[] = {
 	PHP_ME(Collectable, isGarbage, 	Collectable_isGarbage, 	ZEND_ACC_PUBLIC)
 	PHP_ME(Collectable, setGarbage, Collectable_setGarbage, ZEND_ACC_PUBLIC)
@@ -39,23 +74,11 @@ zend_function_entry pthreads_collectable_methods[] = {
 /* {{{ proto bool Collectable::isGarbage(void)
 	Can be called in Pool::collect to determine if this object is garbage */
 PHP_METHOD(Collectable, isGarbage) {
-	zval garbage;
-	PTHREAD pobject = PTHREADS_FETCH;
-	
 	if (zend_parse_parameters_none() != SUCCESS) {
 		return;
 	}
 	
-	if (!zend_read_property(pobject->std.ce, getThis(), ZEND_STRL("garbage"), 1, &garbage)) {
-		RETVAL_BOOL(0);
-	} else {
-        if (zend_is_true(&garbage)) {
-			RETVAL_BOOL(1);
-		} else RETVAL_BOOL(0);
-	}
-	
-	/* these properties are returned with no references */
-	zval_dtor(&garbage);
+	RETURN_BOOL(pthreads_collectable_is_garbage(getThis()));
 } /* }}} */
 
 /* {{{ proto bool Collectable::setGarbage(void)

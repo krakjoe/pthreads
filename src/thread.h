@@ -41,7 +41,7 @@
 /* {{{ stack structure */
 typedef struct _pthreads_stack {
 	HashTable    objects;
-	ulong        position;
+	HashPosition position;
 } *pthreads_stack; /* }}} */
 
 /* {{{ address structure */
