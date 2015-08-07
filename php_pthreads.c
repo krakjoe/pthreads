@@ -307,10 +307,14 @@ ZEND_MODULE_POST_ZEND_DEACTIVATE_D(pthreads)
 
 PHP_RINIT_FUNCTION(pthreads) {
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
+	
+	return SUCCESS;
 }
 
 PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(&PTHREADS_ZG(resolve));
+
+	return SUCCESS;
 }
 
 PHP_MINFO_FUNCTION(pthreads)
