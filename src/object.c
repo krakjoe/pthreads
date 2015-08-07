@@ -621,152 +621,130 @@ static inline zend_bool pthreads_routine_run_function(PTHREAD object, PTHREAD co
 /* {{{ */
 static void * pthreads_routine(void *arg) {
 	PTHREAD thread = (PTHREAD) arg;
-	
+
+#ifdef PTHREADS_PEDANTIC
+	zend_bool  glocked = 0;
+#endif
+	zval that;
+
 #ifdef PTHREADS_KILL_SIGNAL
 	signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
 #endif
 
-	if (thread) {
-#ifdef PTHREADS_PEDANTIC
-		zend_bool  glocked = 0;
-#endif
-		zval that;		
-		
-		/**
-		* Startup Block Begin
-		**/
-		TSRMLS_CACHE = thread->local.ls 
-			= tsrm_new_interpreter_context();
-		tsrm_set_interpreter_context(TSRMLS_CACHE);
+	thread->local.ls 
+		= tsrm_new_interpreter_context();
+	tsrm_set_interpreter_context(thread->local.ls);
+	TSRMLS_CACHE_UPDATE();
 
 #ifdef PTHREADS_PEDANTIC
-		pthreads_globals_lock(&glocked);
+	pthreads_globals_lock(&glocked);
 #endif
 
-		thread->local.id = pthreads_self();
-		
-		SG(server_context) = PTHREADS_SG(thread->creator.ls, server_context);
-		
-		PG(expose_php) = 0;
-		PG(auto_globals_jit) = 0;
-		
-		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-			/*zend_alter_ini_entry(
-				"session.cache_limiter", 
-				sizeof("session.cache_limiter"), 
-				"nocache", sizeof("nocache")-1, 
-				PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
-			zend_alter_ini_entry(
-				"session.use_cookies", 
-				sizeof("session.use_cookies"), 
-				"0", sizeof("0")-1,
-				PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);*/
-		}
+	thread->local.id = pthreads_self();
 
-		php_request_startup();
+	SG(server_context) = PTHREADS_SG(thread->creator.ls, server_context);
 
-		SG(sapi_started) = 0;
-		
-		if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-			SG(headers_sent)=1;
-			SG(request_info).no_headers = 1;
-		}
+	PG(expose_php) = 0;
+	PG(auto_globals_jit) = 0;
 
-		pthreads_prepare(thread);
-
-#ifdef PTHREADS_PEDANTIC
-		pthreads_globals_unlock(glocked);
-#endif
-
-		/**
-		* Startup Block End
-		**/
-
-		/**
-		* Thread Block Begin
-		**/
-		zend_first_try {
-			zend_string *run = zend_string_init(ZEND_STRL("run"), 1);
-
-			ZVAL_UNDEF(&PTHREADS_ZG(this));
-			object_init_ex(
-				&PTHREADS_ZG(this),
-				pthreads_prepared_entry(thread, thread->std.ce));
-			pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))), run);
-			
-			if (PTHREADS_IS_WORKER(thread)) {
-				zend_bool locked;
-				zend_string *key = zend_string_init(ZEND_STRL("worker"), 0);
-
-				do {
-					if (pthreads_lock_acquire(thread->lock, &locked)) {
-						zval *next;
-
-						ZEND_HASH_FOREACH_VAL(&thread->stack->objects, next) {
-							if (!pthreads_collectable_is_garbage(next)) {
-								PTHREAD work = PTHREADS_FETCH_FROM(Z_OBJ_P(next));
-
-								ZVAL_UNDEF(&that);
-								object_init_ex(
-									&that,
-									pthreads_prepared_entry(thread, work->std.ce));
-								pthreads_store_write(
-									work->store, key, &PTHREADS_ZG(this));
-								pthreads_routine_run_function(
-									work, PTHREADS_FETCH_FROM(Z_OBJ(that)), run);
-								zval_dtor(&that);
-
-								pthreads_collectable_set_garbage(next);
-							}
-						} ZEND_HASH_FOREACH_END();
-
-						pthreads_lock_release(thread->lock, locked);
-
-						if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
-							pthreads_synchro_lock(thread->synchro);
-							if (pthreads_set_state(thread, PTHREADS_ST_WAITING)) {
-							    pthreads_synchro_unlock(thread->synchro);
-								continue;
-							} else pthreads_synchro_unlock(thread->synchro);
-						} else break;
-					}
-				} while (1);
-
-				zend_string_release(key);
-			}
-
-			zval_ptr_dtor(&PTHREADS_ZG(this));
-			zend_string_release(run);
-		} zend_end_try();
-
-		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
-
-		/**
-		* Thread Block End
-		**/
-		
-		/**
-		* Shutdown Block Begin
-		**/
-		PG(report_memleaks) = 0;
-		
-#ifdef PTHREADS_PEDANTIC
-		pthreads_globals_lock(&glocked);
-#endif
-		php_request_shutdown((void*)NULL);
-
-#ifdef PTHREADS_PEDANTIC
-		pthreads_globals_unlock(glocked);
-#endif
-		tsrm_free_interpreter_context(TSRMLS_CACHE);
-
-		/**
-		* Shutdown Block End
-		**/
+	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
+		/*zend_alter_ini_entry(
+			"session.cache_limiter", 
+			sizeof("session.cache_limiter"), 
+			"nocache", sizeof("nocache")-1, 
+			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
+		zend_alter_ini_entry(
+			"session.use_cookies", 
+			sizeof("session.use_cookies"), 
+			"0", sizeof("0")-1,
+			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);*/
 	}
 
+	php_request_startup();
+
+	SG(sapi_started) = 0;
+
+	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
+		SG(headers_sent)=1;
+		SG(request_info).no_headers = 1;
+	}
+
+	pthreads_prepare(thread);
+
+#ifdef PTHREADS_PEDANTIC
+	pthreads_globals_unlock(glocked);
+#endif
+
+	zend_first_try {
+		zend_string *run = zend_string_init(ZEND_STRL("run"), 1);
+
+		ZVAL_UNDEF(&PTHREADS_ZG(this));
+		object_init_ex(
+			&PTHREADS_ZG(this),
+			pthreads_prepared_entry(thread, thread->std.ce));
+		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))), run);
+		
+		if (PTHREADS_IS_WORKER(thread)) {
+			zend_bool locked;
+			zend_string *key = zend_string_init(ZEND_STRL("worker"), 0);
+
+			do {
+				if (pthreads_lock_acquire(thread->lock, &locked)) {
+					zval *next;
+
+					ZEND_HASH_FOREACH_VAL(&thread->stack->objects, next) {
+						if (!pthreads_collectable_is_garbage(next)) {
+							PTHREAD work = PTHREADS_FETCH_FROM(Z_OBJ_P(next));
+
+							ZVAL_UNDEF(&that);
+							object_init_ex(
+								&that,
+								pthreads_prepared_entry(thread, work->std.ce));
+							pthreads_store_write(
+								work->store, key, &PTHREADS_ZG(this));
+							pthreads_routine_run_function(
+								work, PTHREADS_FETCH_FROM(Z_OBJ(that)), run);
+							zval_dtor(&that);
+
+							pthreads_collectable_set_garbage(next);
+						}
+					} ZEND_HASH_FOREACH_END();
+
+					pthreads_lock_release(thread->lock, locked);
+
+					if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
+						pthreads_synchro_lock(thread->synchro);
+						if (pthreads_set_state(thread, PTHREADS_ST_WAITING)) {
+						    pthreads_synchro_unlock(thread->synchro);
+							continue;
+						} else pthreads_synchro_unlock(thread->synchro);
+					} else break;
+				}
+			} while (1);
+
+			zend_string_release(key);
+		}
+
+		zval_ptr_dtor(&PTHREADS_ZG(this));
+		zend_string_release(run);
+	} zend_end_try();
+
+	zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
+
+	PG(report_memleaks) = 0;
+
+#ifdef PTHREADS_PEDANTIC
+	pthreads_globals_lock(&glocked);
+#endif
+	php_request_shutdown((void*)NULL);
+
+#ifdef PTHREADS_PEDANTIC
+	pthreads_globals_unlock(glocked);
+#endif
+	tsrm_free_interpreter_context(TSRMLS_CACHE);
+
 	pthread_exit(NULL);
-	
+
 #ifdef _WIN32
 	return NULL;
 #endif

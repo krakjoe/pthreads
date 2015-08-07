@@ -47,6 +47,8 @@ foreach($threads as $thread) {
 		else var_dump($thread->done);
 	});
 }
+foreach ($threads as $thread)
+	$thread->join();
 ?>
 --EXPECT--
 bool(true)
