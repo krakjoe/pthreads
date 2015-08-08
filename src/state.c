@@ -49,11 +49,9 @@ pthreads_state pthreads_state_alloc(int mask) {
 
 /* {{{ free state object */
 void pthreads_state_free(pthreads_state state) {
-	if (state) {
-	    pthreads_lock_free(state->lock);
-	    pthreads_synchro_free(state->synchro);
-	    free(state);
-	}
+	pthreads_lock_free(state->lock);
+	pthreads_synchro_free(state->synchro);
+	free(state);
 } /* }}} */
 
 /* {{{ lock state */
@@ -74,9 +72,7 @@ int pthreads_state_check(pthreads_state state, int mask) {
 /* {{{ set state (assumes appropriate locking in place */
 int pthreads_state_set_locked(pthreads_state state, int mask) {
 	state->was |= mask;
-	pthreads_synchro_notify(
-		state->synchro
-	);
+	pthreads_synchro_notify(state->synchro);
 	return (state->bits |= mask);
 } /* }}} */
 
@@ -87,62 +83,64 @@ int pthreads_state_unset_locked(pthreads_state state, int mask) {
 
 /* {{{ set state on state object */
 zend_bool pthreads_state_set(pthreads_state state, int mask) {
-	zend_bool locked, result = 1;
-	
-	if (state) {
-		if (pthreads_lock_acquire(state->lock, &locked)) {
-			state->was |= mask;
-			pthreads_synchro_notify(
-				state->synchro
-			);
-			state->bits |= mask;
-			pthreads_lock_release(state->lock, locked);
-		} else result = 0;
+	zend_bool locked, 
+		  result = 1;
+
+	if (pthreads_lock_acquire(state->lock, &locked)) {
+		state->was |= mask;
+		pthreads_synchro_notify(state->synchro);
+		state->bits |= mask;
+		pthreads_lock_release(state->lock, locked);
 	} else result = 0;
+
 	return result;
 } /* }}} */
 
 /* {{{ wait until a state has been set */
 zend_bool pthreads_state_wait(pthreads_state state, int mask) {
-	zend_bool locked = 0, wasset = 0, result = 1;
-	if (state) {
-		if (pthreads_lock_acquire(state->lock, &locked)) {
-			wasset = ((state->was & mask)==mask);
-			if (locked)
-				pthreads_lock_release(state->lock, locked);
-			if (!wasset) do {
-				pthreads_synchro_lock(
-				    state->synchro);
-				pthreads_synchro_wait(state->synchro);
-				pthreads_synchro_unlock(
-				    state->synchro);
-			} while(!((state->was & mask)==mask));
-		} else result = 0;
+	zend_bool locked, 
+		  wasset = 0, 
+		  result = 1;
+
+	if (pthreads_lock_acquire(state->lock, &locked)) {
+		wasset = ((state->was & mask)==mask);
+		if (locked)
+			pthreads_lock_release(state->lock, locked);
+		if (!wasset) do {
+			pthreads_synchro_lock(
+			    state->synchro);
+			pthreads_synchro_wait(state->synchro);
+			pthreads_synchro_unlock(
+			    state->synchro);
+		} while(!((state->was & mask)==mask));
 	} else result = 0;
+
 	return result;
 } /* }}} */
 
 /* {{{ check for state on state object */
 zend_bool pthreads_state_isset(pthreads_state state, int mask) {
-	zend_bool locked = 0, isset = 0;
-	if (state) {
-		if (pthreads_lock_acquire(state->lock, &locked)) {
-			isset = ((state->bits & mask)==mask);
-			pthreads_lock_release(state->lock, locked);
-		}
+	zend_bool locked, 
+		  isset = 0;
+
+	if (pthreads_lock_acquire(state->lock, &locked)) {
+		isset = ((state->bits & mask)==mask);
+		pthreads_lock_release(state->lock, locked);
 	}
+
 	return isset;
 } /* }}} */
 
 /* {{{ unset state on state object */
 zend_bool pthreads_state_unset(pthreads_state state, int mask) {
-	zend_bool locked = 0, result = 1;
-	if (state) {
-		if (pthreads_lock_acquire(state->lock, &locked)) {
-			state->bits &= ~mask;
-			pthreads_lock_release(state->lock, locked);
-		} else result = 0;
+	zend_bool locked, 
+		  result = 1;
+
+	if (pthreads_lock_acquire(state->lock, &locked)) {
+		state->bits &= ~mask;
+		pthreads_lock_release(state->lock, locked);
 	} else result = 0;
+
 	return result;
 } /* }}} */
 

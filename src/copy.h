@@ -192,6 +192,7 @@ static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_in
 	return info;
 } /* }}} */
 
+/* {{{ */
 static inline zend_function* pthreads_copy_user_function(zend_function *function) {
 	zend_function  *copy;	
 	zend_op_array  *op_array;
@@ -199,7 +200,7 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	zval           *literals;
 	zend_arg_info  *arg_info;
 	
-	copy = (zend_function*) 
+	copy = (zend_function*)
 		zend_arena_alloc(&CG(arena), sizeof(zend_op_array));
 	memcpy(copy, function, sizeof(zend_op_array));
 	
@@ -229,12 +230,13 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	if (op_array->static_variables) op_array->static_variables = pthreads_copy_statics(op_array->static_variables);
 
 	return copy;
-}
+} /* }}} */
 
+/* {{{ */
 static inline zend_function* pthreads_copy_internal_function(zend_function *function) {
 	zend_string_addref(function->common.function_name);
 	return function;
-}
+} /* }}} */
 
 /* {{{ */
 static zend_function* pthreads_copy_function(zend_function *function) {

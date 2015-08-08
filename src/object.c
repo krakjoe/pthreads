@@ -290,7 +290,6 @@ void pthreads_current_thread(zval *return_value) {
 /* {{{ */
 static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 	if (source && destination) {
-
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
 			pthreads_lock_free(destination->lock);
 			pthreads_state_free(destination->state );
@@ -359,33 +358,31 @@ static inline void pthreads_base_init(PTHREAD base) {
 
 /* {{{ */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
-	if (base) {
-		TSRMLS_CACHE_UPDATE();
+	TSRMLS_CACHE_UPDATE();
 
-		zend_object_std_init(&base->std, entry);
+	zend_object_std_init(&base->std, entry);
 
-		base->creator.ls = TSRMLS_CACHE;
-		base->creator.id = pthreads_self();
-		base->address = pthreads_address_alloc(base);
-		base->options = PTHREADS_INHERIT_ALL;
+	base->creator.ls = TSRMLS_CACHE;
+	base->creator.id = pthreads_self();
+	base->address = pthreads_address_alloc(base);
+	base->options = PTHREADS_INHERIT_ALL;
 
-		if (!PTHREADS_IS_CONNECTION(base)) {
-			base->lock = pthreads_lock_alloc();
-			base->state = pthreads_state_alloc(0);
-			base->synchro = pthreads_synchro_alloc();
-			base->store = pthreads_store_alloc();
+	if (!PTHREADS_IS_CONNECTION(base)) {
+		base->lock = pthreads_lock_alloc();
+		base->state = pthreads_state_alloc(0);
+		base->synchro = pthreads_synchro_alloc();
+		base->store = pthreads_store_alloc();
 
-			if (PTHREADS_IS_WORKER(base)) {
-				base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
-				if (base->stack) {
-					zend_hash_init(
-						&base->stack->objects, 8, NULL, ZVAL_PTR_DTOR, 0);
-                    			zend_hash_internal_pointer_reset_ex(&base->stack->objects, &base->stack->position);
-				}
+		if (PTHREADS_IS_WORKER(base)) {
+			base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
+			if (base->stack) {
+				zend_hash_init(
+					&base->stack->objects, 8, NULL, ZVAL_PTR_DTOR, 0);
+            			zend_hash_internal_pointer_reset_ex(&base->stack->objects, &base->stack->position);
 			}
-
-			pthreads_base_init(base);
 		}
+
+		pthreads_base_init(base);
 	}
 } /* }}} */
 

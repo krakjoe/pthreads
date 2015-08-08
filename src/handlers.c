@@ -75,7 +75,7 @@ static inline zend_long *pthreads_get_guard(zend_object *zobj, zend_string *memb
 
 /* {{{ */
 int pthreads_count_properties(PTHREADS_COUNT_PASSTHRU_D) {
-    return pthreads_store_count(PTHREADS_COUNT_PASSTHRU_C);
+	return pthreads_store_count(PTHREADS_COUNT_PASSTHRU_C);
 } /* }}} */
 
 /* {{{ */
