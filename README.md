@@ -93,7 +93,7 @@ you can in Java or .NET, or any other language ( perhaps ), and as a result, you
 
 No restrictions here, you should have no problem running pthreads in your chosen SAPI.
 
-### Documentation
+### Documentation 
 
 Documentation can be found in the PHP manual: http://docs.php.net/manual/en/book.pthreads.php, and some examples can be found in the "examples" folder in the master repository.
 
