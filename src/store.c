@@ -396,7 +396,7 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 
 	if (Z_TYPE_P(unstore) == IS_INDIRECT) 
 		return pthreads_store_create(Z_INDIRECT_P(unstore), 1);
-	storage = (pthreads_storage*) malloc(sizeof(pthreads_storage));
+	storage = (pthreads_storage*) calloc(1, sizeof(pthreads_storage));
 	
 	switch((storage->type = Z_TYPE_P(unstore))){
 		case IS_NULL: /* do nothing */ break;

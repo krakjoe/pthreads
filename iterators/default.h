@@ -63,19 +63,11 @@ static inline zend_object_iterator* pthreads_object_iterator_ctor(zend_class_ent
 
 static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator) {
     pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-    
-    {
-        zend_hash_destroy(
-            &intern->properties
-        );
-    }
-    
-    efree(intern);
+    zend_hash_destroy(&intern->properties);
 }
 
 static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator) {
    pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-   
    if (zend_hash_num_elements(&intern->properties)) {
        return (((pobject_iterator_t*)iterator)->end) ? FAILURE : SUCCESS;
    } else return FAILURE;
