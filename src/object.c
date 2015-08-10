@@ -645,16 +645,14 @@ static void * pthreads_routine(void *arg) {
 	PG(auto_globals_jit) = 0;
 
 	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-		/*zend_alter_ini_entry(
-			"session.cache_limiter", 
-			sizeof("session.cache_limiter"), 
+		zend_alter_ini_entry_chars(
+			PTHREADS_G(strings).session.cache_limiter,
 			"nocache", sizeof("nocache")-1, 
 			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
-		zend_alter_ini_entry(
-			"session.use_cookies", 
-			sizeof("session.use_cookies"), 
+		zend_alter_ini_entry_chars(
+			PTHREADS_G(strings).session.use_cookies,
 			"0", sizeof("0")-1,
-			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);*/
+			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
 	}
 
 	php_request_startup();
