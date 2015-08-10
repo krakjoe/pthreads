@@ -567,7 +567,7 @@ static inline int pthreads_resources_cleanup(zval *bucket) {
 	} else return ZEND_HASH_APPLY_KEEP;
 }
 
-static inline zend_bool pthreads_routine_run_function(PTHREAD object, PTHREAD connection, zend_string *method) {
+static inline zend_bool pthreads_routine_run_function(PTHREAD object, PTHREAD connection) {
 	zend_function *run;
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
 	zval zresult;					
@@ -581,7 +581,7 @@ static inline zend_bool pthreads_routine_run_function(PTHREAD object, PTHREAD co
 	pthreads_state_set(object->state, PTHREADS_ST_RUNNING);
 
 	zend_try {
-		if ((run = zend_hash_find_ptr(&connection->std.ce->function_table, method))) {							
+		if ((run = zend_hash_find_ptr(&connection->std.ce->function_table, PTHREADS_G(strings).run))) {							
 			if (run->type == ZEND_USER_FUNCTION) {
 				call.fci.size = sizeof(zend_fcall_info);
 			    	call.fci.retval = &zresult;
@@ -673,17 +673,14 @@ static void * pthreads_routine(void *arg) {
 #endif
 
 	zend_first_try {
-		zend_string *run = zend_string_init(ZEND_STRL("run"), 1);
-
 		ZVAL_UNDEF(&PTHREADS_ZG(this));
 		object_init_ex(
 			&PTHREADS_ZG(this),
 			pthreads_prepared_entry(thread, thread->std.ce));
-		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))), run);
+		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))));
 		
 		if (PTHREADS_IS_WORKER(thread)) {
 			zend_bool locked;
-			zend_string *key = zend_string_init(ZEND_STRL("worker"), 0);
 
 			do {
 				if (pthreads_lock_acquire(thread->lock, &locked)) {
@@ -698,9 +695,9 @@ static void * pthreads_routine(void *arg) {
 								&that,
 								pthreads_prepared_entry(thread, work->std.ce));
 							pthreads_store_write(
-								work->store, key, &PTHREADS_ZG(this));
+								work->store, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
 							pthreads_routine_run_function(
-								work, PTHREADS_FETCH_FROM(Z_OBJ(that)), run);
+								work, PTHREADS_FETCH_FROM(Z_OBJ(that)));
 							zval_dtor(&that);
 
 							pthreads_collectable_set_garbage(next);
@@ -718,12 +715,9 @@ static void * pthreads_routine(void *arg) {
 					} else break;
 				}
 			} while (1);
-
-			zend_string_release(key);
 		}
 
 		zval_ptr_dtor(&PTHREADS_ZG(this));
-		zend_string_release(run);
 	} zend_end_try();
 
 	zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		

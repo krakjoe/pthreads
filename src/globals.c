@@ -44,6 +44,8 @@ zend_bool pthreads_globals_init(){
 		    zend_hash_init(
 		    	&PTHREADS_G(objects), 64, NULL, (dtor_func_t) NULL, 1);
 		}
+		PTHREADS_G(strings).run = zend_string_init(ZEND_STRL("run"), 1);
+		PTHREADS_G(strings).worker = zend_string_init(ZEND_STRL("worker"), 1);
 
 		return PTHREADS_G(init);
 	} else return 0;
@@ -117,6 +119,8 @@ void pthreads_globals_shutdown() {
 		PTHREADS_G(init)=0;
 		PTHREADS_G(failed)=0;
 		zend_hash_destroy(&PTHREADS_G(objects));
+		zend_string_free(PTHREADS_G(strings).run);
+		zend_string_free(PTHREADS_G(strings).worker);
 		pthreads_lock_free(PTHREADS_G(lock));
 	}
 } /* }}} */

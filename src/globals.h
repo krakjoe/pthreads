@@ -60,6 +60,14 @@ struct _pthreads_globals {
 	* Objects Cache
 	*/
 	HashTable objects;
+
+	/*
+	* High Frequency Strings
+	*/
+	struct _strings {
+		zend_string *run;
+		zend_string *worker;
+	} strings;
 }; /* }}} */
 
 extern struct _pthreads_globals pthreads_globals;
