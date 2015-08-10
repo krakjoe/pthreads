@@ -58,8 +58,8 @@ void pthreads_current_thread(zval *return_value);
 /* }}} */
 
 /* {{{ start/join */
-int pthreads_start(PTHREAD thread);
-int pthreads_join(PTHREAD thread);
+zend_bool pthreads_start(PTHREAD thread);
+zend_bool pthreads_join(PTHREAD thread);
 /* }}} */
 
 /* {{{ synchronization heplers */

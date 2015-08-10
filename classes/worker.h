@@ -66,23 +66,10 @@ PHP_METHOD(Worker, stack)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 	zval 	*work;
-	
-	if (thread) {
-		if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
-				RETURN_LONG(pthreads_stack_push(thread, work));
-			}
-		} else {
-			zend_throw_exception_ex(
-				spl_ce_RuntimeException, 0, 
-				"pthreads has detected an attempt to stack onto %s (%lu) which has already been shutdown", PTHREADS_FRIENDLY_NAME);
-		}
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while stacking onto %s (%lu)", PTHREADS_FRIENDLY_NAME);
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
+		RETURN_LONG(pthreads_stack_push(thread, work));
 	}
-	RETURN_FALSE;
 } /* }}} */
 
 /* {{{ proto int Worker::unstack([Collectable $work])
@@ -92,24 +79,11 @@ PHP_METHOD(Worker, unstack)
 	PTHREAD thread = PTHREADS_FETCH;
 	zval * work;
 	
-	if (thread) {
-		if (ZEND_NUM_ARGS() > 0) {
-			if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
-				if (Z_REFCOUNT_P(work) < 2) {
-					zend_throw_exception(
-						spl_ce_InvalidArgumentException, "Worker::unstack expects $work to be a reference", 0);
-					return;
-				}
-				
-				RETURN_LONG(pthreads_stack_pop(thread, work));
-			}
-		} else RETURN_LONG(pthreads_stack_pop(thread, NULL));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while unstacking from %s (%lu)", PTHREADS_FRIENDLY_NAME);	
-	}
-	RETURN_FALSE;
+	if (ZEND_NUM_ARGS() > 0) {
+		if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
+			RETURN_LONG(pthreads_stack_pop(thread, work));
+		}
+	} else RETURN_LONG(pthreads_stack_pop(thread, NULL));
 }
 
 /* {{{ proto int Worker::getStacked()
@@ -117,15 +91,8 @@ PHP_METHOD(Worker, unstack)
 PHP_METHOD(Worker, getStacked)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_LONG(pthreads_stack_length(thread));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while getting the stack length of %s (%lu)", PTHREADS_FRIENDLY_NAME);
-	}
-	RETURN_FALSE;
+
+	RETURN_LONG(pthreads_stack_length(thread));
 }
 
 /* {{{ proto Worker::isShutdown()
@@ -133,14 +100,8 @@ PHP_METHOD(Worker, getStacked)
 PHP_METHOD(Worker, isShutdown)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while determining the state of %s (%lu)", PTHREADS_FRIENDLY_NAME);
-	}
+
+	RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED));
 } /* }}} */
 
 /* {{{ proto boolean Worker::isWorking() 
@@ -148,32 +109,17 @@ PHP_METHOD(Worker, isShutdown)
 PHP_METHOD(Worker, isWorking)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while determining the state of %s (%lu)", PTHREADS_FRIENDLY_NAME);
-	}
+
+	RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
 } /* }}} */
 
-/* {{{ proto boolean Worker::shutdown() 
+/* {{{ proto boolean Worker::shutdown()
 		Will wait for execution of all Stackables to complete before shutting down the Worker */
 PHP_METHOD(Worker, shutdown) 
 { 
 	PTHREAD thread = PTHREADS_FETCH;
-	
-	/*
-	* Check that we are in the correct context
-	*/
-	if (PTHREADS_IN_CREATOR(thread)) {
-		RETURN_BOOL((pthreads_join(thread)==SUCCESS));
-	} else {	
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has detected an attempt to shutdown %s (%lu) from an incorrect context", PTHREADS_FRIENDLY_NAME);
-	}
+
+	RETURN_BOOL(pthreads_join(thread));
 } /* }}} */
 
 /* {{{ proto long Worker::getThreadId()

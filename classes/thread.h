@@ -92,56 +92,15 @@ PHP_METHOD(Thread, start)
 	int result = FAILURE;
 	zend_long options = PTHREADS_INHERIT_ALL;
 	
-	/* get options */
 	if (ZEND_NUM_ARGS()) {
-	    if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &options) != SUCCESS) {
-	        return;
-	    }
-	    
-	    /* set thread options */
-	    thread->options = options;
-	}
-	
-	/*
-	* See if there are any limits in this environment
-	*/
-	if (PTHREADS_IS_NOT_CONNECTION(thread)) {
-		/* attempt to create the thread */
-		if ((result = pthreads_start(thread)) != SUCCESS) {
-			/*
-			* Report the error, there's no chance of recovery ...
-			*/
-			switch(result) {
-				case PTHREADS_ST_STARTED:
-					zend_throw_exception_ex(
-						spl_ce_RuntimeException, 0, 
-						"pthreads has detected an attempt to start %s (%lu), which has been previously started", PTHREADS_FRIENDLY_NAME);
-				break;
-				
-				case EAGAIN:
-					zend_throw_exception_ex(
-						spl_ce_RuntimeException, 0, 
-						"pthreads has detected that the %s could not be started, the system "
-						"lacks the necessary resources or the system-imposed limit would be exceeded", PTHREADS_FRIENDLY_NAME);
-				break;
-				
-				default:
-					zend_throw_exception_ex(
-						spl_ce_RuntimeException, 0, 
-						"pthreads has detected that the %s could not be started because of an unspecified system error (%d)", PTHREADS_NAME, result);
-			}
+		if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &options) != SUCCESS) {
+			return;
 		}
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has detected an attempt to start %s from an invalid context, the creating context must start %s", PTHREADS_NAME, PTHREADS_NAME);
+
+		thread->options = options;
 	}
 	
-	if (result==SUCCESS) {
-		RETURN_TRUE;
-	}
-	
-	RETURN_FALSE;
+	RETURN_BOOL(pthreads_start(thread));
 } /* }}} */
 
 /* {{{ proto Thread::isStarted() 
@@ -149,14 +108,8 @@ PHP_METHOD(Thread, start)
 PHP_METHOD(Thread, isStarted)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_STARTED));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);
-	}
+
+	RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_STARTED));
 } /* }}} */
 
 /* {{{ proto Thread::isJoined()
@@ -164,14 +117,8 @@ PHP_METHOD(Thread, isStarted)
 PHP_METHOD(Thread, isJoined)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);
-	}
+
+	RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED));
 } /* }}} */
 
 /* {{{ proto boolean Thread::isWaiting() 
@@ -179,14 +126,8 @@ PHP_METHOD(Thread, isJoined)
 PHP_METHOD(Thread, isWaiting)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);
-	}
+
+	RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
 } /* }}} */
 
 /* {{{ proto boolean Thread::join() 
@@ -194,20 +135,8 @@ PHP_METHOD(Thread, isWaiting)
 PHP_METHOD(Thread, join) 
 { 
 	PTHREAD thread = PTHREADS_FETCH;
-	/*
-	* Check that we are in the correct context
-	*/
-	if (PTHREADS_IS_NOT_CONNECTION(thread)) {
-		/*
-		* Ensure this thread was started
-		*/
-		RETURN_BOOL((pthreads_join(thread)==SUCCESS));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0,
-			"pthreads has detected an attempt to shutdown %s (%lu) from an incorrect context", PTHREADS_FRIENDLY_NAME);
-		RETURN_FALSE;
-	}
+
+	RETURN_BOOL(pthreads_join(thread));
 } /* }}} */
 
 /* {{{ proto long Thread::getThreadId()

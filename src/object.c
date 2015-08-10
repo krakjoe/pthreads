@@ -117,7 +117,14 @@ zend_bool pthreads_unset_state(PTHREAD thread, int mask){
 uint32_t pthreads_stack_pop(PTHREAD thread, zval *work) {
 	zend_bool locked;
 	uint32_t left = 0;
-	
+
+	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 
+			0, "only the creator of this %s may pop from the stack", 
+			thread->std.ce->name->val);
+		return;
+	}
+
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
 		if (PTHREADS_IS_WORKER(thread)) {
 			if (!work) {
@@ -135,7 +142,14 @@ uint32_t pthreads_stack_pop(PTHREAD thread, zval *work) {
 uint32_t pthreads_stack_push(PTHREAD thread, zval *work) {
 	zend_bool locked;
 	uint32_t counted = 0;
-	
+
+	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException,
+			0, "only the creator of this %s may push to the stack",
+			thread->std.ce->name->val);
+		return 0;
+	}
+
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
 		HashTable *stack = &thread->stack->objects;
 		if (stack) {
@@ -198,7 +212,14 @@ static inline int pthreads_stack_collect_function(zval *collectable, void *argum
 uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call) {
 	zend_bool locked;
 	uint32_t waiting = 0;
-	
+
+	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0,	
+			"only the creator of this %s may collect from the stack",
+			thread->std.ce->name->val);
+		return 0;
+	}	
+
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
 		zend_hash_apply_with_argument(
 			&thread->stack->objects,
@@ -433,10 +454,18 @@ static void pthreads_base_clone(void *arg, void **pclone) {
 } /* }}} */
 
 /* {{{ */
-int pthreads_start(PTHREAD thread) {
+zend_bool pthreads_start(PTHREAD thread) {
 	int dostart = 0;
 	int started = FAILURE;
 	zend_bool tlocked, slocked;
+
+	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 
+			0, "only the creator of this %s may start it",
+			thread->std.ce->name->val);
+		return 0;
+	}
+
 	if (pthreads_state_lock(thread->state, &slocked)) {
 		if (!pthreads_state_check(thread->state, PTHREADS_ST_STARTED)) {
 			pthreads_state_set_locked(thread->state, PTHREADS_ST_STARTED);
@@ -454,16 +483,42 @@ int pthreads_start(PTHREAD thread) {
 			pthreads_lock_release(thread->lock, tlocked);
 		}
 	}
+
+	switch (started) {
+		case SUCCESS:
+			return 1;
+		
+		case PTHREADS_ST_STARTED:
+			zend_throw_exception_ex(spl_ce_RuntimeException, 
+				0, "cannot start %s, thread already started", thread->std.ce->name->val);
+		break;
+		
+		case EAGAIN:
+			zend_throw_exception_ex(spl_ce_RuntimeException,
+				0, "cannot start %s, out of resources", thread->std.ce->name->val);
+		break;
+
+		default:
+			zend_throw_exception_ex(spl_ce_RuntimeException,
+				0, "cannot start %s, unknown error(%d)", thread->std.ce->name->val, started);
+	}
 	
-	return started;
+	return 0;
 } /* }}} */
 
 /* {{{ */
-int pthreads_join(PTHREAD thread) {
+zend_bool pthreads_join(PTHREAD thread) {
 	int dojoin = 0;
 	int donotify = 0;
 	zend_bool slocked;
-	
+
+	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 
+			0, "only the creator of this %s may join with it",
+			thread->std.ce->name->val);
+		return 0;
+	}
+
 	if (pthreads_state_lock(thread->state, &slocked)) {
 		if (pthreads_state_check(thread->state, PTHREADS_ST_STARTED) && 
 			!pthreads_state_check(thread->state, PTHREADS_ST_JOINED)) {
@@ -479,8 +534,8 @@ int pthreads_join(PTHREAD thread) {
 	if (donotify) do {
 		pthreads_unset_state(thread, PTHREADS_ST_WAITING);
 	} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
-	
-	return dojoin ? pthread_join(thread->thread, NULL) 	: FAILURE;
+
+	return dojoin ? (pthread_join(thread->thread, NULL) == SUCCESS) : 1;
 } /* }}} */
 
 /* {{{ */
