@@ -208,7 +208,7 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	variables = op_array->vars;
 	literals = op_array->literals;
 	arg_info = op_array->arg_info;
-	
+
 	op_array->function_name = zend_string_new(op_array->function_name);
 	op_array->prototype = copy;
 	op_array->refcount = emalloc(sizeof(uint32_t));
@@ -241,7 +241,7 @@ static inline zend_function* pthreads_copy_internal_function(zend_function *func
 /* {{{ */
 static zend_function* pthreads_copy_function(zend_function *function) {
 	zend_function *copy = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong)function);
-		
+	
 	if (copy) {
 		function_add_ref(copy);
 		return copy;
