@@ -1,6 +1,6 @@
 --TEST--
 Test anonymous classes (bound inherited class)
---DESCRIPTION--mae
+--DESCRIPTION--
 This test verifies that anonymous Threaded objects work as expected
 --FILE--
 <?php
