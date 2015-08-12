@@ -50,20 +50,30 @@ static void pthreads_prepared_resource_dtor(zval *zv); /* }}} */
 
 /* {{{ */
 static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *candidate) {
-	zend_class_entry *prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
+	zend_class_entry *prepared;
 
+	if (candidate->ce_flags & ZEND_ACC_ANON_CLASS) {
+		if (!(candidate->ce_flags & ZEND_ACC_ANON_BOUND)) {
+			return NULL;
+		}
+	}
+
+	prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
 	prepared->name = zend_string_new(candidate->name);
 	prepared->type = candidate->type;
-	
+
 	zend_initialize_class_data(prepared, 1);
-	
+
 	zend_hash_index_update_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate, prepared);
-	
+
 	prepared->ce_flags = candidate->ce_flags;
 	prepared->refcount = 1;
 
-	if (candidate->parent)
-	    prepared->parent = candidate->parent;
+	if (candidate->parent) {
+		if (zend_hash_index_exists(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent)) {
+			prepared->parent = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent);
+		} else  prepared->parent = candidate->parent;
+	}
 
 	if (candidate->num_interfaces) {
 		uint interface;
@@ -307,7 +317,6 @@ while(0)
 
 			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
-
 	}
 
 	return prepared;
@@ -356,11 +365,11 @@ zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *cand
 	    	zend_string_release(lookup);
 		return prepared;
 	}
-
+	
 	if (!(prepared = pthreads_copy_entry(thread, candidate))) {
 		zend_string_release(lookup);
 		return NULL;
-	}
+	}	
 
 	zend_hash_apply_with_arguments(
 		&prepared->function_table, 

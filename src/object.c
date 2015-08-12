@@ -151,19 +151,9 @@ uint32_t pthreads_stack_push(PTHREAD thread, zval *work) {
 	}
 
 	if (pthreads_lock_acquire(thread->lock, &locked)) {
-		HashTable *stack = &thread->stack->objects;
-		if (stack) {
-			counted = zend_hash_num_elements(stack);
-			
-			zend_hash_next_index_insert(stack, work);
+		if (zend_hash_next_index_insert(&thread->stack->objects, work)) {
 			Z_ADDREF_P(work);
-
-			if (counted == 0) {
-				zend_hash_internal_pointer_reset_ex(
-					&thread->stack->objects, &thread->stack->position);
-			}
-			
-			counted = zend_hash_num_elements(stack);
+			counted = zend_hash_num_elements(&thread->stack->objects);
 		}
 
 		pthreads_lock_release(thread->lock, locked);
@@ -312,17 +302,24 @@ void pthreads_current_thread(zval *return_value) {
 static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
-			pthreads_lock_free(destination->lock);
-			pthreads_state_free(destination->state );
-			pthreads_store_free(destination->store);
-			pthreads_synchro_free(destination->synchro);
-			pthreads_address_free(destination->address);
+			if (destination->lock)
+				pthreads_lock_free(destination->lock);
+			if (destination->state)
+				pthreads_state_free(destination->state);
+			if (destination->store)
+				pthreads_store_free(destination->store);
+			if (destination->synchro)
+				pthreads_synchro_free(destination->synchro);
+			if (destination->address)
+				pthreads_address_free(destination->address);
 
 			if (PTHREADS_IS_WORKER(destination)) {
-				zend_hash_destroy(
-				    &destination->stack->objects
-				);
-				free(destination->stack);
+				if (destination->stack) {
+					zend_hash_destroy(
+					    &destination->stack->objects
+					);
+					free(destination->stack);
+				}
 			}
 
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
@@ -388,7 +385,7 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 	base->address = pthreads_address_alloc(base);
 	base->options = PTHREADS_INHERIT_ALL;
 
-	if (!PTHREADS_IS_CONNECTION(base)) {
+	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->lock = pthreads_lock_alloc();
 		base->state = pthreads_state_alloc(0);
 		base->synchro = pthreads_synchro_alloc();
@@ -670,6 +667,8 @@ static inline zend_bool pthreads_routine_run_function(PTHREAD object, PTHREAD co
 	return 1;
 }
 
+extern zend_class_entry *pthreads_collectable_entry;
+
 /* {{{ */
 static void * pthreads_routine(void *arg) {
 	PTHREAD thread = (PTHREAD) arg;
@@ -742,11 +741,8 @@ static void * pthreads_routine(void *arg) {
 					ZEND_HASH_FOREACH_VAL(&thread->stack->objects, next) {
 						if (!pthreads_collectable_is_garbage(next)) {
 							PTHREAD work = PTHREADS_FETCH_FROM(Z_OBJ_P(next));
-
-							ZVAL_UNDEF(&that);
-							object_init_ex(
-								&that,
-								pthreads_prepared_entry(thread, work->std.ce));
+							
+							object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
 							pthreads_store_write(
 								work->store, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
 							pthreads_routine_run_function(

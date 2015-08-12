@@ -99,7 +99,7 @@ PHP_METHOD(Thread, start)
 
 		thread->options = options;
 	}
-	
+
 	RETURN_BOOL(pthreads_start(thread));
 } /* }}} */
 
