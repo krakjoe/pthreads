@@ -857,7 +857,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                     
                     switch (zend_hash_get_current_key_ex(table, &key, &klen, &idx, 0, &position)) {
                         case HASH_KEY_IS_STRING: {
-                            if (!overwrite && zend_hash_exists(table, key, klen)) {
+                            if (!overwrite && zend_hash_exists(&pobject->store->table, key, klen)) {
                                 goto next;
                             }
                             
@@ -872,7 +872,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite TSRM
                             
                             convert_to_string(&zkey);
                             
-                            if (!overwrite && zend_hash_exists(table, Z_STRVAL(zkey), Z_STRLEN(zkey))) {
+                            if (!overwrite && zend_hash_exists(&pobject->store->table, Z_STRVAL(zkey), Z_STRLEN(zkey))) {
                                 zval_dtor(&zkey);
                                 goto next;
                             }
