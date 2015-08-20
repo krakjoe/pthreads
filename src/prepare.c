@@ -601,11 +601,10 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 	zend_trait_method_reference *copy = ecalloc(1, sizeof(zend_trait_method_reference));
 	if (copy) {
 		copy->method_name = zend_string_new(reference->method_name);
-		if (copy->class_name) {
+		if (reference->class_name) {
 			copy->class_name = zend_string_new(reference->class_name);
 		}
-		copy->ce = pthreads_prepared_entry(
-			thread, (zend_class_entry*) reference->ce);
+		copy->ce = pthreads_prepared_entry(thread, (zend_class_entry*) reference->ce);
 	}
 	return copy;
 } /* }}} */

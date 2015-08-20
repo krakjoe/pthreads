@@ -36,7 +36,7 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 			if (Z_REFCOUNTED_P(value)) {
 				zval separated;
 				if (pthreads_store_separate(value, &separated, 1) == SUCCESS) {
-					zend_hash_add(statics, name, &separated);					
+					zend_hash_add(statics, name, &separated);
 				}
 			} else zend_hash_add(statics, name, value);
 			zend_string_release(name);

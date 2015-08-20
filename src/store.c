@@ -396,6 +396,9 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 
 	if (Z_TYPE_P(unstore) == IS_INDIRECT) 
 		return pthreads_store_create(Z_INDIRECT_P(unstore), 1);
+	if (Z_TYPE_P(unstore) == IS_REFERENCE)
+		return pthreads_store_create(&Z_REF_P(unstore)->val, 1);
+
 	storage = (pthreads_storage*) calloc(1, sizeof(pthreads_storage));
 	
 	switch((storage->type = Z_TYPE_P(unstore))){
@@ -448,6 +451,7 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 					storage->exists = zend_hash_num_elements(Z_ARRVAL_P(unstore));
 			}
 		} break;
+
 	}
 	return storage;
 }
