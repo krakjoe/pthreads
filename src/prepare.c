@@ -711,7 +711,7 @@ static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREA
 				exclude++;
 			}
 			precedence->exclude_from_classes[exclude]=NULL;
-		}
+		} else copy->exclude_from_classes = NULL;
 #if PHP_VERSION_ID < 50500
 		copy->function = precedence->function;
 #endif
