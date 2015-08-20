@@ -722,7 +722,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                     
                     switch (zend_hash_get_current_key_ex(table, &key, &idx, &position)) {
                         case HASH_KEY_IS_STRING: {
-                            if (!overwrite && zend_hash_exists(table, key)) {
+                            if (!overwrite && zend_hash_exists(&pobject->store->table, key)) {
                                 goto next;
                             }
                             
@@ -736,7 +736,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                             
                             convert_to_string(&zkey);
                             
-                            if (!overwrite && zend_hash_exists(table, Z_STR(zkey))) {
+                            if (!overwrite && zend_hash_exists(&pobject->store->table, Z_STR(zkey))) {
                                 zval_dtor(&zkey);
                                 goto next;
                             }
