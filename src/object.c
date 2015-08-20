@@ -580,47 +580,71 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry TSRMLS_DC) 
 static void pthreads_base_dtor(void *arg, zend_object_handle handle TSRMLS_DC) {
     PTHREAD base = (PTHREAD) arg;
 
-	if (PTHREADS_IS_NOT_CONNECTION(base) && PTHREADS_IS_NOT_DETACHED(base)) {
+	if (PTHREADS_IS_NOT_DETACHED(base)) {
 	    assert(base->cls == TSRMLS_C);
 
-	    if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
-	        pthread_t *pthread = &base->thread;
-	        if (pthread) {
-		        pthreads_join(base TSRMLS_CC);
-	        }
-        }
+            if (PTHREADS_IS_NOT_CONNECTION(base)) {
+                if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
+                    pthread_t *pthread = &base->thread;
+                    if (pthread) {
+                        pthreads_join(base TSRMLS_CC);
+                    }
+                }
+                // call userland destructor if any
+                zend_objects_destroy_object(arg, handle TSRMLS_CC);
 
-	    pthreads_lock_free(base->lock TSRMLS_CC);
-	    pthreads_state_free(base->state  TSRMLS_CC);
-	    pthreads_modifiers_free(base->modifiers TSRMLS_CC);
-	    pthreads_store_free(base->store TSRMLS_CC);
-	    pthreads_synchro_free(base->synchro TSRMLS_CC);
-	    pthreads_address_free(base->address);
-        pthreads_error_free(base->error TSRMLS_CC);
+                pthreads_lock_free(base->lock TSRMLS_CC);
+                pthreads_state_free(base->state  TSRMLS_CC);
+                pthreads_modifiers_free(base->modifiers TSRMLS_CC);
+                pthreads_store_free(base->store TSRMLS_CC);
+                pthreads_synchro_free(base->synchro TSRMLS_CC);
+                pthreads_address_free(base->address);
+                pthreads_error_free(base->error TSRMLS_CC);
 
-	    if (PTHREADS_IS_WORKER(base)) {
-		    zend_hash_destroy(
-			    &base->stack->objects
-		    );
-		    free(base->stack);
-	    }
-
-	    zend_objects_destroy_object(arg, handle TSRMLS_CC);
+                if (PTHREADS_IS_WORKER(base)) {
+                    zend_hash_destroy(
+                            &base->stack->objects
+                            );
+                    free(base->stack);
+                }
+            }
 	}
 } /* }}} */
 
 /* {{{ free object */
 static void pthreads_base_free(void *arg TSRMLS_DC) {
 	PTHREAD base = (PTHREAD) arg;
-	if (base) {
-	    zend_object_std_dtor(arg TSRMLS_CC);
-	    
-	    if (PTHREADS_IS_NOT_DETACHED(base)) {
-	    	if (pthreads_globals_object_delete(base TSRMLS_CC)) {
-	    		base = NULL;
-	    	}
-	    }
-    }
+        if (base && PTHREADS_IS_NOT_DETACHED(base)) {
+#if PHP_VERSION_ID > 50399
+            zend_object *object = &base->std;
+
+            if (object->properties_table) {
+                int i;
+                for (i = 0; i < object->ce->default_properties_count; i++) {
+                    if (object->properties_table[i]) {
+                        zval_ptr_dtor(&object->properties_table[i]);
+                    }
+                }
+                efree(object->properties_table);
+            }
+
+            if (object->properties) {
+                zend_hash_destroy(object->properties);
+                FREE_HASHTABLE(object->properties);
+            }
+
+            if (object->guards) {
+                zend_hash_destroy(object->guards);
+                FREE_HASHTABLE(object->guards);
+            }
+#else
+            zend_object_std_dtor(&(base->std) TSRMLS_CC);
+#endif
+
+            if (pthreads_globals_object_delete(base TSRMLS_CC)) {
+                base = NULL;
+            }
+        }
 } /* }}} */
 
 /* {{{ clone object */
