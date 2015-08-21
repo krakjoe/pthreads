@@ -35,6 +35,10 @@ PHP_METHOD(Threaded, count);
 PHP_METHOD(Threaded, extend);
 PHP_METHOD(Threaded, from);
 
+PHP_METHOD(Threaded, addRef);
+PHP_METHOD(Threaded, delRef);
+PHP_METHOD(Threaded, getRefCount);
+
 ZEND_BEGIN_ARG_INFO_EX(Threaded_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_wait, 0, 0, 0)
@@ -89,6 +93,15 @@ ZEND_BEGIN_ARG_INFO_EX(Threaded_from, 0, 0, 1)
     ZEND_ARG_INFO(0, args)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Threaded_addRef, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Threaded_delRef, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Threaded_getRefCount, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_threaded_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREADED
@@ -108,6 +121,9 @@ zend_function_entry pthreads_threaded_methods[] = {
 	PHP_ME(Threaded, chunk, Threaded_chunk, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, pop, Threaded_pop, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, count, Threaded_count, ZEND_ACC_PUBLIC)
+	PHP_ME(Threaded, addRef, Threaded_addRef, ZEND_ACC_PUBLIC)
+	PHP_ME(Threaded, delRef, Threaded_delRef, ZEND_ACC_PUBLIC)
+	PHP_ME(Threaded, getRefCount, Threaded_getRefCount, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, extend, Threaded_extend, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Threaded, from, Threaded_from, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
@@ -115,6 +131,11 @@ zend_function_entry pthreads_threaded_methods[] = {
 
 /* {{{ */
 PHP_METHOD(Threaded, run) {} /* }}} */
+
+/* {{{{ */
+PHP_METHOD(Threaded, addRef) 		{ Z_ADDREF_P(getThis()); }
+PHP_METHOD(Threaded, delRef) 		{ zval_ptr_dtor(getThis()); }
+PHP_METHOD(Threaded, getRefCount) 	{ RETURN_LONG(Z_REFCOUNT_P(getThis())); } /* }}} */
 
 /* {{{ proto boolean Threaded::wait([long timeout]) 
 		Will cause the calling thread to wait for notification from the referenced object
