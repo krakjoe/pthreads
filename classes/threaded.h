@@ -42,7 +42,7 @@ PHP_METHOD(Threaded, getRefCount);
 ZEND_BEGIN_ARG_INFO_EX(Threaded_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_wait, 0, 0, 0)
-	ZEND_ARG_INFO(0, timeout)
+	ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 1)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_notify, 0, 0, 0)
 ZEND_END_ARG_INFO()

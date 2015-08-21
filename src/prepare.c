@@ -70,9 +70,11 @@ static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *c
 	prepared->refcount = 1;
 
 	if (candidate->parent) {
-		if (zend_hash_index_exists(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent)) {
-			prepared->parent = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent);
-		} else  prepared->parent = candidate->parent;
+		if (candidate->parent->type == ZEND_USER_CLASS) {
+			if (zend_hash_index_exists(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent)) {
+				prepared->parent = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent);
+			} else prepared->parent = pthreads_prepared_entry(thread, candidate->parent);
+		} else prepared->parent = zend_lookup_class(candidate->parent->name);
 	}
 
 	if (candidate->num_interfaces) {

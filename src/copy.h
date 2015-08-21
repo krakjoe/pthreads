@@ -33,11 +33,14 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 
 		ZEND_HASH_FOREACH_STR_KEY_VAL(old, key, value) {
 			zend_string *name = zend_string_new(key);
+
 			if (Z_REFCOUNTED_P(value)) {
-				zval separated;
-				if (pthreads_store_separate(value, &separated, 1) == SUCCESS) {
-					zend_hash_add(statics, name, &separated);
-				}
+				if (Z_TYPE_P(value) == IS_STRING) {
+					zval copy;
+
+					ZVAL_STR(&copy, zend_string_new(Z_STR_P(value)));
+					zend_hash_add(statics, name, &copy);
+				} else zend_hash_add_empty_element(statics, name);
 			} else zend_hash_add(statics, name, value);
 			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
