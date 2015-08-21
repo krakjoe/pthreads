@@ -275,7 +275,7 @@ while(0)
 				} break;
 
 				default: if (Z_REFCOUNTED(prepared->default_static_members_table[i])) {
-					ZVAL_UNDEF(&prepared->default_static_members_table[i]);
+					ZVAL_NULL(&prepared->default_static_members_table[i]);
 				} 
 			}
 		}

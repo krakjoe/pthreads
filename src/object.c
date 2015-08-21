@@ -251,7 +251,7 @@ uint32_t pthreads_stack_length(PTHREAD thread) {
 
 /* {{{ */
 zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
-	PTHREAD thread = pthreads_globals_object_alloc(sizeof(*thread));
+	PTHREAD thread = pthreads_globals_object_alloc(sizeof(*thread) + zend_object_properties_size(entry));
 	if (!thread) {	
 		return NULL;
 	}
@@ -265,7 +265,7 @@ zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 
 /* {{{ */
 zend_object* pthreads_worker_ctor(zend_class_entry *entry) {
-	PTHREAD worker = pthreads_globals_object_alloc(sizeof(*worker));
+	PTHREAD worker = pthreads_globals_object_alloc(sizeof(*worker) + zend_object_properties_size(entry));
 	if (!worker) {
 		return NULL;
 	}
@@ -279,7 +279,7 @@ zend_object* pthreads_worker_ctor(zend_class_entry *entry) {
 
 /* {{{ */
 zend_object* pthreads_threaded_ctor(zend_class_entry *entry) {
-	PTHREAD threaded = pthreads_globals_object_alloc(sizeof(*threaded));
+	PTHREAD threaded = pthreads_globals_object_alloc(sizeof(*threaded) + zend_object_properties_size(entry));
 	if (!threaded) {
 		return NULL;
 	}
