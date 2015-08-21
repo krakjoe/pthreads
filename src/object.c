@@ -540,11 +540,11 @@ int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *bl
 	PTHREAD threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	if (threaded) {
 		(*buffer) = (unsigned char*) estrndup(
-			(char*)threaded->address->serial, 
+			(char*)threaded->address->serial,
 			threaded->address->length
 		);
-		(*blength) = threaded->address->length + 1;
-		
+		(*blength) = threaded->address->length;
+
 		return SUCCESS;
 	}
 	return FAILURE;
@@ -555,8 +555,8 @@ int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsi
 	PTHREAD address = NULL;
 	pid_t pid = 0L;
 	size_t scanned = sscanf(
-		(const char*)buffer, 
-		"%lu:%lu", 
+		(const char*)buffer,
+		"%lu:%lu",
 		(long unsigned int *)&pid, (long unsigned int *)&address);
 	
 	if (scanned) {
