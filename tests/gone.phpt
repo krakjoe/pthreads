@@ -27,13 +27,13 @@ $t->join();
 var_dump($t->o);
 ?>
 --EXPECTF--
-Fatal error: Uncaught %s: pthreads detected an attempt to connect to a %s which has already been destroyed in %s:14
+Fatal error: Uncaught %s: pthreads detected an attempt to connect to an object which has already been destroyed in %s:14
 Stack trace:
 #0 [internal function]: T->run()
 #1 {main}
   thrown in %s on line 14
 
-Fatal error: Uncaught %s: pthreads detected an attempt to connect to a %s which has already been destroyed in %s:22
+Fatal error: Uncaught %s: pthreads detected an attempt to connect to an object which has already been destroyed in %s:22
 Stack trace:
 #0 {main}
   thrown in %s on line 22

@@ -434,15 +434,24 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 		} break;
 		
 		case IS_OBJECT:
-		    if (instanceof_function(Z_OBJCE_P(unstore), zend_ce_closure)) {
-		        const zend_function *def = 
-		            zend_get_closure_method_def(unstore);
-		        storage->type = IS_CLOSURE;
-		        storage->data = 
-		            (zend_function*) malloc(sizeof(zend_op_array));
-		        memcpy(storage->data, def, sizeof(zend_op_array));
-		        break;
-		    }
+			if (instanceof_function(Z_OBJCE_P(unstore), zend_ce_closure)) {
+				const zend_function *def = 
+				    zend_get_closure_method_def(unstore);
+				storage->type = IS_CLOSURE;
+				storage->data = 
+				    (zend_function*) malloc(sizeof(zend_op_array));
+				memcpy(storage->data, def, sizeof(zend_op_array));
+				break;
+			}
+			
+			if (instanceof_function(Z_OBJCE_P(unstore), pthreads_threaded_entry)) {
+				PTHREAD pobject = 
+					PTHREADS_FETCH_FROM(Z_OBJ_P(unstore));
+				storage->type = IS_PTHREADS;
+				storage->data = Z_OBJ_P(unstore);
+				break;
+			}
+		    
 
 		/* break intentionally omitted */
 		case IS_ARRAY: {
@@ -510,18 +519,46 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 		} break;
 		
 		case IS_CLOSURE: {
-		    char *name;
-		    size_t name_len;
-		    zend_function *closure = pthreads_copy_function((zend_function*) storage->data);
+			char *name;
+			size_t name_len;
+			zend_function *closure = pthreads_copy_function((zend_function*) storage->data);
 
-		    zend_create_closure(pzval, closure, EG(scope), closure->common.scope, NULL);
-		    closure = (zend_function*) zend_get_closure_method_def(pzval);
-		    name_len = spprintf(&name, 0, "Closure@%p", closure);
-		    if (!zend_hash_str_update_ptr(EG(function_table), name, name_len, closure)) {
-		        result = FAILURE;
-			zval_dtor(pzval);
-		    } else result = SUCCESS;
-		    efree(name);
+			zend_create_closure(pzval, closure, EG(scope), closure->common.scope, NULL);
+			closure = (zend_function*) zend_get_closure_method_def(pzval);
+			name_len = spprintf(&name, 0, "Closure@%p", closure);
+			if (!zend_hash_str_update_ptr(EG(function_table), name, name_len, closure)) {
+				result = FAILURE;
+				zval_dtor(pzval);
+			} else result = SUCCESS;
+			efree(name);
+		} break;
+
+		case IS_PTHREADS: {
+			PTHREAD address = PTHREADS_FETCH_FROM(storage->data);
+			
+			if (address && pthreads_globals_object_validate((zend_ulong)address)) {
+				zend_class_entry *ce;
+
+				if (address->creator.ls == TSRMLS_CACHE) {
+					ZVAL_OBJ(pzval, &address->std);
+					Z_ADDREF_P(pzval);
+					result = SUCCESS;
+				} else {
+					ce = zend_lookup_class(address->std.ce->name);
+
+					if (object_init_ex(pzval, ce) == SUCCESS) {
+						pthreads_connect(address, PTHREADS_FETCH_FROM(Z_OBJ_P(pzval)));
+						result = SUCCESS;
+					} else {
+						result = FAILURE;
+					}
+				}
+			} else {
+				zend_throw_exception_ex(
+					spl_ce_RuntimeException, 0,
+					"pthreads detected an attempt to connect to an object which has already been destroyed");
+				result = FAILURE;
+			}
 		} break;
 		
 		case IS_ARRAY:
@@ -552,7 +589,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 		smart_str smart;
 
 		memset(&smart, 0, sizeof(smart_str));
-		
+
 		if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
 			(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
 			php_serialize_data_t vars;

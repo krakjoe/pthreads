@@ -34,7 +34,8 @@
 # define IS_CALLABLE 10
 #endif
 
-#define IS_CLOSURE IS_CALLABLE
+#define IS_CLOSURE  (IS_CALLABLE)
+#define IS_PTHREADS (IS_PTR + 1)
 
 /* {{{ buffer structure */
 typedef struct _pthreads_store {

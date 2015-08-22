@@ -180,23 +180,17 @@ PHP_MINIT_FUNCTION(pthreads)
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
 
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
-	ce.serialize = pthreads_internal_serialize;
-	ce.unserialize = pthreads_internal_unserialize;
 	pthreads_threaded_entry=zend_register_internal_class(&ce);
 	pthreads_threaded_entry->get_iterator = pthreads_object_iterator_ctor;
 	pthreads_threaded_entry->create_object = pthreads_threaded_ctor;
 	zend_class_implements(pthreads_threaded_entry, 1, zend_ce_traversable);
 
 	INIT_CLASS_ENTRY(ce, "Thread", pthreads_thread_methods);
-	ce.serialize = pthreads_internal_serialize;
-	ce.unserialize = pthreads_internal_unserialize;
 	pthreads_thread_entry=zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	pthreads_thread_entry->get_iterator = pthreads_object_iterator_ctor;
 	pthreads_thread_entry->create_object = pthreads_thread_ctor;
 	
 	INIT_CLASS_ENTRY(ce, "Worker", pthreads_worker_methods);
-	ce.serialize = pthreads_internal_serialize;
-	ce.unserialize = pthreads_internal_unserialize;
 	pthreads_worker_entry=zend_register_internal_class_ex(&ce, pthreads_thread_entry);
 	pthreads_worker_entry->get_iterator = pthreads_object_iterator_ctor;
 	pthreads_worker_entry->create_object = pthreads_worker_ctor;

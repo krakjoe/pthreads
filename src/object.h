@@ -66,9 +66,8 @@ zend_bool pthreads_join(PTHREAD thread);
 zend_bool pthreads_wait_member(PTHREAD thread, zval *member);
 zend_bool pthreads_wait_member_ex(PTHREAD thread, zval *member, ulong timeout); /* }}} */
 
-/* {{{ serialize/unserialize threaded objects */
-int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *blength, zend_serialize_data *data);
-int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t blength, zend_unserialize_data *data); /* }}} */
+/* {{{ */
+int pthreads_connect(PTHREAD source, PTHREAD destination); /* }}} */
 
 /* {{{ TSRM manipulation */
 #define PTHREADS_FETCH_ALL(ls, id, type) ((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])

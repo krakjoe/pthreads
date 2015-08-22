@@ -44,12 +44,6 @@ typedef struct _pthreads_stack {
 	HashPosition position;
 } *pthreads_stack; /* }}} */
 
-/* {{{ address structure */
-typedef struct _pthreads_address {
-	unsigned char *serial;
-	size_t length;
-} *pthreads_address; /* }}} */
-
 typedef struct _pthreads_ident {
 	zend_ulong id;
 	void*** ls;
@@ -69,7 +63,6 @@ typedef struct _pthread_construct {
 	pthreads_synchro synchro;
 	pthreads_store store;
 	pthreads_stack stack;
-	pthreads_address address;
 } *PTHREAD;
 
 /* {{{ comparison function */

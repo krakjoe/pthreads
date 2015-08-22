@@ -38,39 +38,8 @@
 extern zend_module_entry pthreads_module_entry; /* }}} */
 
 /* {{{ */
-static inline pthreads_address pthreads_address_alloc(PTHREAD object) {
-	pthreads_address address = (pthreads_address) calloc(1, sizeof(*address));
-	if (address) {
-	    pid_t pid = PTHREADS_PID();
-		address->length = snprintf(
-			NULL, 0, "%lu:%lu", (long)pid, (long) object
-		);
-		if (address->length) {
-			address->serial = calloc(1, address->length+1);
-			if (address->serial) {
-				sprintf(
-					(char*) address->serial, "%lu:%lu", (long)pid, (long) object
-				);
-			}
-		}
-	}
-	return address;
-} /* }}} */
-
-/* {{{ */
-static inline void pthreads_address_free(pthreads_address address) {
-	if (address->serial) {
-		free(address->serial);
-	}
-	free(address);
-} /* }}} */
-
-/* {{{ */
 static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry);
 static void pthreads_base_clone(void *arg, void **pclone); /* }}} */
-
-/* {{{ */
-static int pthreads_connect(PTHREAD source, PTHREAD destination); /* }}} */
 
 /* {{{ */
 static void * pthreads_routine(void *arg); /* }}} */
@@ -299,7 +268,7 @@ void pthreads_current_thread(zval *return_value) {
 } /* }}} */
 
 /* {{{ */
-static int pthreads_connect(PTHREAD source, PTHREAD destination) {
+int pthreads_connect(PTHREAD source, PTHREAD destination) {
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
 			if (destination->lock)
@@ -310,8 +279,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 				pthreads_store_free(destination->store);
 			if (destination->synchro)
 				pthreads_synchro_free(destination->synchro);
-			if (destination->address)
-				pthreads_address_free(destination->address);
 
 			if (PTHREADS_IS_WORKER(destination)) {
 				if (destination->stack) {
@@ -334,7 +301,6 @@ static int pthreads_connect(PTHREAD source, PTHREAD destination) {
 		destination->thread = source->thread;
 		destination->local.id = source->local.id;
 		destination->local.ls = source->local.ls;
-		destination->address = source->address;
 		destination->lock = source->lock;
 		destination->state = source->state;
 		destination->synchro = source->synchro;
@@ -382,7 +348,6 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 
 	base->creator.ls = TSRMLS_CACHE;
 	base->creator.id = pthreads_self();
-	base->address = pthreads_address_alloc(base);
 	base->options = PTHREADS_INHERIT_ALL;
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
@@ -420,7 +385,6 @@ void pthreads_base_free(zend_object *object) {
 		pthreads_state_free(base->state );
 		pthreads_store_free(base->store);
 		pthreads_synchro_free(base->synchro);
-		pthreads_address_free(base->address);
 
 		if (PTHREADS_IS_WORKER(base)) {
 		    zend_hash_destroy(&base->stack->objects);
@@ -533,67 +497,6 @@ zend_bool pthreads_join(PTHREAD thread) {
 	} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
 
 	return dojoin ? (pthread_join(thread->thread, NULL) == SUCCESS) : 1;
-} /* }}} */
-
-/* {{{ */
-int pthreads_internal_serialize(zval *object, unsigned char **buffer, size_t *blength, zend_serialize_data *data) {
-	PTHREAD threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	if (threaded) {
-		(*buffer) = (unsigned char*) estrndup(
-			(char*)threaded->address->serial,
-			threaded->address->length
-		);
-		(*blength) = threaded->address->length;
-
-		return SUCCESS;
-	}
-	return FAILURE;
-} /* }}} */
-
-/* {{{ */
-int pthreads_internal_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t blength, zend_unserialize_data *data) {
-	PTHREAD address = NULL;
-	pid_t pid = 0L;
-	size_t scanned = sscanf(
-		(const char*)buffer,
-		"%lu:%lu",
-		(long unsigned int *)&pid, (long unsigned int *)&address);
-	
-	if (scanned) {
-		pid_t mpid = PTHREADS_PID();
-
-		if (address && pthreads_globals_object_validate((zend_ulong)address)) {
-			if (pid == mpid) {
-				if (address->creator.ls == TSRMLS_CACHE) {
-					ZVAL_OBJ(object, &address->std);
-					Z_ADDREF_P(object);
-					return SUCCESS;
-				}
-
-				if (object_init_ex(object, ce) == SUCCESS) {
-					pthreads_connect(address, PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
-					return SUCCESS;
-				}
-			} else {
-				zend_throw_exception_ex(
-					spl_ce_RuntimeException, 0,
-					"pthreads detected an attempt to connect to a %s "
-					"which belongs to another process", ce->name->val);
-			}
-		} else {
-			zend_throw_exception_ex(
-				spl_ce_RuntimeException, 0,
-				"pthreads detected an attempt to connect to a %s "
-				"which has already been destroyed", ce->name->val);
-		}
-	} else {
-		zend_throw_exception_ex(
-		spl_ce_RuntimeException, 0,
-		"pthreads detected an attempt to connect to a %s "
-		"which is corrupted", ce->name->val);
-	}
-	
-	return FAILURE;
 } /* }}} */
 
 #ifdef PTHREADS_KILL_SIGNAL
