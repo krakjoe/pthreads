@@ -22,100 +22,114 @@
 # include <iterators/iterator.h>
 #endif
 
-static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator);
-static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator);
-static inline zval* pthreads_object_iterator_current_data(zend_object_iterator* iterator);
-static inline void pthreads_object_iterator_current_key(zend_object_iterator* iterator, zval *key);
-static inline void pthreads_object_iterator_move_forward(zend_object_iterator* iterator);
+static inline void pthreads_object_iterator_dtor(pthreads_iterator_t* iterator);
+static inline int pthreads_object_iterator_validate(pthreads_iterator_t* iterator);
+static inline zval* pthreads_object_iterator_current_data(pthreads_iterator_t* iterator);
+static inline void pthreads_object_iterator_current_key(pthreads_iterator_t* iterator, zval *key);
+static inline void pthreads_object_iterator_move_forward(pthreads_iterator_t* iterator);
 
 zend_object_iterator_funcs pthreads_object_iterator_funcs = {
-    pthreads_object_iterator_dtor,
-    pthreads_object_iterator_validate,
-    pthreads_object_iterator_current_data,
-    pthreads_object_iterator_current_key,
-    pthreads_object_iterator_move_forward,
-    NULL  
+    (void (*) (zend_object_iterator*)) 				pthreads_object_iterator_dtor,
+    (int (*)(zend_object_iterator *)) 				pthreads_object_iterator_validate,
+    (zval* (*)(zend_object_iterator *)) 			pthreads_object_iterator_current_data,
+    (void (*)(zend_object_iterator *, zval *)) 		pthreads_object_iterator_current_key,
+    (void (*)(zend_object_iterator *))				pthreads_object_iterator_move_forward,
+    NULL 
 };
 
 static inline zend_object_iterator* pthreads_object_iterator_ctor(zend_class_entry *ce, zval *object, int by_ref) {
-    pobject_iterator_t *iterator = emalloc(sizeof(pobject_iterator_t));
+    pthreads_iterator_t *iterator = ecalloc(1, sizeof(pthreads_iterator_t));
     
     zend_iterator_init((zend_object_iterator*)iterator);
-    zend_hash_init(
-        &iterator->properties, 8, NULL, ZVAL_PTR_DTOR, 0);
+
+	ZVAL_COPY(&iterator->object, object);
 
     {
-        PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-         
-        pthreads_store_tohash(
-            pobject->store, &iterator->properties);
-        
+        pthreads_store store = (PTHREADS_FETCH_FROM(Z_OBJ(iterator->object)))->store;
+		zend_bool locked;		
+		
+        if (pthreads_lock_acquire(store->lock, &locked)) {
+			zend_string *key;
+
+			 zend_hash_init(
+        		&iterator->keys, 
+				zend_hash_num_elements(&store->table), 
+				NULL, ZVAL_PTR_DTOR, 0);			
+			
+			ZEND_HASH_FOREACH_STR_KEY(&store->table, key) {
+				zend_hash_add_empty_element(
+					&iterator->keys, key);
+			} ZEND_HASH_FOREACH_END();
+
+			pthreads_lock_release(store->lock, locked);
+		}
+
         zend_hash_internal_pointer_reset_ex(
-            &iterator->properties, &iterator->position);
-            
-        iterator->end = 0;
+            &iterator->keys, &iterator->position);
     }
 
-    iterator->zit.funcs = &pthreads_object_iterator_funcs;  
+    iterator->zit.funcs = &pthreads_object_iterator_funcs;
+	ZVAL_UNDEF(&iterator->zit.data);
 
     return (zend_object_iterator*) iterator;
 }
 
-static inline void pthreads_object_iterator_dtor(zend_object_iterator* iterator) {
-    pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-    zend_hash_destroy(&intern->properties);
+static inline void pthreads_object_iterator_dtor(pthreads_iterator_t* iterator) {
+	if (Z_TYPE(iterator->zit.data) != IS_UNDEF) {
+		zval_ptr_dtor(&iterator->zit.data);
+	}
+    zend_hash_destroy(&iterator->keys);
+	zval_ptr_dtor(&iterator->object);
 }
 
-static inline int pthreads_object_iterator_validate(zend_object_iterator* iterator) {
-   pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-   if (zend_hash_num_elements(&intern->properties)) {
-       return (((pobject_iterator_t*)iterator)->end) ? FAILURE : SUCCESS;
+static inline int pthreads_object_iterator_validate(pthreads_iterator_t* iterator) {
+   if (zend_hash_num_elements(&iterator->keys)) {
+       return iterator->end ? FAILURE : SUCCESS;
    } else return FAILURE;
 }
 
-static inline zval* pthreads_object_iterator_current_data(zend_object_iterator* iterator) {
-    pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-    zval *data = NULL;
+static inline zval* pthreads_object_iterator_current_data(pthreads_iterator_t* iterator) {
+	zend_string *key;
+	zend_ulong idx;
 
-    if (!intern->end) {
-        if (!(data = zend_hash_get_current_data_ex(&intern->properties, &intern->position))) {
-            intern->end = 1;
-        }
+    if (!iterator->end) {
+        switch (zend_hash_get_current_key_ex(&iterator->keys, &key, &idx, &iterator->position)) {
+			case HASH_KEY_IS_STRING: {
+				if (Z_TYPE(iterator->zit.data) != IS_UNDEF) {
+					zval_ptr_dtor(&iterator->zit.data);
+				}
+				
+				pthreads_store_read((PTHREADS_FETCH_FROM(Z_OBJ(iterator->object)))->store, key, &iterator->zit.data);
+			} break;
+		}
     }
 
-    return data;
+    return &iterator->zit.data;
 }
 
-static inline void pthreads_object_iterator_current_key(zend_object_iterator* iterator, zval* key) {
-    pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-    zend_string *skey = NULL;
-    ulong ukey;
+static inline void pthreads_object_iterator_current_key(pthreads_iterator_t* iterator, zval* result) {
+    zend_string *key = NULL;
+    ulong idx;
     
     switch (zend_hash_get_current_key_ex(
-        &intern->properties, &skey, &ukey, &intern->position)) {
+        &iterator->keys, &key, &idx, &iterator->position)) {
         case HASH_KEY_IS_STRING: {
-            ZVAL_STRINGL(key, skey->val, skey->len);
-        } break;
-            
-        case HASH_KEY_IS_LONG: {
-            ZVAL_LONG(key, ukey);
+            ZVAL_STR(result, key);
         } break;
             
         default: {
-            intern->end = 1;
-        }    
+            iterator->end = 1;
+        }
     }
 }
 
-static inline void pthreads_object_iterator_move_forward(zend_object_iterator* iterator) {
-    pobject_iterator_t *intern = (pobject_iterator_t*) iterator;
-    
-    if (!intern->end) {
+static inline void pthreads_object_iterator_move_forward(pthreads_iterator_t* iterator) {
+    if (!iterator->end) {
         zend_hash_move_forward_ex(
-            &intern->properties, &intern->position);
+            &iterator->keys, &iterator->position);
         {
-            if (!zend_hash_get_current_data_ex(&intern->properties, &intern->position)) {
-                intern->end = 1;
+            if (!zend_hash_get_current_data_ex(&iterator->keys, &iterator->position)) {
+                iterator->end = 1;
             }
         }
     }

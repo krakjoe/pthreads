@@ -19,10 +19,11 @@
 #define HAVE_PTHREADS_ITERATOR_H
 
 /* {{{ object iterator structure */
-typedef struct _pobject_iterator_t {
+typedef struct _pthreads_iterator_t {
     zend_object_iterator zit;
-    HashTable            properties;
+	zval                 object;
+    HashTable            keys;
     HashPosition         position;
     zend_bool            end;
-} pobject_iterator_t; /* }}} */
+} pthreads_iterator_t; /* }}} */
 #endif
