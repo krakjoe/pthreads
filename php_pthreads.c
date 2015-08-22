@@ -22,16 +22,8 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_LOCK_H
-#	include <src/lock.h>
-#endif
-
 #ifndef HAVE_PHP_PTHREADS_H
 #	include <php_pthreads.h>
-#endif
-
-#ifndef HAVE_PTHREADS_STATE_H
-#	include <src/state.h>
 #endif
 
 #ifndef HAVE_PTHREADS_THREAD_H

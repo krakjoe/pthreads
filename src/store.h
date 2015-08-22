@@ -26,8 +26,8 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_LOCK_H
-#	include <src/lock.h>
+#ifndef HAVE_PTHREADS_MONITOR_H
+#	include <src/monitor.h>
 #endif
 
 #ifndef IS_CALLABLE
@@ -40,18 +40,12 @@
 /* {{{ buffer structure */
 typedef struct _pthreads_store {
 	HashTable         table;
-	pthreads_lock     lock;
+	pthreads_monitor_t *monitor;
 	zend_ulong        next; /* idx of next anonymous member */
 } *pthreads_store; /* }}} */
 
 /* {{{ allocate and initialize buffers */
-pthreads_store pthreads_store_alloc(); /* }}} */
-
-/* {{{ lock storage, userland only */
-zend_bool pthreads_store_lock(zval *this_ptr); /* }}} */
-
-/* {{{ unlock storage, userland only */
-zend_bool pthreads_store_unlock(zval *this_ptr); /* }}} */
+pthreads_store pthreads_store_alloc(pthreads_monitor_t *monitor); /* }}} */
 
 /* {{{ merges the properties/elements of from into destination */
 int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite); /* }}} */

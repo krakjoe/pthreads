@@ -31,7 +31,7 @@
 #endif
 
 #ifndef HAVE_PTHREADS_LOCK_H
-#	include <src/lock.h>
+#	include <src/monitor.h>
 #endif
 
 /* {{{ pthreads_globals */
@@ -47,9 +47,9 @@ struct _pthreads_globals {
 	zend_bool failed;
 	
 	/*
-	* Globals Mutex
+	* Global Monitor
 	*/
-	pthreads_lock lock;
+	pthreads_monitor_t *monitor;
 
 	/*
 	* Global/Default Resource Destructor
@@ -95,10 +95,10 @@ void* pthreads_globals_object_alloc(size_t length); /* }}} */
 zend_bool pthreads_globals_init(); /* }}} */
 
 /* {{{ acquire global lock */
-zend_bool pthreads_globals_lock(zend_bool *locked); /* }}} */
+zend_bool pthreads_globals_lock(); /* }}} */
 
 /* {{{ release global lock */
-void pthreads_globals_unlock(zend_bool locked); /* }}} */
+void pthreads_globals_unlock(); /* }}} */
 
 /* {{{ copy string to globals */
 char *pthreads_global_string(char *strkey, int32_t keylen, zend_bool lower); /* }}} */

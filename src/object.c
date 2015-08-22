@@ -45,63 +45,24 @@ static void pthreads_base_clone(void *arg, void **pclone); /* }}} */
 static void * pthreads_routine(void *arg); /* }}} */
 
 /* {{{ */
-zend_bool pthreads_set_state_ex(PTHREAD thread, int mask, long timeout) {
-	zend_bool locked, dowait, result;
-	if (mask & PTHREADS_ST_WAITING) {
-		if (pthreads_state_lock(thread->state, &locked)) {
-			dowait = !pthreads_state_check(thread->state, PTHREADS_ST_JOINED);
-			if (dowait)
-				pthreads_state_set_locked(thread->state, PTHREADS_ST_WAITING);
-			if (locked)
-				pthreads_state_unlock(thread->state, locked);
-			if (dowait) {
-				result = pthreads_synchro_wait_ex(
-					thread->synchro, timeout
-				);
-			} else result = 0;
-		} else result = 0;
-	} else result = pthreads_state_set(thread->state, mask);
-	return result;
-} /* }}} */
-
-/* {{{ */
-zend_bool pthreads_set_state(PTHREAD thread, int mask) {
-	return pthreads_set_state_ex(thread, mask, 0L);
-} /* }}} */
-
-/* {{{ */
-zend_bool pthreads_unset_state(PTHREAD thread, int mask){
-	zend_bool result = 0;
-	
-	if (mask & PTHREADS_ST_WAITING) {
-		if (pthreads_state_unset(thread->state, mask)) {
-			result = pthreads_synchro_notify(thread->synchro);
-		} else result = 0;
-	} else result = pthreads_state_unset(thread->state, mask);
-	
-	return result;
-} /* }}} */
-
-/* {{{ */
 uint32_t pthreads_stack_pop(PTHREAD thread, zval *work) {
-	zend_bool locked;
 	uint32_t left = 0;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
 		zend_throw_exception_ex(spl_ce_RuntimeException, 
 			0, "only the creator of this %s may pop from the stack", 
 			thread->std.ce->name->val);
-		return;
+		return 0;
 	}
 
-	if (pthreads_lock_acquire(thread->lock, &locked)) {
+	if (pthreads_monitor_lock(thread->monitor)) {
 		if (PTHREADS_IS_WORKER(thread)) {
 			if (!work) {
 				zend_hash_destroy(&thread->stack->objects);
 			}
 			left = zend_hash_num_elements(&thread->stack->objects);
 		}
-		pthreads_lock_release(thread->lock, locked);
+		pthreads_monitor_unlock(thread->monitor);
 	}
 
 	return left;
@@ -109,7 +70,6 @@ uint32_t pthreads_stack_pop(PTHREAD thread, zval *work) {
 
 /* {{{ */
 uint32_t pthreads_stack_push(PTHREAD thread, zval *work) {
-	zend_bool locked;
 	uint32_t counted = 0;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
@@ -119,20 +79,13 @@ uint32_t pthreads_stack_push(PTHREAD thread, zval *work) {
 		return 0;
 	}
 
-	if (pthreads_lock_acquire(thread->lock, &locked)) {
+	if (pthreads_monitor_lock(thread->monitor)) {
 		if (zend_hash_next_index_insert(&thread->stack->objects, work)) {
 			Z_ADDREF_P(work);
 			counted = zend_hash_num_elements(&thread->stack->objects);
 		}
-
-		pthreads_lock_release(thread->lock, locked);
-		
-		if (counted > 0) {
-		    pthreads_synchro_lock(thread->synchro);
-			pthreads_unset_state(
-			    thread, PTHREADS_ST_WAITING);
-			pthreads_synchro_unlock(thread->synchro);
-		}
+		pthreads_monitor_notify(thread->monitor);
+		pthreads_monitor_unlock(thread->monitor);
 	}
 	
 	return counted;
@@ -169,7 +122,6 @@ static inline int pthreads_stack_collect_function(zval *collectable, void *argum
 
 /* {{{ */
 uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call) {
-	zend_bool locked;
 	uint32_t waiting = 0;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
@@ -179,7 +131,7 @@ uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call) {
 		return 0;
 	}	
 
-	if (pthreads_lock_acquire(thread->lock, &locked)) {
+	if (pthreads_monitor_lock(thread->monitor)) {
 		zend_hash_apply_with_argument(
 			&thread->stack->objects,
 			pthreads_stack_collect_function, call);
@@ -189,18 +141,8 @@ uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call) {
 			zend_hash_destroy(&thread->stack->objects);
 			zend_hash_init(
 				&thread->stack->objects, 8, NULL, ZVAL_PTR_DTOR, 0);
-		} else {
-			zend_bool state;
-
-			if (pthreads_state_lock(thread->state, &state)) {
-				if (pthreads_state_check(thread->state, PTHREADS_ST_WAITING)) {
-					pthreads_unset_state(thread, PTHREADS_ST_WAITING);
-				}
-				pthreads_state_unlock(thread->state, state);
-			}
-		}
-
-		pthreads_lock_release(thread->lock, locked);
+		} else pthreads_monitor_notify(thread->monitor);
+		pthreads_monitor_unlock(thread->monitor);
 	}
 
 	return waiting;
@@ -208,12 +150,11 @@ uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call) {
 
 /* {{{ */
 uint32_t pthreads_stack_length(PTHREAD thread) {
-	zend_bool locked;
 	uint32_t length = 0;
-	if (pthreads_lock_acquire(thread->lock, &locked)) {
+	if (pthreads_monitor_lock(thread->monitor)) {
 		length = zend_hash_num_elements
 			(&thread->stack->objects);
-		pthreads_lock_release(thread->lock, locked);
+		pthreads_monitor_unlock(thread->monitor);
 	}
 	return length;
 } /* }}} */
@@ -271,20 +212,14 @@ void pthreads_current_thread(zval *return_value) {
 int pthreads_connect(PTHREAD source, PTHREAD destination) {
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
-			if (destination->lock)
-				pthreads_lock_free(destination->lock);
-			if (destination->state)
-				pthreads_state_free(destination->state);
 			if (destination->store)
 				pthreads_store_free(destination->store);
-			if (destination->synchro)
-				pthreads_synchro_free(destination->synchro);
+			if (destination->monitor)
+				pthreads_monitor_free(destination->monitor);
 
 			if (PTHREADS_IS_WORKER(destination)) {
 				if (destination->stack) {
-					zend_hash_destroy(
-					    &destination->stack->objects
-					);
+					zend_hash_destroy(&destination->stack->objects);
 					free(destination->stack);
 				}
 			}
@@ -301,9 +236,7 @@ int pthreads_connect(PTHREAD source, PTHREAD destination) {
 		destination->thread = source->thread;
 		destination->local.id = source->local.id;
 		destination->local.ls = source->local.ls;
-		destination->lock = source->lock;
-		destination->state = source->state;
-		destination->synchro = source->synchro;
+		destination->monitor = source->monitor;
 		destination->store = source->store;
 		destination->stack = source->stack;
 		
@@ -351,10 +284,8 @@ static void pthreads_base_ctor(PTHREAD base, zend_class_entry *entry) {
 	base->options = PTHREADS_INHERIT_ALL;
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
-		base->lock = pthreads_lock_alloc();
-		base->state = pthreads_state_alloc(0);
-		base->synchro = pthreads_synchro_alloc();
-		base->store = pthreads_store_alloc();
+		base->monitor = pthreads_monitor_alloc();
+		base->store = pthreads_store_alloc(base->monitor);
 
 		if (PTHREADS_IS_WORKER(base)) {
 			base->stack = (pthreads_stack) calloc(1, sizeof(*base->stack));
@@ -374,17 +305,16 @@ void pthreads_base_free(zend_object *object) {
 	PTHREAD base = PTHREADS_FETCH_FROM(object);
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
-		if (PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) {
+		if ((PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) &&
+			!pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_JOINED)) {
 			pthread_t *pthread = &base->thread;
 			if (pthread) {
 				pthreads_join(base);
 			}
 		}
 
-		pthreads_lock_free(base->lock);
-		pthreads_state_free(base->state );
 		pthreads_store_free(base->store);
-		pthreads_synchro_free(base->synchro);
+		pthreads_monitor_free(base->monitor);
 
 		if (PTHREADS_IS_WORKER(base)) {
 		    zend_hash_destroy(&base->stack->objects);
@@ -418,7 +348,6 @@ static void pthreads_base_clone(void *arg, void **pclone) {
 zend_bool pthreads_start(PTHREAD thread) {
 	int dostart = 0;
 	int started = FAILURE;
-	zend_bool tlocked, slocked;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
 		zend_throw_exception_ex(spl_ce_RuntimeException, 
@@ -427,33 +356,19 @@ zend_bool pthreads_start(PTHREAD thread) {
 		return 0;
 	}
 
-	if (pthreads_state_lock(thread->state, &slocked)) {
-		if (!pthreads_state_check(thread->state, PTHREADS_ST_STARTED)) {
-			pthreads_state_set_locked(thread->state, PTHREADS_ST_STARTED);
-			dostart = 1;
-		} else started = PTHREADS_ST_STARTED;
-		if (slocked)
-			pthreads_state_unlock(thread->state, slocked);
-		
-	}
-	if (dostart) {
-		if (pthreads_lock_acquire(thread->lock, &tlocked)) {
-			started = pthread_create(&thread->thread, NULL, pthreads_routine, (void*)thread);
-			if (started == SUCCESS) 
-				pthreads_state_wait(thread->state, PTHREADS_ST_RUNNING);
-			pthreads_lock_release(thread->lock, tlocked);
-		}
+	if (pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_STARTED)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+			"the creator of %s already started it", thread->std.ce->name->val);
+		return 0;
 	}
 
-	switch (started) {
+	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_STARTED);
+
+	switch (pthread_create(&thread->thread, NULL, pthreads_routine, (void*)thread)) {
 		case SUCCESS:
+			pthreads_monitor_wait_until(thread->monitor, PTHREADS_MONITOR_READY);
 			return 1;
-		
-		case PTHREADS_ST_STARTED:
-			zend_throw_exception_ex(spl_ce_RuntimeException, 
-				0, "cannot start %s, thread already started", thread->std.ce->name->val);
-		break;
-		
+
 		case EAGAIN:
 			zend_throw_exception_ex(spl_ce_RuntimeException,
 				0, "cannot start %s, out of resources", thread->std.ce->name->val);
@@ -461,7 +376,7 @@ zend_bool pthreads_start(PTHREAD thread) {
 
 		default:
 			zend_throw_exception_ex(spl_ce_RuntimeException,
-				0, "cannot start %s, unknown error(%d)", thread->std.ce->name->val, started);
+				0, "cannot start %s, unknown error", thread->std.ce->name->val);
 	}
 	
 	return 0;
@@ -469,9 +384,6 @@ zend_bool pthreads_start(PTHREAD thread) {
 
 /* {{{ */
 zend_bool pthreads_join(PTHREAD thread) {
-	int dojoin = 0;
-	int donotify = 0;
-	zend_bool slocked;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
 		zend_throw_exception_ex(spl_ce_RuntimeException, 
@@ -480,34 +392,32 @@ zend_bool pthreads_join(PTHREAD thread) {
 		return 0;
 	}
 
-	if (pthreads_state_lock(thread->state, &slocked)) {
-		if (pthreads_state_check(thread->state, PTHREADS_ST_STARTED) && 
-			!pthreads_state_check(thread->state, PTHREADS_ST_JOINED)) {
-			pthreads_state_set_locked(thread->state, PTHREADS_ST_JOINED);
-			if (PTHREADS_IS_WORKER(thread))
-				donotify = pthreads_state_check(thread->state, PTHREADS_ST_WAITING);
-			dojoin = 1;
+	if (pthreads_monitor_lock(thread->monitor)) {
+		if (pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
+			zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+				"the creator of %s already joined with it",
+				thread->std.ce->name->val);
+			pthreads_monitor_unlock(thread->monitor);
+			return 0;
 		}
-		if (slocked)
-			pthreads_state_unlock(thread->state, slocked);
+
+		pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_JOINED);
+		pthreads_monitor_unlock(thread->monitor);
+
+		return (pthread_join(thread->thread, NULL) == SUCCESS);
 	}
 	
-	if (donotify) do {
-		pthreads_unset_state(thread, PTHREADS_ST_WAITING);
-	} while(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
-
-	return dojoin ? (pthread_join(thread->thread, NULL) == SUCCESS) : 1;
+	return 0;
 } /* }}} */
 
 #ifdef PTHREADS_KILL_SIGNAL
 static inline void pthreads_kill_handler(int signo) /* {{{ */
 {	
-
 	PTHREAD current = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
 	
 	if (current) {
-		pthreads_state_set(
-		    current->state, PTHREADS_ST_ERROR);
+		pthreads_monitor_add(
+		    current->monitor, PTHREADS_MONITOR_ERROR);
 	}
 	
 	PTHREADS_ZG(signal) = signo;
@@ -533,7 +443,7 @@ static inline zend_bool pthreads_routine_run_function(PTHREAD object, PTHREAD co
 
 	ZVAL_UNDEF(&zresult);
 
-	pthreads_state_set(object->state, PTHREADS_ST_RUNNING);
+	pthreads_monitor_add(object->monitor, PTHREADS_MONITOR_RUNNING);
 
 	zend_try {
 		if ((run = zend_hash_find_ptr(&connection->std.ce->function_table, PTHREADS_G(strings).run))) {							
@@ -552,8 +462,8 @@ static inline zend_bool pthreads_routine_run_function(PTHREAD object, PTHREAD co
 			}
 		}
 	} zend_catch {
-	    pthreads_state_set(
-		    object->state, PTHREADS_ST_ERROR);		
+	    pthreads_monitor_add(
+		    object->monitor, PTHREADS_MONITOR_ERROR);		
 
 	    if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
 		    /* like, totally bail man ! */
@@ -565,7 +475,7 @@ static inline zend_bool pthreads_routine_run_function(PTHREAD object, PTHREAD co
 		zval_ptr_dtor(&zresult);
 	}
 
-	pthreads_state_unset(object->state, PTHREADS_ST_RUNNING);
+	pthreads_monitor_remove(object->monitor, PTHREADS_MONITOR_RUNNING);
 	
 	return 1;
 }
@@ -627,6 +537,8 @@ static void * pthreads_routine(void *arg) {
 	pthreads_globals_unlock(glocked);
 #endif
 
+	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_READY);
+
 	zend_first_try {
 		ZVAL_UNDEF(&PTHREADS_ZG(this));
 		object_init_ex(
@@ -635,10 +547,8 @@ static void * pthreads_routine(void *arg) {
 		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))));
 		
 		if (PTHREADS_IS_WORKER(thread)) {
-			zend_bool locked;
-
 			do {
-				if (pthreads_lock_acquire(thread->lock, &locked)) {
+				if (pthreads_monitor_lock(thread->monitor)) {
 					zval *next;
 
 					ZEND_HASH_FOREACH_VAL(&thread->stack->objects, next) {
@@ -656,15 +566,13 @@ static void * pthreads_routine(void *arg) {
 						}
 					} ZEND_HASH_FOREACH_END();
 
-					pthreads_lock_release(thread->lock, locked);
+					if (pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
+						pthreads_monitor_unlock(thread->monitor);						
+						break;
+					}
 
-					if (!pthreads_state_isset(thread->state, PTHREADS_ST_JOINED)) {
-						pthreads_synchro_lock(thread->synchro);
-						if (pthreads_set_state(thread, PTHREADS_ST_WAITING)) {
-						    pthreads_synchro_unlock(thread->synchro);
-							continue;
-						} else pthreads_synchro_unlock(thread->synchro);
-					} else break;
+					pthreads_monitor_wait(thread->monitor, 0);
+					pthreads_monitor_unlock(thread->monitor);
 				}
 			} while (1);
 		}

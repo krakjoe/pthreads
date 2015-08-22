@@ -163,18 +163,17 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zval mstring;
 	zend_bool nulled = 0;
-	zend_bool locked;
 	
 	ZVAL_UNDEF(&mstring);	
 
 	if (member == NULL || Z_TYPE_P(member) == IS_NULL) {
-		pthreads_lock_acquire(pthreads->store->lock, &locked);
+		pthreads_monitor_lock(pthreads->monitor);
 		{
 			ZVAL_LONG(
 				&mstring, pthreads->store->next++);
 			member = &mstring;
 		}
-		pthreads_lock_release(pthreads->store->lock, locked);
+		pthreads_monitor_unlock(pthreads->monitor);
 	}
 
 	if (Z_TYPE_P(member) != IS_STRING) {

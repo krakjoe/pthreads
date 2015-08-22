@@ -19,7 +19,6 @@
 #define HAVE_PTHREADS_CLASS_WORKER_H
 PHP_METHOD(Worker, shutdown);
 PHP_METHOD(Worker, isShutdown);
-PHP_METHOD(Worker, isWorking);
 PHP_METHOD(Worker, stack);
 PHP_METHOD(Worker, unstack);
 PHP_METHOD(Worker, getStacked);
@@ -29,8 +28,6 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_shutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_isShutdown, 0, 0, 0)
-ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO_EX(Worker_isWorking, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_stack, 0, 0, 1)
@@ -55,7 +52,6 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, unstack, Worker_unstack, ZEND_ACC_PUBLIC)
 	PHP_ME(Worker, getStacked, Worker_getStacked, ZEND_ACC_PUBLIC)
 	PHP_ME(Worker, isShutdown, Worker_isShutdown, ZEND_ACC_PUBLIC)
-	PHP_ME(Worker, isWorking, Worker_isWorking, ZEND_ACC_PUBLIC)
 	PHP_ME(Worker, collect, Worker_collect, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
@@ -101,16 +97,7 @@ PHP_METHOD(Worker, isShutdown)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 
-	RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED));
-} /* }}} */
-
-/* {{{ proto boolean Worker::isWorking() 
-	Can be used to tell if a Worker is executing any Stackables or waiting */
-PHP_METHOD(Worker, isWorking)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-
-	RETURN_BOOL(!pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
+	RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED));
 } /* }}} */
 
 /* {{{ proto boolean Worker::shutdown()

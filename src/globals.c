@@ -24,8 +24,8 @@
 
 struct _pthreads_globals pthreads_globals;
 
-#ifndef HAVE_PTHREADS_LOCK_H
-#	include <src/lock.h>
+#ifndef HAVE_PTHREADS_MONITOR_H
+#	include <src/monitor.h>
 #endif
 
 #ifndef PTHREADS_G
@@ -36,7 +36,7 @@ struct _pthreads_globals pthreads_globals;
 zend_bool pthreads_globals_init(){
 	if (!PTHREADS_G(init)&&!PTHREADS_G(failed)) {
 		PTHREADS_G(init)=1;
-		if (!(PTHREADS_G(lock)=pthreads_lock_alloc()))
+		if (!(PTHREADS_G(monitor)=pthreads_monitor_alloc()))
 			PTHREADS_G(failed)=1;
 		if (PTHREADS_G(failed)) {
 		    PTHREADS_G(init)=0;
@@ -57,13 +57,13 @@ zend_bool pthreads_globals_init(){
 } /* }}} */
 
 /* {{{ */
-zend_bool pthreads_globals_lock(zend_bool *locked){
-	return pthreads_lock_acquire(PTHREADS_G(lock), locked);
+zend_bool pthreads_globals_lock(){
+	return pthreads_monitor_lock(PTHREADS_G(monitor));
 } /* }}} */
 
 /* {{{ */
-void pthreads_globals_unlock(zend_bool locked) {
-	pthreads_lock_release(PTHREADS_G(lock), locked);
+void pthreads_globals_unlock() {
+	pthreads_monitor_unlock(PTHREADS_G(monitor));
 } /* }}} */
 
 /* {{{ */
@@ -74,12 +74,11 @@ void* pthreads_globals_object_alloc(size_t length) {
 	if (!bucket)
 		return NULL;
 	
-	if (pthreads_globals_lock(&locked)) {
+	if (pthreads_globals_lock()) {
 		zend_hash_index_update_ptr(
 			&PTHREADS_G(objects),
 			(zend_ulong) bucket, bucket);
-		
-		pthreads_globals_unlock(locked);
+		pthreads_globals_unlock();
 	}
 	
 	return bucket;
@@ -88,14 +87,13 @@ void* pthreads_globals_object_alloc(size_t length) {
 /* {{{ */
 zend_bool pthreads_globals_object_validate(zend_ulong address) {
 	zend_bool valid = 0;
-	zend_bool locked = 0;
 	if (!address)
 		return valid;
 	
-	if (pthreads_globals_lock(&locked)) {
+	if (pthreads_globals_lock()) {
 		valid = zend_hash_index_exists(
 			&PTHREADS_G(objects), address);
-		pthreads_globals_unlock(locked);
+		pthreads_globals_unlock();
 	}
 	
 	return valid;
@@ -104,15 +102,14 @@ zend_bool pthreads_globals_object_validate(zend_ulong address) {
 /* {{{ */
 zend_bool pthreads_globals_object_delete(void *address) {
 	zend_bool deleted = 0;
-	zend_bool locked = 0;
 	
 	if (!address)
 		return deleted;
 	
-	if (pthreads_globals_lock(&locked)) {
+	if (pthreads_globals_lock()) {
 		deleted = zend_hash_index_del(
 			&PTHREADS_G(objects), (zend_ulong) address);
-		pthreads_globals_unlock(locked);
+		pthreads_globals_unlock();
 	}
 	
 	return deleted;
@@ -128,7 +125,7 @@ void pthreads_globals_shutdown() {
 		zend_string_free(PTHREADS_G(strings).worker);
 		zend_string_free(PTHREADS_G(strings).session.cache_limiter);
 		zend_string_free(PTHREADS_G(strings).session.use_cookies);
-		pthreads_lock_free(PTHREADS_G(lock));
+		pthreads_monitor_free(PTHREADS_G(monitor));
 	}
 } /* }}} */
 #endif

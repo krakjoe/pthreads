@@ -108,4 +108,7 @@ typedef struct _pthreads_call_t {
 
 #define PTHREADS_CALL_EMPTY {empty_fcall_info, empty_fcall_info_cache}
 
+#ifndef HAVE_PTHREADS_MONITOR_H
+#	include <src/monitor.h>
+#endif
 #endif

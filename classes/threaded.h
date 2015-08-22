@@ -21,12 +21,9 @@ PHP_METHOD(Threaded, run);
 PHP_METHOD(Threaded, wait);
 PHP_METHOD(Threaded, notify);
 PHP_METHOD(Threaded, isRunning);
-PHP_METHOD(Threaded, isWaiting);
 PHP_METHOD(Threaded, isTerminated);
 
 PHP_METHOD(Threaded, synchronized);
-PHP_METHOD(Threaded, lock);
-PHP_METHOD(Threaded, unlock);
 PHP_METHOD(Threaded, merge);
 PHP_METHOD(Threaded, shift);
 PHP_METHOD(Threaded, chunk);
@@ -48,19 +45,11 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Threaded_isRunning, 0, 0, 0)
 ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO_EX(Threaded_isWaiting, 0, 0, 0)
-ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_isTerminated, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Threaded_synchronized, 0, 0, 1)
 	ZEND_ARG_INFO(0, function)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Threaded_lock, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Threaded_unlock, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Threaded_merge, 0, 0, 1)
@@ -104,11 +93,8 @@ zend_function_entry pthreads_threaded_methods[] = {
 	PHP_ME(Threaded, wait, Threaded_wait, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, notify, Threaded_notify, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, isRunning, Threaded_isRunning, ZEND_ACC_PUBLIC)
-	PHP_ME(Threaded, isWaiting, Threaded_isWaiting, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, isTerminated, Threaded_isTerminated, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, synchronized, Threaded_synchronized, ZEND_ACC_PUBLIC)
-	PHP_ME(Threaded, lock, Threaded_lock, ZEND_ACC_PUBLIC)
-	PHP_ME(Threaded, unlock, Threaded_unlock, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, merge, Threaded_merge, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, shift, Threaded_shift, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, chunk, Threaded_chunk, ZEND_ACC_PUBLIC)
@@ -140,16 +126,13 @@ PHP_METHOD(Threaded, wait)
 	
 	if (thread) {
 		if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &timeout)==SUCCESS) {
-			if (ZEND_NUM_ARGS()) {
-				RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, timeout));
-			} else RETURN_BOOL(pthreads_set_state_ex(thread, PTHREADS_ST_WAITING, 0L));
+			RETURN_BOOL(pthreads_monitor_wait(thread->monitor, timeout) == SUCCESS);
 		}
 	} else {
 		zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0, 
 			"pthreads has experienced an internal error while preparing to wait for a %s", PTHREADS_NAME);
 	}
-	
 } /* }}} */
 
 /* {{{ proto boolean Threaded::notify()
@@ -158,8 +141,9 @@ PHP_METHOD(Threaded, wait)
 PHP_METHOD(Threaded, notify)
 {
 	PTHREAD thread = PTHREADS_FETCH;
+
 	if (thread) {
-		RETURN_BOOL(pthreads_unset_state(thread, PTHREADS_ST_WAITING));
+		RETURN_BOOL(pthreads_monitor_notify(thread->monitor));
 	} else {
 		zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0, 
@@ -174,22 +158,7 @@ PHP_METHOD(Threaded, isRunning)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_RUNNING));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);		
-	}
-} /* }}} */
-
-/* {{{ proto boolean Threaded::isWaiting() 
-	Will return true if the referenced Threaded is waiting for notification */
-PHP_METHOD(Threaded, isWaiting)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-	
-	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
+		RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_RUNNING));
 	} else {
 		zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0, 
@@ -204,7 +173,7 @@ PHP_METHOD(Threaded, isTerminated)
 	PTHREAD thread = PTHREADS_FETCH;
 	
 	if (thread) {
-		RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_ERROR));
+		RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_ERROR));
 	} else {
 		zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0, 
@@ -217,28 +186,35 @@ PHP_METHOD(Threaded, isTerminated)
 	 */
 PHP_METHOD(Threaded, synchronized) 
 {
-	zend_fcall_info fci = empty_fcall_info;
-	zend_fcall_info_cache fcc = empty_fcall_info_cache;
+	pthreads_call_t call = PTHREADS_CALL_EMPTY;
 	uint argc = 0;
 	zval *argv = NULL;
+	PTHREAD thread = PTHREADS_FETCH;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f|+", &fci, &fcc, &argv, &argc) == SUCCESS) {
-		pthreads_synchro_block(getThis(), &fci, &fcc, argc, argv, return_value);
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f|+", &call.fci, &call.fcc, &argv, &argc) != SUCCESS) {
+		return;
 	}
-} /* }}} */
 
-/* {{{ proto boolean Threaded::lock()
-	Will acquire the storage lock */
-PHP_METHOD(Threaded, lock) 
-{
-	ZVAL_BOOL(return_value, pthreads_store_lock(getThis()));
-} /* }}} */
+	zend_fcall_info_argp(&call.fci, argc, argv);
 
-/* {{{ proto boolean Threaded::unlock()
-	Will release the storage lock */
-PHP_METHOD(Threaded, unlock) 
-{
-	ZVAL_BOOL(return_value, pthreads_store_unlock(getThis()));
+	call.fci.retval = return_value;
+	call.fci.no_separation = 1;
+	
+	call.fci.object = &thread->std;
+	call.fcc.object = &thread->std;
+
+	if (pthreads_monitor_lock(thread->monitor)) {
+		zend_try {
+			/* call the closure */
+			zend_call_function(&call.fci, &call.fcc);
+		} zend_catch {
+			ZVAL_UNDEF(return_value);
+		} zend_end_try ();
+		
+		pthreads_monitor_unlock(thread->monitor);
+	}
+	
+	zend_fcall_info_args_clear(&call.fci, 1);
 } /* }}} */
 
 /* {{{ proto boolean Threaded::merge(mixed $data, [boolean $overwrite = true])

@@ -37,17 +37,17 @@ void pthreads_collectable_set_garbage(zval *object);
 zend_bool pthreads_collectable_is_garbage(zval *object) {
 	PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zval garbage;
-	zend_bool locked[2], is_garbage = 0;
+	zend_bool is_garbage = 0;
 	
-	if (pthreads_lock_acquire(pobject->lock, &locked[0])) {
-		if (!pthreads_state_isset(pobject->state, PTHREADS_ST_RUNNING)) {
+	if (pthreads_monitor_lock(pobject->monitor)) {
+		if (!pthreads_monitor_check(pobject->monitor, PTHREADS_MONITOR_RUNNING)) {
 			if (zend_read_property(pobject->std.ce, object, ZEND_STRL("garbage"), 1, &garbage)) {
 				is_garbage = 
 					zend_is_true(&garbage);
 				zval_dtor(&garbage);
 			}
 		}
-		pthreads_lock_release(pobject->lock, locked[0]);
+		pthreads_monitor_unlock(pobject->monitor);
 	}
 
 	return is_garbage;

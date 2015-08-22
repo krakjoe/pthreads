@@ -22,14 +22,6 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_LOCK_H
-#	include <src/lock.h>
-#endif
-
-#ifndef HAVE_PTHREADS_STATE_H
-#	include <src/state.h>
-#endif
-
 #ifndef HAVE_PTHREADS_STORE_H
 #	include <src/store.h>
 #endif
@@ -44,10 +36,10 @@ typedef struct _pthreads_stack {
 	HashPosition position;
 } *pthreads_stack; /* }}} */
 
-typedef struct _pthreads_ident {
+typedef struct _pthreads_ident_t {
 	zend_ulong id;
 	void*** ls;
-} pthreads_ident;
+} pthreads_ident_t;
 
 /* {{{ threaded structure */
 typedef struct _pthread_construct {
@@ -56,13 +48,11 @@ typedef struct _pthread_construct {
 	uint scope;
 	zend_bool hold;
 	zend_ulong options;
-	pthreads_ident creator;
-	pthreads_ident local;
-	pthreads_lock lock;
-	pthreads_state state;
-	pthreads_synchro synchro;
+	pthreads_ident_t 	creator;
+	pthreads_ident_t	local;
 	pthreads_store store;
 	pthreads_stack stack;
+	pthreads_monitor_t *monitor;
 } *PTHREAD;
 
 /* {{{ comparison function */

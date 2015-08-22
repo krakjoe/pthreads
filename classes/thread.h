@@ -89,7 +89,6 @@ zend_function_entry pthreads_thread_methods[] = {
 PHP_METHOD(Thread, start)
 {
 	PTHREAD thread = PTHREADS_FETCH;
-	int result = FAILURE;
 	zend_long options = PTHREADS_INHERIT_ALL;
 	
 	if (ZEND_NUM_ARGS()) {
@@ -109,7 +108,7 @@ PHP_METHOD(Thread, isStarted)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 
-	RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_STARTED));
+	RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_STARTED));
 } /* }}} */
 
 /* {{{ proto Thread::isJoined()
@@ -118,16 +117,7 @@ PHP_METHOD(Thread, isJoined)
 {
 	PTHREAD thread = PTHREADS_FETCH;
 
-	RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_JOINED));
-} /* }}} */
-
-/* {{{ proto boolean Thread::isWaiting() 
-	Will return true if the referenced thread is waiting for notification */
-PHP_METHOD(Thread, isWaiting)
-{
-	PTHREAD thread = PTHREADS_FETCH;
-
-	RETURN_BOOL(pthreads_state_isset(thread->state, PTHREADS_ST_WAITING));
+	RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED));
 } /* }}} */
 
 /* {{{ proto boolean Thread::join() 
