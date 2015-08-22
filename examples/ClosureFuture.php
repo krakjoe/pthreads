@@ -41,12 +41,6 @@ class Future extends Thread {
         $future->start();
         return $future;
     }
-
-	public function __destruct() {
-		if (Thread::getCurrentThreadId() == $this->owner) {
-			$this->join();
-		}
-	}
     
 	protected $owner;
     protected $closure;

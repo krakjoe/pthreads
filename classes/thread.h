@@ -26,6 +26,7 @@ PHP_METHOD(Thread, getCurrentThreadId);
 PHP_METHOD(Thread, getCurrentThread);
 PHP_METHOD(Thread, getCreatorId);
 PHP_METHOD(Thread, kill);
+PHP_METHOD(Thread, __destruct);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_INFO(0, options)
@@ -66,6 +67,9 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Thread_kill, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Thread_destruct, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_thread_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREAD
@@ -80,6 +84,7 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, getCurrentThreadId, Thread_getCurrentThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Thread, getCurrentThread, Thread_getCurrentThread, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Thread, kill, Thread_kill, ZEND_ACC_PUBLIC)
+	PHP_ME(Thread, __destruct, Thread_destruct, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -172,6 +177,18 @@ PHP_METHOD(Thread, kill)
     		pthread_kill(thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
     }
 
+} /* }}} */
+
+/* {{{ */
+PHP_METHOD(Thread, __destruct)
+{
+	PTHREAD thread = PTHREADS_FETCH;
+
+	if (PTHREADS_IN_CREATOR(thread) && !PTHREADS_IS_CONNECTION(thread)) {
+		if (!pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
+			pthreads_join(thread);
+		}
+	}
 } /* }}} */
 #	endif
 #endif
