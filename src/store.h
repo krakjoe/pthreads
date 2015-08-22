@@ -26,10 +26,6 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_MONITOR_H
-#	include <src/monitor.h>
-#endif
-
 #ifndef IS_CALLABLE
 # define IS_CALLABLE 10
 #endif

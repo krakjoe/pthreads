@@ -30,10 +30,6 @@
 #	include <src/thread.h>
 #endif
 
-#ifndef HAVE_PTHREADS_LOCK_H
-#	include <src/monitor.h>
-#endif
-
 /* {{{ pthreads_globals */
 struct _pthreads_globals {
 	/*

@@ -24,10 +24,6 @@
 
 struct _pthreads_globals pthreads_globals;
 
-#ifndef HAVE_PTHREADS_MONITOR_H
-#	include <src/monitor.h>
-#endif
-
 #ifndef PTHREADS_G
 #	define PTHREADS_G () ?  : (void***) &pthreads_globals
 #endif

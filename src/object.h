@@ -43,10 +43,7 @@ void        pthreads_base_free(zend_object *object);
 *	pthreads_*_state functions work with specific PTHREAD state
 */
 
-/* {{{ state and stack management */
-zend_bool pthreads_set_state_ex(PTHREAD thread, int state, long timeout);
-zend_bool pthreads_set_state(PTHREAD thread, int state);
-zend_bool pthreads_unset_state(PTHREAD thread, int state);
+/* {{{ stack management */
 uint32_t pthreads_stack_pop(PTHREAD thread, zval *work);
 uint32_t pthreads_stack_push(PTHREAD thread, zval *work);
 uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call);
@@ -61,10 +58,6 @@ void pthreads_current_thread(zval *return_value);
 zend_bool pthreads_start(PTHREAD thread);
 zend_bool pthreads_join(PTHREAD thread);
 /* }}} */
-
-/* {{{ synchronization heplers */
-zend_bool pthreads_wait_member(PTHREAD thread, zval *member);
-zend_bool pthreads_wait_member_ex(PTHREAD thread, zval *member, ulong timeout); /* }}} */
 
 /* {{{ */
 int pthreads_connect(PTHREAD source, PTHREAD destination); /* }}} */
