@@ -26,7 +26,7 @@ class Channel extends Threaded {
     }
 }
 
-class Routine extends Threaded {
+class Routine extends Collectable {
     public function __construct(Channel $channel) {
         $this->channel = $channel;
     }
