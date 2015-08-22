@@ -77,6 +77,9 @@ void pthreads_store_separate_zval(zval *pzval); /* }}} */
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash); /* }}} */
 
+/* {{{ copy keys to hashtable */
+void pthreads_store_keys(pthreads_store store, HashTable *keys, HashPosition *position); /* }}} */
+
 /* {{{ store shift */
 int pthreads_store_shift(zval *object, zval *member); /* }}} */
 

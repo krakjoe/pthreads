@@ -347,6 +347,29 @@ int pthreads_store_pop(zval *object, zval *member) {
    return FAILURE;
 } /* }}} */
 
+/* {{{ */
+void pthreads_store_keys(pthreads_store store, HashTable *keys, HashPosition *position) {
+	zend_bool locked;
+	
+	if (pthreads_lock_acquire(store->lock, &locked)) {
+		zend_string *key;
+
+		 zend_hash_init(
+    		keys, 
+			zend_hash_num_elements(&store->table), 
+			NULL, ZVAL_PTR_DTOR, 0);			
+		
+		ZEND_HASH_FOREACH_STR_KEY(&store->table, key) {
+			zend_hash_add_empty_element(
+				keys, key);
+		} ZEND_HASH_FOREACH_END();
+
+		pthreads_lock_release(store->lock, locked);
+	}
+
+    zend_hash_internal_pointer_reset_ex(keys, position);
+} /* }}} */
+
 /* {{{ copy store to hashtable */
 void pthreads_store_tohash(pthreads_store store, HashTable *hash) {
 	zend_bool locked;

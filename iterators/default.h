@@ -45,27 +45,9 @@ static inline zend_object_iterator* pthreads_object_iterator_ctor(zend_class_ent
 	ZVAL_COPY(&iterator->object, object);
 
     {
-        pthreads_store store = (PTHREADS_FETCH_FROM(Z_OBJ(iterator->object)))->store;
-		zend_bool locked;		
-		
-        if (pthreads_lock_acquire(store->lock, &locked)) {
-			zend_string *key;
-
-			 zend_hash_init(
-        		&iterator->keys, 
-				zend_hash_num_elements(&store->table), 
-				NULL, ZVAL_PTR_DTOR, 0);			
-			
-			ZEND_HASH_FOREACH_STR_KEY(&store->table, key) {
-				zend_hash_add_empty_element(
-					&iterator->keys, key);
-			} ZEND_HASH_FOREACH_END();
-
-			pthreads_lock_release(store->lock, locked);
-		}
-
-        zend_hash_internal_pointer_reset_ex(
-            &iterator->keys, &iterator->position);
+		PTHREAD pthreads = 
+			PTHREADS_FETCH_FROM(Z_OBJ(iterator->object));
+		pthreads_store_keys(pthreads->store, &iterator->keys, &iterator->position);
     }
 
     iterator->zit.funcs = &pthreads_object_iterator_funcs;
