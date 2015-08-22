@@ -14,7 +14,8 @@ class Future extends Thread {
 
     private function __construct(Closure $closure, array $args = []) {
         $this->closure = $closure;
-        $this->args    = $args;
+        $this->args    = $args;	
+		$this->owner   = Thread::getCurrentThreadId();
     }
 
     public function run() {
@@ -40,7 +41,14 @@ class Future extends Thread {
         $future->start();
         return $future;
     }
+
+	public function __destruct() {
+		if (Thread::getCurrentThreadId() == $this->owner) {
+			$this->join();
+		}
+	}
     
+	protected $owner;
     protected $closure;
     protected $args;
     protected $result;
