@@ -52,7 +52,7 @@ zend_bool pthreads_join(pthreads_object_t* thread);
 /* {{{ */
 int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination); /* }}} */
 
-/* {{{ handlers included here for access to macros above */
+/* {{{ */
 #ifndef HAVE_PTHREADS_HANDLERS_H
 #	include <src/handlers.h>
 #endif /* }}} */
