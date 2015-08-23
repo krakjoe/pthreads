@@ -66,7 +66,7 @@ static inline void pthreads_store_storage_table_dtor (zval *element) {
 
 /* {{{ allocate storage for an object */
 pthreads_store pthreads_store_alloc(pthreads_monitor_t *monitor) {
-	pthreads_store store = (pthreads_store) malloc(sizeof(*store));
+	pthreads_store store = (pthreads_store) calloc(1, sizeof(*store));
 
 	if (store) {
 		zend_hash_init(
