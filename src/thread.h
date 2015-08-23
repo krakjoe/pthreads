@@ -56,22 +56,6 @@ typedef struct _pthread_construct {
 /* {{{ fetches the current PTHREAD from $this */
 #define PTHREADS_FETCH (PTHREAD) ((char*) Z_OBJ(EX(This)) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
 
-/* {{{ comparison function */
-static inline int pthreads_equal(PTHREAD first, PTHREAD second) {
-	if (first && second) {
-		if ((first == second))
-		    return 1;
-	}
-	return 0;
-} /* }}} */
-
-/* {{{ comparison callback for llists */
-static inline int pthreads_equal_func(void **first, void **second){
-	if (first && second)
-		return pthreads_equal((PTHREAD)*first, (PTHREAD)*second);
-	return 0;
-} /* }}} */
-
 /* {{{ option constants */
 #define PTHREADS_INHERIT_NONE      0x00000000
 #define PTHREADS_INHERIT_INI       0x00000001
