@@ -346,8 +346,6 @@ static void pthreads_base_clone(void *arg, void **pclone) {
 
 /* {{{ */
 zend_bool pthreads_start(pthreads_object_t* thread) {
-	int dostart = 0;
-	int started = FAILURE;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
 		zend_throw_exception_ex(spl_ce_RuntimeException, 
@@ -601,7 +599,7 @@ static void * pthreads_routine(void *arg) {
 #ifdef _WIN32
 	return NULL;
 #endif
-} 
+}
 /* }}} */
 
 #endif
