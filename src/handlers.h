@@ -26,10 +26,6 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_STORE_H
-#	include <src/store.h>
-#endif
-
 #define PTHREADS_CAST_PASSTHRU_D zval *from, zval *to, int type
 #define PTHREADS_CAST_PASSTHRU_C from, to, type
 #define PTHREADS_COUNT_PASSTHRU_D zval *object, long *count

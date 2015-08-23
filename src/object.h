@@ -26,10 +26,6 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
-#endif
-
 /* {{{ object creation and destruction */
 zend_object* pthreads_threaded_ctor(zend_class_entry *entry);
 zend_object* pthreads_worker_ctor(zend_class_entry *entry);
@@ -55,23 +51,6 @@ zend_bool pthreads_join(PTHREAD thread);
 
 /* {{{ */
 int pthreads_connect(PTHREAD source, PTHREAD destination); /* }}} */
-
-/* {{{ TSRM manipulation */
-#define PTHREADS_FETCH_ALL(ls, id, type) ((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
-#define PTHREADS_FETCH_CTX(ls, id, type, element) (((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)
-#define PTHREADS_CG(ls, v) PTHREADS_FETCH_CTX(ls, compiler_globals_id, zend_compiler_globals*, v)
-#define PTHREADS_CG_ALL(ls) PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
-#define PTHREADS_EG(ls, v) PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
-#define PTHREADS_SG(ls, v) PTHREADS_FETCH_CTX(ls, sapi_globals_id, sapi_globals_struct*, v)
-#define PTHREADS_PG(ls, v) PTHREADS_FETCH_CTX(ls, core_globals_id, php_core_globals*, v)
-#define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*) 
-/* }}} */
-
-/* {{{ fetches a PTHREAD from a specific object in the current context */
-#define PTHREADS_FETCH_FROM(object) (PTHREAD) (((char*)object) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
-
-/* {{{ fetches the current PTHREAD from $this */
-#define PTHREADS_FETCH (PTHREAD) ((char*) Z_OBJ(EX(This)) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
 
 /* {{{ handlers included here for access to macros above */
 #ifndef HAVE_PTHREADS_HANDLERS_H

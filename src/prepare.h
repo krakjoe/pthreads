@@ -22,10 +22,6 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
-#endif
-
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate); /* }}} */
 

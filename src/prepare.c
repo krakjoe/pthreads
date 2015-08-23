@@ -34,10 +34,6 @@
 #	include <src/globals.h>
 #endif
 
-#ifndef HAVE_PTHREADS_STORE_H
-#	include <src/store.h>
-#endif
-
 #ifndef HAVE_PTHREADS_COPY_H
 #   include <src/copy.h>
 #endif

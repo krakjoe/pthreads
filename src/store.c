@@ -18,12 +18,8 @@
 #ifndef HAVE_PTHREADS_STORE
 #define HAVE_PTHREADS_STORE
 
-#ifndef HAVE_PTHREADS_STORE_H
-#	include <src/store.h>
-#endif
-
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
+#ifndef HAVE_PTHREADS_H
+#	include <src/pthreads.h>
 #endif
 
 #ifndef HAVE_PTHREADS_OBJECT_H

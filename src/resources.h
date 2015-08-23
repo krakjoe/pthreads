@@ -22,10 +22,6 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_STORE_H
-#	include <src/store.h>
-#endif
-
 typedef struct {
 	zend_resource *original;
 	void ***ls;

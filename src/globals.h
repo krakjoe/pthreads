@@ -18,16 +18,8 @@
 #ifndef HAVE_PTHREADS_GLOBALS_H
 #define HAVE_PTHREADS_GLOBALS_H
 
-/*
-* NOTES
-* 1. pthreads cannot use the Zend implementation of globals, it makes for instability - we sometimes require a true global lock
-*/
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
-#endif
-
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
 #endif
 
 /* {{{ pthreads_globals */

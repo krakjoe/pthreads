@@ -22,10 +22,6 @@
 #	include <src/pthreads.h>
 #endif
 
-#ifndef HAVE_PTHREADS_STORE_H
-#	include <src/store.h>
-#endif
-
 #ifndef HAVE_PTHREADS_RESOURCES_H
 #	include <src/resources.h>
 #endif
@@ -54,6 +50,12 @@ typedef struct _pthread_construct {
 	pthreads_stack stack;
 	zend_object std;
 } *PTHREAD;
+
+/* {{{ fetches a PTHREAD from a specific object in the current context */
+#define PTHREADS_FETCH_FROM(object) (PTHREAD) (((char*)object) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
+
+/* {{{ fetches the current PTHREAD from $this */
+#define PTHREADS_FETCH (PTHREAD) ((char*) Z_OBJ(EX(This)) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
 
 /* {{{ comparison function */
 static inline int pthreads_equal(PTHREAD first, PTHREAD second) {

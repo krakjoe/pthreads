@@ -22,10 +22,6 @@
 #	include <config.h>
 #endif
 
-#ifndef HAVE_PTHREADS_H
-#	include <src/pthreads.h>
-#endif
-
 #ifndef IS_CALLABLE
 # define IS_CALLABLE 10
 #endif

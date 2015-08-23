@@ -22,14 +22,6 @@
 #	include <src/handlers.h>
 #endif
 
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
-#endif
-
-#ifndef HAVE_PTHREADS_STORE_H
-#	include <src/store.h>
-#endif
-
 #ifndef HAVE_PTHREADS_OBJECT_H
 #	include <src/object.h>
 #endif

@@ -98,6 +98,15 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 #   define PTHREADS_PID() PTHREADS_ZG(pid) ? PTHREADS_ZG(pid) : (PTHREADS_ZG(pid)=getpid())
 #endif
 
+#define PTHREADS_FETCH_ALL(ls, id, type) ((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])
+#define PTHREADS_FETCH_CTX(ls, id, type, element) (((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)
+#define PTHREADS_CG(ls, v) PTHREADS_FETCH_CTX(ls, compiler_globals_id, zend_compiler_globals*, v)
+#define PTHREADS_CG_ALL(ls) PTHREADS_FETCH_ALL(ls, compiler_globals_id, zend_compiler_globals*)
+#define PTHREADS_EG(ls, v) PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
+#define PTHREADS_SG(ls, v) PTHREADS_FETCH_CTX(ls, sapi_globals_id, sapi_globals_struct*, v)
+#define PTHREADS_PG(ls, v) PTHREADS_FETCH_CTX(ls, core_globals_id, php_core_globals*, v)
+#define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
+
 #define zend_string_new(s) zend_string_init((s)->val, (s)->len, 0)
 
 /* {{{ */
@@ -111,4 +120,13 @@ typedef struct _pthreads_call_t {
 #ifndef HAVE_PTHREADS_MONITOR_H
 #	include <src/monitor.h>
 #endif
+
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
+#endif
+
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include <src/thread.h>
+#endif
+
 #endif
