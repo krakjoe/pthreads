@@ -76,6 +76,8 @@ void* pthreads_globals_object_alloc(size_t length) {
 			(zend_ulong) bucket, bucket);
 		pthreads_globals_unlock();
 	}
+
+	memset(bucket, 0, length);
 	
 	return bucket;
 } /* }}} */
