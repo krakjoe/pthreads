@@ -151,6 +151,7 @@ uint32_t pthreads_stack_collect(pthreads_object_t* thread, pthreads_call_t *call
 /* {{{ */
 uint32_t pthreads_stack_length(pthreads_object_t* thread) {
 	uint32_t length = 0;
+
 	if (pthreads_monitor_lock(thread->monitor)) {
 		length = zend_hash_num_elements(thread->stack);
 		pthreads_monitor_unlock(thread->monitor);
@@ -162,10 +163,6 @@ uint32_t pthreads_stack_length(pthreads_object_t* thread) {
 zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 	pthreads_object_t* thread = pthreads_globals_object_alloc(
 		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
-	
-	if (!thread) {	
-		return NULL;
-	}
 
 	thread->scope = PTHREADS_SCOPE_THREAD;
 	pthreads_base_ctor(thread, entry);
@@ -176,10 +173,8 @@ zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 
 /* {{{ */
 zend_object* pthreads_worker_ctor(zend_class_entry *entry) {
-	pthreads_object_t* worker = pthreads_globals_object_alloc(sizeof(pthreads_object_t) + zend_object_properties_size(entry));
-	if (!worker) {
-		return NULL;
-	}
+	pthreads_object_t* worker = pthreads_globals_object_alloc(
+		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
 
 	worker->scope = PTHREADS_SCOPE_WORKER;
 	pthreads_base_ctor(worker, entry);
@@ -190,10 +185,8 @@ zend_object* pthreads_worker_ctor(zend_class_entry *entry) {
 
 /* {{{ */
 zend_object* pthreads_threaded_ctor(zend_class_entry *entry) {
-	pthreads_object_t* threaded = pthreads_globals_object_alloc(sizeof(pthreads_object_t) + zend_object_properties_size(entry));
-	if (!threaded) {
-		return NULL;
-	}
+	pthreads_object_t* threaded = pthreads_globals_object_alloc(
+		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
 
 	threaded->scope = PTHREADS_SCOPE_THREADED;
 	pthreads_base_ctor(threaded, entry);
@@ -412,7 +405,7 @@ static inline int pthreads_resources_cleanup(zval *bucket) {
 static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object, pthreads_object_t* connection) {
 	zend_function *run;
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
-	zval zresult;					
+	zval zresult;	
 
 	if (pthreads_connect(object, connection) != SUCCESS) {
 		return 0;
