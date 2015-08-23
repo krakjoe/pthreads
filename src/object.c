@@ -213,16 +213,12 @@ void pthreads_current_thread(zval *return_value) {
 int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) {
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
-			if (destination->store)
-				pthreads_store_free(destination->store);
-			if (destination->monitor)
-				pthreads_monitor_free(destination->monitor);
+			pthreads_store_free(destination->store);	
+			pthreads_monitor_free(destination->monitor);	
 
 			if (PTHREADS_IS_WORKER(destination)) {
-				if (destination->stack) {
-					zend_hash_destroy(destination->stack);
-					free(destination->stack);
-				}
+				zend_hash_destroy(destination->stack);
+				free(destination->stack);
 			}
 
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
@@ -307,10 +303,7 @@ void pthreads_base_free(zend_object *object) {
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		if ((PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) &&
 			!pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_JOINED)) {
-			pthread_t *pthread = &base->thread;
-			if (pthread) {
-				pthreads_join(base);
-			}
+			pthreads_join(base);
 		}
 
 		pthreads_store_free(base->store);
