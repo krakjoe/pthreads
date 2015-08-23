@@ -315,19 +315,7 @@ void pthreads_base_free(zend_object *object) {
 		}
 	}
 
-	if (object->properties) {
-		zend_hash_destroy(object->properties);
-		FREE_HASHTABLE(object->properties);
-	}
-	
-	if (GC_FLAGS(object) & IS_OBJ_HAS_GUARDS) {
-		HashTable *guards = Z_PTR(object->properties_table[object->ce->default_properties_count]);
-		
-		if (guards) {
-			zend_hash_destroy(guards);
-			FREE_HASHTABLE(guards);
-		}
-	}
+	zend_object_std_dtor(object);
 
 	pthreads_globals_object_delete(base);
 } /* }}} */
