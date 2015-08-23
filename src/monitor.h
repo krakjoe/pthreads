@@ -20,11 +20,7 @@
 
 typedef volatile unsigned int pthreads_monitor_state_t;
 
-typedef struct _pthreads_monitor_t {
-	pthreads_monitor_state_t state;	
-	pthread_mutex_t			 mutex;	
-	pthread_cond_t			 cond;
-} pthreads_monitor_t;
+typedef struct _pthreads_monitor_t pthreads_monitor_t;
 
 #define PTHREADS_MONITOR_NOTHING 0x000000
 #define PTHREADS_MONITOR_READY   0x000010

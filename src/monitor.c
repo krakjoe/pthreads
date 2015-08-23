@@ -22,6 +22,12 @@
 #	include <src/pthreads.h>
 #endif
 
+struct _pthreads_monitor_t {
+	pthreads_monitor_state_t state;	
+	pthread_mutex_t			 mutex;	
+	pthread_cond_t			 cond;
+};
+
 pthreads_monitor_t* pthreads_monitor_alloc() {
 	pthread_mutexattr_t at;
 	pthreads_monitor_t *m = 
