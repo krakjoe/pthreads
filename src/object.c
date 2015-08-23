@@ -414,12 +414,8 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 static inline void pthreads_kill_handler(int signo) /* {{{ */
 {	
 	pthreads_object_t* current = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
-	
-	if (current) {
-		pthreads_monitor_add(
-		    current->monitor, PTHREADS_MONITOR_ERROR);
-	}
-	
+
+	pthreads_monitor_add(current->monitor, PTHREADS_MONITOR_ERROR);
 	PTHREADS_ZG(signal) = signo;
 	zend_bailout();
 } /* }}} */
@@ -462,8 +458,7 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 			}
 		}
 	} zend_catch {
-	    pthreads_monitor_add(
-		    object->monitor, PTHREADS_MONITOR_ERROR);		
+	    pthreads_monitor_add(object->monitor, PTHREADS_MONITOR_ERROR);		
 
 	    if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
 		    /* like, totally bail man ! */
