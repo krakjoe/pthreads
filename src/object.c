@@ -379,6 +379,8 @@ zend_bool pthreads_start(PTHREAD thread) {
 				0, "cannot start %s, unknown error", thread->std.ce->name->val);
 	}
 	
+	pthreads_monitor_remove(thread->monitor, PTHREADS_MONITOR_STARTED);
+	
 	return 0;
 } /* }}} */
 

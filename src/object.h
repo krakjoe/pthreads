@@ -37,12 +37,6 @@ zend_object* pthreads_thread_ctor(zend_class_entry *entry);
 void        pthreads_base_free(zend_object *object);
 /* }}} */
 
-/*
-* @NOTE
-*	pthreads_state_* functions work with pthreads_state directly
-*	pthreads_*_state functions work with specific PTHREAD state
-*/
-
 /* {{{ stack management */
 uint32_t pthreads_stack_pop(PTHREAD thread, zval *work);
 uint32_t pthreads_stack_push(PTHREAD thread, zval *work);
