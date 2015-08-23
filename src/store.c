@@ -442,8 +442,6 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 			}
 			
 			if (instanceof_function(Z_OBJCE_P(unstore), pthreads_threaded_entry)) {
-				PTHREAD pobject = 
-					PTHREADS_FETCH_FROM(Z_OBJ_P(unstore));
 				storage->type = IS_PTHREADS;
 				storage->data = Z_OBJ_P(unstore);
 				break;
@@ -654,7 +652,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
         Z_TYPE_P(from) != IS_OBJECT) {
         return FAILURE;
     }
-    
+
     switch (Z_TYPE_P(from)) {
         case IS_OBJECT: {
             /* check for a suitable pthreads object */
@@ -666,20 +664,15 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                     
                     /* acquire other lock */
                     if (pthreads_monitor_lock(pobjects[1]->monitor)) {
-                        
-                        /* free to do what we want, everything locked */
                         HashPosition position;
                         pthreads_storage *storage;
-			zval *bucket;
                         HashTable *tables[2] = {&pobjects[0]->store->table, &pobjects[1]->store->table};
-			zend_string *key = NULL;
+						zend_string *key = NULL;
                         zend_ulong idx = 0L;                        
 			
                         for (zend_hash_internal_pointer_reset_ex(tables[1], &position);
-                             (bucket = zend_hash_get_current_data_ex(tables[1], &position));
+                             (storage = zend_hash_get_current_data_ptr_ex(tables[1], &position));
                              zend_hash_move_forward_ex(tables[1], &position)) {
-
-			    storage = (pthreads_storage*) Z_PTR_P(bucket);
 
                             if (zend_hash_get_current_key_ex(tables[1], &key, &idx, &position) == HASH_KEY_IS_STRING) {
                                 

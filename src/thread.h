@@ -43,16 +43,16 @@ typedef struct _pthreads_ident_t {
 
 /* {{{ threaded structure */
 typedef struct _pthread_construct {
-	zend_object std;
 	pthread_t thread;
 	uint scope;
 	zend_bool hold;
 	zend_ulong options;
+	pthreads_monitor_t *monitor;
 	pthreads_ident_t 	creator;
 	pthreads_ident_t	local;
 	pthreads_store store;
 	pthreads_stack stack;
-	pthreads_monitor_t *monitor;
+	zend_object std;
 } *PTHREAD;
 
 /* {{{ comparison function */

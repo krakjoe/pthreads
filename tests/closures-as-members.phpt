@@ -21,19 +21,19 @@ class T extends Thread {
         $this->call($this->test->some);
         
         /* set new closure */
-        $this->synchronized(function($thread){
-            $thread->set = true;
-            $thread->test->some = function() {
+        $this->synchronized(function(){
+            $this->set = true;
+            $this->test->some = function() {
                 echo "Hello World\n";
             };
-            $thread->notify();
-        }, $this);
+            $this->notify();
+        });
         
         /* wait for new closure execution */
-        $this->synchronized(function($thread){
-            while (!$thread->used)
-                $thread->wait();
-        }, $this);
+        $this->synchronized(function(){
+            while (!$this->used)
+                $this->wait();
+        });
     }
     
     public function call(Closure $closure) {
@@ -60,8 +60,8 @@ $t->synchronized(function() use($t) {
     $t->used = true;
     $t->notify();
 });
-
 $t->join();
+unset($t);
 --EXPECTF--
 Hello Some
 Hello World
