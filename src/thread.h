@@ -41,7 +41,6 @@ typedef struct _pthreads_ident_t {
 typedef struct _pthread_construct {
 	pthread_t thread;
 	uint scope;
-	zend_bool hold;
 	zend_ulong options;
 	pthreads_monitor_t *monitor;
 	pthreads_ident_t 	creator;
