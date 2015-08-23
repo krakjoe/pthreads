@@ -93,7 +93,7 @@ zend_function_entry pthreads_thread_methods[] = {
 		$options should be a mask of inheritance constants */
 PHP_METHOD(Thread, start)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 	zend_long options = PTHREADS_INHERIT_ALL;
 	
 	if (ZEND_NUM_ARGS()) {
@@ -111,7 +111,7 @@ PHP_METHOD(Thread, start)
 	Will return true if a Thread has been started */
 PHP_METHOD(Thread, isStarted)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 
 	RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_STARTED));
 } /* }}} */
@@ -120,7 +120,7 @@ PHP_METHOD(Thread, isStarted)
 	Will return true if a Thread has been joined already */
 PHP_METHOD(Thread, isJoined)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 
 	RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED));
 } /* }}} */
@@ -129,7 +129,7 @@ PHP_METHOD(Thread, isJoined)
 		Will return a boolean indication of success */
 PHP_METHOD(Thread, join) 
 { 
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 
 	RETURN_BOOL(pthreads_join(thread));
 } /* }}} */
@@ -166,23 +166,19 @@ PHP_METHOD(Thread, getCreatorId)
 	Will kill the referenced thread, forcefully */
 PHP_METHOD(Thread, kill) 
 {
+	pthreads_object_t* thread = PTHREADS_FETCH;
+
     if (zend_parse_parameters_none() != SUCCESS) {
         return;
     }
-
-    {
-    	PTHREAD thread = PTHREADS_FETCH;
-    	/* allowing sending other signals here is just too dangerous */
-    	RETURN_BOOL(
-    		pthread_kill(thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
-    }
-
+	
+	RETURN_BOOL(pthread_kill(thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
 } /* }}} */
 
 /* {{{ */
 PHP_METHOD(Thread, __destruct)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 
 	if (PTHREADS_IN_CREATOR(thread) && !PTHREADS_IS_CONNECTION(thread)) {
 		if (!pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {

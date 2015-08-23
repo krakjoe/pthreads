@@ -35,26 +35,26 @@ void pthreads_collectable_set_garbage(zval *object);
 #	ifndef HAVE_PTHREADS_CLASS_COLLECTABLE
 #	define HAVE_PTHREADS_CLASS_COLLECTABLE
 zend_bool pthreads_collectable_is_garbage(zval *object) {
-	PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	pthreads_object_t* collectable = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zval garbage;
 	zend_bool is_garbage = 0;
 	
-	if (pthreads_monitor_lock(pobject->monitor)) {
-		if (!pthreads_monitor_check(pobject->monitor, PTHREADS_MONITOR_RUNNING)) {
-			if (zend_read_property(pobject->std.ce, object, ZEND_STRL("garbage"), 1, &garbage)) {
+	if (pthreads_monitor_lock(collectable->monitor)) {
+		if (!pthreads_monitor_check(collectable->monitor, PTHREADS_MONITOR_RUNNING)) {
+			if (zend_read_property(collectable->std.ce, object, ZEND_STRL("garbage"), 1, &garbage)) {
 				is_garbage = 
 					zend_is_true(&garbage);
 				zval_dtor(&garbage);
 			}
 		}
-		pthreads_monitor_unlock(pobject->monitor);
+		pthreads_monitor_unlock(collectable->monitor);
 	}
 
 	return is_garbage;
 }
 
 void pthreads_collectable_set_garbage(zval *object) {
-	PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	pthreads_object_t* collectable = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	
 	if (pthreads_collectable_is_garbage(object)) {
 		zend_throw_exception
@@ -62,7 +62,7 @@ void pthreads_collectable_set_garbage(zval *object) {
 		return;
 	}
 	
-	zend_update_property_bool(pobject->std.ce, object, ZEND_STRL("garbage"), 1);
+	zend_update_property_bool(collectable->std.ce, object, ZEND_STRL("garbage"), 1);
 }
 
 zend_function_entry pthreads_collectable_methods[] = {
@@ -84,13 +84,13 @@ PHP_METHOD(Collectable, isGarbage) {
 /* {{{ proto bool Collectable::setGarbage(void)
 	Should be called once per object when the object is finished being executed or referenced */
 PHP_METHOD(Collectable, setGarbage) {
-	PTHREAD pobject = PTHREADS_FETCH;
+	pthreads_object_t* collectable = PTHREADS_FETCH;
 	
 	if (zend_parse_parameters_none() != SUCCESS) {
 		return;
 	}
 	
-	zend_update_property_bool(pobject->std.ce, getThis(), ZEND_STRL("garbage"), 1);
+	zend_update_property_bool(collectable->std.ce, getThis(), ZEND_STRL("garbage"), 1);
 } /* }}} */
 #	endif
 #endif

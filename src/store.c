@@ -61,8 +61,8 @@ static inline void pthreads_store_storage_table_dtor (zval *element) {
 } /* }}} */
 
 /* {{{ allocate storage for an object */
-pthreads_store pthreads_store_alloc(pthreads_monitor_t *monitor) {
-	pthreads_store store = (pthreads_store) calloc(1, sizeof(*store));
+pthreads_store_t* pthreads_store_alloc(pthreads_monitor_t *monitor) {
+	pthreads_store_t *store = (pthreads_store_t*) calloc(1, sizeof(pthreads_store_t));
 
 	if (store) {
 		zend_hash_init(
@@ -75,7 +75,7 @@ pthreads_store pthreads_store_alloc(pthreads_monitor_t *monitor) {
 } /* }}} */
 
 /* {{{ delete a value from the store */
-int pthreads_store_delete(pthreads_store store, zend_string *key) {
+int pthreads_store_delete(pthreads_store_t *store, zend_string *key) {
 	int result = FAILURE;
 	
 	if (pthreads_monitor_lock(store->monitor)) {
@@ -90,7 +90,7 @@ int pthreads_store_delete(pthreads_store store, zend_string *key) {
 /* }}} */
 
 /* {{{ isset helper for handlers */
-zend_bool pthreads_store_isset(pthreads_store store, zend_string *key, int has_set_exists) {
+zend_bool pthreads_store_isset(pthreads_store_t *store, zend_string *key, int has_set_exists) {
 	zend_bool isset = 0;
 
 	if (pthreads_monitor_lock(store->monitor)) {
@@ -146,7 +146,7 @@ zend_bool pthreads_store_isset(pthreads_store store, zend_string *key, int has_s
 } /* }}} */
 
 /* {{{ read a value from store */
-int pthreads_store_read(pthreads_store store, zend_string *key, zval *read) {
+int pthreads_store_read(pthreads_store_t *store, zend_string *key, zval *read) {
 	int result = FAILURE;
 
 	if (pthreads_monitor_lock(store->monitor)) {
@@ -165,7 +165,7 @@ int pthreads_store_read(pthreads_store store, zend_string *key, zval *read) {
 } /* }}} */
 
 /* {{{ write a value to store */
-int pthreads_store_write(pthreads_store store, zend_string *key, zval *write) {
+int pthreads_store_write(pthreads_store_t *store, zend_string *key, zval *write) {
 	int result = FAILURE;
 	zend_string *keyed = zend_string_init(key->val, key->len, 1);
 	pthreads_storage *storage = pthreads_store_create(write, 1);
@@ -215,12 +215,12 @@ void pthreads_store_separate_zval(zval *zv) {
 
 /* {{{ count properties */
 int pthreads_store_count(zval *object, zend_long *count) {
-	PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-   
-	if (pthreads_monitor_lock(pthreads->monitor)) {
+	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	if (pthreads_monitor_lock(threaded->monitor)) {
 		(*count) = zend_hash_num_elements(
-		    &pthreads->store->table);
-		pthreads_monitor_unlock(pthreads->monitor);
+		    &threaded->store->table);
+		pthreads_monitor_unlock(threaded->monitor);
 	} else (*count) = 0L;
    
 	return SUCCESS;
@@ -228,24 +228,24 @@ int pthreads_store_count(zval *object, zend_long *count) {
 
 /* {{{ shift member */
 int pthreads_store_shift(zval *object, zval *member) {
-	PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
    
-	if (pthreads_monitor_lock(pthreads->monitor)) {
+	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_string *key;
 		zend_ulong index;
 		HashPosition position;
 		pthreads_storage *storage;
 
-		zend_hash_internal_pointer_reset_ex(&pthreads->store->table, &position);
-		if ((storage = zend_hash_get_current_data_ptr_ex(&pthreads->store->table, &position))) {
+		zend_hash_internal_pointer_reset_ex(&threaded->store->table, &position);
+		if ((storage = zend_hash_get_current_data_ptr_ex(&threaded->store->table, &position))) {
 			int type = zend_hash_get_current_key_ex(
-				&pthreads->store->table, &key, &index, &position);
+				&threaded->store->table, &key, &index, &position);
 			pthreads_store_convert(storage, member);
 			if (type == HASH_KEY_IS_STRING)
-				zend_hash_del(&pthreads->store->table, key);
-			else zend_hash_index_del(&pthreads->store->table, index);
+				zend_hash_del(&threaded->store->table, key);
+			else zend_hash_index_del(&threaded->store->table, index);
 		} else ZVAL_NULL(member);
-		pthreads_monitor_unlock(pthreads->monitor);
+		pthreads_monitor_unlock(threaded->monitor);
 
 		return SUCCESS;
 	}
@@ -255,9 +255,9 @@ int pthreads_store_shift(zval *object, zval *member) {
 
 /* {{{ store chunk */
 int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval *chunk) {
-   PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+   pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
    
-   if (pthreads_monitor_lock(pthreads->monitor)) {
+   if (pthreads_monitor_lock(threaded->monitor)) {
 	/* do chunk */
 	HashPosition position;
 	pthreads_storage *storage;
@@ -265,12 +265,12 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 	zend_ulong index;
 	
 	array_init(chunk);
-	zend_hash_internal_pointer_reset_ex(&pthreads->store->table, &position);
+	zend_hash_internal_pointer_reset_ex(&threaded->store->table, &position);
 	while((zend_hash_num_elements(Z_ARRVAL_P(chunk)) < size) &&
-	      (storage = zend_hash_get_current_data_ptr_ex(&pthreads->store->table, &position))) {
+	      (storage = zend_hash_get_current_data_ptr_ex(&threaded->store->table, &position))) {
 		zval zv;
 		int type = zend_hash_get_current_key_ex(
-			&pthreads->store->table, &key, &index, &position);
+			&threaded->store->table, &key, &index, &position);
 		pthreads_store_convert(storage, &zv);
 		switch (type) {
 			case HASH_KEY_IS_STRING:
@@ -281,12 +281,12 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 				zend_hash_index_update(Z_ARRVAL_P(chunk), index, &zv);
 			break;
 		}
-		zend_hash_move_forward_ex(&pthreads->store->table, &position);
+		zend_hash_move_forward_ex(&threaded->store->table, &position);
 		if (type == HASH_KEY_IS_STRING)
-			zend_hash_del(&pthreads->store->table, key);
-		else zend_hash_index_del(&pthreads->store->table, index);
+			zend_hash_del(&threaded->store->table, key);
+		else zend_hash_index_del(&threaded->store->table, index);
 	}	
-        pthreads_monitor_unlock(pthreads->monitor);
+        pthreads_monitor_unlock(threaded->monitor);
      
 	return SUCCESS;
     }
@@ -296,25 +296,25 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 
 /* {{{ pop member */
 int pthreads_store_pop(zval *object, zval *member) {
-   PTHREAD pthreads = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+   pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
    
-   if (pthreads_monitor_lock(pthreads->monitor)) {
+   if (pthreads_monitor_lock(threaded->monitor)) {
 	zend_string *key;
 	zend_ulong index;
 	HashPosition position;
 	pthreads_storage *storage;
 	
-	zend_hash_internal_pointer_end_ex(&pthreads->store->table, &position);
-	if ((storage = zend_hash_get_current_data_ptr_ex(&pthreads->store->table, &position))) {
+	zend_hash_internal_pointer_end_ex(&threaded->store->table, &position);
+	if ((storage = zend_hash_get_current_data_ptr_ex(&threaded->store->table, &position))) {
 		int type = zend_hash_get_current_key_ex(
-			&pthreads->store->table, &key, &index, &position);
+			&threaded->store->table, &key, &index, &position);
 		pthreads_store_convert(storage, member);
 		if (type == HASH_KEY_IS_STRING)
-			zend_hash_del(&pthreads->store->table, key);
-		else zend_hash_index_del(&pthreads->store->table, index);
+			zend_hash_del(&threaded->store->table, key);
+		else zend_hash_index_del(&threaded->store->table, index);
 	} else ZVAL_NULL(member);
 	
-        pthreads_monitor_unlock(pthreads->monitor);
+        pthreads_monitor_unlock(threaded->monitor);
         
         return SUCCESS;
     }
@@ -323,7 +323,7 @@ int pthreads_store_pop(zval *object, zval *member) {
 } /* }}} */
 
 /* {{{ */
-void pthreads_store_keys(pthreads_store store, HashTable *keys, HashPosition *position) {
+void pthreads_store_keys(pthreads_store_t *store, HashTable *keys, HashPosition *position) {
 	
 	if (pthreads_monitor_lock(store->monitor)) {
 		zend_string *key;
@@ -345,7 +345,7 @@ void pthreads_store_keys(pthreads_store store, HashTable *keys, HashPosition *po
 } /* }}} */
 
 /* {{{ copy store to hashtable */
-void pthreads_store_tohash(pthreads_store store, HashTable *hash) {
+void pthreads_store_tohash(pthreads_store_t *store, HashTable *hash) {
 	
 	/* php is reusing this hash and making things misbehave */
 	zend_hash_clean(hash);
@@ -375,7 +375,7 @@ void pthreads_store_tohash(pthreads_store store, HashTable *hash) {
 } /* }}} */
 
 /* {{{ free store storage for a thread */
-void pthreads_store_free(pthreads_store store){
+void pthreads_store_free(pthreads_store_t *store){
 	if (pthreads_monitor_lock(store->monitor)) {
 		zend_hash_destroy(&store->table);
 		pthreads_monitor_unlock(store->monitor);
@@ -525,20 +525,20 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 		} break;
 
 		case IS_PTHREADS: {
-			PTHREAD address = PTHREADS_FETCH_FROM(storage->data);
+			pthreads_object_t* threaded = PTHREADS_FETCH_FROM(storage->data);
 			
-			if (address && pthreads_globals_object_validate((zend_ulong)address)) {
+			if (threaded && pthreads_globals_object_validate((zend_ulong)threaded)) {
 				zend_class_entry *ce;
 
-				if (address->creator.ls == TSRMLS_CACHE) {
-					ZVAL_OBJ(pzval, &address->std);
+				if (threaded->creator.ls == TSRMLS_CACHE) {
+					ZVAL_OBJ(pzval, &threaded->std);
 					Z_ADDREF_P(pzval);
 					result = SUCCESS;
 				} else {
-					ce = zend_lookup_class(address->std.ce->name);
+					ce = zend_lookup_class(threaded->std.ce->name);
 
 					if (object_init_ex(pzval, ce) == SUCCESS) {
-						pthreads_connect(address, PTHREADS_FETCH_FROM(Z_OBJ_P(pzval)));
+						pthreads_connect(threaded, PTHREADS_FETCH_FROM(Z_OBJ_P(pzval)));
 						result = SUCCESS;
 					} else {
 						result = FAILURE;
@@ -653,25 +653,25 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
         case IS_OBJECT: {
             /* check for a suitable pthreads object */
             if (IS_PTHREADS_OBJECT(from)) {
-                PTHREAD pobjects[2] = {PTHREADS_FETCH_FROM(Z_OBJ_P(destination)), PTHREADS_FETCH_FROM(Z_OBJ_P(from))};
+                pthreads_object_t* threaded[2] = {PTHREADS_FETCH_FROM(Z_OBJ_P(destination)), PTHREADS_FETCH_FROM(Z_OBJ_P(from))};
                 
                 /* acquire destination lock */
-                if (pthreads_monitor_lock(pobjects[0]->monitor)) {
+                if (pthreads_monitor_lock(threaded[0]->monitor)) {
                     
                     /* acquire other lock */
-                    if (pthreads_monitor_lock(pobjects[1]->monitor)) {
+                    if (pthreads_monitor_lock(threaded[1]->monitor)) {
                         HashPosition position;
                         pthreads_storage *storage;
-                        HashTable *tables[2] = {&pobjects[0]->store->table, &pobjects[1]->store->table};
+                        HashTable *tables[2] = {&threaded[0]->store->table, &threaded	[1]->store->table};
 						zend_string *key = NULL;
                         zend_ulong idx = 0L;                        
-			
+
                         for (zend_hash_internal_pointer_reset_ex(tables[1], &position);
                              (storage = zend_hash_get_current_data_ptr_ex(tables[1], &position));
                              zend_hash_move_forward_ex(tables[1], &position)) {
 
                             if (zend_hash_get_current_key_ex(tables[1], &key, &idx, &position) == HASH_KEY_IS_STRING) {
-                                
+
                                 /* skip if not overwriting where the 
                                         entry exists in destination table */
                                 if (!overwrite && zend_hash_exists(tables[0], key)) {
@@ -683,28 +683,27 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
 
                                     /* copy storage */
                                     pthreads_storage copy;
-                                    
-				    memcpy(&copy, storage, sizeof(pthreads_storage));
+
+				    				memcpy(&copy, storage, sizeof(pthreads_storage));
 
                                     switch (copy.type) {
                                         case IS_STRING: {
                                         	copy.data = (char*) malloc(copy.length+1);
-		                                memcpy(
-		                                    copy.data, (const void*) storage->data, copy.length
-		                                );
+				                            memcpy(
+				                                copy.data, (const void*) storage->data, copy.length);
                                         } break;
                                         
                                         case IS_OBJECT:
-				        case IS_ARRAY: {
-				        	if (storage->length) {
+				        				case IS_ARRAY: {
+				        					if (storage->length) {
 		                                        copy.data = (char*) malloc(copy.length+1);
 		                                        memcpy(
 		                                            copy.data, (const void*) storage->data, copy.length
 		                                        );
                                         	}
-				        } break;
+				        				} break;
 				                        
-				        default: {  }
+				        				default: {  }
                                     }
 
                                     zend_hash_update_mem(tables[0], key, &copy, sizeof(pthreads_storage));
@@ -712,10 +711,10 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                             }
                         }
                         
-                        pthreads_monitor_unlock(pobjects[1]->monitor);
+                        pthreads_monitor_unlock(threaded[1]->monitor);
                     }
                     
-                    pthreads_monitor_unlock(pobjects[0]->monitor);
+                    pthreads_monitor_unlock(threaded[0]->monitor);
                     
                     return SUCCESS;
                     
@@ -726,9 +725,9 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
         /* fall through on purpose to handle normal objects and arrays */
         
         default: {
-           PTHREAD pobject = PTHREADS_FETCH_FROM(Z_OBJ_P(destination));
+           pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(destination));
            
-           if (pthreads_monitor_lock(pobject->monitor)) {
+           if (pthreads_monitor_lock(threaded->monitor)) {
                HashPosition position;
                zval *pzval;
                int32_t index = 0;
@@ -742,11 +741,11 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                     
                     switch (zend_hash_get_current_key_ex(table, &key, &idx, &position)) {
                         case HASH_KEY_IS_STRING: {
-                            if (!overwrite && zend_hash_exists(&pobject->store->table, key)) {
+                            if (!overwrite && zend_hash_exists(&threaded->store->table, key)) {
                                 goto next;
                             }
                             
-                            pthreads_store_write(pobject->store, key, pzval);
+                            pthreads_store_write(threaded->store, key, pzval);
                         } break;
                         
                         case HASH_KEY_IS_LONG: {
@@ -756,12 +755,12 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                             
                             convert_to_string(&zkey);
                             
-                            if (!overwrite && zend_hash_exists(&pobject->store->table, Z_STR(zkey))) {
+                            if (!overwrite && zend_hash_exists(&threaded->store->table, Z_STR(zkey))) {
                                 zval_dtor(&zkey);
                                 goto next;
                             }
                             
-                            pthreads_store_write(pobject->store, Z_STR(zkey), pzval);
+                            pthreads_store_write(threaded->store, Z_STR(zkey), pzval);
                             
                             zval_dtor(&zkey);
                         } break;
@@ -770,7 +769,7 @@ next:
                     index++;
                }
                
-               pthreads_monitor_unlock(pobject->monitor);
+               pthreads_monitor_unlock(threaded->monitor);
            }
         } break;
     }

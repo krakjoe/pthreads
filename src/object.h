@@ -34,10 +34,10 @@ void        pthreads_base_free(zend_object *object);
 /* }}} */
 
 /* {{{ stack management */
-uint32_t pthreads_stack_pop(PTHREAD thread, zval *work);
-uint32_t pthreads_stack_push(PTHREAD thread, zval *work);
-uint32_t pthreads_stack_collect(PTHREAD thread, pthreads_call_t *call);
-uint32_t pthreads_stack_length(PTHREAD thread);
+uint32_t pthreads_stack_pop(pthreads_object_t* thread, zval *work);
+uint32_t pthreads_stack_push(pthreads_object_t* thread, zval *work);
+uint32_t pthreads_stack_collect(pthreads_object_t* thread, pthreads_call_t *call);
+uint32_t pthreads_stack_length(pthreads_object_t* thread);
 /* }}} */
 
 /* {{{ MISC */
@@ -45,12 +45,12 @@ void pthreads_current_thread(zval *return_value);
 /* }}} */
 
 /* {{{ start/join */
-zend_bool pthreads_start(PTHREAD thread);
-zend_bool pthreads_join(PTHREAD thread);
+zend_bool pthreads_start(pthreads_object_t* thread);
+zend_bool pthreads_join(pthreads_object_t* thread);
 /* }}} */
 
 /* {{{ */
-int pthreads_connect(PTHREAD source, PTHREAD destination); /* }}} */
+int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination); /* }}} */
 
 /* {{{ handlers included here for access to macros above */
 #ifndef HAVE_PTHREADS_HANDLERS_H

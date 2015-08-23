@@ -45,7 +45,7 @@ static inline zend_object_iterator* pthreads_object_iterator_ctor(zend_class_ent
 	ZVAL_COPY(&iterator->object, object);
 
     {
-		PTHREAD pthreads = 
+		pthreads_object_t* pthreads = 
 			PTHREADS_FETCH_FROM(Z_OBJ(iterator->object));
 		pthreads_store_keys(pthreads->store, &iterator->keys, &iterator->position);
     }

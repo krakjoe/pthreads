@@ -26,11 +26,7 @@
 #	include <src/resources.h>
 #endif
 
-/* {{{ stack structure */
-typedef struct _pthreads_stack {
-	HashTable    objects;
-	HashPosition position;
-} *pthreads_stack; /* }}} */
+typedef HashTable pthreads_stack_t;
 
 typedef struct _pthreads_ident_t {
 	zend_ulong id;
@@ -38,23 +34,23 @@ typedef struct _pthreads_ident_t {
 } pthreads_ident_t;
 
 /* {{{ threaded structure */
-typedef struct _pthread_construct {
+typedef struct _pthreads_object_t {
 	pthread_t thread;
 	uint scope;
 	zend_ulong options;
-	pthreads_monitor_t *monitor;
+	pthreads_monitor_t	*monitor;
+	pthreads_store_t	*store;
+	pthreads_stack_t    *stack;
 	pthreads_ident_t 	creator;
 	pthreads_ident_t	local;
-	pthreads_store store;
-	pthreads_stack stack;
 	zend_object std;
-} *PTHREAD;
+} pthreads_object_t;
 
 /* {{{ fetches a PTHREAD from a specific object in the current context */
-#define PTHREADS_FETCH_FROM(object) (PTHREAD) (((char*)object) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
+#define PTHREADS_FETCH_FROM(object) ((pthreads_object_t*) (((char*)object) - XtOffsetOf(pthreads_object_t, std))) /* }}} */
 
 /* {{{ fetches the current PTHREAD from $this */
-#define PTHREADS_FETCH (PTHREAD) ((char*) Z_OBJ(EX(This)) - XtOffsetOf(struct _pthread_construct, std)) /* }}} */
+#define PTHREADS_FETCH ((pthreads_object_t*) ((char*) Z_OBJ(EX(This)) - XtOffsetOf(pthreads_object_t, std))) /* }}} */
 
 /* {{{ option constants */
 #define PTHREADS_INHERIT_NONE      0x00000000

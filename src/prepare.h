@@ -23,8 +23,8 @@
 #endif
 
 /* {{{ fetch prepared class entry */
-zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate); /* }}} */
+zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate); /* }}} */
 
 /* {{{ prepare for execution in context */
-int pthreads_prepare(PTHREAD thread); /* }}} */
+int pthreads_prepare(pthreads_object_t* thread); /* }}} */
 #endif

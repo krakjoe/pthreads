@@ -60,7 +60,7 @@ zend_function_entry pthreads_worker_methods[] = {
 	Pushes an item onto the stack, returns the size of stack */
 PHP_METHOD(Worker, stack)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 	zval 	*work;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
@@ -72,7 +72,7 @@ PHP_METHOD(Worker, stack)
 	Removes an item from the stack, if no item is specified the stack is cleared, returns the size of stack */
 PHP_METHOD(Worker, unstack)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 	zval * work;
 	
 	if (ZEND_NUM_ARGS() > 0) {
@@ -86,7 +86,7 @@ PHP_METHOD(Worker, unstack)
 	Returns the current size of the stack */
 PHP_METHOD(Worker, getStacked)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 
 	RETURN_LONG(pthreads_stack_length(thread));
 }
@@ -95,7 +95,7 @@ PHP_METHOD(Worker, getStacked)
 	Will return true if the Worker has been shutdown */
 PHP_METHOD(Worker, isShutdown)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 
 	RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED));
 } /* }}} */
@@ -104,7 +104,7 @@ PHP_METHOD(Worker, isShutdown)
 		Will wait for execution of all Stackables to complete before shutting down the Worker */
 PHP_METHOD(Worker, shutdown) 
 { 
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* thread = PTHREADS_FETCH;
 
 	RETURN_BOOL(pthreads_join(thread));
 } /* }}} */

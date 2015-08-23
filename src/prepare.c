@@ -39,13 +39,13 @@
 #endif
 
 /* {{{ */
-static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, zend_trait_alias *alias); 
-static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREAD thread, zend_trait_precedence *precedence);
-static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference);
+static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_t* thread, zend_trait_alias *alias); 
+static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(pthreads_object_t* thread, zend_trait_precedence *precedence);
+static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference);
 static void pthreads_prepared_resource_dtor(zval *zv); /* }}} */
 
 /* {{{ */
-static zend_class_entry* pthreads_copy_entry(PTHREAD thread, zend_class_entry *candidate) {
+static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
 	zend_class_entry *prepared;
 
 	if (candidate->ce_flags & ZEND_ACC_ANON_CLASS) {
@@ -323,7 +323,7 @@ while(0)
 /* {{{ */
 static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int argc, va_list argv, zend_hash_key *key) {
 	zend_function *function = (zend_function*) Z_PTR_P(bucket);
-	PTHREAD thread = va_arg(argv, PTHREAD);	
+	pthreads_object_t* thread = va_arg(argv, pthreads_object_t*);	
 	zend_class_entry *prepared = va_arg(argv, zend_class_entry*);
 	zend_class_entry *candidate = va_arg(argv, zend_class_entry*);
 	zend_class_entry *scope = function->common.scope;
@@ -349,7 +349,7 @@ static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int arg
 } /* }}} */
 
 /* {{{ */
-zend_class_entry* pthreads_prepared_entry(PTHREAD thread, zend_class_entry *candidate) {
+zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
 	zend_class_entry *prepared = NULL;
 	zend_string *lookup = NULL;
 
@@ -396,7 +396,7 @@ static inline zend_bool pthreads_constant_exists(zend_string *name) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_ini(PTHREAD thread) {
+static inline void pthreads_prepare_ini(pthreads_object_t* thread) {
 	zend_ini_entry *entry[2];
 	zend_string *name;
 	HashTable *table[2] = {PTHREADS_EG(thread->creator.ls, ini_directives), EG(ini_directives)};
@@ -434,7 +434,7 @@ static inline void pthreads_prepare_ini(PTHREAD thread) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_constants(PTHREAD thread) {
+static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
 	zend_constant *zconstant;
 	zend_string *name;
 	
@@ -473,7 +473,7 @@ static inline void pthreads_prepare_constants(PTHREAD thread) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_functions(PTHREAD thread) {
+static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
 	zend_string *key;
 	zend_function *value;
 
@@ -487,7 +487,7 @@ static inline void pthreads_prepare_functions(PTHREAD thread) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_classes(PTHREAD thread) {
+static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 	zend_class_entry *entry, *prepared;
 	zend_string *name;
 	HashTable inherited;
@@ -518,7 +518,7 @@ static inline void pthreads_prepare_classes(PTHREAD thread) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_includes(PTHREAD thread) {
+static inline void pthreads_prepare_includes(pthreads_object_t* thread) {
 	zend_string *file;
 	ZEND_HASH_FOREACH_STR_KEY(&PTHREADS_EG(thread->creator.ls, included_files), file) {
 		zend_hash_add_empty_element(&EG(included_files), file);
@@ -526,7 +526,7 @@ static inline void pthreads_prepare_includes(PTHREAD thread) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_exception_handler(PTHREAD thread) {
+static inline void pthreads_prepare_exception_handler(pthreads_object_t* thread) {
 	if (Z_TYPE(PTHREADS_EG(thread->creator.ls, user_exception_handler)) != IS_UNDEF) {
 		pthreads_store_separate(
 			&PTHREADS_EG(thread->creator.ls, user_exception_handler), 
@@ -535,14 +535,14 @@ static inline void pthreads_prepare_exception_handler(PTHREAD thread) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_resource_destructor(PTHREAD thread) {
+static inline void pthreads_prepare_resource_destructor(pthreads_object_t* thread) {
 	if (!PTHREADS_G(default_resource_dtor))
 		PTHREADS_G(default_resource_dtor)=(EG(regular_list).pDestructor);
 	EG(regular_list).pDestructor =  (dtor_func_t) pthreads_prepared_resource_dtor;	
 } /* }}} */
 
 /* {{{ */
-int pthreads_prepare(PTHREAD thread){
+int pthreads_prepare(pthreads_object_t* thread){
 	if (thread->options & PTHREADS_INHERIT_INI)
 		pthreads_prepare_ini(thread);
 	
@@ -565,7 +565,7 @@ int pthreads_prepare(PTHREAD thread){
 } /* }}} */
 
 /* {{{ */
-static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, zend_trait_alias *alias) {
+static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_t* thread, zend_trait_alias *alias) {
 	zend_trait_alias *copy = ecalloc(1, sizeof(zend_trait_alias));
 	if (copy) {
 		if (copy->trait_method) {
@@ -579,7 +579,7 @@ static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, 
 } /* }}} */
 
 /* {{{ */
-static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREAD thread, zend_trait_precedence *precedence) {
+static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(pthreads_object_t* thread, zend_trait_precedence *precedence) {
 	zend_trait_precedence *copy = ecalloc(1, sizeof(zend_trait_precedence));
 	if (copy) {
 		copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, precedence->trait_method);
@@ -595,7 +595,7 @@ static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(PTHREA
 } /* }}} */
 
 /* {{{  */
-static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(PTHREAD thread, zend_trait_method_reference *reference) {
+static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference) {
 	zend_trait_method_reference *copy = ecalloc(1, sizeof(zend_trait_method_reference));
 	if (copy) {
 		copy->method_name = zend_string_new(reference->method_name);

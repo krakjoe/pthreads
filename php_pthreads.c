@@ -210,7 +210,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	
 	memcpy(&pthreads_handlers, zend_handlers, sizeof(zend_object_handlers));
 
-	pthreads_handlers.offset = XtOffsetOf(struct _pthread_construct, std);
+	pthreads_handlers.offset = XtOffsetOf(pthreads_object_t, std);
 
 	pthreads_handlers.free_obj = pthreads_base_free;
 	pthreads_handlers.cast_object = pthreads_cast_object;

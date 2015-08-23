@@ -121,17 +121,11 @@ PHP_METHOD(Threaded, getRefCount) 	{ RETURN_LONG(Z_REFCOUNT_P(getThis())); } /* 
 		Otherwise returns a boolean indication of success */
 PHP_METHOD(Threaded, wait)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* threaded = PTHREADS_FETCH;
 	zend_long timeout = 0L;
-	
-	if (thread) {
-		if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &timeout)==SUCCESS) {
-			RETURN_BOOL(pthreads_monitor_wait(thread->monitor, timeout) == SUCCESS);
-		}
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while preparing to wait for a %s", PTHREADS_NAME);
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &timeout)==SUCCESS) {
+		RETURN_BOOL(pthreads_monitor_wait(threaded->monitor, timeout) == SUCCESS);
 	}
 } /* }}} */
 
@@ -140,45 +134,27 @@ PHP_METHOD(Threaded, wait)
 		Will return a boolean indication of success */
 PHP_METHOD(Threaded, notify)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* threaded = PTHREADS_FETCH;
 
-	if (thread) {
-		RETURN_BOOL(pthreads_monitor_notify(thread->monitor));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while preparing to notify a %s", PTHREADS_NAME);
-	}
+	RETURN_BOOL(pthreads_monitor_notify(threaded->monitor));
 } /* }}} */
 
 /* {{{ proto boolean Threaded::isRunning() 
 	Will return true while the referenced Threaded is being executed by a Worker */
 PHP_METHOD(Threaded, isRunning)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* threaded = PTHREADS_FETCH;
 	
-	if (thread) {
-		RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_RUNNING));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);		
-	}
+	RETURN_BOOL(pthreads_monitor_check(threaded->monitor, PTHREADS_MONITOR_RUNNING));
 } /* }}} */
 
 /* {{{ proto boolean Threaded::isTerminated() 
 	Will return true if the referenced Threaded suffered fatal errors or uncaught exceptions */
 PHP_METHOD(Threaded, isTerminated)
 {
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* threaded = PTHREADS_FETCH;
 	
-	if (thread) {
-		RETURN_BOOL(pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_ERROR));
-	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads has experienced an internal error while preparing to read the state of a %s", PTHREADS_NAME);	
-	}
+	RETURN_BOOL(pthreads_monitor_check(threaded->monitor, PTHREADS_MONITOR_ERROR));
 } /* }}} */
 
 /* {{{ proto void Threaded::synchronized(Callable function, ...)
@@ -189,7 +165,7 @@ PHP_METHOD(Threaded, synchronized)
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
 	uint argc = 0;
 	zval *argv = NULL;
-	PTHREAD thread = PTHREADS_FETCH;
+	pthreads_object_t* threaded= PTHREADS_FETCH;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f|+", &call.fci, &call.fcc, &argv, &argc) != SUCCESS) {
 		return;
@@ -200,10 +176,10 @@ PHP_METHOD(Threaded, synchronized)
 	call.fci.retval = return_value;
 	call.fci.no_separation = 1;
 	
-	call.fci.object = &thread->std;
-	call.fcc.object = &thread->std;
+	call.fci.object = &threaded->std;
+	call.fcc.object = &threaded->std;
 
-	if (pthreads_monitor_lock(thread->monitor)) {
+	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_try {
 			/* call the closure */
 			zend_call_function(&call.fci, &call.fcc);
@@ -211,7 +187,7 @@ PHP_METHOD(Threaded, synchronized)
 			ZVAL_UNDEF(return_value);
 		} zend_end_try ();
 		
-		pthreads_monitor_unlock(thread->monitor);
+		pthreads_monitor_unlock(threaded->monitor);
 	}
 	
 	zend_fcall_info_args_clear(&call.fci, 1);
