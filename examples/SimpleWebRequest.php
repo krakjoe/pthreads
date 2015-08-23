@@ -1,7 +1,7 @@
 <?php
 error_reporting(E_ALL);
 
-class AsyncWebRequest extends Thread {
+class WebRequest extends Thread {
 	public $url;
 	public $data;
 	
@@ -21,7 +21,7 @@ class AsyncWebRequest extends Thread {
 }
 
 $t = microtime(true);
-$g = new AsyncWebRequest(sprintf("http://www.google.com/?q=%s", rand()*10));
+$g = new WebRequest(sprintf("http://www.google.com/?q=%s", rand()*10));
 /* starting synchronized */
 if($g->start()){
 	printf("Request took %f seconds to start ", microtime(true)-$t);
