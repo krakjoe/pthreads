@@ -7,9 +7,9 @@ This test verifies that reaching at timeout returns the correct value
 class T extends Thread {
         public $data;
         public function run() {
-            $this->synchronized(function($thread){
-				usleep(100000);
-			}, $this);               
+            $this->synchronized(function(){
+				$this->wait(1000000);
+			});
         }
 }
 $t = new T;
