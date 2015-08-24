@@ -242,15 +242,14 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 		return 0;
 	}
 
-	if (pthreads_monitor_lock(thread->monitor)) {
-		if (pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
-			zend_throw_exception_ex(spl_ce_RuntimeException, 0,
-				"the creator of %s already joined with it",
-				thread->std.ce->name->val);
-			pthreads_monitor_unlock(thread->monitor);
-			return 0;
-		}
+	if (pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+			"the creator of %s already joined with it",
+			thread->std.ce->name->val);
+		return 0;
+	}
 
+	if (pthreads_monitor_lock(thread->monitor)) {
 		pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_JOINED);
 		pthreads_monitor_notify(thread->monitor);
 		pthreads_monitor_unlock(thread->monitor);

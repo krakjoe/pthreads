@@ -31,14 +31,14 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_isShutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_stack, 0, 0, 1)
-	ZEND_ARG_INFO(0, work)
+	ZEND_ARG_OBJ_INFO(0, work, Collectable, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_unstack, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_collect, 0, 0, 1)
-	ZEND_ARG_INFO(0, function)
+	ZEND_ARG_OBJ_INFO(0, function, Closure, 0)
 ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_worker_methods[];

@@ -25,26 +25,26 @@ PHP_METHOD(Pool, collect);
 PHP_METHOD(Pool, shutdown);
 
 ZEND_BEGIN_ARG_INFO_EX(Pool___construct, 0, 0, 1)
-	ZEND_ARG_INFO(0, size)
-	ZEND_ARG_INFO(0, class)
-	ZEND_ARG_INFO(0, ctor)
+	ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(0, class, IS_STRING, 1)
+	ZEND_ARG_TYPE_INFO(0, ctor, IS_ARRAY, 1)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_resize, 0, 0, 1)
-	ZEND_ARG_INFO(0, size)
+	ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_submit, 0, 0, 1)
-	ZEND_ARG_INFO(0, task)
+	ZEND_ARG_OBJ_INFO(0, task, Collectable, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_submitTo, 0, 0, 2)
-	ZEND_ARG_INFO(0, worker)
-	ZEND_ARG_INFO(0, task)
+	ZEND_ARG_TYPE_INFO(0, worker, IS_LONG, 0)
+	ZEND_ARG_OBJ_INFO(0, task, Collectable, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_collect, 0, 0, 1)
-	ZEND_ARG_INFO(0, collector)
+	ZEND_ARG_OBJ_INFO(0, collector, Closure, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_noargs, 0, 0, 0)
@@ -152,7 +152,7 @@ PHP_METHOD(Pool, submit) {
 	if (Z_TYPE_P(workers) != IS_ARRAY)
 		array_init(workers);
 	
-	if (Z_LVAL_P(last) >= Z_LVAL_P(size)) 
+	if (Z_LVAL_P(last) >= Z_LVAL_P(size))
 		ZVAL_LONG(last, 0);
 
 	if (!(selected = zend_hash_index_find(Z_ARRVAL_P(workers), Z_LVAL_P(last)))) {
@@ -231,7 +231,7 @@ PHP_METHOD(Pool, submit) {
 	Z_LVAL_P(last)++;
 } /* }}} */
 
-/* {{{ proto integer Pool::submitTo(integer $worker, Threaded task) 
+/* {{{ proto integer Pool::submitTo(integer $worker, Collectable task) 
 	Will submit the given task to the specified worker */
 PHP_METHOD(Pool, submitTo) {
 	zval *task = NULL;
@@ -239,7 +239,7 @@ PHP_METHOD(Pool, submitTo) {
 	zend_long worker = 0;
 	zval *selected = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lO", &worker, &task, pthreads_threaded_entry) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lO", &worker, &task, pthreads_collectable_entry) != SUCCESS) {
 		return;
 	}
 	

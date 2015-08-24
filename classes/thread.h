@@ -29,7 +29,7 @@ PHP_METHOD(Thread, kill);
 PHP_METHOD(Thread, __destruct);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
-    ZEND_ARG_INFO(0, options)
+    ZEND_ARG_TYPE_INFO(0, options, IS_LONG, 1)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
@@ -61,7 +61,7 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_merge, 0, 0, 1)
     ZEND_ARG_INFO(0, from)
-    ZEND_ARG_INFO(0, overwrite)
+    ZEND_ARG_TYPE_INFO(0, overwrite, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_kill, 0, 0, 0)
