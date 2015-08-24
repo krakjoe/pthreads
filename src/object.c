@@ -249,15 +249,9 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 		return 0;
 	}
 
-	if (pthreads_monitor_lock(thread->monitor)) {
-		pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_JOINED);
-		pthreads_monitor_notify(thread->monitor);
-		pthreads_monitor_unlock(thread->monitor);
+	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_JOINED);
 
-		return (pthread_join(thread->thread, NULL) == SUCCESS);
-	}
-	
-	return 0;
+	return (pthread_join(thread->thread, NULL) == SUCCESS);
 } /* }}} */
 
 #ifdef PTHREADS_KILL_SIGNAL
