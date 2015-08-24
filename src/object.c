@@ -334,25 +334,14 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 static void * pthreads_routine(void *arg) {
 	pthreads_object_t* thread = (pthreads_object_t*) arg;
 
-#ifdef PTHREADS_PEDANTIC
-	zend_bool  glocked = 0;
-#endif
-	zval that;
-
 #ifdef PTHREADS_KILL_SIGNAL
 	signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
 #endif
 
-	thread->local.ls 
-		= tsrm_new_interpreter_context();
+	thread->local.id = pthreads_self();
+	thread->local.ls = tsrm_new_interpreter_context();
 	tsrm_set_interpreter_context(thread->local.ls);
 	TSRMLS_CACHE_UPDATE();
-
-#ifdef PTHREADS_PEDANTIC
-	pthreads_globals_lock(&glocked);
-#endif
-
-	thread->local.id = pthreads_self();
 
 	SG(server_context) = PTHREADS_SG(thread->creator.ls, server_context);
 
@@ -373,7 +362,6 @@ static void * pthreads_routine(void *arg) {
 	php_request_startup();
 
 	SG(sapi_started) = 0;
-
 	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
 		SG(headers_sent)=1;
 		SG(request_info).no_headers = 1;
@@ -381,30 +369,23 @@ static void * pthreads_routine(void *arg) {
 
 	pthreads_prepare(thread);
 
-#ifdef PTHREADS_PEDANTIC
-	pthreads_globals_unlock(glocked);
-#endif
-
 	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_READY);
 
 	zend_first_try {
 		ZVAL_UNDEF(&PTHREADS_ZG(this));
-		object_init_ex(
-			&PTHREADS_ZG(this),
-			pthreads_prepared_entry(thread, thread->std.ce));
+		object_init_ex(&PTHREADS_ZG(this), pthreads_prepared_entry(thread, thread->std.ce));
 		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))));
-		
+
 		if (PTHREADS_IS_WORKER(thread)) {
 			zval stacked;
 
 			while (pthreads_stack_next(thread->stack, &stacked) != PTHREADS_MONITOR_JOINED) {
+				zval that;
 				pthreads_object_t* work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
 
 				object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
-				pthreads_store_write(
-					work->store, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
-				pthreads_routine_run_function(
-					work, PTHREADS_FETCH_FROM(Z_OBJ(that)));
+				pthreads_store_write(work->store, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
+				pthreads_routine_run_function(work, PTHREADS_FETCH_FROM(Z_OBJ(that)));
 				zval_dtor(&that);
 			}
 		}
@@ -416,14 +397,8 @@ static void * pthreads_routine(void *arg) {
 
 	PG(report_memleaks) = 0;
 
-#ifdef PTHREADS_PEDANTIC
-	pthreads_globals_lock(&glocked);
-#endif
 	php_request_shutdown((void*)NULL);
 
-#ifdef PTHREADS_PEDANTIC
-	pthreads_globals_unlock(glocked);
-#endif
 	tsrm_free_interpreter_context(TSRMLS_CACHE);
 
 	pthread_exit(NULL);
