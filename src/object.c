@@ -45,86 +45,6 @@ static void pthreads_base_clone(void *arg, void **pclone); /* }}} */
 static void * pthreads_routine(void *arg); /* }}} */
 
 /* {{{ */
-uint32_t pthreads_worker_pop(pthreads_object_t* thread, zval *work) {
-	uint32_t left = 0;
-
-	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
-		zend_throw_exception_ex(spl_ce_RuntimeException, 
-			0, "only the creator of this %s may pop from the stack", 
-			thread->std.ce->name->val);
-		return 0;
-	}
-
-	if (PTHREADS_IS_WORKER(thread)) {
-		left = (uint32_t) pthreads_stack_remove(
-			thread->stack, thread->stack->head, work, 1);
-	}
-
-	return left;
-} /* }}} */
-
-/* {{{ */
-uint32_t pthreads_worker_push(pthreads_object_t* thread, zval *work) {
-	uint32_t counted = 0;
-
-	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
-		zend_throw_exception_ex(spl_ce_RuntimeException,
-			0, "only the creator of this %s may push to the stack",
-			thread->std.ce->name->val);
-		return 0;
-	}
-
-	return pthreads_stack_add(thread->stack, work);;
-} /* }}} */
-
-/* {{{ */
-static inline zend_bool pthreads_worker_collect_function(pthreads_call_t *call, zval *collectable) {
-	zval result;
-	zend_bool remove = 0;
-
-	ZVAL_UNDEF(&result);
-
-	call->fci.retval = &result;
-	call->fci.no_separation = 1;
-
-	zend_fcall_info_argn(&call->fci, 1, collectable);
-
-	if (zend_call_function(&call->fci, &call->fcc) != SUCCESS) {
-		return remove;
-	}
-
-	zend_fcall_info_args_clear(&call->fci, 1);
-
-	if (Z_TYPE(result) != IS_UNDEF) {
-		if (zend_is_true(&result)) {
-			remove = 1;
-		}
-		zval_dtor(&result);
-	}
-
-	return remove;
-} /* }}} */
-
-/* {{{ */
-uint32_t pthreads_worker_collect(pthreads_object_t* thread, pthreads_call_t *call) {
-	uint32_t waiting = 0;
-
-	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
-		zend_throw_exception_ex(spl_ce_RuntimeException, 0,	
-			"only the creator of this %s may collect from the stack",
-			thread->std.ce->name->val);
-		return 0;
-	}	
-
-	return pthreads_stack_collect(thread->stack, call, pthreads_worker_collect_function);
-} /* }}} */
-
-/* {{{ */
-uint32_t pthreads_worker_length(pthreads_object_t* thread) {
-	return (uint32_t) pthreads_stack_size(thread->stack);
-} /* }}} */
-
-/* {{{ */
 zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 	pthreads_object_t* thread = pthreads_globals_object_alloc(
 		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
@@ -410,8 +330,6 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 	return 1;
 }
 
-extern zend_class_entry *pthreads_collectable_entry;
-
 /* {{{ */
 static void * pthreads_routine(void *arg) {
 	pthreads_object_t* thread = (pthreads_object_t*) arg;
@@ -479,22 +397,15 @@ static void * pthreads_routine(void *arg) {
 		if (PTHREADS_IS_WORKER(thread)) {
 			zval stacked;
 
-			while (pthreads_stack_shift(thread->stack, &stacked) != PTHREADS_MONITOR_JOINED) {
-				pthreads_object_t* work;
+			while (pthreads_stack_next(thread->stack, &stacked) != PTHREADS_MONITOR_JOINED) {
+				pthreads_object_t* work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
 
-				if (Z_TYPE(stacked) == IS_UNDEF) {
-					break;
-				}
-
-				work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
 				object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
 				pthreads_store_write(
 					work->store, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
 				pthreads_routine_run_function(
 					work, PTHREADS_FETCH_FROM(Z_OBJ(that)));
 				zval_dtor(&that);
-
-				ZVAL_UNDEF(&stacked);
 			}
 		}
 

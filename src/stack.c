@@ -56,7 +56,7 @@ size_t pthreads_stack_size(pthreads_stack_t *stack) {
 
 void pthreads_stack_free(pthreads_stack_t *stack) {
 	pthreads_monitor_t *monitor = stack->monitor;
-		
+
 	if (pthreads_monitor_lock(monitor)) {
 		pthreads_stack_item_t *item = stack->head;
 		while (item) {
@@ -111,7 +111,7 @@ size_t pthreads_stack_add(pthreads_stack_t *stack, zval *value) {
 	return size;
 }
 
-size_t pthreads_stack_remove(pthreads_stack_t *stack, pthreads_stack_item_t *item, zval *value, zend_bool garbage) {
+static inline size_t pthreads_stack_remove(pthreads_stack_t *stack, pthreads_stack_item_t *item, zval *value, zend_bool garbage) {
 	if (!item) {
 		value = NULL;
 		return 0;
@@ -147,6 +147,18 @@ size_t pthreads_stack_remove(pthreads_stack_t *stack, pthreads_stack_item_t *ite
 	return stack->size;
 }
 
+size_t pthreads_stack_del(pthreads_stack_t *stack, zval *value) {
+	size_t size = 0;
+	
+	if (pthreads_monitor_lock(stack->monitor)) {
+		size = pthreads_stack_remove(
+			stack, stack->head, value, 0);
+		pthreads_monitor_unlock(stack->monitor);
+	}
+
+	return size;
+}
+
 size_t pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call, pthreads_stack_collect_function_t collect) {
 	size_t size = 0;
 
@@ -173,7 +185,7 @@ size_t pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call, pt
 	return size;
 }
 
-pthreads_monitor_state_t pthreads_stack_shift(pthreads_stack_t *stack, zval *value) {
+pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *value) {
 	pthreads_monitor_state_t state = PTHREADS_MONITOR_RUNNING;
 	if (pthreads_monitor_lock(stack->monitor)) {
 		do {

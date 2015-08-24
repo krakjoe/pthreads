@@ -33,13 +33,6 @@ zend_object* pthreads_thread_ctor(zend_class_entry *entry);
 void        pthreads_base_free(zend_object *object);
 /* }}} */
 
-/* {{{ worker management */
-uint32_t pthreads_worker_pop(pthreads_object_t* thread, zval *work);
-uint32_t pthreads_worker_push(pthreads_object_t* thread, zval *work);
-uint32_t pthreads_worker_collect(pthreads_object_t* thread, pthreads_call_t *call);
-uint32_t pthreads_worker_length(pthreads_object_t* thread);
-/* }}} */
-
 /* {{{ MISC */
 void pthreads_current_thread(zval *return_value);
 /* }}} */

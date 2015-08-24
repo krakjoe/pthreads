@@ -45,8 +45,8 @@ pthreads_stack_t* pthreads_stack_alloc(pthreads_monitor_t *monitor);
 size_t pthreads_stack_size(pthreads_stack_t *stack);
 void pthreads_stack_free(pthreads_stack_t *stack);
 size_t pthreads_stack_add(pthreads_stack_t *stack, zval *value);
-size_t pthreads_stack_remove(pthreads_stack_t *stack, pthreads_stack_item_t *item, zval *value, zend_bool garbage);
+size_t pthreads_stack_del(pthreads_stack_t *stack, zval *value);
 size_t pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call, pthreads_stack_collect_function_t collect); 
-pthreads_monitor_state_t pthreads_stack_shift(pthreads_stack_t *stack, zval *value);
+pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *value);
 #endif
 

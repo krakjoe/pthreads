@@ -34,7 +34,6 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_stack, 0, 0, 1)
 	ZEND_ARG_INFO(0, work)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_unstack, 0, 0, 0)
-	ZEND_ARG_INFO(0, work)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -61,25 +60,40 @@ zend_function_entry pthreads_worker_methods[] = {
 PHP_METHOD(Worker, stack)
 {
 	pthreads_object_t* thread = PTHREADS_FETCH;
-	zval 	*work;
+	zval *work;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
-		RETURN_LONG(pthreads_worker_push(thread, work));
+	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException,
+			0, "only the creator of this %s may call stack",
+			thread->std.ce->name->val);
+		return;
 	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry) != SUCCESS) {
+		return;
+	}
+	
+	RETURN_LONG(pthreads_stack_add(thread->stack, work));	
 } /* }}} */
 
-/* {{{ proto int Worker::unstack([Collectable $work])
-	Removes an item from the stack, if no item is specified the stack is cleared, returns the size of stack */
+/* {{{ proto Collectable Worker::unstack()
+	Removes the first item from the stack */
 PHP_METHOD(Worker, unstack)
 {
 	pthreads_object_t* thread = PTHREADS_FETCH;
-	zval * work;
-	
-	if (ZEND_NUM_ARGS() > 0) {
-		if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
-			RETURN_LONG(pthreads_worker_pop(thread, work));
-		}
-	} else RETURN_LONG(pthreads_worker_pop(thread, NULL));
+
+	if (zend_parse_parameters_none() != SUCCESS) {
+		return;
+	}
+
+	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 
+			0, "only the creator of this %s may call unstack", 
+			thread->std.ce->name->val);
+		return;
+	}
+
+	RETURN_LONG(pthreads_stack_del(thread->stack, return_value));
 }
 
 /* {{{ proto int Worker::getStacked()
@@ -88,7 +102,7 @@ PHP_METHOD(Worker, getStacked)
 {
 	pthreads_object_t* thread = PTHREADS_FETCH;
 
-	RETURN_LONG(pthreads_worker_length(thread));
+	RETURN_LONG(pthreads_stack_size(thread->stack));
 }
 
 /* {{{ proto Worker::isShutdown()
@@ -123,16 +137,52 @@ PHP_METHOD(Worker, getCreatorId)
 	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->creator.id);
 } /* }}} */
 
-/* {{{ proto bool Worker::collect(callable function) */
-PHP_METHOD(Worker, collect) 
+/* {{{ */
+static zend_bool pthreads_worker_collect_function(pthreads_call_t *call, zval *collectable) {
+	zval result;
+	zend_bool remove = 0;
+
+	ZVAL_UNDEF(&result);
+
+	call->fci.retval = &result;
+	call->fci.no_separation = 1;
+
+	zend_fcall_info_argn(&call->fci, 1, collectable);
+
+	if (zend_call_function(&call->fci, &call->fcc) != SUCCESS) {
+		return remove;
+	}
+
+	zend_fcall_info_args_clear(&call->fci, 1);
+
+	if (Z_TYPE(result) != IS_UNDEF) {
+		if (zend_is_true(&result)) {
+			remove = 1;
+		}
+		zval_dtor(&result);
+	}
+
+	return remove;
+} /* }}} */
+
+/* {{{ proto int Worker::collect(callable function) */
+PHP_METHOD(Worker, collect)
 {
+	pthreads_object_t *thread = PTHREADS_FETCH;
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &call.fci, &call.fcc) != SUCCESS) {
 		return;
 	}
 
-	ZVAL_BOOL(return_value, pthreads_worker_collect(PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())), &call));
+	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0,	
+			"only the creator of this %s may call collect",
+			thread->std.ce->name->val);
+		return;
+	}
+
+	RETURN_LONG(pthreads_stack_collect(thread->stack, &call, pthreads_worker_collect_function));
 }
 #	endif
 #endif

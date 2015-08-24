@@ -23,7 +23,7 @@ $test->start();
 $test->join();
 ?>
 --EXPECTF--
-Fatal error: Uncaught RuntimeException: only the creator of this Worker may push to the stack in %s:10
+Fatal error: Uncaught RuntimeException: only the creator of this Worker may call stack in %s:10
 Stack trace:
 #0 %s(10): Worker->stack(Object(Collectable))
 #1 [internal function]: Test->run()
