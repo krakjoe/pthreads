@@ -26,8 +26,6 @@
 #	include <src/resources.h>
 #endif
 
-typedef HashTable pthreads_stack_t;
-
 typedef struct _pthreads_ident_t {
 	zend_ulong id;
 	void*** ls;

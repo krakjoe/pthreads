@@ -45,7 +45,7 @@ static void pthreads_base_clone(void *arg, void **pclone); /* }}} */
 static void * pthreads_routine(void *arg); /* }}} */
 
 /* {{{ */
-uint32_t pthreads_stack_pop(pthreads_object_t* thread, zval *work) {
+uint32_t pthreads_worker_pop(pthreads_object_t* thread, zval *work) {
 	uint32_t left = 0;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
@@ -55,21 +55,16 @@ uint32_t pthreads_stack_pop(pthreads_object_t* thread, zval *work) {
 		return 0;
 	}
 
-	if (pthreads_monitor_lock(thread->monitor)) {
-		if (PTHREADS_IS_WORKER(thread)) {
-			if (!work) {
-				zend_hash_destroy(thread->stack);
-			}
-			left = zend_hash_num_elements(thread->stack);
-		}
-		pthreads_monitor_unlock(thread->monitor);
+	if (PTHREADS_IS_WORKER(thread)) {
+		left = (uint32_t) pthreads_stack_remove(
+			thread->stack, thread->stack->head, work, 1);
 	}
 
 	return left;
 } /* }}} */
 
 /* {{{ */
-uint32_t pthreads_stack_push(pthreads_object_t* thread, zval *work) {
+uint32_t pthreads_worker_push(pthreads_object_t* thread, zval *work) {
 	uint32_t counted = 0;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
@@ -79,49 +74,39 @@ uint32_t pthreads_stack_push(pthreads_object_t* thread, zval *work) {
 		return 0;
 	}
 
-	if (pthreads_monitor_lock(thread->monitor)) {
-		if (zend_hash_next_index_insert(thread->stack, work)) {
-			Z_ADDREF_P(work);
-			counted = zend_hash_num_elements(thread->stack);
-		}
-		pthreads_monitor_notify(thread->monitor);
-		pthreads_monitor_unlock(thread->monitor);
-	}
-	
-	return counted;
+	return pthreads_stack_add(thread->stack, work);;
 } /* }}} */
 
 /* {{{ */
-static inline int pthreads_stack_collect_function(zval *collectable, void *argument) {
-	pthreads_call_t *call = (pthreads_call_t*) argument;
-	int apply = ZEND_HASH_APPLY_KEEP | ZEND_HASH_APPLY_STOP;
+static inline zend_bool pthreads_worker_collect_function(pthreads_call_t *call, zval *collectable) {
 	zval result;
+	zend_bool remove = 0;
 
 	ZVAL_UNDEF(&result);
 
-	call->fci.retval = &result;				
+	call->fci.retval = &result;
 	call->fci.no_separation = 1;
 
 	zend_fcall_info_argn(&call->fci, 1, collectable);
 
 	if (zend_call_function(&call->fci, &call->fcc) != SUCCESS) {
-		return apply;
+		return remove;
 	}
 
 	zend_fcall_info_args_clear(&call->fci, 1);
 
 	if (Z_TYPE(result) != IS_UNDEF) {
 		if (zend_is_true(&result)) {
-			apply = ZEND_HASH_APPLY_REMOVE;
+			remove = 1;
 		}
 		zval_dtor(&result);
 	}
 
-	return apply;
+	return remove;
 } /* }}} */
 
 /* {{{ */
-uint32_t pthreads_stack_collect(pthreads_object_t* thread, pthreads_call_t *call) {
+uint32_t pthreads_worker_collect(pthreads_object_t* thread, pthreads_call_t *call) {
 	uint32_t waiting = 0;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
@@ -131,32 +116,12 @@ uint32_t pthreads_stack_collect(pthreads_object_t* thread, pthreads_call_t *call
 		return 0;
 	}	
 
-	if (pthreads_monitor_lock(thread->monitor)) {
-		zend_hash_apply_with_argument(
-			thread->stack,
-			pthreads_stack_collect_function, call);
-		waiting = zend_hash_num_elements(thread->stack);
-		if (waiting == 0) {
-			/* destroy and reset stack to free up unused memory */
-			zend_hash_destroy(thread->stack);
-			zend_hash_init(
-				thread->stack, 8, NULL, ZVAL_PTR_DTOR, 0);
-		} else pthreads_monitor_notify(thread->monitor);
-		pthreads_monitor_unlock(thread->monitor);
-	}
-
-	return waiting;
+	return pthreads_stack_collect(thread->stack, call, pthreads_worker_collect_function);
 } /* }}} */
 
 /* {{{ */
-uint32_t pthreads_stack_length(pthreads_object_t* thread) {
-	uint32_t length = 0;
-
-	if (pthreads_monitor_lock(thread->monitor)) {
-		length = zend_hash_num_elements(thread->stack);
-		pthreads_monitor_unlock(thread->monitor);
-	}
-	return length;
+uint32_t pthreads_worker_length(pthreads_object_t* thread) {
+	return (uint32_t) pthreads_stack_size(thread->stack);
 } /* }}} */
 
 /* {{{ */
@@ -207,12 +172,12 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
 			pthreads_store_free(destination->store);	
-			pthreads_monitor_free(destination->monitor);	
 
 			if (PTHREADS_IS_WORKER(destination)) {
-				zend_hash_destroy(destination->stack);
-				free(destination->stack);
+				pthreads_stack_free(destination->stack);
 			}
+
+			pthreads_monitor_free(destination->monitor);	
 
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
 			
@@ -276,13 +241,8 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();
 		base->store = pthreads_store_alloc(base->monitor);
-
 		if (PTHREADS_IS_WORKER(base)) {
-			base->stack = (pthreads_stack_t*) calloc(1, sizeof(pthreads_stack_t));
-			if (base->stack) {
-				zend_hash_init(
-					base->stack, 8, NULL, ZVAL_PTR_DTOR, 0);
-			}
+			base->stack = pthreads_stack_alloc(base->monitor);
 		}
 
 		pthreads_base_init(base);
@@ -300,12 +260,12 @@ void pthreads_base_free(zend_object *object) {
 		}
 
 		pthreads_store_free(base->store);
-		pthreads_monitor_free(base->monitor);
-
+		
 		if (PTHREADS_IS_WORKER(base)) {
-		    zend_hash_destroy(base->stack);
-		    free(base->stack);
+		    pthreads_stack_free(base->stack);	
 		}
+
+		pthreads_monitor_free(base->monitor);
 	}
 
 	zend_object_std_dtor(object);
@@ -376,6 +336,7 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 		}
 
 		pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_JOINED);
+		pthreads_monitor_notify(thread->monitor);
 		pthreads_monitor_unlock(thread->monitor);
 
 		return (pthread_join(thread->thread, NULL) == SUCCESS);
@@ -516,34 +477,25 @@ static void * pthreads_routine(void *arg) {
 		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))));
 		
 		if (PTHREADS_IS_WORKER(thread)) {
-			do {
-				if (pthreads_monitor_lock(thread->monitor)) {
-					zval *next;
+			zval stacked;
 
-					ZEND_HASH_FOREACH_VAL(thread->stack, next) {
-						if (!pthreads_collectable_is_garbage(next)) {
-							pthreads_object_t* work = PTHREADS_FETCH_FROM(Z_OBJ_P(next));
+			while (pthreads_stack_shift(thread->stack, &stacked) != PTHREADS_MONITOR_JOINED) {
+				pthreads_object_t* work;
 
-							object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
-							pthreads_store_write(
-								work->store, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
-							pthreads_routine_run_function(
-								work, PTHREADS_FETCH_FROM(Z_OBJ(that)));
-							zval_dtor(&that);
-
-							pthreads_collectable_set_garbage(next);
-						}
-					} ZEND_HASH_FOREACH_END();
-
-					if (pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
-						pthreads_monitor_unlock(thread->monitor);						
-						break;
-					}
-
-					pthreads_monitor_wait(thread->monitor, 0);
-					pthreads_monitor_unlock(thread->monitor);
+				if (Z_TYPE(stacked) == IS_UNDEF) {
+					break;
 				}
-			} while (1);
+
+				work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
+				object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
+				pthreads_store_write(
+					work->store, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
+				pthreads_routine_run_function(
+					work, PTHREADS_FETCH_FROM(Z_OBJ(that)));
+				zval_dtor(&that);
+
+				ZVAL_UNDEF(&stacked);
+			}
 		}
 
 		zval_ptr_dtor(&PTHREADS_ZG(this));

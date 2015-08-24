@@ -276,7 +276,7 @@ PHP_METHOD(Pool, collect) {
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
 	
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(workers), worker) {
-		collected += pthreads_stack_collect(
+		collected += pthreads_worker_collect(
 			PTHREADS_FETCH_FROM(Z_OBJ_P(worker)), &call);
 	} ZEND_HASH_FOREACH_END();
 	

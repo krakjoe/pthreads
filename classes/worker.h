@@ -64,7 +64,7 @@ PHP_METHOD(Worker, stack)
 	zval 	*work;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
-		RETURN_LONG(pthreads_stack_push(thread, work));
+		RETURN_LONG(pthreads_worker_push(thread, work));
 	}
 } /* }}} */
 
@@ -77,9 +77,9 @@ PHP_METHOD(Worker, unstack)
 	
 	if (ZEND_NUM_ARGS() > 0) {
 		if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry)==SUCCESS) {
-			RETURN_LONG(pthreads_stack_pop(thread, work));
+			RETURN_LONG(pthreads_worker_pop(thread, work));
 		}
-	} else RETURN_LONG(pthreads_stack_pop(thread, NULL));
+	} else RETURN_LONG(pthreads_worker_pop(thread, NULL));
 }
 
 /* {{{ proto int Worker::getStacked()
@@ -88,7 +88,7 @@ PHP_METHOD(Worker, getStacked)
 {
 	pthreads_object_t* thread = PTHREADS_FETCH;
 
-	RETURN_LONG(pthreads_stack_length(thread));
+	RETURN_LONG(pthreads_worker_length(thread));
 }
 
 /* {{{ proto Worker::isShutdown()
@@ -132,7 +132,7 @@ PHP_METHOD(Worker, collect)
 		return;
 	}
 
-	ZVAL_BOOL(return_value, pthreads_stack_collect(PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())), &call));
+	ZVAL_BOOL(return_value, pthreads_worker_collect(PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())), &call));
 }
 #	endif
 #endif
