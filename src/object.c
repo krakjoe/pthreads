@@ -100,14 +100,10 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 			pthreads_monitor_free(destination->monitor);	
 
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
-			
-			return pthreads_connect
-			(
-				source,
-				destination
-			);
+
+			return pthreads_connect(source, destination);
 		}
-		
+
 		destination->thread = source->thread;
 		destination->local.id = source->local.id;
 		destination->local.ls = source->local.ls;
@@ -300,7 +296,7 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 		if ((run = zend_hash_find_ptr(&connection->std.ce->function_table, PTHREADS_G(strings).run))) {							
 			if (run->type == ZEND_USER_FUNCTION) {
 				call.fci.size = sizeof(zend_fcall_info);
-			    	call.fci.retval = &zresult;
+			    call.fci.retval = &zresult;
 				call.fci.object = &connection->std;
 				call.fci.no_separation = 1;
 				call.fcc.initialized = 1;

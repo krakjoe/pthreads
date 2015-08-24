@@ -111,17 +111,24 @@ static inline void pthreads_stack_add_item(pthreads_stack_t *stack, pthreads_sta
 
 zend_long pthreads_stack_add(pthreads_stack_t *stack, zval *value) {
 	zend_long size = 0;
-
-	if (pthreads_monitor_lock(stack->monitor)) {
-		pthreads_stack_item_t *item = 
+	pthreads_stack_item_t *item = 
 			(pthreads_stack_item_t*) calloc(1, sizeof(pthreads_stack_item_t));
 
-		ZVAL_COPY(&item->value, value);
+	if (!item) {
+		return -1;
+	}
+
+	ZVAL_COPY(&item->value, value);
+
+	if (pthreads_monitor_lock(stack->monitor)) {
 		pthreads_stack_add_item(stack, item);
 		size = stack->size;
-
 		pthreads_monitor_notify(stack->monitor);
 		pthreads_monitor_unlock(stack->monitor);
+	} else {
+		zval_ptr_dtor(&item->value);
+		free(item);
+		size = -1;
 	}
 
 	return size;
