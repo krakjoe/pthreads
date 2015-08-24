@@ -49,7 +49,7 @@ size_t pthreads_stack_size(pthreads_stack_t *stack) {
 
 	if (pthreads_monitor_lock(stack->monitor)) {
 		size = stack->size;
-		pthreads_monitor_release(stack->monitor);
+		pthreads_monitor_unlock(stack->monitor);
 	}
 	return size;
 }
