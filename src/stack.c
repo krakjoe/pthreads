@@ -121,9 +121,12 @@ zend_long pthreads_stack_add(pthreads_stack_t *stack, zval *value) {
 	ZVAL_COPY(&item->value, value);
 
 	if (pthreads_monitor_lock(stack->monitor)) {
-		pthreads_stack_add_item(stack, item);
 		size = stack->size;
-		pthreads_monitor_notify(stack->monitor);
+		pthreads_stack_add_item(stack, item);
+		if (!size) {
+			pthreads_monitor_notify(stack->monitor);
+		}
+		size = stack->size;
 		pthreads_monitor_unlock(stack->monitor);
 	} else {
 		zval_ptr_dtor(&item->value);
@@ -192,6 +195,7 @@ zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call,
 			item = stack->gc->head;
 			while (item) {
 				pthreads_stack_item_t *garbage = item;
+
 				if (collect(call, &garbage->value)) {
 					pthreads_stack_remove(stack->gc, garbage, NULL, 0);
 					item = garbage->next;
@@ -224,6 +228,7 @@ pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *valu
 				break;
 			}
 		} while (state != PTHREADS_MONITOR_JOINED);
+		
 		pthreads_monitor_unlock(stack->monitor);
 	}
 
