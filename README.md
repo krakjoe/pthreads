@@ -43,6 +43,7 @@ The API for v3 has changed, the following things have been removed:
  * ```Threaded::lock``` and ```Threaded::unlock```
  * ```Threaded::isWaiting```
  * ```Threaded::from```
+ * Special behaviour of ```protected``` and ```private``` methods on ```Threaded``` objects
 
 The following things have significant changes:
  
