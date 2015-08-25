@@ -16,14 +16,12 @@ This project provides multi-threading that is compatible with PHP based on Posix
 
 ## Technical Features
 
-* High Level Threading Abstraction
+* High Level Threading
 * Synchronization
 * Worker Threads
 * Thread Pools
 * Complete Support for OO - ie. traits, interfaces, inheritance etc
-* Full read/write/execute support for threaded objects
-
-pthreads was written with simplicity, compatibility and efficiency in mind, its performance beggars belief !!
+* Full read/write/execute support for Threaded objects
 
 ## Requirements
 
