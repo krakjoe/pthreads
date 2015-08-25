@@ -35,20 +35,12 @@ ZEND_MODULE_POST_ZEND_DEACTIVATE_D(pthreads);
 #	include <classes/thread.h>
 #endif
 
-#ifndef HAVE_PTHREADS_CLASS_WORKER_H
-#	include <classes/worker.h>
-#endif
-
-#ifndef HAVE_PTHREADS_CLASS_MUTEX_H
-#	include <classes/mutex.h>
-#endif
-
-#ifndef HAVE_PTHREADS_CLASS_COND_H
-#	include <classes/cond.h>
-#endif
-
 #ifndef HAVE_PTHREADS_CLASS_COLLECTABLE_H
 #	include <classes/collectable.h>
+#endif
+
+#ifndef HAVE_PTHREADS_CLASS_WORKER_H
+#	include <classes/worker.h>
 #endif
 
 #ifndef HAVE_PTHREADS_CLASS_POOL_H

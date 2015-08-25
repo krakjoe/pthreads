@@ -69,8 +69,6 @@ zend_module_entry pthreads_module_entry = {
 zend_class_entry *pthreads_threaded_entry;
 zend_class_entry *pthreads_thread_entry;
 zend_class_entry *pthreads_worker_entry;
-zend_class_entry *pthreads_mutex_entry;
-zend_class_entry *pthreads_condition_entry;
 zend_class_entry *pthreads_collectable_entry;
 zend_class_entry *pthreads_pool_entry;
 
@@ -178,18 +176,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_worker_entry=zend_register_internal_class_ex(&ce, pthreads_thread_entry);
 	pthreads_worker_entry->get_iterator = pthreads_object_iterator_ctor;
 	pthreads_worker_entry->create_object = pthreads_worker_ctor;
-
-	INIT_CLASS_ENTRY(ce, "Mutex", pthreads_mutex_methods);
-	ce.serialize = zend_class_serialize_deny;
-	ce.unserialize = zend_class_unserialize_deny;
-	pthreads_mutex_entry=zend_register_internal_class(&ce);
-	pthreads_mutex_entry->ce_flags |= ZEND_ACC_FINAL;
-	
-	INIT_CLASS_ENTRY(ce, "Cond", pthreads_condition_methods);
-	ce.serialize = zend_class_serialize_deny;
-	ce.unserialize = zend_class_unserialize_deny;
-	pthreads_condition_entry=zend_register_internal_class(&ce);
-	pthreads_condition_entry->ce_flags |= ZEND_ACC_FINAL;
 
 	INIT_CLASS_ENTRY(ce, "Collectable", pthreads_collectable_methods);
 	pthreads_collectable_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
@@ -310,20 +296,12 @@ PHP_MINFO_FUNCTION(pthreads)
 #	include <classes/thread.h>
 #endif
 
-#ifndef HAVE_PTHREADS_CLASS_WORKER
-#	include <classes/worker.h>
-#endif
-
-#ifndef HAVE_PTHREADS_CLASS_MUTEX
-#	include <classes/mutex.h>
-#endif
-
-#ifndef HAVE_PTHREADS_CLASS_COND
-#	include <classes/cond.h>
-#endif
-
 #ifndef HAVE_PTHREADS_CLASS_COLLECTABLE
 #	include <classes/collectable.h>
+#endif
+
+#ifndef HAVE_PTHREADS_CLASS_WORKER
+#	include <classes/worker.h>
 #endif
 
 #ifndef HAVE_PTHREADS_CLASS_POOL
