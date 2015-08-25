@@ -96,7 +96,7 @@ static inline void pthreads_object_iterator_current_key(pthreads_iterator_t* ite
     switch (zend_hash_get_current_key_ex(
         &iterator->keys, &key, &idx, &iterator->position)) {
         case HASH_KEY_IS_STRING: {
-            ZVAL_STR(result, key);
+            ZVAL_STR(result, zend_string_copy(key));
         } break;
             
         default: {
