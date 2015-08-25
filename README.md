@@ -53,6 +53,7 @@ The following things have significant changes:
  * The method by which iteration occurs on ```Threaded``` objects, such that it uses memory more efficiently.
  * ```Threaded::synchronized``` provides true synchronization (state and properties lock).
  * ```Worker``` objects no longer require that you retain a reference to ```Collectable``` objects on the stack.
+ * Unified monitor (cond/mutex/state) for ```Threaded``` objects
 
 For an explanation of why these changes have happened, keep an eye on my blog, I'll be writing about it soon.
 
