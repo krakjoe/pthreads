@@ -49,7 +49,7 @@ The following things have significant changes:
  * The method by which ```Threaded``` objects are stored as member properties of other ```Threaded``` objects.
  * The structure used by a ```Worker``` for stack (```Collectable``` objects to execute inserted by ```Worker::stack```).
  * The ```Pool::collect``` mechanism was moved from ```Pool``` to ```Worker``` for a more robust ```Worker``` and simpler ```Pool``` inheritance.
- * The method by which an ```Iterator``` is created for ```Threaded``` objects such that it uses memory more efficiently.
+ * The method by which iteration occurs on ```Threaded``` objects, such that it uses memory more efficiently.
  * ```Threaded::synchronized``` provides true synchronization (state and properties lock).
  * ```Worker``` objects no longer require that you retain a reference to ```Collectable``` objects on the stack.
 
