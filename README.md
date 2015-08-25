@@ -130,7 +130,7 @@ Please submit issues, and send your feedback and suggestions as often as you hav
 
 ### Reporting Bugs
 
-If you believe you have found a bug in pthreads, please open an issue: Include in your report *minimal, executable, reproducing script*.
+If you believe you have found a bug in pthreads, please open an issue: Include in your report *minimal, executable, reproducing code*.
 
 Minimal:     reduce your problem to the smallest amount of code possible; This helps with hunting the bug, but also it helps with integration and regression testing once the bug is fixed.
 Executable:  include all the information required to execute the example code, code snippets are not helpful.
