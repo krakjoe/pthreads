@@ -171,15 +171,15 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_thread_entry=zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	pthreads_thread_entry->get_iterator = pthreads_object_iterator_ctor;
 	pthreads_thread_entry->create_object = pthreads_thread_ctor;
-	
-	INIT_CLASS_ENTRY(ce, "Worker", pthreads_worker_methods);
-	pthreads_worker_entry=zend_register_internal_class_ex(&ce, pthreads_thread_entry);
-	pthreads_worker_entry->get_iterator = pthreads_object_iterator_ctor;
-	pthreads_worker_entry->create_object = pthreads_worker_ctor;
 
 	INIT_CLASS_ENTRY(ce, "Collectable", pthreads_collectable_methods);
 	pthreads_collectable_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	zend_declare_property_bool(pthreads_collectable_entry, ZEND_STRL("garbage"), 0, ZEND_ACC_PROTECTED);	
+
+	INIT_CLASS_ENTRY(ce, "Worker", pthreads_worker_methods);
+	pthreads_worker_entry=zend_register_internal_class_ex(&ce, pthreads_thread_entry);
+	pthreads_worker_entry->get_iterator = pthreads_object_iterator_ctor;
+	pthreads_worker_entry->create_object = pthreads_worker_ctor;	
 
 	INIT_CLASS_ENTRY(ce, "Pool", pthreads_pool_methods);
 	pthreads_pool_entry=zend_register_internal_class(&ce);

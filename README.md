@@ -8,7 +8,7 @@ This project provides multi-threading that is compatible with PHP based on Posix
 
 ## Highlights
 
-* An easy to use, quick to learn OO Threading API for PHP5.3+
+* An easy to use, quick to learn OO Threading API for PHP7
 * Execute any and all predefined and user declared methods and functions, including closures.
 * Ready made synchronization included
 * Seamless operation in multi-threaded SAPI environments
@@ -16,33 +16,58 @@ This project provides multi-threading that is compatible with PHP based on Posix
 
 ## Technical Features
 
-* Posix Threads
+* High Level Threading Abstraction
 * Synchronization
 * Worker Threads
-* Complete Support for OO - ie. traits, interfaces, inheritance
+* Thread Pools
+* Complete Support for OO - ie. traits, interfaces, inheritance etc
 * Full read/write/execute support for threaded objects
-* Mutex ( direct, subset )
-* Conditions ( direct, subset )
 
 pthreads was written with simplicity, compatibility and efficiency in mind, its performance beggars belief !!
 
 ## Requirements
 
-* PHP5.3+
+* PHP7+
 * ZTS Enabled ( Thread Safety )
 * Posix Threads Implementation
 
 Testing has been carried out on x86, x64 and ARM, in general you just need a compiler and pthread.h
 
+## PHP7
+
+For PHP7, pthreads has been almost completely rewritten to be more efficient, easier to use and more robust.
+
+While documentation on php.net is waiting to be updated and translated, I will give a brief changelog here:
+
+The API for v3 has changed, the following things have been removed:
+
+ * ```Mutex``` and ```Cond```
+ * ```Threaded::lock``` and ```Threaded::unlock```
+ * ```Threaded::isWaiting```
+ * ```Threaded::from```
+
+The following things have significant changes:
+ 
+ * The method by which ```Threaded``` objects are stored as member properties of other ```Threaded``` objects.
+ * The structure used by a ```Worker``` for stack (```Collectable``` objects to execute inserted by ```Worker::stack```).
+ * The ``Pool::collect``` mechanism was moved from ```Pool``` to ```Worker``` for a more robust ```Worker``` and simpler ```Pool``` inheritance.
+ * The method by which an ```Iterator``` is created for ```Threaded``` objects such that it uses memory more efficiently.
+ * ```Threaded::synchronized``` provides true synchronization (state and properties lock).
+ * ```Worker``` objects no longer require that you retain a reference to ```Collectable``` objects on the stack.
+
+For an explanation of why these changes have happened, keep an eye on my blog, I'll be writing about it soon.
+
 ### Supported PHP Versions
 
-pthreads should compile and work in any version of PHP from 5.3.0 to the latest release.
+pthreads v3 requires PHP7 or above. PHP5 and below need to use pthreads v2 which can be found in the master branch.
 
 ### Windows Support
 
 Yes !! Windows support is offered thanks to the pthread-w32 library.
 
 Releases for Windows can be found: http://windows.php.net/downloads/pecl/releases/pthreads/
+
+*Note: Windows builds are not yet available, they are coming ...*
 
 ##### Simple Windows Installation
 
@@ -59,20 +84,13 @@ As is customary in our line of work:
 
 ```php
 <?php
-class AsyncOperation extends Thread {
-  public function __construct($arg){
-    $this->arg = $arg;
-  }
+$thread = new class extends Thread {
+	public function run() {
+		echo "Hello World\n";
+	}
+};
 
-  public function run(){
-    if($this->arg){
-      printf("Hello %s\n", $this->arg);
-    }
-  }
-}
-$thread = new AsyncOperation("World");
-if($thread->start())
-  $thread->join();
+$thread->start() && $thread->join();
 ?>
 ```
 
@@ -106,9 +124,27 @@ Here are some links to articles I have prepared for users: everybody should read
 
 If you have had the time to put any cool demo's together and would like them showcased on pthreads.org please get in touch.
 
+*Note: the documentation in the manual refers to pthreads v2, it has not yet been updated ... anyone want to help ?*
+
 ### Feedback
 
 Please submit issues, and send your feedback and suggestions as often as you have them.
+
+### Reporting Bugs
+
+If you believe you have found a bug in pthreads, please open an issue: Include in your report *minimal, executable, reproducing script*.
+
+Minimal:     reduce your problem to the smallest amount of code possible; This helps with hunting the bug, but also it helps with integration and regression testing once the bug is fixed.
+Executable:  include all the information required to execute the example code, code snippets are not helpful.
+Reproducing: some bugs don't show themselves on every execution, that's fine, mention that in the report and give an idea of how often you encounter the bug.
+
+__It is impossible to help without reproducing code, bugs that are opened without reproducing code will be closed.__
+
+Please include version and operating system information in your report.
+
+*Please do not post requests to help with code on github; I spend a lot of time on Stackoverflow, a much better place for asking questions.*
+
+Have patience; I am one human being.
 
 ### Developers
 
