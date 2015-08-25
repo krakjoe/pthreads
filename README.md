@@ -133,7 +133,9 @@ Please submit issues, and send your feedback and suggestions as often as you hav
 If you believe you have found a bug in pthreads, please open an issue: Include in your report *minimal, executable, reproducing code*.
 
 Minimal:     reduce your problem to the smallest amount of code possible; This helps with hunting the bug, but also it helps with integration and regression testing once the bug is fixed.
+
 Executable:  include all the information required to execute the example code, code snippets are not helpful.
+
 Reproducing: some bugs don't show themselves on every execution, that's fine, mention that in the report and give an idea of how often you encounter the bug.
 
 __It is impossible to help without reproducing code, bugs that are opened without reproducing code will be closed.__
