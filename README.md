@@ -59,7 +59,7 @@ For an explanation of why these changes have happened, keep an eye on my blog, I
 
 ### Supported PHP Versions
 
-pthreads v3 requires PHP7 or above. PHP5 and below need to use pthreads v2 which can be found in the master branch.
+pthreads v3 requires PHP7 or above. PHP5 needs to use pthreads v2 which can be found in the master branch.
 
 ### Windows Support
 
