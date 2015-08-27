@@ -86,18 +86,6 @@ zend_class_entry *spl_ce_RuntimeException;
 #	include <src/object.h>
 #endif
 
-#ifndef PTHREADS_NAME
-#	define PTHREADS_NAME Z_OBJCE_P(getThis())->name
-#endif
-
-#ifndef PTHREADS_TID
-#	define PTHREADS_TID thread->local.id
-#endif
-
-#ifndef PTHREADS_FRIENDLY_NAME
-#	define PTHREADS_FRIENDLY_NAME PTHREADS_NAME, PTHREADS_TID
-#endif
-
 ZEND_DECLARE_MODULE_GLOBALS(pthreads)
 
 static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
