@@ -325,28 +325,6 @@ int pthreads_store_pop(zval *object, zval *member) {
 } /* }}} */
 
 /* {{{ */
-void pthreads_store_keys(pthreads_store_t *store, HashTable *keys, HashPosition *position) {
-	
-	if (pthreads_monitor_lock(store->monitor)) {
-		zend_string *key;
-
-		 zend_hash_init(
-    		keys, 
-			zend_hash_num_elements(&store->table), 
-			NULL, ZVAL_PTR_DTOR, 0);			
-		
-		ZEND_HASH_FOREACH_STR_KEY(&store->table, key) {
-			zend_hash_add_empty_element(
-				keys, key);
-		} ZEND_HASH_FOREACH_END();
-
-		pthreads_monitor_unlock(store->monitor);
-	}
-
-    zend_hash_internal_pointer_reset_ex(keys, position);
-} /* }}} */
-
-/* {{{ */
 void pthreads_store_tohash(pthreads_store_t *store, HashTable *hash) {
 	
 	/* php is reusing this hash and making things misbehave */
@@ -751,6 +729,52 @@ static void pthreads_store_storage_dtor (pthreads_storage *storage){
 		break;
 	}
 	free(storage);
+} /* }}} */
+
+/* {{{ iteration helpers */
+void pthreads_store_reset(zval *object, HashPosition *position) {
+	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	if (pthreads_monitor_lock(threaded->monitor)) {
+		zend_hash_internal_pointer_reset_ex(
+			&threaded->store->table, position);
+		pthreads_monitor_unlock(threaded->monitor);
+	}
+}
+
+void pthreads_store_key(zval *object, zval *key, HashPosition *position) {
+	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	if (pthreads_monitor_lock(threaded->monitor)) {
+		zend_hash_get_current_key_zval_ex(
+			&threaded->store->table, key, position);
+		pthreads_monitor_unlock(threaded->monitor);
+	}
+}
+
+void pthreads_store_data(zval *object, zval *value, HashPosition *position) {
+	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	if (pthreads_monitor_lock(threaded->monitor)) {
+		pthreads_storage *storage = (pthreads_storage*) 
+			zend_hash_get_current_data_ptr_ex(&threaded->store->table, position);
+
+		if (storage) {
+			pthreads_store_convert(storage, value);
+		} else ZVAL_UNDEF(value);
+		
+		pthreads_monitor_unlock(threaded->monitor);
+	}
+}
+
+void pthreads_store_forward(zval *object, HashPosition *position) {
+	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	if (pthreads_monitor_lock(threaded->monitor)) {
+		zend_hash_move_forward_ex(
+			&threaded->store->table, position);
+		pthreads_monitor_unlock(threaded->monitor);
+	}
 } /* }}} */
 
 #endif

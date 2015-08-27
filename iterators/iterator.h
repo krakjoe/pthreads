@@ -22,8 +22,6 @@
 typedef struct _pthreads_iterator_t {
     zend_object_iterator zit;
 	zval                 object;
-    HashTable            keys;
     HashPosition         position;
-    zend_bool            end;
 } pthreads_iterator_t; /* }}} */
 #endif

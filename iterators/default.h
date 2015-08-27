@@ -27,6 +27,7 @@ static inline int pthreads_object_iterator_validate(pthreads_iterator_t* iterato
 static inline zval* pthreads_object_iterator_current_data(pthreads_iterator_t* iterator);
 static inline void pthreads_object_iterator_current_key(pthreads_iterator_t* iterator, zval *key);
 static inline void pthreads_object_iterator_move_forward(pthreads_iterator_t* iterator);
+static inline void pthreads_object_iterator_rewind(pthreads_iterator_t* iterator);
 
 zend_object_iterator_funcs pthreads_object_iterator_funcs = {
     (void (*) (zend_object_iterator*)) 				pthreads_object_iterator_dtor,
@@ -34,86 +35,53 @@ zend_object_iterator_funcs pthreads_object_iterator_funcs = {
     (zval* (*)(zend_object_iterator *)) 			pthreads_object_iterator_current_data,
     (void (*)(zend_object_iterator *, zval *)) 		pthreads_object_iterator_current_key,
     (void (*)(zend_object_iterator *))				pthreads_object_iterator_move_forward,
-    NULL 
+    (void (*)(zend_object_iterator *)) 				pthreads_object_iterator_rewind
 };
 
 static inline zend_object_iterator* pthreads_object_iterator_ctor(zend_class_entry *ce, zval *object, int by_ref) {
     pthreads_iterator_t *iterator = ecalloc(1, sizeof(pthreads_iterator_t));
-    
+	
     zend_iterator_init((zend_object_iterator*)iterator);
 
 	ZVAL_COPY(&iterator->object, object);
+	ZVAL_UNDEF(&iterator->zit.data);
 
-    {
-		pthreads_object_t* pthreads = 
-			PTHREADS_FETCH_FROM(Z_OBJ(iterator->object));
-		pthreads_store_keys(pthreads->store, &iterator->keys, &iterator->position);
-    }
+	pthreads_store_reset(&iterator->object, &iterator->position);
 
     iterator->zit.funcs = &pthreads_object_iterator_funcs;
-	ZVAL_UNDEF(&iterator->zit.data);
 
     return (zend_object_iterator*) iterator;
 }
 
 static inline void pthreads_object_iterator_dtor(pthreads_iterator_t* iterator) {
-	if (Z_TYPE(iterator->zit.data) != IS_UNDEF) {
+	if (Z_TYPE(iterator->zit.data) != IS_UNDEF)
 		zval_ptr_dtor(&iterator->zit.data);
-	}
-    zend_hash_destroy(&iterator->keys);
 	zval_ptr_dtor(&iterator->object);
 }
 
 static inline int pthreads_object_iterator_validate(pthreads_iterator_t* iterator) {
-   if (zend_hash_num_elements(&iterator->keys)) {
-       return iterator->end ? FAILURE : SUCCESS;
-   } else return FAILURE;
+	return (iterator->position != HT_INVALID_IDX) ? SUCCESS : FAILURE;
 }
 
 static inline zval* pthreads_object_iterator_current_data(pthreads_iterator_t* iterator) {
-	zend_string *key;
-	zend_ulong idx;
+	pthreads_store_data(&iterator->object, &iterator->zit.data, &iterator->position);
 
-    if (!iterator->end) {
-        switch (zend_hash_get_current_key_ex(&iterator->keys, &key, &idx, &iterator->position)) {
-			case HASH_KEY_IS_STRING: {
-				if (Z_TYPE(iterator->zit.data) != IS_UNDEF) {
-					zval_ptr_dtor(&iterator->zit.data);
-				}
-				
-				pthreads_store_read((PTHREADS_FETCH_FROM(Z_OBJ(iterator->object)))->store, key, &iterator->zit.data);
-			} break;
-		}
-    }
+	if (Z_ISUNDEF(iterator->zit.data)) {
+		return &EG(uninitialized_zval);
+	}
 
     return &iterator->zit.data;
 }
 
 static inline void pthreads_object_iterator_current_key(pthreads_iterator_t* iterator, zval* result) {
-    zend_string *key = NULL;
-    ulong idx;
-    
-    switch (zend_hash_get_current_key_ex(
-        &iterator->keys, &key, &idx, &iterator->position)) {
-        case HASH_KEY_IS_STRING: {
-            ZVAL_STR(result, zend_string_copy(key));
-        } break;
-            
-        default: {
-            iterator->end = 1;
-        }
-    }
+    pthreads_store_key(&iterator->object, result, &iterator->position);
 }
 
 static inline void pthreads_object_iterator_move_forward(pthreads_iterator_t* iterator) {
-    if (!iterator->end) {
-        zend_hash_move_forward_ex(
-            &iterator->keys, &iterator->position);
-        {
-            if (!zend_hash_get_current_data_ex(&iterator->keys, &iterator->position)) {
-                iterator->end = 1;
-            }
-        }
-    }
+    pthreads_store_forward(&iterator->object, &iterator->position);
+}
+
+static inline void pthreads_object_iterator_rewind(pthreads_iterator_t* iterator) {
+    pthreads_store_reset(&iterator->object, &iterator->position);
 }
 #endif

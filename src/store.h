@@ -40,10 +40,16 @@ int pthreads_store_write(pthreads_store_t *store, zend_string *key, zval *write)
 int pthreads_store_separate(zval *pzval, zval *seperated, zend_bool complex);
 void pthreads_store_separate_zval(zval *pzval);
 void pthreads_store_tohash(pthreads_store_t *store, HashTable *hash);
-void pthreads_store_keys(pthreads_store_t *store, HashTable *keys, HashPosition *position);
 int pthreads_store_shift(zval *object, zval *member);
 int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval *chunk);
 int pthreads_store_pop(zval *object, zval *member);
 int pthreads_store_count(zval *object, zend_long *count);
 void pthreads_store_free(pthreads_store_t *store);
+
+/* {{{ * iteration helpers */
+void pthreads_store_reset(zval *object, HashPosition *position);
+void pthreads_store_key(zval *object, zval *key, HashPosition *position);
+void pthreads_store_data(zval *object, zval *value, HashPosition *position);
+void pthreads_store_forward(zval *object, HashPosition *position); /* }}} */
+
 #endif
