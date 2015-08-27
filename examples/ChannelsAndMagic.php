@@ -54,6 +54,4 @@ printf("Message: %s, Gold: %.3f\n",
     $channel["gold"]);
 
 $pool->shutdown();
-
-
 ?>

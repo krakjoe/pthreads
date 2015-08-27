@@ -1,4 +1,7 @@
 <?php
+/*
+* Please don't use resources, it's dangerous ...
+*/
 class Test extends Thread {
 	public $stop = false;
 	

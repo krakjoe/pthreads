@@ -1,48 +1,58 @@
 <?php
-define("SQL_HOST", "127.0.0.1");
-define("SQL_USER", "root");
-define("SQL_PASS", "");
-define("SQL_DB", "mysql");
+/*
+* Often an application will have singleton-like objects, such as PDO connections or such.
+* 
+* You cannot pass such objects into a Thread, because they do not gracefully or properly serialize
+* themselves and are not Threaded objects.
+*
+* Even if you could pass the object to a Thread, it would not be safe; They were never intended to be used that
+* way and don't have the machinery that Threaded objects have that make them safe to share.
+*
+* This may seem awkward, but the solution can be quite elegant, and is usually easy to achieve.
+*
+* This example shows the execution of some Collectables (the anon class) that require a connection to PDO.
+*/
+class PDOWorker extends Worker {
 
-class sql {
-	public static $connection;
-
-	public static function __callstatic($method, $args){
-		if (self::$connection) {
-			return call_user_func_array(array(self::$connection, $method), $args);
-		} else {
-			self::$connection = new mysqli(SQL_HOST, SQL_USER, SQL_PASS, SQL_DB);
-			if (self::$connection)
-				return call_user_func_array(array(self::$connection, $method), $args);
-		}
+	/*
+	* Note that we only pass in the configuration to create the connection
+	*/
+	public function __construct(array $config) {
+		$this->config = $config;
 	}
-}
 
-class UserThread extends Thread {
-    private $config;
-
-    function __construct () {
-        $this->config = $config;
-    }
-
-    public function run () {
-        /* execute queries */
-		if (sql::query("SELECT * FROM mysql.user")) {
-			printf("...\n");
-			if (sql::query("SELECT * FROM mysql.user")) {
-				printf("...\n");
-			}
-		}
-    }
-}
-
-if (sql::query("SELECT * FROM mysql.user;")) {
-	printf("...\n");
-	if (sql::query("SELECT * FROM mysql.user;")) {
-		printf("...\n");
+	public function run() {
+		self::$connection = 
+			new PDO(...$this->config);
 	}
+
+	public function getConnection() { return self::$connection; }
+
+	private $config;
+	
+	/*
+	* static variables are treated as thread-local by pthreads
+	*/
+	private static $connection;
 }
 
-$thread = new UserThread();
-$thread->start();
+/*
+* When the Pool starts new Worker threads, they will construct the
+* PDO object before any Collectable objects are executed.
+*/
+$pool = new Pool(4, PDOWorker::class, [["sqlite:example.db"]]);
+
+/*
+* Now we can submit work to the Pool
+*/
+
+while (@$i++<10) {
+	$pool->submit(new class extends Collectable {
+		public function run() {
+			var_dump($this->worker->getConnection());
+		}
+	});
+}
+
+$pool->shutdown();
 ?>

@@ -1,28 +1,24 @@
 <?php
 /**
-* NOTE: THIS IS A 5.6 EXAMPLE ONLY
+* A synchronized Future for a Closure
 *
-* This is just scrap code, but rather cool scrap code!
+*	This example takes a Closure and executes it in parallel, storing the result
+*	and fetching the result are synchronized operations
 *
-* Notes:
-*   Lexcial vars and threads do not mix, do not try, rather use this kind of abstraction or Threaded::from
-*       to create thread safe objects.
-*
-* That's all I've got to say about that ...
+*	This means that a call to getResult() will block the calling context until a result
+*	is available
 **/
 class Future extends Thread {
 
     private function __construct(Closure $closure, array $args = []) {
         $this->closure = $closure;
         $this->args    = $args;	
-		$this->owner   = Thread::getCurrentThreadId();
     }
 
     public function run() {
-        $closure = $this->closure;
-        $this->synchronized(function() use($closure) {
+        $this->synchronized(function() {
             $this->result = 
-                $closure(...$this->args);
+                ($this->closure)(...$this->args);
             $this->notify();
         });
     }
@@ -48,8 +44,10 @@ class Future extends Thread {
     protected $result;
 }
 
+/* some data */
 $test = ["Hello", "World"];
 
+/* a closure to execute in background and foreground */
 $closure = function($test) {
     return $test;
 };

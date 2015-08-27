@@ -9,9 +9,6 @@
 /**
 * Nothing
 */
-class T extends Thread {
-	public function run() {}
-}
 
 $max = @$argv[1] ? $argv[1] : 100;
 $sample = @$argv[2] ? $argv[2] : 5;
@@ -23,7 +20,7 @@ do {
     /* begin test */
     $ts = [];
     while (count($ts)<$max) {
-        $t = new T();
+        $t = new Thread();
         $t->start();
         $ts[]=$t;
     }

@@ -7,11 +7,10 @@ This test verifies that reaching at timeout returns the correct value
 class T extends Thread {
         public $data;
         public function run() {
-            $this->synchronized(function(){
-				$this->wait(1000000);
-			});
+            $this->wait(10000);
         }
 }
+
 $t = new T;
 $t->start();
 $t->synchronized(function($thread){

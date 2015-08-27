@@ -15,7 +15,7 @@ class Caller extends Thread {
 	/**
 	* Provide a passthrough to call_user_func_array
 	**/
-	public function __construct($method, $params){
+	public function __construct(callable $method, $params){
 		$this->method = $method;
 		$this->params = $params;
 		$this->result = null;
@@ -25,10 +25,9 @@ class Caller extends Thread {
 	/**
 	* The smallest thread in the world
 	**/
-	public function run(){
-		if (($this->result=call_user_func_array($this->method, $this->params))) {
-			return true;
-		} else return false;
+	public function run() {
+		$this->result = 
+			($this->method)(...$this->params); /* gotta love php7 :) */
 	}
 
 	/**
@@ -38,7 +37,7 @@ class Caller extends Thread {
 		$thread = new Caller($method, $params);
 		if($thread->start()){
 			return $thread;
-		} /** else throw Nastyness **/
+		}
 	}
 
 	/**
@@ -52,6 +51,12 @@ class Caller extends Thread {
 
 		return $this->result;
 	}
+
+
+	private $method;
+	private $params;
+	private $result;
+	private $joined;
 }
 
 /* here's us calling file_get_contents in a thread of it's own */
@@ -60,9 +65,9 @@ $future = Caller::call("file_get_contents", array("http://www.php.net"));
 printf("Got %d bytes from php.net\n", strlen((string)$future));
 /* you can reference again as a string because you cached the result, YOU CANNOT JOIN TWICE */
 printf("First 16 chars: %s\n", substr((string)$future, 0, 16));
-/* if you have no __toString(): */
-/* $response = $future->result; */
-/* you could also not use a reference to the thread,
-	if the threads job was to say, log stats and you do not need to know when or how it returns,
-	then you could just Async::call at the beginning of the request and by the end it would be finished */
+
+/* here's us calling a closure in a thread of it's own */
+$future = Caller::call(function($params) {
+	printf("and how about this: %s, %s %s %s %s!\n", ...$params);
+}, [["also", "you", "can", "use", "closures"]]);
 ?>

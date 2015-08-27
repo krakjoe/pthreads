@@ -12,7 +12,7 @@
 *
 * Some helpful notes ...
 *	If some logic crashes while you are sharing resources among contexts, try:
-		introduce a mutex  
+		introduce synchronization
 		free results explicitly in the thread that queried for them
 		try another database driver
 		try another database server
@@ -34,35 +34,35 @@
 * This code remains to keep history in tact - ish
 */
 class MyShared extends Thread {
-	public function __construct($mysql, $mutex = null){
+	public function __construct($mysql, $lock = null){
 		$this->mysql = $mysql;
-		$this->mutex = $mutex;
+		$this->lock = $lock;
 	}
 
 	public function run(){
-		if ($this->mutex)
-			printf("LOCK(%d): %d\n", $this->getThreadId(), Mutex::lock($this->mutex));
+		if ($this->lock) {
+			$this->lock->synchronized(function(){
+				$this->doStuff();
+			});
+		} else $this->doStuff();
+	}
 
+	private function doStuff() {
 		if (($result = mysql_query("SHOW PROCESSLIST;", $this->mysql))) {
 			while(($row = mysql_fetch_assoc($result))) {
 				print_r($row);
 			}
 		}
-
-		if ($this->mutex)
-			printf("UNLOCK(%d): %d\n", $this->getThreadId(), Mutex::unlock($this->mutex));
 	}
 }
 
-
 $mysql = mysql_connect("127.0.0.1", "root", "");
 if ($mysql) {
-	$mutex = Mutex::create();
-	$instances = array(new MyShared($mysql, $mutex), new MyShared($mysql, $mutex), new MyShared($mysql, $mutex));
+	$lock = new Threaded();
+	$instances = array(new MyShared($mysql, $lock), new MyShared($mysql, $lock), new MyShared($mysql, $lock));
 	foreach($instances as $instance)
 		$instance->start();
 	foreach($instances as $instance)
 		$instance->join();
-	Mutex::destroy($mutex);
 }
 ?>
