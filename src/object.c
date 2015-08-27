@@ -86,7 +86,16 @@ static zend_object_iterator_funcs pthreads_object_iterator_funcs = {
 };
 
 zend_object_iterator* pthreads_object_iterator_create(zend_class_entry *ce, zval *object, int by_ref) {
-    pthreads_iterator_t *iterator = ecalloc(1, sizeof(pthreads_iterator_t));
+    pthreads_iterator_t *iterator;
+
+	if (by_ref) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0, 
+			"iteration by reference is not allowed on %s objects", ZSTR_VAL(ce->name));
+		return NULL;
+	}
+	
+	iterator = (pthreads_iterator_t*) 
+		ecalloc(1, sizeof(pthreads_iterator_t));
 	
     zend_iterator_init((zend_object_iterator*)iterator);
 
