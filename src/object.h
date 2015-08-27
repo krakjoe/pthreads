@@ -26,24 +26,24 @@
 #	include <src/pthreads.h>
 #endif
 
-/* {{{ object creation and destruction */
+/* {{{ */
 zend_object* pthreads_threaded_ctor(zend_class_entry *entry);
 zend_object* pthreads_worker_ctor(zend_class_entry *entry);
 zend_object* pthreads_thread_ctor(zend_class_entry *entry);
-void        pthreads_base_free(zend_object *object);
-/* }}} */
+void        pthreads_base_free(zend_object *object); /* }}} */
 
-/* {{{ MISC */
-void pthreads_current_thread(zval *return_value);
-/* }}} */
+/* {{{ */
+void pthreads_current_thread(zval *return_value); /* }}} */
 
-/* {{{ start/join */
+/* {{{ */
 zend_bool pthreads_start(pthreads_object_t* thread);
-zend_bool pthreads_join(pthreads_object_t* thread);
-/* }}} */
+zend_bool pthreads_join(pthreads_object_t* thread); /* }}} */
 
 /* {{{ */
 int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination); /* }}} */
+
+/* {{{ */
+zend_object_iterator* pthreads_object_iterator_create(zend_class_entry *ce, zval *object, int by_ref); /* }}} */
 
 /* {{{ */
 #ifndef HAVE_PTHREADS_HANDLERS_H

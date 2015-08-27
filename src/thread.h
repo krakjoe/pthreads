@@ -44,6 +44,13 @@ typedef struct _pthreads_object_t {
 	zend_object std;
 } pthreads_object_t;
 
+/* {{{ object iterator structure */
+typedef struct _pthreads_iterator_t {
+    zend_object_iterator zit;
+	zval                 object;
+    HashPosition         position;
+} pthreads_iterator_t; /* }}} */
+
 /* {{{ fetches a PTHREAD from a specific object in the current context */
 #define PTHREADS_FETCH_FROM(object) ((pthreads_object_t*) (((char*)object) - XtOffsetOf(pthreads_object_t, std))) /* }}} */
 

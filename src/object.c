@@ -44,6 +44,62 @@ static void pthreads_base_clone(void *arg, void **pclone); /* }}} */
 /* {{{ */
 static void * pthreads_routine(void *arg); /* }}} */
 
+static inline void pthreads_object_iterator_dtor(pthreads_iterator_t* iterator) {
+	if (Z_TYPE(iterator->zit.data) != IS_UNDEF)
+		zval_ptr_dtor(&iterator->zit.data);
+	zval_ptr_dtor(&iterator->object);
+}
+
+static inline int pthreads_object_iterator_validate(pthreads_iterator_t* iterator) {
+	return (iterator->position != HT_INVALID_IDX) ? SUCCESS : FAILURE;
+}
+
+static inline zval* pthreads_object_iterator_current_data(pthreads_iterator_t* iterator) {
+	pthreads_store_data(&iterator->object, &iterator->zit.data, &iterator->position);
+
+	if (Z_ISUNDEF(iterator->zit.data)) {
+		return &EG(uninitialized_zval);
+	}
+
+    return &iterator->zit.data;
+}
+
+static inline void pthreads_object_iterator_current_key(pthreads_iterator_t* iterator, zval* result) {
+    pthreads_store_key(&iterator->object, result, &iterator->position);
+}
+
+static inline void pthreads_object_iterator_move_forward(pthreads_iterator_t* iterator) {
+    pthreads_store_forward(&iterator->object, &iterator->position);
+}
+
+static inline void pthreads_object_iterator_rewind(pthreads_iterator_t* iterator) {
+    pthreads_store_reset(&iterator->object, &iterator->position);
+}
+
+static zend_object_iterator_funcs pthreads_object_iterator_funcs = {
+    (void (*) (zend_object_iterator*)) 				pthreads_object_iterator_dtor,
+    (int (*)(zend_object_iterator *)) 				pthreads_object_iterator_validate,
+    (zval* (*)(zend_object_iterator *)) 			pthreads_object_iterator_current_data,
+    (void (*)(zend_object_iterator *, zval *)) 		pthreads_object_iterator_current_key,
+    (void (*)(zend_object_iterator *))				pthreads_object_iterator_move_forward,
+    (void (*)(zend_object_iterator *)) 				pthreads_object_iterator_rewind
+};
+
+zend_object_iterator* pthreads_object_iterator_create(zend_class_entry *ce, zval *object, int by_ref) {
+    pthreads_iterator_t *iterator = ecalloc(1, sizeof(pthreads_iterator_t));
+	
+    zend_iterator_init((zend_object_iterator*)iterator);
+
+	ZVAL_COPY(&iterator->object, object);
+	ZVAL_UNDEF(&iterator->zit.data);
+
+	pthreads_store_reset(&iterator->object, &iterator->position);
+
+    iterator->zit.funcs = &pthreads_object_iterator_funcs;
+
+    return (zend_object_iterator*) iterator;
+}
+
 /* {{{ */
 zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 	pthreads_object_t* thread = pthreads_globals_object_alloc(
@@ -265,13 +321,15 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 } /* }}} */
 #endif
 
+/* {{{ */
 static inline int pthreads_resources_cleanup(zval *bucket) {
 	TSRMLS_CACHE_UPDATE();
 	if (pthreads_resources_kept(Z_RES_P(bucket))) {
 		return ZEND_HASH_APPLY_REMOVE;
 	} else return ZEND_HASH_APPLY_KEEP;
-}
+} /* }}} */
 
+/* {{{ */
 static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object, pthreads_object_t* connection) {
 	zend_function *run;
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
@@ -317,7 +375,7 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 	pthreads_monitor_remove(object->monitor, PTHREADS_MONITOR_RUNNING);
 
 	return 1;
-}
+} /* }}} */
 
 /* {{{ */
 static void * pthreads_routine(void *arg) {
@@ -395,8 +453,7 @@ static void * pthreads_routine(void *arg) {
 #ifdef _WIN32
 	return NULL;
 #endif
-}
-/* }}} */
+} /* }}} */
 
 #endif
 
