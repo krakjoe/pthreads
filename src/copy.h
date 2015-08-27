@@ -41,7 +41,7 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 		) {
 			zend_hash_get_current_key_ex(old, &key_str, &key_str_length, &num_index, 0, &pos);
 
-			if (Z_TYPE_P(*value) != IS_OBJECT && Z_TYPE_P(*value) != IS_RESOURCE) {
+			if (Z_TYPE_PP(value) != IS_ARRAY && Z_TYPE_PP(value) != IS_OBJECT && Z_TYPE_PP(value) != IS_RESOURCE) {
 				zval *copy;
 				ALLOC_ZVAL(copy);
 				MAKE_COPY_ZVAL(value, copy);
