@@ -229,8 +229,6 @@ PHP_MINIT_FUNCTION(pthreads)
 
 PHP_MSHUTDOWN_FUNCTION(pthreads)
 {
-	TSRMLS_CACHE_UPDATE();
-
 	if (pthreads_instance == TSRMLS_CACHE) {
 		pthreads_globals_shutdown();
 	}
@@ -252,6 +250,8 @@ ZEND_MODULE_POST_ZEND_DEACTIVATE_D(pthreads)
 }
 
 PHP_RINIT_FUNCTION(pthreads) {
+	ZEND_TSRMLS_CACHE_UPDATE();
+
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
 	
 	return SUCCESS;

@@ -202,8 +202,6 @@ static inline void pthreads_base_init(pthreads_object_t* base) {
 
 /* {{{ */
 static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry) {
-	TSRMLS_CACHE_UPDATE();
-
 	zend_object_std_init(&base->std, entry);
 
 	base->creator.ls = TSRMLS_CACHE;
@@ -323,7 +321,6 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 
 /* {{{ */
 static inline int pthreads_resources_cleanup(zval *bucket) {
-	TSRMLS_CACHE_UPDATE();
 	if (pthreads_resources_kept(Z_RES_P(bucket))) {
 		return ZEND_HASH_APPLY_REMOVE;
 	} else return ZEND_HASH_APPLY_KEEP;

@@ -391,8 +391,6 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 			if (complex) {
 				pthreads_resource resource = malloc(sizeof(*resource));
 				if (resource) {
-					TSRMLS_CACHE_UPDATE();
-					
 					resource->original = Z_RES_P(unstore);
 					resource->ls = TSRMLS_CACHE;
 					
@@ -450,8 +448,6 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 		case IS_DOUBLE: ZVAL_DOUBLE(pzval, storage->simple.dval); break;
 		case IS_RESOURCE: {	
 			pthreads_resource stored = (pthreads_resource) storage->data;
-
-			TSRMLS_CACHE_UPDATE();
 
 			if (stored->ls != TSRMLS_CACHE) {
 				zval *search;
