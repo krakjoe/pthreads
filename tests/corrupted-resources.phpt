@@ -16,7 +16,7 @@ class Test extends Thread {
 		$this->test = $test;
 		print_r($this->test);
 		var_dump($this->test);
-		$stream = fopen("/tmp/test.txt", "w+");
+		$stream = tmpfile();
 		var_dump($stream);
 		$this->stream = $stream;
 		stream_set_blocking($this->stream, 0);
@@ -27,13 +27,13 @@ class Test extends Thread {
 $test =new Test();
 $test->start();
 ?>
---EXPECT--
+--EXPECTF--
 Work Object
 (
 )
 object(Work)#2 (0) {
 }
-resource(2) of type (stream)
-resource(2) of type (stream)
+resource(%d) of type (stream)
+resource(%d) of type (stream)
 
 

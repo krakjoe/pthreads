@@ -2,6 +2,8 @@
 Test kill
 --DESCRIPTION--
 This test verifies that ::kill sets state
+--SKIPIF--
+<?php if (defined('PHP_WINDOWS_VERSION_MAJOR')) die("skip: no support for this on windows"); ?>
 --FILE--
 <?php
 class Test extends Thread
