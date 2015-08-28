@@ -142,37 +142,38 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 #if ZEND_USE_ABS_CONST_ADDR || ZEND_USE_ABS_JMP_ADDR
 	zend_op *opline = copy;
 	zend_op *end    = copy + op_array->last;
-	int it = 0;
 
-	for (; opline < end; opline++, it++) {
+	for (; opline < end; opline++) {
 #if ZEND_USE_ABS_CONST_ADDR
-		if (copy[it].op1_type == IS_CONST)
-			copy[it].op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
-		if (copy[it].op2_type == IS_CONST) 
-			copy[it].op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
+		if (opline->op1_type == IS_CONST)
+			opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
+		if (opline->op2_type == IS_CONST) 
+			opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
 #endif
 #if ZEND_USE_ABS_JMP_ADDR
-		switch (copy[it].opcode) {
-			case ZEND_JMP:
-			case ZEND_FAST_CALL:
-			case ZEND_DECLARE_ANON_CLASS:
-			case ZEND_DECLARE_ANON_INHERITED_CLASS:
-				 copy[it].op1.jmp_addr = &copy[copy[it].op1.jmp_addr - op_array->opcodes];
-			break;
+		if ((op_array->fn_flags & ZEND_ACC_DONE_PASS_TWO) != 0) {
+			switch (opline->opcode) {
+				case ZEND_JMP:
+				case ZEND_FAST_CALL:
+				case ZEND_DECLARE_ANON_CLASS:
+				case ZEND_DECLARE_ANON_INHERITED_CLASS:
+					 opline->op1.jmp_addr = &copy[opline->op1.jmp_addr - op_array->opcodes];
+				break;
 
-			case ZEND_JMPZNZ:
-			case ZEND_JMPZ:
-			case ZEND_JMPNZ:
-			case ZEND_JMPZ_EX:
-			case ZEND_JMPNZ_EX:
-			case ZEND_JMP_SET:
-			case ZEND_COALESCE:
-			case ZEND_NEW:
-			case ZEND_FE_RESET_R:
-			case ZEND_FE_RESET_RW:
-			case ZEND_ASSERT_CHECK:
-			    copy[it].op2.jmp_addr = &copy[copy[it].op2.jmp_addr - op_array->opcodes];
-			break;
+				case ZEND_JMPZNZ:
+				case ZEND_JMPZ:
+				case ZEND_JMPNZ:
+				case ZEND_JMPZ_EX:
+				case ZEND_JMPNZ_EX:
+				case ZEND_JMP_SET:
+				case ZEND_COALESCE:
+				case ZEND_NEW:
+				case ZEND_FE_RESET_R:
+				case ZEND_FE_RESET_RW:
+				case ZEND_ASSERT_CHECK:
+					opline->op2.jmp_addr = &copy[opline->op2.jmp_addr - op_array->opcodes];
+				break;
+			}
 		}
 #endif
 		it++;
