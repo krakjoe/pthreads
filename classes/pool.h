@@ -23,6 +23,7 @@ PHP_METHOD(Pool, submit);
 PHP_METHOD(Pool, submitTo);
 PHP_METHOD(Pool, collect);
 PHP_METHOD(Pool, shutdown);
+PHP_METHOD(Pool, __destruct);
 
 ZEND_BEGIN_ARG_INFO_EX(Pool___construct, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
@@ -61,6 +62,7 @@ zend_function_entry pthreads_pool_methods[] = {
 	PHP_ME(Pool, submitTo, 		Pool_submitTo, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, collect, 		Pool_collect, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, shutdown, 		Pool_noargs, 		ZEND_ACC_PUBLIC)
+	PHP_ME(Pool, __destruct, 	Pool_noargs, 		ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -285,32 +287,40 @@ PHP_METHOD(Pool, collect) {
 } /* }}} */
 
 /* {{{ */
-static inline int pthreads_pool_shutdown(zval *worker) {
+static inline int pthreads_pool_shutdown_worker(zval *worker) {
 	zend_call_method(
 		worker, Z_OBJCE_P(worker), NULL, ZEND_STRL("shutdown"), NULL, 0, NULL, NULL);
 	
 	return ZEND_HASH_APPLY_REMOVE;
 } /* }}} */
 
-/* {{{ proto void Pool::shutdown(void)
-	Will cause all the workers to finish executing their stacks and shutdown */
-PHP_METHOD(Pool, shutdown) {
-	zval *workers = NULL;
-	
-	if (zend_parse_parameters_none() != SUCCESS) {
-		return;
-	}
-	
-	workers = zend_read_property(
-		Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
+/* {{{ */
+static inline void pthreads_pool_shutdown(zval *pool) {
+	zval *workers = zend_read_property(
+		Z_OBJCE_P(pool), pool, ZEND_STRL("workers"), 1, workers);
 	
 	if (Z_TYPE_P(workers) == IS_ARRAY) {
 		if (zend_hash_num_elements(Z_ARRVAL_P(workers))) {
-			zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown);	
+			zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown_worker);	
 		}
 
 		zend_hash_clean(Z_ARRVAL_P(workers));	
 	}
+} /* }}} */
+
+/* {{{ proto void Pool::shutdown(void)
+	Will cause all the workers to finish executing their stacks and shutdown */
+PHP_METHOD(Pool, shutdown) {
+	if (zend_parse_parameters_none() != SUCCESS) {
+		return;
+	}
+	
+	pthreads_pool_shutdown(getThis());
+} /* }}} */
+
+/* {{{ proto void Pool::__destruct */
+PHP_METHOD(Pool, __destruct) {
+	pthreads_pool_shutdown(getThis());
 } /* }}} */
 #	endif
 #endif
