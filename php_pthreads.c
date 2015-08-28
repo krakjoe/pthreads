@@ -227,10 +227,24 @@ PHP_MINIT_FUNCTION(pthreads)
 	return SUCCESS;
 }
 
+static inline int sapi_cli_deactivate(void) 
+{
+	fflush(stdout);
+	if (SG(request_info).argv0) {
+		free(SG(request_info).argv0);
+		SG(request_info).argv0 = NULL;
+	}
+	return SUCCESS;
+}
+
 PHP_MSHUTDOWN_FUNCTION(pthreads)
 {
 	if (pthreads_instance == TSRMLS_CACHE) {
 		pthreads_globals_shutdown();
+
+		if (memcmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
+			sapi_module.deactivate = sapi_cli_deactivate;
+		}
 	}
 	
 	zend_throw_exception_hook = zend_throw_exception_hook_function;
@@ -253,7 +267,13 @@ PHP_RINIT_FUNCTION(pthreads) {
 	ZEND_TSRMLS_CACHE_UPDATE();
 
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
-	
+
+	if (pthreads_instance != TSRMLS_CACHE) {
+		if (memcmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
+			sapi_module.deactivate = NULL;
+		}
+	}	
+
 	return SUCCESS;
 }
 

@@ -452,7 +452,7 @@ static void * pthreads_routine(void *arg) {
 
 	php_request_shutdown((void*)NULL);
 
-	tsrm_free_interpreter_context(TSRMLS_CACHE);
+	tsrm_free_interpreter_context(thread->local.ls);
 
 	pthread_exit(NULL);
 
