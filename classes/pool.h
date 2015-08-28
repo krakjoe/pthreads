@@ -296,15 +296,16 @@ static inline int pthreads_pool_shutdown_worker(zval *worker) {
 
 /* {{{ */
 static inline void pthreads_pool_shutdown(zval *pool) {
+	zval tmp;
 	zval *workers = zend_read_property(
-		Z_OBJCE_P(pool), pool, ZEND_STRL("workers"), 1, workers);
+		Z_OBJCE_P(pool), pool, ZEND_STRL("workers"), 1, &tmp);
 	
 	if (Z_TYPE_P(workers) == IS_ARRAY) {
 		if (zend_hash_num_elements(Z_ARRVAL_P(workers))) {
 			zend_hash_apply(Z_ARRVAL_P(workers), pthreads_pool_shutdown_worker);	
 		}
 
-		zend_hash_clean(Z_ARRVAL_P(workers));	
+		zend_hash_clean(Z_ARRVAL_P(workers));
 	}
 } /* }}} */
 
