@@ -145,9 +145,9 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 #if ZEND_USE_ABS_CONST_ADDR || ZEND_USE_ABS_JMP_ADDR
 #if ZEND_USE_ABS_CONST_ADDR
 		if (copy[it].op1_type == IS_CONST)
-			copy[it].op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
+			copy[it].op1.zv = (zval*)((char*)copy[it]->op1.zv + ((char*)op_array->literals - (char*)literals));
 		if (copy[it].op2_type == IS_CONST) 
-			copy[it].op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
+			copy[it].op2.zv = (zval*)((char*)copy[it]->op2.zv + ((char*)op_array->literals - (char*)literals));
 #endif
 #if ZEND_USE_ABS_JMP_ADDR
 		switch (copy[it].opcode) {
