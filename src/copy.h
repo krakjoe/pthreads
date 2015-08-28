@@ -35,12 +35,31 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 			zend_string *name = zend_string_new(key);
 
 			if (Z_REFCOUNTED_P(value)) {
-				if (Z_TYPE_P(value) == IS_STRING) {
-					zval copy;
+				zval copy;
 
-					ZVAL_STR(&copy, zend_string_new(Z_STR_P(value)));
-					zend_hash_add(statics, name, &copy);
-				} else zend_hash_add_empty_element(statics, name);
+				switch (Z_TYPE_P(value)) {
+					case IS_STRING:
+						ZVAL_STR(&copy, 
+							zend_string_new(Z_STR_P(value)));
+						zend_hash_add(statics, name, &copy);
+					break;
+					
+					case IS_OBJECT:
+						if (instanceof_function(Z_OBJCE_P(value), pthreads_threaded_entry) ||
+							instanceof_function(Z_OBJCE_P(value), zend_ce_closure)) {
+							pthreads_store_separate(value, &copy, 1);
+							zend_hash_add(statics, name, &copy);
+						}
+					break;
+
+					case IS_ARRAY:
+						pthreads_store_separate(value, &copy, 1);
+						zend_hash_add(statics, name, &copy);
+					break;
+					
+					default:
+						zend_hash_add_empty_element(statics, name);					
+				}
 			} else zend_hash_add(statics, name, value);
 			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
