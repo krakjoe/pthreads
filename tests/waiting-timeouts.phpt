@@ -6,6 +6,8 @@ This test verifies that reaching a timeout returns the correct value
 Note that this is a dodgy test, ONLY EVER WAIT FOR SOMETHING
 We assume, wrongly, that the thread will be active and waiting within 3
 seconds.
+--SKIPIF--
+<?php if (defined('PHP_WINDOWS_VERSION_MAJOR')) die("skip: no support for this on windows"); ?>
 --FILE--
 <?php
 class T extends Thread {
