@@ -134,20 +134,22 @@ static zval* pthreads_copy_literals(zval *old, int end) {
 
 /* {{{ */
 static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
-	zval *literal;
-	uint32_t it = 0;
 	zend_op *copy = safe_emalloc(
 		op_array->last, sizeof(zend_op), 0);
 
 	memcpy(copy, op_array->opcodes, sizeof(zend_op) * op_array->last);
 
-	while (it < op_array->last) {
 #if ZEND_USE_ABS_CONST_ADDR || ZEND_USE_ABS_JMP_ADDR
+	zend_op *opline = copy;
+	zend_op *end    = copy + op_array->last;
+	int it = 0;
+
+	for (; opline < end; opline++; it++) {
 #if ZEND_USE_ABS_CONST_ADDR
 		if (copy[it].op1_type == IS_CONST)
-			copy[it].op1.zv = (zval*)((char*)copy[it]->op1.zv + ((char*)op_array->literals - (char*)literals));
+			copy[it].op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
 		if (copy[it].op2_type == IS_CONST) 
-			copy[it].op2.zv = (zval*)((char*)copy[it]->op2.zv + ((char*)op_array->literals - (char*)literals));
+			copy[it].op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
 #endif
 #if ZEND_USE_ABS_JMP_ADDR
 		switch (copy[it].opcode) {
@@ -173,10 +175,11 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 			break;
 		}
 #endif
-#endif
-
 		it++;
 	}
+#endif
+
+		
 
 	return copy;
 } /* }}} */
