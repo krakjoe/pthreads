@@ -49,7 +49,7 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 							instanceof_function(Z_OBJCE_P(value), zend_ce_closure)) {
 							pthreads_store_separate(value, &copy, 1);
 							zend_hash_add(statics, name, &copy);
-						}
+						} else zend_hash_add_empty_element(statics, name);
 					break;
 
 					case IS_ARRAY:

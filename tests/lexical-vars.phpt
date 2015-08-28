@@ -14,7 +14,7 @@ The following things will not work:
 	Non-threaded objects
 	Resources
 
-This test ensures all of that is true.
+Unsupported types should not raise notices, they will simply be undefined in the function scope.
 --FILE--
 <?php
 class TestThread extends \Thread
@@ -46,7 +46,6 @@ $thread = new TestThread(function () use ($scalar, $string, $res, $threaded, $cl
 });
 $thread->start();
 --EXPECTF--
-Notice: Undefined variable: std in %s on line 26
 int(1)
 string(5) "thing"
 NULL
