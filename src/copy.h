@@ -144,7 +144,7 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 	zend_op *end    = copy + op_array->last;
 	int it = 0;
 
-	for (; opline < end; opline++; it++) {
+	for (; opline < end; opline++, it++) {
 #if ZEND_USE_ABS_CONST_ADDR
 		if (copy[it].op1_type == IS_CONST)
 			copy[it].op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
