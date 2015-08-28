@@ -176,7 +176,6 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 			}
 		}
 #endif
-		it++;
 	}
 #endif
 
