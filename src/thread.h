@@ -51,11 +51,15 @@ typedef struct _pthreads_iterator_t {
     HashPosition         position;
 } pthreads_iterator_t; /* }}} */
 
+static inline pthreads_object_t* _pthreads_fetch_object(zend_object *object) {
+	return (pthreads_object_t*) ((char*)object - XtOffsetOf(pthreads_object_t, std));
+}
+
 /* {{{ fetches a PTHREAD from a specific object in the current context */
-#define PTHREADS_FETCH_FROM(object) ((pthreads_object_t*) (((char*)object) - XtOffsetOf(pthreads_object_t, std))) /* }}} */
+#define PTHREADS_FETCH_FROM(object) _pthreads_fetch_object(object) /* }}} */
 
 /* {{{ fetches the current PTHREAD from $this */
-#define PTHREADS_FETCH ((pthreads_object_t*) ((char*) Z_OBJ(EX(This)) - XtOffsetOf(pthreads_object_t, std))) /* }}} */
+#define PTHREADS_FETCH PTHREADS_FETCH_FROM(Z_OBJ(EX(This))) /* }}} */
 
 /* {{{ option constants */
 #define PTHREADS_INHERIT_NONE      0x00000000

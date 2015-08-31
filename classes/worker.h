@@ -93,7 +93,7 @@ PHP_METHOD(Worker, unstack)
 		return;
 	}
 
-	RETURN_LONG(pthreads_stack_del(thread->stack, return_value));
+	pthreads_stack_del(thread->stack, return_value);
 }
 
 /* {{{ proto int Worker::getStacked()
@@ -159,7 +159,7 @@ static zend_bool pthreads_worker_collect_function(pthreads_call_t *call, zval *c
 		if (zend_is_true(&result)) {
 			remove = 1;
 		}
-		zval_dtor(&result);
+		zval_ptr_dtor(&result);
 	}
 
 	return remove;
