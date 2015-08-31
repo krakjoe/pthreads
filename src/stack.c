@@ -26,6 +26,10 @@
 #	include <src/pthreads.h>
 #endif
 
+#define PTHREADS_STACK_GARBAGE 2
+#define PTHREADS_STACK_FREE    1
+#define PTHREADS_STACK_NOTHING 0
+
 struct pthreads_stack_item_t {
 	struct pthreads_stack_item_t *next;
 	struct pthreads_stack_item_t *prev;
@@ -41,17 +45,17 @@ struct pthreads_stack_t {
 };
 
 pthreads_stack_t* pthreads_stack_alloc(pthreads_monitor_t *monitor) {
-	pthreads_stack_t *stack = (pthreads_stack_t*) calloc(1, sizeof(pthreads_stack_t));
+	pthreads_stack_t *stack = (pthreads_stack_t*) ecalloc(1, sizeof(pthreads_stack_t));
 	
 	if (!stack) {
 		return NULL;
 	}
 	
 	stack->monitor = monitor;	
-	stack->gc = (pthreads_stack_t*) calloc(1, sizeof(pthreads_stack_t));
+	stack->gc = (pthreads_stack_t*) ecalloc(1, sizeof(pthreads_stack_t));
 	
 	if (!stack->gc) {
-		free(stack);
+		efree(stack);
 		return NULL;
 	}
 
@@ -77,7 +81,7 @@ void pthreads_stack_free(pthreads_stack_t *stack) {
 			pthreads_stack_item_t *r = item;
 			zval_ptr_dtor(&item->value);
 			item = r->next;
-			free(r);
+			efree(r);
 		}
 
 		if (stack->gc) {
@@ -86,12 +90,12 @@ void pthreads_stack_free(pthreads_stack_t *stack) {
 				pthreads_stack_item_t *r = item;
 				zval_ptr_dtor(&item->value);
 				item = r->next;
-				free(r);			
+				efree(r);			
 			}
 		}
 
-		free(stack->gc);
-		free(stack);
+		efree(stack->gc);
+		efree(stack);
 	
 		pthreads_monitor_unlock(monitor);
 	}
@@ -112,7 +116,7 @@ static inline void pthreads_stack_add_item(pthreads_stack_t *stack, pthreads_sta
 zend_long pthreads_stack_add(pthreads_stack_t *stack, zval *value) {
 	zend_long size = 0;
 	pthreads_stack_item_t *item = 
-			(pthreads_stack_item_t*) calloc(1, sizeof(pthreads_stack_item_t));
+			(pthreads_stack_item_t*) ecalloc(1, sizeof(pthreads_stack_item_t));
 
 	if (!item) {
 		return -1;
@@ -130,7 +134,7 @@ zend_long pthreads_stack_add(pthreads_stack_t *stack, zval *value) {
 		pthreads_monitor_unlock(stack->monitor);
 	} else {
 		zval_ptr_dtor(&item->value);
-		free(item);
+		efree(item);
 		size = -1;
 	}
 
@@ -162,12 +166,18 @@ static inline zend_long pthreads_stack_remove(pthreads_stack_t *stack, pthreads_
 
 	stack->size--;
 
-	if (garbage) {
-		pthreads_stack_add_item(stack->gc, item);
-	}
-
 	if (value) {
 		memcpy(value, &item->value, sizeof(zval));
+	}
+	
+	switch (garbage) {
+		case PTHREADS_STACK_GARBAGE:
+			pthreads_stack_add_item(stack->gc, item);
+		break;
+
+		case PTHREADS_STACK_FREE:
+			efree(item);
+		break;
 	}
 
 	return stack->size;
@@ -178,7 +188,7 @@ zend_long pthreads_stack_del(pthreads_stack_t *stack, zval *value) {
 	
 	if (pthreads_monitor_lock(stack->monitor)) {
 		size = pthreads_stack_remove(
-			stack, stack->head, value, 0);
+			stack, stack->head, value, PTHREADS_STACK_FREE);
 		pthreads_monitor_unlock(stack->monitor);
 	}
 
@@ -197,10 +207,10 @@ zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call,
 				pthreads_stack_item_t *garbage = item;
 
 				if (collect(call, &garbage->value)) {
-					pthreads_stack_remove(stack->gc, garbage, NULL, 0);
+					pthreads_stack_remove(stack->gc, garbage, NULL, PTHREADS_STACK_NOTHING);
 					item = garbage->next;
 					zval_ptr_dtor(&garbage->value);
-					free(garbage);
+					efree(garbage);
 				} else item = garbage->next;
 			}
 			size = stack->gc->size;
@@ -224,7 +234,7 @@ pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *valu
 
 				pthreads_monitor_wait(stack->monitor, 0);
 			} else {
-				pthreads_stack_remove(stack, stack->head, value, 1);
+				pthreads_stack_remove(stack, stack->head, value, PTHREADS_STACK_GARBAGE);
 				break;
 			}
 		} while (state != PTHREADS_MONITOR_JOINED);
