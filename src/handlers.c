@@ -73,12 +73,19 @@ int pthreads_count_properties(PTHREADS_COUNT_PASSTHRU_D) {
 /* {{{ */
 HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 	HashTable *table = emalloc(sizeof(HashTable));
+	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
 	zend_hash_init(table, 8, NULL, ZVAL_PTR_DTOR, 0);
 	*is_temp = 1;
-	pthreads_store_tohash(
-		(PTHREADS_FETCH_FROM(Z_OBJ_P(object)))->store,
-		table
-	);
+
+	pthreads_store_tohash(threaded->store, table);
+	
+	if (PTHREADS_IS_WORKER(threaded)) {
+		if (PTHREADS_IN_CREATOR(threaded) && !PTHREADS_IS_CONNECTION(threaded)) {
+			pthreads_stack_tohash(threaded->stack, table);
+		}
+	}
+
 	return table;
 } /* }}} */
 

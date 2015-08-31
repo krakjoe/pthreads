@@ -90,7 +90,7 @@ void pthreads_stack_free(pthreads_stack_t *stack) {
 				pthreads_stack_item_t *r = item;
 				zval_ptr_dtor(&item->value);
 				item = r->next;
-				efree(r);			
+				efree(r);	
 			}
 		}
 
@@ -243,6 +243,43 @@ pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *valu
 	}
 
 	return state;
+}
+
+void pthreads_stack_tohash(pthreads_stack_t *stack, HashTable *hash) {
+	zval stacked;
+	zval waiting;
+	zval gc;
+
+	array_init(&stacked);
+	array_init(&waiting);	
+	array_init(&gc);
+
+	zend_hash_str_add(Z_ARRVAL(stacked), ":stacked:", sizeof(":stacked:")-1, &waiting);
+	zend_hash_str_add(Z_ARRVAL(stacked), ":gc:", sizeof(":gc:")-1, &gc);
+
+	if (pthreads_monitor_lock(stack->monitor)) {
+		pthreads_stack_item_t *item = stack->head;
+		
+		while (item) {
+			if (add_next_index_zval(
+					&waiting, &item->value)) {
+				Z_ADDREF(item->value);
+			}
+			item = item->next;
+		}
+
+		item = stack->gc->head;
+		while (item) {
+			if (add_next_index_zval(
+					&gc, &item->value)) {
+				Z_ADDREF(item->value);
+			}
+			item = item->next;
+		}
+		pthreads_monitor_unlock(stack->monitor);
+	}
+
+	zend_hash_str_add(hash, ":stack:", sizeof(":stack:")-1, &stacked);
 }
 #endif
 
