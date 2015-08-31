@@ -79,12 +79,6 @@ HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 	*is_temp = 1;
 
 	pthreads_store_tohash(threaded->store, table);
-	
-	if (PTHREADS_IS_WORKER(threaded)) {
-		if (PTHREADS_IN_CREATOR(threaded) && !PTHREADS_IS_CONNECTION(threaded)) {
-			pthreads_stack_tohash(threaded->stack, table);
-		}
-	}
 
 	return table;
 } /* }}} */
