@@ -402,6 +402,8 @@ static void * pthreads_routine(void *arg) {
 	PG(expose_php) = 0;
 	PG(auto_globals_jit) = 0;
 
+	php_request_startup();
+
 	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
 		zend_alter_ini_entry_chars(
 			PTHREADS_G(strings).session.cache_limiter,
@@ -412,8 +414,6 @@ static void * pthreads_routine(void *arg) {
 			"0", sizeof("0")-1,
 			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
 	}
-
-	php_request_startup();
 
 	SG(sapi_started) = 0;
 	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
