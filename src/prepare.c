@@ -483,11 +483,10 @@ static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
 	zend_function *value;
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, function_table), key, value) {
-		key = zend_string_new(key);
+		zend_string *name = zend_string_new(key);
 		value = pthreads_copy_function(value);
 		zend_hash_add_ptr(
-			CG(function_table), key, value);
-		zend_string_release(key);
+			CG(function_table), name, value);
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
