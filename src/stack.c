@@ -45,19 +45,11 @@ struct pthreads_stack_t {
 };
 
 pthreads_stack_t* pthreads_stack_alloc(pthreads_monitor_t *monitor) {
-	pthreads_stack_t *stack = (pthreads_stack_t*) ecalloc(1, sizeof(pthreads_stack_t));
+	pthreads_stack_t *stack = 
+		(pthreads_stack_t*) ecalloc(1, sizeof(pthreads_stack_t));
 	
-	if (!stack) {
-		return NULL;
-	}
-	
-	stack->monitor = monitor;	
+	stack->monitor = monitor;
 	stack->gc = (pthreads_stack_t*) ecalloc(1, sizeof(pthreads_stack_t));
-	
-	if (!stack->gc) {
-		efree(stack);
-		return NULL;
-	}
 
 	return stack;
 }
@@ -117,10 +109,6 @@ zend_long pthreads_stack_add(pthreads_stack_t *stack, zval *value) {
 	zend_long size = 0;
 	pthreads_stack_item_t *item = 
 			(pthreads_stack_item_t*) ecalloc(1, sizeof(pthreads_stack_item_t));
-
-	if (!item) {
-		return -1;
-	}
 
 	ZVAL_COPY(&item->value, value);
 
