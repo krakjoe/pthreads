@@ -161,11 +161,12 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 		zend_string *key;
 		zend_function *value;
 
-		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->function_table, key, value) {
+		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->function_table, key, value) {	
+			zend_string *name = zend_string_new(key);
 			value = pthreads_copy_function(value);
-			key = zend_string_new(key);
-			zend_hash_add_ptr(&prepared->function_table, key, value);
-			zend_string_release(key);		
+			zend_hash_add_ptr(
+				&prepared->function_table, name, value);
+			zend_string_release(name);		
 		} ZEND_HASH_FOREACH_END();
 	}
 	
