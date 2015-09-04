@@ -422,8 +422,8 @@ static inline void pthreads_prepare_ini(pthreads_object_t* thread) {
 		if ((entry[1] = zend_hash_find_ptr(table[1], name))) {
 			if (entry[0]->value && entry[1]->value) {
 				if (memcmp(ZSTR_VAL(entry[0]->value), ZSTR_VAL(entry[1]->value), ZSTR_LEN(entry[0]->value)) != SUCCESS) {
-					zend_string *copied;
 					zend_bool resmod = entry[1]->modifiable;
+					zend_string *copied = zend_string_new(name); 
 
 					if (!EG(modified_ini_directives)) {
 						ALLOC_HASHTABLE(EG(modified_ini_directives));
@@ -434,7 +434,7 @@ static inline void pthreads_prepare_ini(pthreads_object_t* thread) {
 						entry[1]->orig_value = entry[1]->value;
 						entry[1]->orig_modifiable = entry[1]->modifiable;
 						entry[1]->modified = 1;
-						zend_hash_add_ptr(EG(modified_ini_directives), name, entry[1]);
+						zend_hash_add_ptr(EG(modified_ini_directives), copied, entry[1]);
 					}
 
 					entry[1]->modifiable = 1;
@@ -442,8 +442,10 @@ static inline void pthreads_prepare_ini(pthreads_object_t* thread) {
 					if (entry[1]->modified && entry[1]->orig_value != entry[1]->value) {
 						zend_string_release(entry[1]->value);
 					}
-					entry[1]->value = zend_string_new(entry[0]->value);					
+					entry[1]->value = zend_string_new(entry[0]->value);			
 					entry[1]->modifiable = resmod;
+
+					zend_string_release(copied);
 				}
 			}
 		}
@@ -538,7 +540,9 @@ static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 static inline void pthreads_prepare_includes(pthreads_object_t* thread) {
 	zend_string *file;
 	ZEND_HASH_FOREACH_STR_KEY(&PTHREADS_EG(thread->creator.ls, included_files), file) {
-		zend_hash_add_empty_element(&EG(included_files), file);
+		zend_string *name = zend_string_new(file);
+		zend_hash_add_empty_element(&EG(included_files), name);
+		zend_string_release(name);
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
