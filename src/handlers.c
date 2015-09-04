@@ -98,6 +98,7 @@ HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 /* {{{ */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 	zval mstring;
+	zend_long *guard = NULL;
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	ZVAL_UNDEF(&mstring);
@@ -108,37 +109,30 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 		cache = NULL;
 	}
 
-	if (Z_TYPE_P(member)==IS_STRING) {
-		zend_long *guard = NULL;
-		if (Z_OBJCE_P(object)->__get && (guard = pthreads_get_guard(&threaded->std, Z_STR_P(member))) && !((*guard) & IN_GET)) {
-			zend_fcall_info fci = empty_fcall_info;
-	        zend_fcall_info_cache fcc = empty_fcall_info_cache;
-			
-			fci.size = sizeof(zend_fcall_info);
-			fci.retval = rv;
-			fci.object = &threaded->std;
-			zend_fcall_info_argn(&fci, 1, member);
-			fcc.initialized = 1;
-			fcc.function_handler = Z_OBJCE_P(object)->__get;
-			fcc.object = &threaded->std;
-			
-			(*guard) |= IN_GET;
-			zend_call_function(&fci, &fcc);
-			(*guard) &= ~IN_GET;
+	if (Z_OBJCE_P(object)->__get && (guard = pthreads_get_guard(&threaded->std, Z_STR_P(member))) && !((*guard) & IN_GET)) {
+		zend_fcall_info fci = empty_fcall_info;
+        zend_fcall_info_cache fcc = empty_fcall_info_cache;
+		
+		fci.size = sizeof(zend_fcall_info);
+		fci.retval = rv;
+		fci.object = &threaded->std;
+		zend_fcall_info_argn(&fci, 1, member);
+		fcc.initialized = 1;
+		fcc.function_handler = Z_OBJCE_P(object)->__get;
+		fcc.object = &threaded->std;
+		
+		(*guard) |= IN_GET;
+		zend_call_function(&fci, &fcc);
+		(*guard) &= ~IN_GET;
 
-			zend_fcall_info_args_clear(&fci, 1);		
-		} else {
-			if (pthreads_store_read(threaded->store, Z_STR_P(member), rv) != SUCCESS) {
-				zend_throw_exception_ex(
-				    spl_ce_RuntimeException, 0, 
-				    "pthreads failed to read member %s::$%s", 
-				    Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
-			}
-		}
+		zend_fcall_info_args_clear(&fci, 1);		
 	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads detected an attempt to use an unsupported key type %s", Z_OBJCE_P(object)->name);
+		if (pthreads_store_read(threaded->store, Z_STR_P(member), rv) != SUCCESS) {
+			zend_throw_exception_ex(
+			    spl_ce_RuntimeException, 0, 
+			    "pthreads failed to read member %s::$%s", 
+			    Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
+		}
 	}
 	
 	if (Z_TYPE(mstring) != IS_UNDEF) {
@@ -238,6 +232,7 @@ void pthreads_write_dimension(PTHREADS_WRITE_DIMENSION_PASSTHRU_D) { pthreads_wr
 int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	int isset = 0;
 	zval mstring;
+	zend_long *guard = NULL;
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	ZVAL_UNDEF(&mstring);
@@ -248,40 +243,33 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 		cache = NULL;
 	}
 
-	if (Z_TYPE_P(member) == IS_STRING) {
-		zend_long *guard = NULL;
-		if (Z_OBJCE_P(object)->__isset && (guard = pthreads_get_guard(&threaded->std, Z_STR_P(member))) && !((*guard) & IN_ISSET)) {
-			zend_fcall_info fci = empty_fcall_info;
-			zend_fcall_info_cache fcc = empty_fcall_info_cache;
-			zval rv;
+	if (Z_OBJCE_P(object)->__isset && (guard = pthreads_get_guard(&threaded->std, Z_STR_P(member))) && !((*guard) & IN_ISSET)) {
+		zend_fcall_info fci = empty_fcall_info;
+		zend_fcall_info_cache fcc = empty_fcall_info_cache;
+		zval rv;
 
-			ZVAL_UNDEF(&rv);
+		ZVAL_UNDEF(&rv);
 
-			fci.size = sizeof(zend_fcall_info);
-			fci.retval = &rv;
-			fci.object = &threaded->std;
-			zend_fcall_info_argn(&fci, 1, member);
-			fcc.initialized = 1;
-			fcc.function_handler = Z_OBJCE_P(object)->__isset;
-			fcc.object = &threaded->std;
+		fci.size = sizeof(zend_fcall_info);
+		fci.retval = &rv;
+		fci.object = &threaded->std;
+		zend_fcall_info_argn(&fci, 1, member);
+		fcc.initialized = 1;
+		fcc.function_handler = Z_OBJCE_P(object)->__isset;
+		fcc.object = &threaded->std;
 
-			(*guard) |= IN_ISSET;
-			zend_call_function(&fci, &fcc);
-			(*guard) &= ~IN_ISSET;
-		
-			if (Z_TYPE(rv) != IS_UNDEF) {
-				isset = 
-					zend_is_true(&rv);
-				zval_dtor(&rv);
-			}
-			zend_fcall_info_args_clear(&fci, 1);
-		} else {
-			isset = pthreads_store_isset(threaded->store, Z_STR_P(member), has_set_exists);
+		(*guard) |= IN_ISSET;
+		zend_call_function(&fci, &fcc);
+		(*guard) &= ~IN_ISSET;
+	
+		if (Z_TYPE(rv) != IS_UNDEF) {
+			isset = 
+				zend_is_true(&rv);
+			zval_dtor(&rv);
 		}
+		zend_fcall_info_args_clear(&fci, 1);
 	} else {
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads detected an attempt to use an unsupported key type %s", Z_OBJCE_P(object)->name);
+		isset = pthreads_store_isset(threaded->store, Z_STR_P(member), has_set_exists);
 	}
 
 	if (Z_TYPE(mstring) != IS_UNDEF) {
@@ -296,6 +284,7 @@ int pthreads_has_dimension(PTHREADS_HAS_DIMENSION_PASSTHRU_D) { return pthreads_
 /* {{{ */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 	zval mstring;
+	zend_long *guard = NULL;
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	ZVAL_UNDEF(&mstring);
@@ -306,41 +295,34 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		cache = NULL;
 	}
 
-	if (Z_TYPE_P(member) == IS_STRING) {
-		zend_long *guard = NULL;
-		if (Z_OBJCE_P(object)->__unset && (guard = pthreads_get_guard(&threaded->std, Z_STR_P(member))) && !((*guard) & IN_UNSET)) {
-			zend_fcall_info fci = empty_fcall_info;
-			zend_fcall_info_cache fcc = empty_fcall_info_cache;			
-			zval rv;
+	if (Z_OBJCE_P(object)->__unset && (guard = pthreads_get_guard(&threaded->std, Z_STR_P(member))) && !((*guard) & IN_UNSET)) {
+		zend_fcall_info fci = empty_fcall_info;
+		zend_fcall_info_cache fcc = empty_fcall_info_cache;			
+		zval rv;
 
-			ZVAL_UNDEF(&rv);
+		ZVAL_UNDEF(&rv);
 
-			fci.size = sizeof(zend_fcall_info);
-			fci.retval = &rv;
-			fci.object = &threaded->std;
-			zend_fcall_info_argn(&fci, 1, member);
-			fcc.initialized = 1;
-			fcc.function_handler = Z_OBJCE_P(object)->__unset;
-			fcc.object = &threaded->std;
+		fci.size = sizeof(zend_fcall_info);
+		fci.retval = &rv;
+		fci.object = &threaded->std;
+		zend_fcall_info_argn(&fci, 1, member);
+		fcc.initialized = 1;
+		fcc.function_handler = Z_OBJCE_P(object)->__unset;
+		fcc.object = &threaded->std;
 
-			(*guard) |= IN_UNSET;
-			zend_call_function(&fci, &fcc);
-			(*guard) &= ~IN_UNSET;
-		
-			if (Z_TYPE(rv) != IS_UNDEF) {
-				zval_dtor(&rv);
-			}
-			zend_fcall_info_args_clear(&fci, 1);
-		} else if (pthreads_store_delete(threaded->store, Z_STR_P(member)) != SUCCESS){
-			zend_throw_exception_ex(
-				spl_ce_RuntimeException, 0, 
-				"pthreads failed to delete member %s::$%s", 
-				Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
+		(*guard) |= IN_UNSET;
+		zend_call_function(&fci, &fcc);
+		(*guard) &= ~IN_UNSET;
+	
+		if (Z_TYPE(rv) != IS_UNDEF) {
+			zval_dtor(&rv);
 		}
-	} else {
+		zend_fcall_info_args_clear(&fci, 1);
+	} else if (pthreads_store_delete(threaded->store, Z_STR_P(member)) != SUCCESS){
 		zend_throw_exception_ex(
 			spl_ce_RuntimeException, 0, 
-			"pthreads detected an attempt to use an unsupported key type %s", Z_OBJCE_P(object)->name);
+			"pthreads failed to delete member %s::$%s", 
+			Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
 	}
 	
 	if (Z_TYPE(mstring) != IS_UNDEF) {
