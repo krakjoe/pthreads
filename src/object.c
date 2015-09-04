@@ -318,24 +318,6 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 	return (pthread_join(thread->thread, NULL) == SUCCESS);
 } /* }}} */
 
-#ifdef PTHREADS_KILL_SIGNAL
-static inline void pthreads_kill_handler(int signo) /* {{{ */
-{	
-	pthreads_object_t* current = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
-
-	pthreads_monitor_add(current->monitor, PTHREADS_MONITOR_ERROR);
-	PTHREADS_ZG(signal) = signo;
-	zend_bailout();
-} /* }}} */
-#endif
-
-/* {{{ */
-static inline int pthreads_resources_cleanup(zval *bucket) {
-	if (pthreads_resources_kept(Z_RES_P(bucket))) {
-		return ZEND_HASH_APPLY_REMOVE;
-	} else return ZEND_HASH_APPLY_KEEP;
-} /* }}} */
-
 /* {{{ */
 static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object, pthreads_object_t* connection) {
 	zend_function *run;
@@ -388,41 +370,7 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 static void * pthreads_routine(void *arg) {
 	pthreads_object_t* thread = (pthreads_object_t*) arg;
 
-#ifdef PTHREADS_KILL_SIGNAL
-	signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
-#endif
-
-	thread->local.id = pthreads_self();
-	thread->local.ls = ts_resource(0);
-	TSRMLS_CACHE_UPDATE();
-
-	SG(server_context) = PTHREADS_SG(thread->creator.ls, server_context);
-
-	PG(expose_php) = 0;
-	PG(auto_globals_jit) = 0;
-
-	php_request_startup();
-
-	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-		zend_alter_ini_entry_chars(
-			PTHREADS_G(strings).session.cache_limiter,
-			"nocache", sizeof("nocache")-1, 
-			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
-		zend_alter_ini_entry_chars(
-			PTHREADS_G(strings).session.use_cookies,
-			"0", sizeof("0")-1,
-			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
-	}
-
-	SG(sapi_started) = 0;
-	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
-		SG(headers_sent)=1;
-		SG(request_info).no_headers = 1;
-	}
-
-	pthreads_prepare(thread);
-
-	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_READY);
+	pthreads_prepared_startup(thread);
 
 	zend_first_try {
 		ZVAL_UNDEF(&PTHREADS_ZG(this));
@@ -446,13 +394,7 @@ static void * pthreads_routine(void *arg) {
 		zval_ptr_dtor(&PTHREADS_ZG(this));
 	} zend_end_try();
 
-	zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
-
-	PG(report_memleaks) = 0;
-
-	php_request_shutdown((void*)NULL);
-
-	ts_free_thread();
+	pthreads_prepared_shutdown(thread);
 
 	pthread_exit(NULL);
 

@@ -405,7 +405,18 @@ static inline void pthreads_prepare_ini(pthreads_object_t* thread) {
 	zend_ini_entry *entry[2];
 	zend_string *name;
 	HashTable *table[2] = {PTHREADS_EG(thread->creator.ls, ini_directives), EG(ini_directives)};
-	
+
+	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
+		zend_alter_ini_entry_chars(
+			PTHREADS_G(strings).session.cache_limiter,
+			"nocache", sizeof("nocache")-1, 
+			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
+		zend_alter_ini_entry_chars(
+			PTHREADS_G(strings).session.use_cookies,
+			"0", sizeof("0")-1,
+			PHP_INI_USER, PHP_INI_STAGE_ACTIVATE);
+	}	
+
 	ZEND_HASH_FOREACH_STR_KEY_PTR(table[0], name, entry[0]) {
 		if ((entry[1] = zend_hash_find_ptr(table[1], name))) {
 			if (entry[0]->value && entry[1]->value) {
@@ -546,7 +557,45 @@ static inline void pthreads_prepare_resource_destructor(pthreads_object_t* threa
 } /* }}} */
 
 /* {{{ */
-int pthreads_prepare(pthreads_object_t* thread){
+static inline void pthreads_prepare_sapi(pthreads_object_t* thread) {
+	SG(sapi_started) = 0;
+
+	if (!(thread->options & PTHREADS_ALLOW_HEADERS)) {
+		SG(headers_sent)=1;
+		SG(request_info).no_headers = 1;
+	}
+} /* }}} */
+
+#ifdef PTHREADS_KILL_SIGNAL
+static inline void pthreads_kill_handler(int signo) /* {{{ */
+{	
+	pthreads_object_t* current = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
+
+	pthreads_monitor_add(current->monitor, PTHREADS_MONITOR_ERROR);
+	PTHREADS_ZG(signal) = signo;
+	zend_bailout();
+} /* }}} */
+#endif
+
+/* {{{ */
+int pthreads_prepared_startup(pthreads_object_t* thread) {
+#ifdef PTHREADS_KILL_SIGNAL
+	signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
+#endif
+
+	thread->local.id = pthreads_self();
+	thread->local.ls = ts_resource(0);
+	TSRMLS_CACHE_UPDATE();
+
+	SG(server_context) = PTHREADS_SG(thread->creator.ls, server_context);
+
+	PG(expose_php) = 0;
+	PG(auto_globals_jit) = 0;
+
+	php_request_startup();
+
+	pthreads_prepare_sapi(thread);
+	
 	if (thread->options & PTHREADS_INHERIT_INI)
 		pthreads_prepare_ini(thread);
 	
@@ -565,7 +614,27 @@ int pthreads_prepare(pthreads_object_t* thread){
 	pthreads_prepare_exception_handler(thread);
 	pthreads_prepare_resource_destructor(thread);
 
+	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_READY);
+
 	return SUCCESS;
+} /* }}} */
+
+/* {{{ */
+static inline int pthreads_resources_cleanup(zval *bucket) {
+	if (pthreads_resources_kept(Z_RES_P(bucket))) {
+		return ZEND_HASH_APPLY_REMOVE;
+	} else return ZEND_HASH_APPLY_KEEP;
+} /* }}} */
+
+/* {{{ */
+int pthreads_prepared_shutdown(pthreads_object_t* thread) {
+	zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
+
+	PG(report_memleaks) = 0;
+
+	php_request_shutdown((void*)NULL);
+
+	ts_free_thread();
 } /* }}} */
 
 /* {{{ */
