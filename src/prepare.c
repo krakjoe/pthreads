@@ -498,6 +498,7 @@ static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
 		value = pthreads_copy_function(value);
 		zend_hash_add_ptr(
 			CG(function_table), name, value);
+		zend_string_release(name);
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
