@@ -482,8 +482,7 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 			zend_function *closure = pthreads_copy_function((zend_function*) storage->data);
 
 			zend_create_closure(pzval, closure, EG(scope), closure->common.scope, NULL);
-			closure = (zend_function*) zend_get_closure_method_def(pzval);
-			name_len = spprintf(&name, 0, "Closure@%p", closure);
+			name_len = spprintf(&name, 0, "Closure@%p", zend_get_closure_method_def(pzval));
 			if (!zend_hash_str_update_ptr(EG(function_table), name, name_len, closure)) {
 				result = FAILURE;
 				zval_dtor(pzval);
