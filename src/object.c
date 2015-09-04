@@ -393,8 +393,7 @@ static void * pthreads_routine(void *arg) {
 #endif
 
 	thread->local.id = pthreads_self();
-	thread->local.ls = tsrm_new_interpreter_context();
-	tsrm_set_interpreter_context(thread->local.ls);
+	thread->local.ls = ts_resource(0);
 	TSRMLS_CACHE_UPDATE();
 
 	SG(server_context) = PTHREADS_SG(thread->creator.ls, server_context);
@@ -453,7 +452,7 @@ static void * pthreads_routine(void *arg) {
 
 	php_request_shutdown((void*)NULL);
 
-	tsrm_free_interpreter_context(thread->local.ls);
+	ts_free_thread();
 
 	pthread_exit(NULL);
 

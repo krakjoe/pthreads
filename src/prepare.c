@@ -295,9 +295,14 @@ while(0)
 		zval *value;
 
 		ZEND_HASH_FOREACH_STR_KEY_VAL(&candidate->constants_table, key, value) {
-			zend_string *name = 
-				zend_string_new(key);
+			zend_string *name;
 			zval separated;
+
+			if (zend_hash_exists(&prepared->constants_table, key)) {
+				continue;
+			}
+
+			name = zend_string_new(key);
 
 			switch (Z_TYPE_P(value)) {
 				case IS_STRING:
