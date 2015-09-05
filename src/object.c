@@ -38,8 +38,7 @@
 extern zend_module_entry pthreads_module_entry; /* }}} */
 
 /* {{{ */
-static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry);
-static void pthreads_base_clone(void *arg, void **pclone); /* }}} */
+static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry); /* }}} */
 
 /* {{{ */
 static void * pthreads_routine(void *arg); /* }}} */
@@ -292,8 +291,12 @@ void pthreads_base_free(zend_object *object) {
 } /* }}} */
 
 /* {{{ */
-static void pthreads_base_clone(void *arg, void **pclone) {
-	printf("pthreads_base_clone: executing ...\n");
+zend_object* pthreads_base_clone(zval *object) {
+	zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+		"%s objects cannot be cloned", ZSTR_VAL(Z_OBJCE_P(object)->name));
+
+	/* assume this is okay ? */
+	return Z_OBJ_P(object);
 } /* }}} */
 
 /* {{{ */

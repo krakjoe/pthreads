@@ -148,13 +148,13 @@ void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
 static inline void pthreads_replace_internal_function(char *oname, size_t olen, char *rname, size_t rlen) {
 	zend_function *functions[2];
 
-	functions[0] = zend_hash_str_find_ptr(CG(function_table), oname, olen);
-	functions[1] = zend_hash_str_find_ptr(CG(function_table), rname, rlen);
+	functions[0] = zend_hash_str_find_ptr(EG(function_table), oname, olen);
+	functions[1] = zend_hash_str_find_ptr(EG(function_table), rname, rlen);
 
 	if (functions[0] && functions[1]) {
 		zend_string *rename = zend_string_copy(functions[0]->common.function_name);		
 		if ((functions[1] = zend_hash_str_update_mem(
-				CG(function_table), oname, olen, functions[1], sizeof(zend_function)))) {
+				EG(function_table), oname, olen, functions[1], sizeof(zend_internal_function)))) {
 			functions[1]->common.function_name = rename;
 		} else zend_string_release(rename);
 	}
@@ -234,7 +234,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.set = NULL;
 	pthreads_handlers.get_gc = NULL;
 
-	pthreads_handlers.clone_obj = pthreads_clone_object; 
+	pthreads_handlers.clone_obj = pthreads_base_clone; 
 
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 
