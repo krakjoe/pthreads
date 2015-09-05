@@ -130,6 +130,52 @@ void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
 	}
 }
 
+static inline int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *buflen, zend_serialize_data *data) {
+	pthreads_object_t *address = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	(*buflen) = snprintf(NULL, 0, ":%lu:", (long unsigned int) address);
+	(*buffer) = emalloc((*buflen) + 1);
+	sprintf(
+		(*buffer), ":%lu:", (long unsigned int) address);
+	(*buffer)[(*buflen)] = 0;
+
+	return SUCCESS;
+}
+
+static inline int pthreads_threaded_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t buflen, zend_unserialize_data *data) {
+	pthreads_object_t *address = NULL;	
+
+	if (!sscanf((const char*) buffer, ":%lu:", (long unsigned int*)&address)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+			"pthreads detected an attempt to connect to a corrupted object");
+		return FAILURE;
+	}
+
+	if (!address) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0, 
+			"pthreads detected an attempt to connect to an invalid object");
+		return FAILURE;	
+	}
+	
+	if (!pthreads_globals_object_validate((zend_ulong) address)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0, 
+			"pthreads detected an attempt to connect to an object which has already been destroyed");
+		return FAILURE;
+	}
+
+	if (PTHREADS_IN_CREATOR(address)) {
+		ZVAL_OBJ(object, &address->std);
+		Z_ADDREF_P(object);
+	} else {
+		object_init_ex(object, ce);
+		pthreads_connect(
+			address,
+			PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
+	}
+
+	return SUCCESS;
+}
+
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry ce;
@@ -149,6 +195,8 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_threaded_entry=zend_register_internal_class(&ce);
 	pthreads_threaded_entry->get_iterator = pthreads_object_iterator_create;
 	pthreads_threaded_entry->create_object = pthreads_threaded_ctor;
+	pthreads_threaded_entry->serialize = pthreads_threaded_serialize;
+	pthreads_threaded_entry->unserialize = pthreads_threaded_unserialize;
 	zend_class_implements(pthreads_threaded_entry, 1, zend_ce_traversable);
 
 	INIT_CLASS_ENTRY(ce, "Thread", pthreads_thread_methods);

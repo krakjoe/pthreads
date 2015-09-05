@@ -517,9 +517,10 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 				result = FAILURE;
 			}
 		} break;
-		
-		case IS_ARRAY:
+
 		case IS_OBJECT:
+		case IS_ARRAY:
+		
 			result = pthreads_store_tozval(pzval, (char*) storage->data, storage->length);
 			if (result == FAILURE) {
 			    ZVAL_NULL(pzval);

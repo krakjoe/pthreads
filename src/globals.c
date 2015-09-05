@@ -100,7 +100,7 @@ zend_bool pthreads_globals_object_delete(void *address) {
 	
 	if (!address)
 		return deleted;
-	
+
 	if (pthreads_globals_lock()) {
 		deleted = zend_hash_index_del(
 			&PTHREADS_G(objects), (zend_ulong) address);
