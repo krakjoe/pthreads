@@ -19,6 +19,6 @@ try {
 	var_dump($ex->getMessage());
 }
 --EXPECT--
-string(61) "usleep is not suitable for use in multi threaded applications"
-string(60) "sleep is not suitable for use in multi threaded applications"
+string(94) "usleep is not suitable for use in multi threaded applications, use synchronized Threaded::wait"
+string(93) "sleep is not suitable for use in multi threaded applications, use synchronized Threaded::wait"
 

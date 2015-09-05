@@ -57,7 +57,7 @@ ZEND_END_ARG_INFO()
 
 PHP_FUNCTION(pthreads_no_sleeping) {
 	zend_throw_exception_ex(spl_ce_RuntimeException, 0,
-		"%s is not suitable for use in multi threaded applications",
+		"%s is not suitable for use in multi threaded applications, use synchronized Threaded::wait",
 		ZSTR_VAL(EX(func)->common.function_name));
 }
 
