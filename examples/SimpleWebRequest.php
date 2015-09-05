@@ -27,7 +27,9 @@ if($g->start()){
 	printf("Request took %f seconds to start ", microtime(true)-$t);
 	while($g->isRunning()){
 		echo ".";
-		usleep(100);
+		$g->synchronized(function() use($g) {
+			$g->wait(100);
+		});
 	}
 	if ($g->join()){
 		printf(" and %f seconds to finish receiving %d bytes\n", microtime(true)-$t, strlen($g->data));

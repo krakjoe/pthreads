@@ -86,7 +86,9 @@ if($request->start()){
 	/* do something during runtime */
 	while($request->isRunning()) {
 		echo ".";
-		usleep(100);
+		$request->synchronized(function() use($request) {
+			$request->wait(100);
+		});
 	}
 	/* 
 		you do not need to join:
