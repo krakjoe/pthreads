@@ -492,25 +492,8 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 
 		case IS_PTHREADS: {
 			pthreads_object_t* threaded = PTHREADS_FETCH_FROM(storage->data);
-			
-			if (threaded && pthreads_globals_object_validate((zend_ulong)threaded)) {
-				zend_class_entry *ce;
 
-				if (threaded->creator.ls == TSRMLS_CACHE) {
-					ZVAL_OBJ(pzval, &threaded->std);
-					Z_ADDREF_P(pzval);
-					result = SUCCESS;
-				} else {
-					ce = zend_lookup_class(threaded->std.ce->name);
-
-					if (object_init_ex(pzval, ce) == SUCCESS) {
-						pthreads_connect(threaded, PTHREADS_FETCH_FROM(Z_OBJ_P(pzval)));
-						result = SUCCESS;
-					} else {
-						result = FAILURE;
-					}
-				}
-			} else {
+			if (!pthreads_globals_object_connect((zend_ulong)threaded, NULL, pzval)) {
 				zend_throw_exception_ex(
 					spl_ce_RuntimeException, 0,
 					"pthreads detected an attempt to connect to an object which has already been destroyed");

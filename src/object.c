@@ -174,20 +174,10 @@ int pthreads_threaded_unserialize(zval *object, zend_class_entry *ce, const unsi
 		return FAILURE;	
 	}
 	
-	if (!pthreads_globals_object_validate((zend_ulong) address)) {
+	if (!pthreads_globals_object_connect((zend_ulong) address, ce, object)) {
 		zend_throw_exception_ex(spl_ce_RuntimeException, 0, 
 			"pthreads detected an attempt to connect to an object which has already been destroyed");
 		return FAILURE;
-	}
-
-	if (PTHREADS_IN_CREATOR(address)) {
-		ZVAL_OBJ(object, &address->std);
-		Z_ADDREF_P(object);
-	} else {
-		object_init_ex(object, ce);
-		pthreads_connect(
-			address,
-			PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
 	}
 
 	return SUCCESS;

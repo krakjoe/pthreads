@@ -74,7 +74,7 @@ ZEND_EXTERN_MODULE_GLOBALS(pthreads)
 zend_bool pthreads_globals_object_delete(void *address); /* }}} */
 
 /* {{{ */
-zend_bool pthreads_globals_object_validate(zend_ulong address); /* }}} */
+zend_bool pthreads_globals_object_connect(zend_ulong address, zend_class_entry *ce, zval *object); /* }}} */
 
 /* {{{ */
 void* pthreads_globals_object_alloc(size_t length); /* }}} */

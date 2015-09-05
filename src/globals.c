@@ -80,15 +80,51 @@ void* pthreads_globals_object_alloc(size_t length) {
 } /* }}} */
 
 /* {{{ */
-zend_bool pthreads_globals_object_validate(zend_ulong address) {
+zend_bool pthreads_globals_object_connect(zend_ulong address, zend_class_entry *ce, zval *object) {
 	zend_bool valid = 0;
+
 	if (!address)
 		return valid;
-	
+
 	if (pthreads_globals_lock()) {
-		valid = zend_hash_index_exists(
-			&PTHREADS_G(objects), address);
+		if (zend_hash_index_exists(&PTHREADS_G(objects), address)) {
+			valid = 1;
+		}
 		pthreads_globals_unlock();
+	}
+
+	if (valid) {
+		
+		/*
+		* This can be done outside of a critical section because there are only two possibilities:
+		*	We own the object: no possible pathway to fault (read free'd memory)
+		*	We don't own the object: possibly pathway to fault whether we use critical section or not:
+		*		We use a critical section: we create the connection knowing that address cannot be freed while doing so
+		*		however, as soon as we leave the section, and before the conext that called this routine can reference the connection
+		*		object the creating context may have free'd the object.
+		*		We don't use a critical section: the object may be freed while we are creating the connection, causing a fault.
+		* 
+		* As always, it's necessary for the programmer to retain the appropriate references so that this does not fault, creating connections
+		* in a critical section would be unecessarily slow, not to mention recursively lock mutex (which is fine, but not ideal).
+		*/
+
+		if (PTHREADS_IN_CREATOR(((pthreads_object_t*)address))) {
+			/* we own the object in this context */
+			ZVAL_OBJ(object, &((pthreads_object_t*)address)->std);
+			Z_ADDREF_P(object);
+		} else {
+			/* we do not own the object, create a connection */
+			if (!ce) {
+				/* we may not know the class, can't use ce directly
+					from zend_object because it is from another context */
+				ce = zend_lookup_class(
+					((pthreads_object_t*)address)->std.ce->name);
+			}
+			object_init_ex(object, ce);
+			pthreads_connect(
+				(pthreads_object_t*) address,
+				PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
+		}
 	}
 	
 	return valid;
