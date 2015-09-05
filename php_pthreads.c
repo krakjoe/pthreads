@@ -256,9 +256,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_throw_exception_hook_function = zend_throw_exception_hook;
 	zend_throw_exception_hook = pthreads_throw_exception_hook;
 
-	pthreads_replace_internal_function(ZEND_STRL("usleep"), ZEND_STRL("pthreads_no_sleeping"));
-	pthreads_replace_internal_function(ZEND_STRL("sleep"),  ZEND_STRL("pthreads_no_sleeping"));
-
 	return SUCCESS;
 }
 
@@ -307,7 +304,10 @@ PHP_RINIT_FUNCTION(pthreads) {
 		if (memcmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
 			sapi_module.deactivate = NULL;
 		}
-	}	
+	}
+
+	pthreads_replace_internal_function(ZEND_STRL("usleep"), ZEND_STRL("pthreads_no_sleeping"));
+	pthreads_replace_internal_function(ZEND_STRL("sleep"),  ZEND_STRL("pthreads_no_sleeping"));
 
 	return SUCCESS;
 }

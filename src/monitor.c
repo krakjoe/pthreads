@@ -119,8 +119,10 @@ void pthreads_monitor_remove(pthreads_monitor_t *m, pthreads_monitor_state_t sta
 }
 
 void pthreads_monitor_free(pthreads_monitor_t *m) {
-	pthread_cond_destroy(&m->cond);
-	pthread_mutex_destroy(&m->mutex);
+	if (pthreads_monitor_lock(m)) {
+		pthread_cond_destroy(&m->cond);
+		pthread_mutex_destroy(&m->mutex);
+	}
 	free(m);
 }
 #endif
