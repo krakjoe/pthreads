@@ -23,7 +23,6 @@ PHP_METHOD(Pool, submit);
 PHP_METHOD(Pool, submitTo);
 PHP_METHOD(Pool, collect);
 PHP_METHOD(Pool, shutdown);
-PHP_METHOD(Pool, __destruct);
 
 ZEND_BEGIN_ARG_INFO_EX(Pool___construct, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
@@ -62,7 +61,6 @@ zend_function_entry pthreads_pool_methods[] = {
 	PHP_ME(Pool, submitTo, 		Pool_submitTo, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, collect, 		Pool_collect, 		ZEND_ACC_PUBLIC)
 	PHP_ME(Pool, shutdown, 		Pool_noargs, 		ZEND_ACC_PUBLIC)
-	PHP_ME(Pool, __destruct, 	Pool_noargs, 		ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -316,11 +314,6 @@ PHP_METHOD(Pool, shutdown) {
 		return;
 	}
 	
-	pthreads_pool_shutdown(getThis());
-} /* }}} */
-
-/* {{{ proto void Pool::__destruct */
-PHP_METHOD(Pool, __destruct) {
 	pthreads_pool_shutdown(getThis());
 } /* }}} */
 #	endif
