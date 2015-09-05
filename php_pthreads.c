@@ -150,7 +150,7 @@ static inline void pthreads_replace_internal_function(char *oname, size_t olen, 
 
 	functions[0] = zend_hash_str_find_ptr(CG(function_table), oname, olen);
 	functions[1] = zend_hash_str_find_ptr(CG(function_table), rname, rlen);
-	
+
 	if (functions[0] && functions[1]) {
 		zend_string *rename = zend_string_copy(functions[0]->common.function_name);		
 		if ((functions[1] = zend_hash_str_update_mem(
