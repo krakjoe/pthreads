@@ -33,6 +33,10 @@ zend_object* pthreads_thread_ctor(zend_class_entry *entry);
 void        pthreads_base_free(zend_object *object); /* }}} */
 
 /* {{{ */
+int pthreads_threaded_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t buflen, zend_unserialize_data *data);
+int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *buflen, zend_serialize_data *data); /* }}} */
+
+/* {{{ */
 void pthreads_current_thread(zval *return_value); /* }}} */
 
 /* {{{ */
