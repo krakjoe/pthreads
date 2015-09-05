@@ -51,10 +51,25 @@ typedef void (*zend_throw_exception_hook_func)(zval * TSRMLS_DC);
 
 zend_throw_exception_hook_func zend_throw_exception_hook_function = NULL;
 
+ZEND_BEGIN_ARG_INFO_EX(pthreads_no_sleeping_arginfo, 0, 0, 1)
+	ZEND_ARG_INFO(0, timeout)
+ZEND_END_ARG_INFO()
+
+PHP_FUNCTION(pthreads_no_sleeping) {
+	zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+		"%s is not suitable for use in multi threaded applications",
+		ZSTR_VAL(EX(func)->common.function_name));
+}
+
+static zend_function_entry pthreads_functions[] = {
+	PHP_FE(pthreads_no_sleeping, pthreads_no_sleeping_arginfo)
+	PHP_FE_END
+};
+
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,
-  NULL,
+  pthreads_functions,
   PHP_MINIT(pthreads),
   PHP_MSHUTDOWN(pthreads),
   PHP_RINIT(pthreads),
@@ -127,6 +142,21 @@ void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
 
 	if (zend_throw_exception_hook_function) {
 		zend_throw_exception_hook_function(ex);
+	}
+}
+
+static inline void pthreads_replace_internal_function(char *oname, size_t olen, char *rname, size_t rlen) {
+	zend_function *functions[2];
+
+	functions[0] = zend_hash_str_find_ptr(CG(function_table), oname, olen);
+	functions[1] = zend_hash_str_find_ptr(CG(function_table), rname, rlen);
+	
+	if (functions[0] && functions[1]) {
+		zend_string *rename = zend_string_copy(functions[0]->common.function_name);		
+		if ((functions[1] = zend_hash_str_update_mem(
+				CG(function_table), oname, olen, functions[1], sizeof(zend_function)))) {
+			functions[1]->common.function_name = rename;
+		} else zend_string_release(rename);
 	}
 }
 
@@ -225,6 +255,9 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	zend_throw_exception_hook_function = zend_throw_exception_hook;
 	zend_throw_exception_hook = pthreads_throw_exception_hook;
+
+	pthreads_replace_internal_function(ZEND_STRL("usleep"), ZEND_STRL("pthreads_no_sleeping"));
+	pthreads_replace_internal_function(ZEND_STRL("sleep"),  ZEND_STRL("pthreads_no_sleeping"));
 
 	return SUCCESS;
 }
