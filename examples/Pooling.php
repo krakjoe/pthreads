@@ -120,7 +120,7 @@ while ($pool->collect(function($work){
 var_dump($pool);
 
 /*
-* Pool::__destruct calls Pool::shutdown when appropriate, but don't leave it to chance!
+* Shutdown Pools at the appropriate time, don't leave it to chance !
 */
 $pool->shutdown();
 ?>
