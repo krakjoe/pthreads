@@ -54,6 +54,10 @@ static inline int pthreads_object_iterator_validate(pthreads_iterator_t* iterato
 }
 
 static inline zval* pthreads_object_iterator_current_data(pthreads_iterator_t* iterator) {
+	if (Z_TYPE(iterator->zit.data) != IS_UNDEF) {
+		zval_ptr_dtor(&iterator->zit.data);
+	}
+
 	pthreads_store_data(&iterator->object, &iterator->zit.data, &iterator->position);
 
 	if (Z_ISUNDEF(iterator->zit.data)) {
