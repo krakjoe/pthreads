@@ -109,6 +109,8 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 		cache = NULL;
 	}
 
+	rebuild_object_properties(&threaded->std);
+
 	if (Z_OBJCE_P(object)->__get && (guard = pthreads_get_guard(&threaded->std, Z_STR_P(member))) && !((*guard) & IN_GET)) {
 		zend_fcall_info fci = empty_fcall_info;
         zend_fcall_info_cache fcc = empty_fcall_info_cache;
@@ -127,12 +129,17 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 
 		zend_fcall_info_args_clear(&fci, 1);		
 	} else {
-		if (pthreads_store_read(threaded->store, Z_STR_P(member), rv) != SUCCESS) {
-			zend_throw_exception_ex(
-			    spl_ce_RuntimeException, 0, 
-			    "pthreads failed to read member %s::$%s", 
-			    Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
-		}
+		zval *property = zend_hash_find(threaded->std.properties, Z_STR_P(member));
+
+		if (!property || !IS_PTHREADS_OBJECT(property)) {
+			if (pthreads_store_read(threaded->store, Z_STR_P(member), rv) == SUCCESS) {
+				if (IS_PTHREADS_OBJECT(rv)) {
+					zend_hash_update(
+						threaded->std.properties, Z_STR_P(member), rv);
+					Z_ADDREF_P(rv);
+				}
+			}
+		} else ZVAL_COPY(rv, property);
 	}
 	
 	if (Z_TYPE(mstring) != IS_UNDEF) {
@@ -169,6 +176,8 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		cache = NULL;
 	}
 
+	rebuild_object_properties(&threaded->std);
+
 	switch(Z_TYPE_P(value)){
 		case IS_UNDEF:
 		case IS_STRING:
@@ -203,11 +212,14 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 				if (Z_TYPE(rv) != IS_UNDEF)
 					zval_dtor(&rv);
 				zend_fcall_info_args_clear(&fci, 1);
-			} else if (pthreads_store_write(threaded->store, Z_STR_P(member), value) != SUCCESS) {
-				zend_throw_exception_ex(
-					spl_ce_RuntimeException, 0, 
-					"pthreads failed to write member %s::$%s", 
-					ZSTR_VAL(Z_OBJCE_P(object)->name), Z_STRVAL_P(member));
+			} else {
+				if (pthreads_store_write(threaded->store, Z_STR_P(member), value) == SUCCESS) {
+					if (IS_PTHREADS_OBJECT(value)) {
+						zend_hash_update(
+							threaded->std.properties, Z_STR_P(member), value);
+						Z_ADDREF_P(value);
+					}
+				}
 			}
 		} break;
 	
@@ -295,6 +307,8 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		cache = NULL;
 	}
 
+	rebuild_object_properties(&threaded->std);
+
 	if (Z_OBJCE_P(object)->__unset && (guard = pthreads_get_guard(&threaded->std, Z_STR_P(member))) && !((*guard) & IN_UNSET)) {
 		zend_fcall_info fci = empty_fcall_info;
 		zend_fcall_info_cache fcc = empty_fcall_info_cache;			
@@ -318,11 +332,10 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 			zval_dtor(&rv);
 		}
 		zend_fcall_info_args_clear(&fci, 1);
-	} else if (pthreads_store_delete(threaded->store, Z_STR_P(member)) != SUCCESS){
-		zend_throw_exception_ex(
-			spl_ce_RuntimeException, 0, 
-			"pthreads failed to delete member %s::$%s", 
-			Z_OBJCE_P(object)->name, Z_STRVAL_P(member));
+	} else {
+		if (pthreads_store_delete(threaded->store, Z_STR_P(member)) == SUCCESS){
+			zend_hash_del(threaded->std.properties, Z_STR_P(member));
+		}
 	}
 	
 	if (Z_TYPE(mstring) != IS_UNDEF) {

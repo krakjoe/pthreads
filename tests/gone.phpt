@@ -15,7 +15,7 @@ class T extends Thread {
 
 	public function run() {
 		$this->o = new O();
-		/* this will disappear */
+		/* this will disappear with this context */
 		$this->o["data"] = true;
 	}
 }
@@ -27,12 +27,6 @@ $t->join();
 var_dump($t->o);
 ?>
 --EXPECTF--
-Fatal error: Uncaught %s: pthreads detected an attempt to connect to an object which has already been destroyed in %s:14
-Stack trace:
-#0 [internal function]: T->run()
-#1 {main}
-  thrown in %s on line 14
-
 Fatal error: Uncaught %s: pthreads detected an attempt to connect to an object which has already been destroyed in %s:22
 Stack trace:
 #0 {main}

@@ -79,13 +79,25 @@ pthreads_store_t* pthreads_store_alloc(pthreads_monitor_t *monitor) {
 } /* }}} */
 
 /* {{{ */
+static inline zend_bool pthreads_store_is_immutable(pthreads_store_t *store, zend_string *key) {
+	pthreads_storage *storage = zend_hash_find_ptr(&store->table, key);
+	if (storage && (storage->type == IS_PTHREADS)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+			"members previously set to Threaded objects are immutable, cannot overwrite %s",
+			ZSTR_VAL(key));		
+		return 1;
+	}
+	return 0;
+} /* }}} */
+
+/* {{{ */
 int pthreads_store_delete(pthreads_store_t *store, zend_string *key) {
 	int result = FAILURE;
-	
+
 	if (pthreads_monitor_lock(store->monitor)) {
-		if (zend_hash_exists(&store->table, key)) {
+		if (!pthreads_store_is_immutable(store, key)) {
 			result = zend_hash_del(&store->table, key);
-		} else result = SUCCESS;
+		}
 		pthreads_monitor_unlock(store->monitor);
 	} else result = FAILURE;
 
@@ -175,10 +187,12 @@ int pthreads_store_write(pthreads_store_t *store, zend_string *key, zval *write)
 	pthreads_storage *storage = pthreads_store_create(write, 1);
 
 	if (pthreads_monitor_lock(store->monitor)) {
-		if (zend_hash_update_ptr(&store->table, keyed, storage)) {
-			pthreads_monitor_unlock(store->monitor);
-			zend_string_release(keyed);
-			return SUCCESS;
+		if (!pthreads_store_is_immutable(store, key)) {
+			if (zend_hash_update_ptr(&store->table, keyed, storage)) {
+				pthreads_monitor_unlock(store->monitor);
+				zend_string_release(keyed);
+				return SUCCESS;
+			}	
 		}
 		pthreads_monitor_unlock(store->monitor);
 	}
@@ -186,7 +200,7 @@ int pthreads_store_write(pthreads_store_t *store, zend_string *key, zval *write)
 	pthreads_store_storage_dtor(storage);
 	zend_string_release(keyed);
 	
-	return FAILURE;
+	return result;
 } /* }}} */
 
 /* {{{ */

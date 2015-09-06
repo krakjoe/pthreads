@@ -232,7 +232,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.get_property_ptr_ptr = NULL;
 	pthreads_handlers.get = NULL;
 	pthreads_handlers.set = NULL;
-	pthreads_handlers.get_gc = NULL;
+	pthreads_handlers.get_gc = pthreads_base_gc;
 
 	pthreads_handlers.clone_obj = pthreads_base_clone; 
 

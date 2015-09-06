@@ -304,6 +304,13 @@ zend_object* pthreads_base_clone(zval *object) {
 } /* }}} */
 
 /* {{{ */
+HashTable* pthreads_base_gc(zval *object, zval **table, int *n) {
+	*table = NULL;
+	*n = 0;
+	return Z_OBJ_P(object)->properties;
+} /* }}} */
+
+/* {{{ */
 zend_bool pthreads_start(pthreads_object_t* thread) {
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {

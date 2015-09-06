@@ -1,7 +1,9 @@
 --TEST--
 Test members (typeof object) with no other references
 --DESCRIPTION--
-This test verifies that members of an object type that have no other references in the engine can be set as members of threaded objects
+In pthreads v2, you were charged with responsability of the objects you create, however in pthreads v3, a Threaded object
+is able to retain a reference to another Threaded object, this makes programming Thread objects a lot simpler, 
+the code in this test would fail with pthreads v2 and will work as expected with pthreads v3, which is a win for everyone ...
 --FILE--
 <?php
 class O extends Threaded {
@@ -9,23 +11,47 @@ class O extends Threaded {
 }
 
 class T extends Thread {
+
 	public function __construct() {
 		$this->t = new O();
+		$this->t->set = true;
+		$this->s = new stdClass();
 	}
 	
-    public function run(){}
+    public function run(){
+		var_dump($this->t, $this->s, $this);
+	}
 }
 
-var_dump(new T());
+$t = new T();
+var_dump($t);
+$t->start();
+$t->join();
 ?>
 --EXPECTF--
-object(T)#1 (0) {
+object(T)#%d (%d) {
+  ["t"]=>
+  object(O)#%d (%d) {
+    ["set"]=>
+    bool(true)
+  }
+  ["s"]=>
+  object(stdClass)#%d (%d) {
+  }
 }
-
-Fatal error: Uncaught %s: pthreads detected an attempt to connect to an object which has already been destroyed in %s:%d
-Stack trace:
-#0 %s(%d): var_dump(Object(T))
-#1 {main}
-  thrown in %s on line %d
-
-
+object(O)#2 (%d) {
+  ["set"]=>
+  bool(true)
+}
+object(stdClass)#%d (%d) {
+}
+object(T)#%d (%d) {
+  ["t"]=>
+  object(O)#%d (%d) {
+    ["set"]=>
+    bool(true)
+  }
+  ["s"]=>
+  object(stdClass)#%d (%d) {
+  }
+}
