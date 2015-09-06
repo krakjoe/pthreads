@@ -258,11 +258,14 @@ int pthreads_store_shift(zval *object, zval *member) {
 
 		zend_hash_internal_pointer_reset_ex(&threaded->store->table, &position);
 		if ((storage = zend_hash_get_current_data_ptr_ex(&threaded->store->table, &position))) {
-			int type = zend_hash_get_current_key_ex(&threaded->store->table, &key, &index, &position);
-			pthreads_store_convert(storage, member);
-			if (type == HASH_KEY_IS_STRING) {
-				zend_hash_del(&threaded->store->table, key);
-			} else zend_hash_index_del(&threaded->store->table, index);
+			switch (zend_hash_get_current_key_ex(&threaded->store->table, &key, &index, &position)) {
+				case HASH_KEY_IS_STRING:
+					if (!pthreads_store_is_immutable(threaded->store, key)) {
+						pthreads_store_convert(storage, member);
+						zend_hash_del(
+							&threaded->store->table, key);
+					}
+			}
 		} else ZVAL_NULL(member);
 		pthreads_monitor_unlock(threaded->monitor);
 
@@ -287,21 +290,19 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 		while((zend_hash_num_elements(Z_ARRVAL_P(chunk)) < size) &&
 			(storage = zend_hash_get_current_data_ptr_ex(&threaded->store->table, &position))) {
 			zval zv;
-			int type = zend_hash_get_current_key_ex(&threaded->store->table, &key, &index, &position);
-			pthreads_store_convert(storage, &zv);
-			switch (type) {
-				case HASH_KEY_IS_STRING:
-				zend_hash_update(Z_ARRVAL_P(chunk), key, &zv);
-				break;
 
-				case HASH_KEY_IS_LONG:
-				zend_hash_index_update(Z_ARRVAL_P(chunk), index, &zv);
-				break;
+			switch (zend_hash_get_current_key_ex(&threaded->store->table, &key, &index, &position)) {
+				case HASH_KEY_IS_STRING:
+					if (!pthreads_store_is_immutable(threaded->store, key)) {
+						pthreads_store_convert(storage, &zv);
+						zend_hash_update(
+							Z_ARRVAL_P(chunk), key, &zv);
+						zend_hash_del(&threaded->store->table, key);
+					} else break;
+				break;			
 			}
+
 			zend_hash_move_forward_ex(&threaded->store->table, &position);
-			if (type == HASH_KEY_IS_STRING) {
-				zend_hash_del(&threaded->store->table, key);
-			} else zend_hash_index_del(&threaded->store->table, index);
 		}
 		pthreads_monitor_unlock(threaded->monitor);
 
@@ -323,11 +324,15 @@ int pthreads_store_pop(zval *object, zval *member) {
 
 		zend_hash_internal_pointer_end_ex(&threaded->store->table, &position);
 		if ((storage = zend_hash_get_current_data_ptr_ex(&threaded->store->table, &position))) {
-			int type = zend_hash_get_current_key_ex(&threaded->store->table, &key, &index, &position);
-			pthreads_store_convert(storage, member);
-			if (type == HASH_KEY_IS_STRING) {
-				zend_hash_del(&threaded->store->table, key);
-			} else zend_hash_index_del(&threaded->store->table, index);
+			switch (zend_hash_get_current_key_ex(&threaded->store->table, &key, &index, &position)) {
+				case HASH_KEY_IS_STRING:
+					if (!pthreads_store_is_immutable(threaded->store, key)) {
+						pthreads_store_convert(storage, member);
+						zend_hash_del(
+							&threaded->store->table, key);			
+					}
+				break;
+			}
 		} else ZVAL_NULL(member);
 
 		pthreads_monitor_unlock(threaded->monitor);
@@ -612,7 +617,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                     if (pthreads_monitor_lock(threaded[1]->monitor)) {
                         HashPosition position;
                         pthreads_storage *storage;
-                        HashTable *tables[2] = {&threaded[0]->store->table, &threaded	[1]->store->table};
+                        HashTable *tables[2] = {&threaded[0]->store->table, &threaded[1]->store->table};
 						zend_string *key = NULL;
                         zend_ulong idx = 0L;                        
 
@@ -624,7 +629,11 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                                 if (!overwrite && zend_hash_exists(tables[0], key)) {
                                     continue;
                                 }
-                                
+
+								if (pthreads_store_is_immutable(threaded[0]->store, key)) {
+									break;
+								}
+								
                                 if (storage->type != IS_RESOURCE) {
                                     pthreads_storage copy;
 
