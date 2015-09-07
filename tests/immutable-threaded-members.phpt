@@ -75,10 +75,10 @@ object(Threaded)#%d (%d) {
 }
 object(stdClass)#%d (%d) {
 }
-members previously set to Threaded objects are immutable, cannot overwrite t in %s on line 18
-members previously set to Threaded objects are immutable, cannot overwrite t in %s on line 24
-members previously set to Threaded objects are immutable, cannot overwrite t in %s on line 44
-members previously set to Threaded objects are immutable, cannot overwrite t in %s on line 50
+Threaded members previously set to Threaded objects are immutable, cannot overwrite t in %s on line 18
+Threaded members previously set to Threaded objects are immutable, cannot overwrite t in %s on line 24
+Threaded members previously set to Threaded objects are immutable, cannot overwrite t in %s on line 44
+Threaded members previously set to Threaded objects are immutable, cannot overwrite t in %s on line 50
 object(Threaded)#%d (%d) {
   ["set"]=>
   bool(true)

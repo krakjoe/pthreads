@@ -82,6 +82,7 @@ zend_module_entry pthreads_module_entry = {
 };
 
 zend_class_entry *pthreads_threaded_entry;
+zend_class_entry *pthreads_volatile_entry;
 zend_class_entry *pthreads_thread_entry;
 zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_collectable_entry;
@@ -183,6 +184,9 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_threaded_entry->unserialize = pthreads_threaded_unserialize;
 	zend_class_implements(pthreads_threaded_entry, 1, zend_ce_traversable);
 
+	INIT_CLASS_ENTRY(ce, "Volatile", NULL);
+	pthreads_volatile_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
+	
 	INIT_CLASS_ENTRY(ce, "Thread", pthreads_thread_methods);
 	pthreads_thread_entry=zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	pthreads_thread_entry->create_object = pthreads_thread_ctor;

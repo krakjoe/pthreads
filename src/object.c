@@ -225,6 +225,10 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 static inline void pthreads_base_init(pthreads_object_t* base) {	
 	zend_property_info *info;
 	zend_string *key;
+	zval tmp;
+
+	ZVAL_OBJ(&tmp, &base->std);	
+
 	ZEND_HASH_FOREACH_PTR(&base->std.ce->properties_info, info) {
 		zend_ulong offset;
 		const char *clazz = NULL, 
@@ -242,10 +246,10 @@ static inline void pthreads_base_init(pthreads_object_t* base) {
 
 		key = zend_string_init(prop, plen, 0);
 		pthreads_store_write(
-			base->store, key,
+			&tmp, key,
 			&base->std.ce->default_properties_table[offset]);
 		zend_string_release(key);
-
+	
 	} ZEND_HASH_FOREACH_END();
 
 } /* }}} */
@@ -261,7 +265,8 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();
-		base->store = pthreads_store_alloc(base->monitor);
+		base->store = pthreads_store_alloc();
+
 		if (PTHREADS_IS_WORKER(base)) {
 			base->stack = pthreads_stack_alloc(base->monitor);
 		}
@@ -371,7 +376,7 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 } /* }}} */
 
 /* {{{ */
-static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object, pthreads_object_t* connection) {
+static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object, pthreads_object_t* connection, zval *work) {
 	zend_function *run;
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
 	zval zresult;	
@@ -383,6 +388,9 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 	ZVAL_UNDEF(&zresult);
 
 	pthreads_monitor_add(object->monitor, PTHREADS_MONITOR_RUNNING);
+
+	if (work)
+		pthreads_store_write(work, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
 
 	zend_try {
 		if ((run = zend_hash_find_ptr(&connection->std.ce->function_table, PTHREADS_G(strings).run))) {							
@@ -427,7 +435,7 @@ static void * pthreads_routine(void *arg) {
 	zend_first_try {
 		ZVAL_UNDEF(&PTHREADS_ZG(this));
 		object_init_ex(&PTHREADS_ZG(this), pthreads_prepared_entry(thread, thread->std.ce));
-		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))));
+		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))), NULL);
 
 		if (PTHREADS_IS_WORKER(thread)) {
 			zval stacked;
@@ -437,9 +445,8 @@ static void * pthreads_routine(void *arg) {
 				pthreads_object_t* work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
 
 				object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
-				pthreads_store_write(work->store, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
-				pthreads_routine_run_function(work, PTHREADS_FETCH_FROM(Z_OBJ(that)));
-				zval_dtor(&that);
+				pthreads_routine_run_function(work, PTHREADS_FETCH_FROM(Z_OBJ(that)), &that);
+				zval_ptr_dtor(&that);
 			}
 		}
 

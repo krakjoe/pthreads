@@ -78,7 +78,7 @@ HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 	zend_hash_init(table, 8, NULL, ZVAL_PTR_DTOR, 0);
 	*is_temp = 1;
 
-	pthreads_store_tohash(threaded->store, table);
+	pthreads_store_tohash(object, table);
 
 	return table;
 } /* }}} */
@@ -89,8 +89,7 @@ HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 
 	rebuild_object_properties(&threaded->std);
 
-	pthreads_store_tohash
-		(threaded->store, threaded->std.properties);
+	pthreads_store_tohash(object, threaded->std.properties);
 			
 	return threaded->std.properties;
 } /* }}} */
@@ -129,17 +128,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 
 		zend_fcall_info_args_clear(&fci, 1);		
 	} else {
-		zval *property = zend_hash_find(threaded->std.properties, Z_STR_P(member));
-
-		if (!property || !IS_PTHREADS_OBJECT(property)) {
-			if (pthreads_store_read(threaded->store, Z_STR_P(member), rv) == SUCCESS) {
-				if (IS_PTHREADS_OBJECT(rv)) {
-					zend_hash_update(
-						threaded->std.properties, Z_STR_P(member), rv);
-					Z_ADDREF_P(rv);
-				}
-			}
-		} else ZVAL_COPY(rv, property);
+		pthreads_store_read(object, Z_STR_P(member), rv);
 	}
 	
 	if (Z_TYPE(mstring) != IS_UNDEF) {
@@ -213,13 +202,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 					zval_dtor(&rv);
 				zend_fcall_info_args_clear(&fci, 1);
 			} else {
-				if (pthreads_store_write(threaded->store, Z_STR_P(member), value) == SUCCESS) {
-					if (IS_PTHREADS_OBJECT(value)) {
-						zend_hash_update(
-							threaded->std.properties, Z_STR_P(member), value);
-						Z_ADDREF_P(value);
-					}
-				}
+				pthreads_store_write(object, Z_STR_P(member), value);
 			}
 		} break;
 	
@@ -281,7 +264,7 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 		}
 		zend_fcall_info_args_clear(&fci, 1);
 	} else {
-		isset = pthreads_store_isset(threaded->store, Z_STR_P(member), has_set_exists);
+		isset = pthreads_store_isset(object, Z_STR_P(member), has_set_exists);
 	}
 
 	if (Z_TYPE(mstring) != IS_UNDEF) {
@@ -333,8 +316,8 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		}
 		zend_fcall_info_args_clear(&fci, 1);
 	} else {
-		if (pthreads_store_delete(threaded->store, Z_STR_P(member)) == SUCCESS){
-			zend_hash_del(threaded->std.properties, Z_STR_P(member));
+		if (pthreads_store_delete(object, Z_STR_P(member)) == SUCCESS){
+			
 		}
 	}
 	
@@ -349,8 +332,7 @@ void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_un
 int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D) {
     switch (type) {
         case IS_ARRAY: {
-            pthreads_store_tohash(
-                (PTHREADS_FETCH_FROM(Z_OBJ_P(from)))->store, Z_ARRVAL_P(to));
+            pthreads_store_tohash(from, Z_ARRVAL_P(to));
             return SUCCESS;
         } break;
     }

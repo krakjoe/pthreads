@@ -27,19 +27,18 @@
 
 typedef struct _pthreads_store_t {
 	HashTable         table;
-	pthreads_monitor_t *monitor;
 	zend_ulong        next;
 } pthreads_store_t;
 
-pthreads_store_t* pthreads_store_alloc(pthreads_monitor_t *monitor);
+pthreads_store_t* pthreads_store_alloc();
 int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite);
-int pthreads_store_delete(pthreads_store_t *store, zend_string *key);
-int pthreads_store_read(pthreads_store_t *store, zend_string *key, zval *read);
-zend_bool pthreads_store_isset(pthreads_store_t *store, zend_string *key, int has_set_exists);
-int pthreads_store_write(pthreads_store_t *store, zend_string *key, zval *write);
+int pthreads_store_delete(zval *object, zend_string *key);
+int pthreads_store_read(zval *object, zend_string *key, zval *read);
+zend_bool pthreads_store_isset(zval *object, zend_string *key, int has_set_exists);
+int pthreads_store_write(zval *object, zend_string *key, zval *write);
 int pthreads_store_separate(zval *pzval, zval *seperated, zend_bool complex);
 void pthreads_store_separate_zval(zval *pzval);
-void pthreads_store_tohash(pthreads_store_t *store, HashTable *hash);
+void pthreads_store_tohash(zval *object, HashTable *hash);
 int pthreads_store_shift(zval *object, zval *member);
 int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval *chunk);
 int pthreads_store_pop(zval *object, zval *member);
