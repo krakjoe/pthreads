@@ -419,7 +419,7 @@ void pthreads_store_tohash(zval *object, HashTable *hash) {
 /* {{{ */
 void pthreads_store_free(pthreads_store_t *store){
 	zend_hash_destroy(&store->table);
-	free(store);	
+	free(store);
 } /* }}} */
 
 /* {{{ */

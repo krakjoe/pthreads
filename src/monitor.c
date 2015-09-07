@@ -62,7 +62,7 @@ zend_bool pthreads_monitor_unlock(pthreads_monitor_t *m) {
 }
 
 pthreads_monitor_state_t pthreads_monitor_check(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
-	return (m->state & state) == (state);
+	return (m->state & state);
 }
 
 int pthreads_monitor_wait(pthreads_monitor_t *m, long timeout) {
@@ -92,13 +92,8 @@ int pthreads_monitor_notify(pthreads_monitor_t *m) {
 }
 
 void pthreads_monitor_wait_until(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
-	if (pthreads_monitor_lock(m)) {
-		while (!pthreads_monitor_check(m, state)) {
-			if (pthreads_monitor_wait(m, 0) != 0) {
-				break;
-			}
-		}
-		pthreads_monitor_unlock(m);
+	while (!pthreads_monitor_check(m, state)) {
+		pthreads_monitor_wait(m, 0);
 	}
 }
 

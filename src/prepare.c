@@ -589,7 +589,11 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 /* {{{ */
 int pthreads_prepared_startup(pthreads_object_t* thread) {
 #ifdef PTHREADS_KILL_SIGNAL
+#ifdef ZEND_SIGNAL
+	zend_signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
+#else
 	signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
+#endif
 #endif
 
 	thread->local.id = pthreads_self();
