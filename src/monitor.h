@@ -37,6 +37,7 @@ int pthreads_monitor_wait(pthreads_monitor_t *m, long timeout);
 int pthreads_monitor_notify(pthreads_monitor_t *m);
 void pthreads_monitor_wait_until(pthreads_monitor_t *m, pthreads_monitor_state_t state);
 void pthreads_monitor_add(pthreads_monitor_t *m, pthreads_monitor_state_t state);
+void pthreads_monitor_set(pthreads_monitor_t *m, pthreads_monitor_state_t state);
 void pthreads_monitor_remove(pthreads_monitor_t *m, pthreads_monitor_state_t state);
 void pthreads_monitor_free(pthreads_monitor_t *m);
 #endif

@@ -92,9 +92,24 @@ int pthreads_monitor_notify(pthreads_monitor_t *m) {
 }
 
 void pthreads_monitor_wait_until(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
-	while (!pthreads_monitor_check(m, state)) {
-		pthreads_monitor_wait(m, 0);
+	if (!pthreads_monitor_lock(m)) {
+		return;
 	}
+
+	if (!pthreads_monitor_check(m, state)) {
+		if (pthreads_monitor_wait(m, 0) != 0) {
+			pthreads_monitor_unlock(m);
+			return;
+		}
+		pthreads_monitor_unlock(m);
+		pthreads_monitor_wait_until(m, state);
+	}
+
+	pthreads_monitor_unlock(m);
+}
+
+void pthreads_monitor_set(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
+	m->state |= state;
 }
 
 void pthreads_monitor_add(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
