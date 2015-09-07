@@ -1,10 +1,8 @@
 --TEST--
 Test managing refcount in userland (super advanced voodoo shit, leave it alone)
 --DESCRIPTION--
-You are responsible for the objects you create; setting a member of a Threaded object
-to another Threaded object with no other references is problematic since a Threaded
-object does not touch reference counts for member data. Exposing addRef/delRef/getRefCount
-allows the programmer to work around this problem.
+pthreads v3 does allow the programmer to store references to other Threaded objects as members without references.
+It still might be useful in a complex system to manipulate the refcount of Threaded objects, so this stays.
 
 This is an advanced feature, if you don't know what you're doing, *don't touch it*.
 
