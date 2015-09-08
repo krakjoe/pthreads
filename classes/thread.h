@@ -171,7 +171,11 @@ PHP_METHOD(Thread, kill)
     if (zend_parse_parameters_none() != SUCCESS) {
         return;
     }
-	
+
+	if (!pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_STARTED)) {
+		return;
+	}
+
 	RETURN_BOOL(pthread_kill(thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
 } /* }}} */
 

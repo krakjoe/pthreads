@@ -409,7 +409,7 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 				call.fcc.calling_scope = connection->std.ce;
 				call.fcc.called_scope = connection->std.ce;
 				call.fcc.function_handler = run;
-			
+
 				zend_call_function(&call.fci, &call.fcc);
 			}
 		}
@@ -417,7 +417,8 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 	    pthreads_monitor_add(object->monitor, PTHREADS_MONITOR_ERROR);		
 
 	    if (PTHREADS_ZG(signal) == PTHREADS_KILL_SIGNAL) {
-		    /* like, totally bail man ! */
+			pthreads_monitor_remove(
+				object->monitor, PTHREADS_MONITOR_RUNNING);
 		    zend_bailout();
 	    }
 	} zend_end_try();
