@@ -54,8 +54,12 @@ The following things have significant changes:
  * ```Threaded::synchronized``` provides true synchronization (state and properties lock).
  * ```Worker``` objects no longer require that you retain a reference to ```Collectable``` objects on the stack.
  * Unified monitor (cond/mutex/state) for ```Threaded``` objects
+ * ```Threaded``` members of ```Threaded``` objects are immutable
+ * ```Volatile``` objects, excempt from immutability
 
-For an explanation of why these changes have happened, keep an eye on my blog, I'll be writing about it soon.
+I have begun to explain these changes on my blog: http://blog.krakjoe.ninja/2015/08/a-letter-from-future.html
+
+More detail to come ...
 
 ### Supported PHP Versions
 
