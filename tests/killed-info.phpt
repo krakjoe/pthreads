@@ -17,7 +17,7 @@ class Test extends Thread
 $t = new Test();
 $t->start();
 $t->kill();
-
+$t->join();
 var_dump($t->isTerminated());
 ?>
 --EXPECT--
