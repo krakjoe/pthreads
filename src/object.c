@@ -203,6 +203,7 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 				pthreads_stack_free(destination->stack);
 			}
 
+			pthreads_monitor_free(destination->ready);
 			pthreads_monitor_free(destination->monitor);	
 
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
@@ -214,6 +215,7 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 		destination->local.id = source->local.id;
 		destination->local.ls = source->local.ls;
 		destination->monitor = source->monitor;
+		destination->ready  = source->ready;
 		destination->store = source->store;
 		destination->stack = source->stack;	
 		
@@ -265,7 +267,8 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();
-		base->store = pthreads_store_alloc();
+		base->ready   = pthreads_monitor_alloc();
+		base->store   = pthreads_store_alloc();
 
 		if (PTHREADS_IS_WORKER(base)) {
 			base->stack = pthreads_stack_alloc(base->monitor);
@@ -337,7 +340,7 @@ zend_bool pthreads_start(pthreads_object_t* thread) {
 
 	switch (pthread_create(&thread->thread, NULL, pthreads_routine, (void*)thread)) {
 		case SUCCESS:
-			pthreads_monitor_wait_until(thread->monitor, PTHREADS_MONITOR_READY);
+			pthreads_monitor_wait_until(thread->ready, PTHREADS_MONITOR_READY);
 			return 1;
 
 		case EAGAIN:

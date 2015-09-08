@@ -574,7 +574,7 @@ static inline void pthreads_prepare_sapi(pthreads_object_t* thread) {
 
 #ifdef PTHREADS_KILL_SIGNAL
 static inline void pthreads_kill_handler(int signo) /* {{{ */
-{	
+{
 	ZEND_TSRMLS_CACHE_UPDATE();
 
 	pthreads_object_t* current = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
@@ -629,7 +629,7 @@ int pthreads_prepared_startup(pthreads_object_t* thread) {
 	pthreads_prepare_exception_handler(thread);
 	pthreads_prepare_resource_destructor(thread);
 
-	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_READY);
+	pthreads_monitor_add(thread->ready, PTHREADS_MONITOR_READY);
 
 	return SUCCESS;
 } /* }}} */
