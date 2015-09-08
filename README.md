@@ -57,7 +57,12 @@ The following things have significant changes:
  * ```Threaded``` members of ```Threaded``` objects are immutable
  * ```Volatile``` objects, excempt from immutability
 
-I have begun to explain these changes on my blog: http://blog.krakjoe.ninja/2015/08/a-letter-from-future.html
+Some blog posts explaining these changes:
+
+ * [A Letter from the Future](http://blog.krakjoe.ninja/2015/08/a-letter-from-future.html)
+ * [Addendum to A Letter from the Future](http://blog.krakjoe.ninja/2015/09/addendum-letter-from-future.html)
+
+As of yet, documentation has not been updated to reflect these changes ... sorry about that ... one human ...
 
 More detail to come ...
 
