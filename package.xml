@@ -11,7 +11,7 @@
   <active>yes</active>
  </lead>
  <date>2015-09-10</date>
- <time>15:09:57</time>
+ <time>15:09:11</time>
  <version>
   <release>3.0.0</release>
   <api>3.0.0</api>
@@ -66,6 +66,7 @@
 	<file name="tests/hacking-serials.phpt" role="test" />
 	<file name="tests/immutable-threaded-members.phpt" role="test" />
 	<file name="tests/included-files.phpt" role="test" />
+	<file name="tests/includeme.inc" role="test" />
 	<file name="tests/ini.phpt" role="test" />
 	<file name="tests/interface.phpt" role="test" />
 	<file name="tests/interfaces.phpt" role="test" />
