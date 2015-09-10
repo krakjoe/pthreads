@@ -589,7 +589,7 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 #endif
 
 /* {{{ */
-int pthreads_prepared_startup(pthreads_object_t* thread) {
+int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready) {
 #ifdef PTHREADS_KILL_SIGNAL
 #ifdef ZEND_SIGNAL
 	zend_signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
@@ -629,7 +629,7 @@ int pthreads_prepared_startup(pthreads_object_t* thread) {
 	pthreads_prepare_exception_handler(thread);
 	pthreads_prepare_resource_destructor(thread);
 
-	pthreads_monitor_add(thread->ready, PTHREADS_MONITOR_READY);
+	pthreads_monitor_add(ready, PTHREADS_MONITOR_READY);
 
 	return SUCCESS;
 } /* }}} */

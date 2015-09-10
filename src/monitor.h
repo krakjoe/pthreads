@@ -18,16 +18,16 @@
 #ifndef HAVE_PTHREADS_MONITOR_H
 #define HAVE_PTHREADS_MONITOR_H
 
-typedef unsigned long pthreads_monitor_state_t;
+typedef volatile unsigned long pthreads_monitor_state_t;
 
 typedef struct _pthreads_monitor_t pthreads_monitor_t;
 
-#define PTHREADS_MONITOR_NOTHING (0)
-#define PTHREADS_MONITOR_READY   (1<<0)
-#define PTHREADS_MONITOR_STARTED (1<<1)
-#define PTHREADS_MONITOR_RUNNING (1<<2)
-#define PTHREADS_MONITOR_JOINED  (1<<3)
-#define PTHREADS_MONITOR_ERROR	 (1<<4)
+#define PTHREADS_MONITOR_NOTHING	(0)
+#define PTHREADS_MONITOR_STARTED	(1<<0)
+#define PTHREADS_MONITOR_RUNNING	(1<<1)
+#define PTHREADS_MONITOR_JOINED		(1<<2)
+#define PTHREADS_MONITOR_ERROR		(1<<3)
+#define PTHREADS_MONITOR_READY		(1<<4)
 
 pthreads_monitor_t* pthreads_monitor_alloc();
 zend_bool pthreads_monitor_lock(pthreads_monitor_t *m);

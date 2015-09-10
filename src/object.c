@@ -41,7 +41,7 @@ extern zend_module_entry pthreads_module_entry; /* }}} */
 static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry); /* }}} */
 
 /* {{{ */
-static void * pthreads_routine(void *arg); /* }}} */
+static void * pthreads_routine(pthreads_routine_arg_t *arg); /* }}} */
 
 static inline void pthreads_object_iterator_dtor(pthreads_iterator_t* iterator) {
 	if (Z_TYPE(iterator->zit.data) != IS_UNDEF)
@@ -203,7 +203,6 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 				pthreads_stack_free(destination->stack);
 			}
 
-			pthreads_monitor_free(destination->ready);
 			pthreads_monitor_free(destination->monitor);	
 
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
@@ -215,7 +214,6 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 		destination->local.id = source->local.id;
 		destination->local.ls = source->local.ls;
 		destination->monitor = source->monitor;
-		destination->ready  = source->ready;
 		destination->store = source->store;
 		destination->stack = source->stack;	
 		
@@ -267,7 +265,6 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();
-		base->ready   = pthreads_monitor_alloc();
 		base->store   = pthreads_store_alloc();
 
 		if (PTHREADS_IS_WORKER(base)) {
@@ -322,6 +319,7 @@ HashTable* pthreads_base_gc(zval *object, zval **table, int *n) {
 
 /* {{{ */
 zend_bool pthreads_start(pthreads_object_t* thread) {
+	pthreads_routine_arg_t routine;
 
 	if (!PTHREADS_IN_CREATOR(thread) || PTHREADS_IS_CONNECTION(thread)) {
 		zend_throw_exception_ex(spl_ce_RuntimeException, 
@@ -336,11 +334,11 @@ zend_bool pthreads_start(pthreads_object_t* thread) {
 		return 0;
 	}
 
-	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_STARTED);
+	pthreads_routine_init(&routine, thread);
 
-	switch (pthread_create(&thread->thread, NULL, pthreads_routine, (void*)thread)) {
+	switch (pthread_create(&thread->thread, NULL, (void* (*) (void*)) pthreads_routine, (void*)&routine)) {
 		case SUCCESS:
-			pthreads_monitor_wait_until(thread->ready, PTHREADS_MONITOR_READY);
+			pthreads_routine_wait(&routine);
 			return 1;
 
 		case EAGAIN:
@@ -353,8 +351,8 @@ zend_bool pthreads_start(pthreads_object_t* thread) {
 				0, "cannot start %s, unknown error", thread->std.ce->name->val);
 	}
 	
-	pthreads_monitor_remove(thread->monitor, PTHREADS_MONITOR_STARTED);
-	
+	pthreads_routine_free(&routine);
+
 	return 0;
 } /* }}} */
 
@@ -433,10 +431,11 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 } /* }}} */
 
 /* {{{ */
-static void * pthreads_routine(void *arg) {
-	pthreads_object_t* thread = (pthreads_object_t*) arg;
+static void * pthreads_routine(pthreads_routine_arg_t *routine) {
+	pthreads_object_t* thread = routine->thread;
+	pthreads_monitor_t* ready = routine->ready;
 
-	pthreads_prepared_startup(thread);
+	pthreads_prepared_startup(thread, ready);
 
 	zend_first_try {
 		ZVAL_UNDEF(&PTHREADS_ZG(this));
