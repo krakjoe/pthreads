@@ -281,6 +281,7 @@ void pthreads_base_free(zend_object *object) {
 	
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		if ((PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) &&
+			pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_STARTED) &&
 			!pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_JOINED)) {
 			pthreads_join(base);
 		}
