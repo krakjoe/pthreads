@@ -185,7 +185,8 @@ PHP_METHOD(Thread, __destruct)
 	pthreads_object_t* thread = PTHREADS_FETCH;
 
 	if (PTHREADS_IN_CREATOR(thread) && !PTHREADS_IS_CONNECTION(thread)) {
-		if (!pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
+		if (pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_STARTED) &&
+			!pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
 			pthreads_join(thread);
 		}
 	}
