@@ -13,8 +13,8 @@
  <date>2015-09-10</date>
  <time>15:09:11</time>
  <version>
-  <release>3.0.0</release>
-  <api>3.0.0</api>
+  <release>3.0.1</release>
+  <api>3.0.1</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- first PHP7 release
+ fix issue #482
  </notes>
  <contents>
   <dir name="/">

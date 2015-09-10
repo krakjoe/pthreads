@@ -22,7 +22,6 @@ class Managed extends Threaded {
 		if (Thread::getCurrentThreadId() == $this->owner) {
 			$this->delRef();
 		}
-			
 	}
 }
 
@@ -46,12 +45,12 @@ object(Test)#1 (2) {
   ["inctor"]=>
   object(Managed)#3 (1) {
     ["owner"]=>
-    int(%d)
+    int(%s)
   }
   ["inrun"]=>
   object(Managed)#2 (1) {
     ["owner"]=>
-    int(%d)
+    int(%s)
   }
 }
 
