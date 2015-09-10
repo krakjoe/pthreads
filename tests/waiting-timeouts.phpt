@@ -28,8 +28,8 @@ $t->synchronized(function($thread){
 	var_dump($thread->wait(100)); # should return false because no notification sent
 								  # but may wake up (and return true) because notification might come from
 								  # somewhere else in the system and there is no precondition
-								  # it will normally be safe to ignore this test failing
+								  # we are testing for faults rather than output here ...
 }, $t);
 ?>
---EXPECT--
-bool(false)
+--EXPECTF--
+bool(%s)
