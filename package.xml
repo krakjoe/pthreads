@@ -3,15 +3,15 @@
  <name>pthreads</name>
  <channel>pecl.php.net</channel>
  <summary>Threading API</summary>
- <description>A compatible Threading API for PHP5.3+</description>
+ <description>A compatible Threading API for PHP</description>
  <lead>
   <name>Joe Watkins</name>
   <user>krakjoe</user>
-  <email>pthreads@pthreads.org</email>
+  <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2014-10-01</date>
- <time>07:25:00</time>
+ <date>2015-09-10</date>
+ <time>15:09:57</time>
  <version>
   <release>3.0.0</release>
   <api>3.0.0</api>
@@ -26,126 +26,125 @@
  </notes>
  <contents>
   <dir name="/">
-   <file name="examples/Benchmark.php" role="doc" />
-   <file name="examples/CallAnyFunction.php" role="doc" />
-   <file name="examples/ChannelsAndMagic.php" role="doc" />
-   <file name="examples/Fetch.php" role="doc" />
-   <file name="examples/KeepAliveSession.php" role="doc" />
-   <file name="examples/Mutexes.php" role="doc" />
-   <file name="examples/MySQLi.php" role="doc" />
-   <file name="examples/NewSynchronization.php" role="doc" />
-   <file name="examples/Notifications.php" role="doc" />
-   <file name="examples/ObjectsAsParameters.php" role="doc" />
-   <file name="examples/Objects.php" role="doc" />
-   <file name="examples/Pooling.php" role="doc" />
-   <file name="examples/Scope.php" role="doc" />
-   <file name="examples/SelectiveInheritance.php" role="doc" />
-   <file name="examples/SharingResources.php" role="doc" />
-   <file name="examples/SimpleWebRequest.php" role="doc" />
-   <file name="examples/Singleton.php" role="doc" />
-   <file name="examples/SocketServer.php" role="doc" />
-   <file name="examples/SQLWorker.php" role="doc" />
-   <file name="examples/StackableArray.php" role="doc" />
-   <file name="examples/Stacking.php" role="doc" />
-   <file name="examples/stub.php" role="doc" />
-   <file name="tests/binding.phpt" role="test" />
-   <file name="tests/callstatic-etc.phpt" role="test" />
-   <file name="tests/chunk.phpt" role="test" />
-   <file name="tests/class-defaults.phpt" role="test" />
-   <file name="tests/closures-as-members.phpt" role="test" />
-   <file name="tests/complex-statics.phpt" role="test" />
-   <file name="tests/complex-statics-set-null.phpt" role="test" />
-   <file name="tests/conditions.phpt" role="test" />
-   <file name="tests/constants.phpt" role="test" />
-   <file name="tests/corrupted-resources.phpt" role="test" />
-   <file name="tests/counting-members.phpt" role="test" />
-   <file name="tests/detach.phpt" role="test" />
-   <file name="tests/doc-comments.phpt" role="test" />
-   <file name="tests/exception-handler.phpt" role="test" />
-   <file name="tests/foreign-private-members.phpt" role="test" />
-   <file name="tests/functions.phpt" role="test" />
-   <file name="tests/global-constants.phpt" role="test" />
-   <file name="tests/globals.phpt" role="test" />
-   <file name="tests/gone.phpt" role="test" />
-   <file name="tests/graceful-fatalities.phpt" role="test" />
-   <file name="tests/included-files.phpt" role="test" />
-   <file name="tests/includeme.inc" role="test" />
-   <file name="tests/ini.phpt" role="test" />
-   <file name="tests/interface.phpt" role="test" />
-   <file name="tests/interfaces.phpt" role="test" />
-   <file name="tests/isset-empty-compat.phpt" role="test" />
-   <file name="tests/isset-unset.phpt" role="test" />
-   <file name="tests/killed-info.phpt" role="test" />
-   <file name="tests/legacy-ctor.phpt" role="test" />
-   <file name="tests/magic-methods-get-set.phpt" role="test" />
-   <file name="tests/magic-methods-isset-unset.phpt" role="test" />
-   <file name="tests/merging-members.phpt" role="test" />
-   <file name="tests/merging-range.phpt" role="test" />
-   <file name="tests/mutex.phpt" role="test" />
-   <file name="tests/norefs.phpt" role="test" />
-   <file name="tests/normalize-members.phpt" role="test" />
-   <file name="tests/normal-reads.phpt" role="test" />
-   <file name="tests/null-member-crash.phpt" role="test" />
-   <file name="tests/oomethods.phpt" role="test" />
-   <file name="tests/objects-from-closures.phpt" role="test" />
-   <file name="tests/pools-default.phpt" role="test" />
-   <file name="tests/pools.phpt" role="test" />
-   <file name="tests/resource-keeping.phpt" role="test" />
-   <file name="tests/runtime-inheritance.phpt" role="test" />
-   <file name="tests/selective-inheritance.phpt" role="test" />
-   <file name="tests/shift-pop.phpt" role="test" />
-   <file name="tests/shutdown-handler.phpt" role="test" />
-   <file name="tests/stack-by-reference-pass.phpt" role="test" />
-   <file name="tests/stack-by-reference.phpt" role="test" />
-   <file name="tests/stateful-fatalities.phpt" role="test" />
-   <file name="tests/staticmethods.phpt" role="test" />
-   <file name="tests/static-resolution.phpt" role="test" />
-   <file name="tests/statics.phpt" role="test" />
-   <file name="tests/statics-thorn-in-other-side.phpt" role="test" />
-   <file name="tests/synchronization.phpt" role="test" />
-   <file name="tests/thorn-in-side.phpt" role="test" />
-   <file name="tests/thread.phpt" role="test" />
-   <file name="tests/threaded-extend-abstract.phpt" role="test" />
-   <file name="tests/trait-aliases.phpt" role="test" />
-   <file name="tests/unset-defaults.phpt" role="test" />
-   <file name="tests/waiting-timeouts.phpt" role="test" />
-   <file name="tests/wait.phpt" role="test" />
-   <file name="src/pthreads.h" role="src" />
-   <file name="src/copy.h" role="src" />
-   <file name="src/globals.c" role="src" />
-   <file name="src/globals.h" role="src" />
-   <file name="src/handlers.c" role="src" />
-   <file name="src/handlers.h" role="src" />
-   <file name="src/lock.c" role="src" />
-   <file name="src/lock.h" role="src" />
-   <file name="src/object.c" role="src" />
-   <file name="src/object.h" role="src" />
-   <file name="src/prepare.c" role="src" />
-   <file name="src/prepare.h" role="src" />
-   <file name="src/resources.c" role="src" />
-   <file name="src/resources.h" role="src" />
-   <file name="src/store.c" role="src" />
-   <file name="src/store.h" role="src" />
-   <file name="src/state.c" role="src" />
-   <file name="src/state.h" role="src" />
-   <file name="src/synchro.c" role="src" />
-   <file name="src/synchro.h" role="src" />
-   <file name="src/thread.h" role="src" />
-   <file name="classes/threaded.h" role="src" />
-   <file name="classes/thread.h" role="src" />
-   <file name="classes/worker.h" role="src" />
-   <file name="classes/mutex.h" role="src" />
-   <file name="classes/cond.h" role="src" />
-   <file name="classes/collectable.h" role="src" />
-   <file name="classes/pool.h" role="src" />
-   <file name="iterators/iterator.h" role="src" />
-   <file name="iterators/default.h" role="src" />
-   <file name="config.m4" role="src" />
-   <file name="config.w32" role="src" />
-   <file name="LICENSE" role="doc" />
-   <file name="php_pthreads.c" role="src" />
-   <file name="php_pthreads.h" role="src" />
-   <file name="README.md" role="doc" />
+   	<file name="examples/Benchmark.php" role="doc" />
+	<file name="examples/CallAnyFunction.php" role="doc" />
+	<file name="examples/ChannelsAndMagic.php" role="doc" />
+	<file name="examples/ClosureFuture.php" role="doc" />
+	<file name="examples/KeepAliveSession.php" role="doc" />
+	<file name="examples/MySQLi.php" role="doc" />
+	<file name="examples/ObjectsAsParameters.php" role="doc" />
+	<file name="examples/Pooling.php" role="doc" />
+	<file name="examples/SelectiveInheritance.php" role="doc" />
+	<file name="examples/SharingResources.php" role="doc" />
+	<file name="examples/SimpleWebRequest.php" role="doc" />
+	<file name="examples/Singleton.php" role="doc" />
+	<file name="examples/SocketServer.php" role="doc" />
+	<file name="examples/Sockets.php" role="doc" />
+	<file name="examples/StackableArray.php" role="doc" />
+	<file name="examples/Synchronization.php" role="doc" />
+	<file name="examples/stub.php" role="doc" />
+   	<file name="tests/anon-bound-inherited.phpt" role="test" />
+	<file name="tests/anon-unbound-inherited.phpt" role="test" />
+	<file name="tests/binding.phpt" role="test" />
+	<file name="tests/callstatic-etc.phpt" role="test" />
+	<file name="tests/chunk.phpt" role="test" />
+	<file name="tests/class-defaults.phpt" role="test" />
+	<file name="tests/closures-as-members.phpt" role="test" />
+	<file name="tests/complex-statics-set-null.phpt" role="test" />
+	<file name="tests/complex-statics.phpt" role="test" />
+	<file name="tests/constants.phpt" role="test" />
+	<file name="tests/corrupted-resources.phpt" role="test" />
+	<file name="tests/counting-members.phpt" role="test" />
+	<file name="tests/crazy-refcounting-stuff.phpt" role="test" />
+	<file name="tests/doc-comments.phpt" role="test" />
+	<file name="tests/exception-handler.phpt" role="test" />
+	<file name="tests/foreign-private-members.phpt" role="test" />
+	<file name="tests/functions.phpt" role="test" />
+	<file name="tests/global-constants.phpt" role="test" />
+	<file name="tests/gone.phpt" role="test" />
+	<file name="tests/graceful-fatalities.phpt" role="test" />
+	<file name="tests/hacking-serials.phpt" role="test" />
+	<file name="tests/immutable-threaded-members.phpt" role="test" />
+	<file name="tests/included-files.phpt" role="test" />
+	<file name="tests/ini.phpt" role="test" />
+	<file name="tests/interface.phpt" role="test" />
+	<file name="tests/interfaces.phpt" role="test" />
+	<file name="tests/isset-empty-compat.phpt" role="test" />
+	<file name="tests/isset-unset.phpt" role="test" />
+	<file name="tests/iterator-no-refs.phpt" role="test" />
+	<file name="tests/killed-info.phpt" role="test" />
+	<file name="tests/legacy-ctor.phpt" role="test" />
+	<file name="tests/lexical-vars.phpt" role="test" />
+	<file name="tests/magic-methods-get-set.phpt" role="test" />
+	<file name="tests/magic-methods-isset-unset.phpt" role="test" />
+	<file name="tests/merge-non-threaded.phpt" role="test" />
+	<file name="tests/merging-members.phpt" role="test" />
+	<file name="tests/merging-range.phpt" role="test" />
+	<file name="tests/no-cloning.phpt" role="test" />
+	<file name="tests/no-sleeping.phpt" role="test" />
+	<file name="tests/norefs.phpt" role="test" />
+	<file name="tests/normal-reads.phpt" role="test" />
+	<file name="tests/normalize-members.phpt" role="test" />
+	<file name="tests/null-member-crash.phpt" role="test" />
+	<file name="tests/oomethods.phpt" role="test" />
+	<file name="tests/pools-default.phpt" role="test" />
+	<file name="tests/pools.phpt" role="test" />
+	<file name="tests/resource-keeping.phpt" role="test" />
+	<file name="tests/return-types.phpt" role="test" />
+	<file name="tests/runtime-inheritance.phpt" role="test" />
+	<file name="tests/selective-inheritance.phpt" role="test" />
+	<file name="tests/shift-pop.phpt" role="test" />
+	<file name="tests/shutdown-handler.phpt" role="test" />
+	<file name="tests/stateful-fatalities.phpt" role="test" />
+	<file name="tests/static-resolution.phpt" role="test" />
+	<file name="tests/staticmethods.phpt" role="test" />
+	<file name="tests/statics-thorn-in-other-side.phpt" role="test" />
+	<file name="tests/statics.phpt" role="test" />
+	<file name="tests/synchronization.phpt" role="test" />
+	<file name="tests/thorn-in-side.phpt" role="test" />
+	<file name="tests/thread.phpt" role="test" />
+	<file name="tests/threaded-extend-abstract.phpt" role="test" />
+	<file name="tests/trait-aliases.phpt" role="test" />
+	<file name="tests/unset-defaults.phpt" role="test" />
+	<file name="tests/volatile-objects.phpt" role="test" />
+	<file name="tests/wait.phpt" role="test" />
+	<file name="tests/waiting-timeouts.phpt" role="test" />
+	<file name="tests/workers-no-collect.phpt" role="test" />
+	<file name="tests/workers-no-join.phpt" role="test" />
+	<file name="tests/workers-no-stack.phpt" role="test" />
+	<file name="tests/workers-no-start.phpt" role="test" />
+	<file name="tests/workers-no-unstack.phpt" role="test" />
+	<file name="tests/workers-ok-unstack.phpt" role="test" />
+   	<file name="src/copy.h" role="src" />
+	<file name="src/globals.c" role="src" />
+	<file name="src/globals.h" role="src" />
+	<file name="src/handlers.c" role="src" />
+	<file name="src/handlers.h" role="src" />
+	<file name="src/monitor.c" role="src" />
+	<file name="src/monitor.h" role="src" />
+	<file name="src/object.c" role="src" />
+	<file name="src/object.h" role="src" />
+	<file name="src/prepare.c" role="src" />
+	<file name="src/prepare.h" role="src" />
+	<file name="src/pthreads.h" role="src" />
+	<file name="src/resources.c" role="src" />
+	<file name="src/resources.h" role="src" />
+	<file name="src/stack.c" role="src" />
+	<file name="src/stack.h" role="src" />
+	<file name="src/store.c" role="src" />
+	<file name="src/store.h" role="src" />
+	<file name="src/thread.h" role="src" />
+   	<file name="classes/collectable.h" role="src" />
+	<file name="classes/pool.h" role="src" />
+	<file name="classes/thread.h" role="src" />
+	<file name="classes/threaded.h" role="src" />
+	<file name="classes/worker.h" role="src" />
+	<file name="config.m4" role="src" />
+	<file name="config.w32" role="src" />
+	<file name="LICENSE" role="doc" />
+	<file name="php_pthreads.c" role="src" />
+	<file name="php_pthreads.h" role="src" />
+	<file name="README.md" role="doc" />
   </dir>
  </contents>
  <dependencies>
