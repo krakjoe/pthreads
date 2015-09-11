@@ -215,6 +215,13 @@ int pthreads_store_write(zval *object, zend_string *key, zval *write) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	keyed = zend_string_init(key->val, key->len, 1);
+	
+	if (Z_TYPE_P(write) == IS_OBJECT) {
+		/* when we copy out in another context, we want properties table
+			to be initialized */
+		rebuild_object_properties(Z_OBJ_P(write));
+	}
+
 	storage = pthreads_store_create(write, 1);
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
@@ -591,6 +598,13 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 			PHP_VAR_SERIALIZE_INIT(vars);
 			php_var_serialize(&smart, pzval, &vars);
 			PHP_VAR_SERIALIZE_DESTROY(vars);
+
+			if (EG(exception)) {
+				smart_str_free(&smart);
+				*pstring = NULL;
+				*slength = 0;
+				return FAILURE;			
+			}
 		}
 
 		if (smart.s) {
