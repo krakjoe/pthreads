@@ -558,8 +558,6 @@ static inline void pthreads_prepare_exception_handler(pthreads_object_t* thread)
 				object = zend_hash_index_find(Z_ARRVAL_P(handler), 0);
 				if (Z_TYPE_P(object) == IS_OBJECT && 
 					!instanceof_function(Z_OBJCE_P(object), pthreads_threaded_entry)) {
-					zend_throw_exception_ex(spl_ce_RuntimeException, 0,
-						"cannot setup exception handler to use non-threaded object, use Threaded object or ::class");
 						return;
 				}
 		}
@@ -624,28 +622,24 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 
 	php_request_startup();
 
-	zend_try {
-		pthreads_prepare_sapi(thread);
+	pthreads_prepare_sapi(thread);
 	
-		if (thread->options & PTHREADS_INHERIT_INI)
-			pthreads_prepare_ini(thread);
-	
-		if (thread->options & PTHREADS_INHERIT_CONSTANTS)
-			pthreads_prepare_constants(thread);
+	if (thread->options & PTHREADS_INHERIT_INI)
+		pthreads_prepare_ini(thread);
 
-		if (thread->options & PTHREADS_INHERIT_FUNCTIONS)
-			pthreads_prepare_functions(thread);
+	if (thread->options & PTHREADS_INHERIT_CONSTANTS)
+		pthreads_prepare_constants(thread);
 
-		if (thread->options & PTHREADS_INHERIT_CLASSES)
-			pthreads_prepare_classes(thread);
+	if (thread->options & PTHREADS_INHERIT_FUNCTIONS)
+		pthreads_prepare_functions(thread);
 
-		if (thread->options & PTHREADS_INHERIT_INCLUDES)
-			pthreads_prepare_includes(thread);
+	if (thread->options & PTHREADS_INHERIT_CLASSES)
+		pthreads_prepare_classes(thread);
 
-		pthreads_prepare_exception_handler(thread);
-	} zend_catch {
-		result = FAILURE;
-	} zend_end_try();
+	if (thread->options & PTHREADS_INHERIT_INCLUDES)
+		pthreads_prepare_includes(thread);
+
+	pthreads_prepare_exception_handler(thread);
 
 	pthreads_prepare_resource_destructor(thread);
 

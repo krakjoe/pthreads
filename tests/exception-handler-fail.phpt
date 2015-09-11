@@ -2,7 +2,7 @@
 Test exception handler inheritance (fail)
 --DESCRIPTION--
 Exception handlers cannot be objects that are not Threaded, this test verifies that such
-handlers cause threads to fail gracefully rather than fault.
+handlers cause threads to fail silently rather than fault.
 --FILE--
 <?php
 class ExceptionHandler
@@ -33,9 +33,12 @@ $t = new ExceptionThread();
 $t->start();
 $t->join();
 ?>
---EXPECT--
-Fatal error: Uncaught RuntimeException: cannot setup exception handler to use non-threaded object, use Threaded object or ::class in [no active file]:0
+--EXPECTF--
+Fatal error: Uncaught Exception in %s:13
 Stack trace:
-#0 {main}
-  thrown in [no active file] on line 0
+#0 %s(18): ExceptionThread->traceable()
+#1 [internal function]: ExceptionThread->run()
+#2 {main}
+  thrown in %s on line 13
+
 
