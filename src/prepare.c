@@ -338,8 +338,9 @@ static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int arg
 		if (scope == candidate) {
 			function->common.scope = prepared;
 		} else {
-			function->common.scope = pthreads_prepared_entry
-				(thread, function->common.scope);
+			if (function->common.scope->type == ZEND_USER_CLASS) {
+				function->common.scope = pthreads_prepared_entry(thread, function->common.scope);
+			}
 		}
 
 		/* runtime cache relies on immutable scope, so if scope changed, reallocate runtime cache */
