@@ -547,33 +547,23 @@ static inline void pthreads_prepare_includes(pthreads_object_t* thread) {
 } /* }}} */
 
 /* {{{ */
-static inline int pthreads_prepare_copy_exception_handler(zval *handler, zend_stack *stack) {
-	zval separated;
-	
-	if (pthreads_store_separate(handler, &separated, 1) == SUCCESS) {
-		zend_stack_push(stack, &separated);
-	}
-
-	return SUCCESS;
-} /* }}} */
-
-/* {{{ */
 static inline void pthreads_prepare_exception_handler(pthreads_object_t* thread) {
 	zval *handler = &PTHREADS_EG(thread->creator.ls, user_exception_handler);
-	zend_stack *stack = &PTHREADS_EG(thread->creator.ls, user_exception_handlers);
-	zval *object = NULL;
 
-	if (zend_stack_count(stack)) {
-		zend_stack_init(
-			&EG(user_exception_handlers), zend_stack_count(stack));
-		zend_stack_apply_with_argument(stack, 
-			ZEND_STACK_APPLY_TOPDOWN, 
-			(int (*)(void*, void*)) pthreads_prepare_copy_exception_handler, 
-			&EG(user_exception_handlers));
-	}
+	if (thread->options & PTHREADS_INHERIT_CLASSES|PTHREADS_INHERIT_FUNCTIONS) {
+		if (Z_TYPE_P(handler) != IS_UNDEF) {
+			if (Z_TYPE_P(handler) == IS_ARRAY) {
+				if (zend_hash_num_elements(Z_ARRVAL_P(handler)) > 1) {
+					if (!(thread->options & PTHREADS_INHERIT_CLASSES)) {
+						return;
+					}
+				} else if(!(thread->options & PTHREADS_INHERIT_FUNCTIONS)) {
+					return;
+				}
+			}
 
-	if (Z_TYPE_P(handler) != IS_UNDEF) {
-		pthreads_store_separate(handler, &EG(user_exception_handler), 1);
+			pthreads_store_separate(handler, &EG(user_exception_handler), 1);
+		}
 	}
 } /* }}} */
 

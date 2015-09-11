@@ -261,7 +261,7 @@ int pthreads_store_separate(zval * pzval, zval *separated, zend_bool complex) {
 		storage = pthreads_store_create(pzval, complex);
 		if (pthreads_store_convert(storage, separated) != SUCCESS) {
 			ZVAL_NULL(separated);
-		}
+		} else result = SUCCESS;
 		pthreads_store_storage_dtor(storage);
 	} else ZVAL_NULL(separated);
 
