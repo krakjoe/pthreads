@@ -1,22 +1,24 @@
 --TEST--
-Test exception handler inheritance (fail)
+Test exception handler inheritance (non threaded objects)
 --DESCRIPTION--
-Exception handlers cannot be objects that are not Threaded, this test verifies that such
-handlers cause threads to fail silently rather than fault.
+Non-threaded objects caused pthreads up to v3.0.1 to fault when used as excepion handlers.
+
+Before we start a new thread, we apply a function to the exception handler stack that rebuilds their
+property tables.
 --FILE--
 <?php
 class ExceptionHandler
 {
     public function handle(Exception $e)
     {
-        var_dump($e);
+        echo $e->getMessage();
     }
 }
 
 class ExceptionThread extends Thread
 {
 	public function traceable() {
-		throw new Exception();
+		throw new Exception("OK");
 	}
 
     public function run()
@@ -33,12 +35,7 @@ $t = new ExceptionThread();
 $t->start();
 $t->join();
 ?>
---EXPECTF--
-Fatal error: Uncaught Exception in %s:13
-Stack trace:
-#0 %s(18): ExceptionThread->traceable()
-#1 [internal function]: ExceptionThread->run()
-#2 {main}
-  thrown in %s on line 13
+--EXPECT--
+OK
 
 

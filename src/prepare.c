@@ -547,20 +547,32 @@ static inline void pthreads_prepare_includes(pthreads_object_t* thread) {
 } /* }}} */
 
 /* {{{ */
+static inline int pthreads_prepare_copy_exception_handler(zval *handler, zend_stack *stack) {
+	zval separated;
+	
+	if (pthreads_store_separate(handler, &separated, 1) == SUCCESS) {
+		zend_stack_push(stack, &separated);
+	}
+
+	return SUCCESS;
+} /* }}} */
+
+/* {{{ */
 static inline void pthreads_prepare_exception_handler(pthreads_object_t* thread) {
 	zval *handler = &PTHREADS_EG(thread->creator.ls, user_exception_handler);
+	zend_stack *stack = &PTHREADS_EG(thread->creator.ls, user_exception_handlers);
 	zval *object = NULL;
 
+	if (zend_stack_count(stack)) {
+		zend_stack_init(
+			&EG(user_exception_handlers), zend_stack_count(stack));
+		zend_stack_apply_with_argument(stack, 
+			ZEND_STACK_APPLY_TOPDOWN, 
+			(int (*)(void*, void*)) pthreads_prepare_copy_exception_handler, 
+			&EG(user_exception_handlers));
+	}
+
 	if (Z_TYPE_P(handler) != IS_UNDEF) {
-		switch (Z_TYPE_P(handler)) {
-			case IS_ARRAY:
-				/* not sure why this is the case */
-				object = zend_hash_index_find(Z_ARRVAL_P(handler), 0);
-				if (Z_TYPE_P(object) == IS_OBJECT && 
-					!instanceof_function(Z_OBJCE_P(object), pthreads_threaded_entry)) {
-						return;
-				}
-		}
 		pthreads_store_separate(handler, &EG(user_exception_handler), 1);
 	}
 } /* }}} */
@@ -597,6 +609,32 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 	zend_bailout();
 } /* }}} */
 #endif
+
+/* {{{ */
+static inline int pthreads_rebuild_exception_handler(zval *exception_handler) {
+	if (Z_TYPE_P(exception_handler) == IS_OBJECT) {
+		rebuild_object_properties(Z_OBJ_P(exception_handler));
+	} else if (Z_TYPE_P(exception_handler) == IS_ARRAY) {
+		zval *object = zend_hash_index_find(Z_ARRVAL_P(exception_handler), 0);
+		if (object && Z_TYPE_P(object) == IS_OBJECT) {
+			rebuild_object_properties(Z_OBJ_P(object));
+		}
+	}
+	return SUCCESS;
+} /* }}} */
+
+/* {{{ */
+void pthreads_prepare_parent(pthreads_object_t *thread) {
+	/* rebuild exception handlers so we can copy them gracefully from this context */
+	if (zend_stack_count(&EG(user_exception_handlers))) {
+		zend_stack_apply(
+			&EG(user_exception_handlers), 
+			ZEND_STACK_APPLY_TOPDOWN,
+			(int (*)(void*)) pthreads_rebuild_exception_handler);
+	}
+	
+	pthreads_rebuild_exception_handler(&EG(user_exception_handler));
+} /* }}} */
 
 /* {{{ */
 int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready) {

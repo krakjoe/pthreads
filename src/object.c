@@ -113,6 +113,27 @@ zend_object_iterator* pthreads_object_iterator_create(zend_class_entry *ce, zval
 }
 
 /* {{{ */
+static void pthreads_routine_init(pthreads_routine_arg_t *r, pthreads_object_t *thread) {
+	r->thread = thread;
+	r->ready  = pthreads_monitor_alloc();
+	pthreads_monitor_add(
+		r->thread->monitor, PTHREADS_MONITOR_STARTED);
+	pthreads_prepare_parent(thread);
+}
+
+static void pthreads_routine_wait(pthreads_routine_arg_t *r) {
+	pthreads_monitor_wait_until(
+		r->ready, PTHREADS_MONITOR_READY);
+	pthreads_monitor_free(r->ready);
+}
+
+static void pthreads_routine_free(pthreads_routine_arg_t *r) {
+	pthreads_monitor_remove(
+		r->thread->monitor, PTHREADS_MONITOR_STARTED);
+	pthreads_monitor_free(r->ready);
+} /* }}} */
+
+/* {{{ */
 zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 	pthreads_object_t* thread = pthreads_globals_object_alloc(
 		sizeof(pthreads_object_t) + zend_object_properties_size(entry));

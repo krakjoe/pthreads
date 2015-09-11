@@ -48,26 +48,7 @@ typedef struct _pthreads_object_t {
 typedef struct _pthreads_routine_arg_t {
 	pthreads_object_t *thread;
 	pthreads_monitor_t *ready;
-} pthreads_routine_arg_t;
-
-static inline void pthreads_routine_init(pthreads_routine_arg_t *r, pthreads_object_t *thread) {
-	r->thread = thread;
-	r->ready  = pthreads_monitor_alloc();
-	pthreads_monitor_add(
-		r->thread->monitor, PTHREADS_MONITOR_STARTED);
-}
-
-static inline void pthreads_routine_wait(pthreads_routine_arg_t *r) {
-	pthreads_monitor_wait_until(
-		r->ready, PTHREADS_MONITOR_READY);
-	pthreads_monitor_free(r->ready);
-}
-
-static inline void pthreads_routine_free(pthreads_routine_arg_t *r) {
-	pthreads_monitor_remove(
-		r->thread->monitor, PTHREADS_MONITOR_STARTED);
-	pthreads_monitor_free(r->ready);
-} /* }}} */
+} pthreads_routine_arg_t; /* }}} */
 
 /* {{{ object iterator structure */
 typedef struct _pthreads_iterator_t {
