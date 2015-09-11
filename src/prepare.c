@@ -554,6 +554,7 @@ static inline void pthreads_prepare_exception_handler(pthreads_object_t* thread)
 	if (Z_TYPE_P(handler) != IS_UNDEF) {
 		switch (Z_TYPE_P(handler)) {
 			case IS_ARRAY:
+				/* not sure why this is the case */
 				object = zend_hash_index_find(Z_ARRVAL_P(handler), 0);
 				if (Z_TYPE_P(object) == IS_OBJECT && 
 					!instanceof_function(Z_OBJCE_P(object), pthreads_threaded_entry)) {
