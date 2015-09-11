@@ -14,12 +14,6 @@ So pthreads v3 implements the comparison handler and returns true when two refer
 comparison which would return true if the property tables of two distinct objects are uniform.
 --FILE--
 <?php
-class Handler {
-	public function handle(Exception $ex) {
-		var_dump(__METHOD__, $ex->getMessage());
-	}
-}
-
 class Test extends Thread {
 	public function __construct(Threaded ... $args) {
 		$this->args = $args;
