@@ -254,7 +254,7 @@ int pthreads_store_separate(zval * pzval, zval *separated, zend_bool complex) {
 		storage = pthreads_store_create(pzval, complex);
 		if (pthreads_store_convert(storage, separated) != SUCCESS) {
 			ZVAL_NULL(separated);
-		}			
+		}
 		pthreads_store_storage_dtor(storage);
 	} else ZVAL_NULL(separated);
 
@@ -469,7 +469,7 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 				memcpy(storage->data, def, sizeof(zend_op_array));
 				break;
 			}
-			
+
 			if (instanceof_function(Z_OBJCE_P(unstore), pthreads_threaded_entry)) {
 				storage->type = IS_PTHREADS;
 				storage->data = Z_OBJ_P(unstore);
@@ -627,7 +627,7 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength) {
 			PHP_VAR_UNSERIALIZE_INIT(vars);
 			if (!php_var_unserialize(pzval, &pointer, pointer+slength, &vars)) {
 				result = FAILURE;
-			}							
+			}
 			PHP_VAR_UNSERIALIZE_DESTROY(vars);
 			
 			if (result != FAILURE) {

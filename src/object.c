@@ -436,28 +436,28 @@ static void * pthreads_routine(pthreads_routine_arg_t *routine) {
 	pthreads_object_t* thread = routine->thread;
 	pthreads_monitor_t* ready = routine->ready;
 
-	pthreads_prepared_startup(thread, ready);
+	if (pthreads_prepared_startup(thread, ready) == SUCCESS) {
+		zend_first_try {
+			ZVAL_UNDEF(&PTHREADS_ZG(this));
+			object_init_ex(&PTHREADS_ZG(this), pthreads_prepared_entry(thread, thread->std.ce));
+			pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))), NULL);
 
-	zend_first_try {
-		ZVAL_UNDEF(&PTHREADS_ZG(this));
-		object_init_ex(&PTHREADS_ZG(this), pthreads_prepared_entry(thread, thread->std.ce));
-		pthreads_routine_run_function(thread, PTHREADS_FETCH_FROM(Z_OBJ_P(&PTHREADS_ZG(this))), NULL);
+			if (PTHREADS_IS_WORKER(thread)) {
+				zval stacked;
 
-		if (PTHREADS_IS_WORKER(thread)) {
-			zval stacked;
+				while (pthreads_stack_next(thread->stack, &stacked) != PTHREADS_MONITOR_JOINED) {
+					zval that;
+					pthreads_object_t* work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
 
-			while (pthreads_stack_next(thread->stack, &stacked) != PTHREADS_MONITOR_JOINED) {
-				zval that;
-				pthreads_object_t* work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
-
-				object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
-				pthreads_routine_run_function(work, PTHREADS_FETCH_FROM(Z_OBJ(that)), &that);
-				zval_ptr_dtor(&that);
+					object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
+					pthreads_routine_run_function(work, PTHREADS_FETCH_FROM(Z_OBJ(that)), &that);
+					zval_ptr_dtor(&that);
+				}
 			}
-		}
 
-		zval_ptr_dtor(&PTHREADS_ZG(this));
-	} zend_end_try();
+			zval_ptr_dtor(&PTHREADS_ZG(this));
+		} zend_end_try();	
+	}
 
 	pthreads_prepared_shutdown(thread);
 

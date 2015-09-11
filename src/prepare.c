@@ -548,10 +548,21 @@ static inline void pthreads_prepare_includes(pthreads_object_t* thread) {
 
 /* {{{ */
 static inline void pthreads_prepare_exception_handler(pthreads_object_t* thread) {
-	if (Z_TYPE(PTHREADS_EG(thread->creator.ls, user_exception_handler)) != IS_UNDEF) {
-		pthreads_store_separate(
-			&PTHREADS_EG(thread->creator.ls, user_exception_handler), 
-			&PTHREADS_EG(thread->local.ls, user_exception_handler), 1);
+	zval *handler = &PTHREADS_EG(thread->creator.ls, user_exception_handler);
+	zval *object = NULL;
+
+	if (Z_TYPE_P(handler) != IS_UNDEF) {
+		switch (Z_TYPE_P(handler)) {
+			case IS_ARRAY:
+				object = zend_hash_index_find(Z_ARRVAL_P(handler), 0);
+				if (Z_TYPE_P(object) == IS_OBJECT && 
+					!instanceof_function(Z_OBJCE_P(object), pthreads_threaded_entry)) {
+					zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+						"cannot setup exception handler to use non-threaded object, use Threaded object or ::class");
+						return;
+				}
+		}
+		pthreads_store_separate(handler, &EG(user_exception_handler), 1);
 	}
 } /* }}} */
 
@@ -590,6 +601,8 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 
 /* {{{ */
 int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready) {
+	int result = SUCCESS;
+
 #ifdef PTHREADS_KILL_SIGNAL
 #ifdef ZEND_SIGNAL
 	zend_signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
@@ -602,36 +615,42 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 	thread->local.ls = ts_resource(0);
 	TSRMLS_CACHE_UPDATE();
 
-	SG(server_context) = PTHREADS_SG(thread->creator.ls, server_context);
+	SG(server_context) = 
+		PTHREADS_SG(thread->creator.ls, server_context);
 
 	PG(expose_php) = 0;
 	PG(auto_globals_jit) = 0;
 
 	php_request_startup();
 
-	pthreads_prepare_sapi(thread);
+	zend_try {
+		pthreads_prepare_sapi(thread);
 	
-	if (thread->options & PTHREADS_INHERIT_INI)
-		pthreads_prepare_ini(thread);
+		if (thread->options & PTHREADS_INHERIT_INI)
+			pthreads_prepare_ini(thread);
 	
-	if (thread->options & PTHREADS_INHERIT_CONSTANTS)
-		pthreads_prepare_constants(thread);
+		if (thread->options & PTHREADS_INHERIT_CONSTANTS)
+			pthreads_prepare_constants(thread);
 
-	if (thread->options & PTHREADS_INHERIT_FUNCTIONS)
-		pthreads_prepare_functions(thread);
+		if (thread->options & PTHREADS_INHERIT_FUNCTIONS)
+			pthreads_prepare_functions(thread);
 
-	if (thread->options & PTHREADS_INHERIT_CLASSES)
-		pthreads_prepare_classes(thread);
+		if (thread->options & PTHREADS_INHERIT_CLASSES)
+			pthreads_prepare_classes(thread);
 
-	if (thread->options & PTHREADS_INHERIT_INCLUDES)
-		pthreads_prepare_includes(thread);
+		if (thread->options & PTHREADS_INHERIT_INCLUDES)
+			pthreads_prepare_includes(thread);
 
-	pthreads_prepare_exception_handler(thread);
+		pthreads_prepare_exception_handler(thread);
+	} zend_catch {
+		result = FAILURE;
+	} zend_end_try();
+
 	pthreads_prepare_resource_destructor(thread);
 
 	pthreads_monitor_add(ready, PTHREADS_MONITOR_READY);
 
-	return SUCCESS;
+	return result;
 } /* }}} */
 
 /* {{{ */
