@@ -1,5 +1,5 @@
 --TEST--
-Test function table inheritance
+Test exception handler inheritance (ok)
 --DESCRIPTION--
 This test verifies that user exception handler is invoked by pthreads if set
 --FILE--
