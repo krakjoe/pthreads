@@ -239,6 +239,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.get_gc = pthreads_base_gc;
 
 	pthreads_handlers.clone_obj = pthreads_base_clone; 
+	pthreads_handlers.compare_objects = pthreads_compare_objects;
 
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 

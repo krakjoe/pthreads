@@ -601,29 +601,21 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 #endif
 
 /* {{{ */
-static inline int pthreads_rebuild_exception_handler(zval *exception_handler) {
-	if (Z_TYPE_P(exception_handler) == IS_OBJECT) {
-		rebuild_object_properties(Z_OBJ_P(exception_handler));
-	} else if (Z_TYPE_P(exception_handler) == IS_ARRAY) {
-		zval *object = zend_hash_index_find(Z_ARRVAL_P(exception_handler), 0);
+static inline void pthreads_rebuild_object(zval *zv) {
+	if (Z_TYPE_P(zv) == IS_OBJECT) {
+		rebuild_object_properties(Z_OBJ_P(zv));
+	} else if (Z_TYPE_P(zv) == IS_ARRAY) {
+		zval *object = zend_hash_index_find(Z_ARRVAL_P(zv), 0);
 		if (object && Z_TYPE_P(object) == IS_OBJECT) {
 			rebuild_object_properties(Z_OBJ_P(object));
 		}
 	}
-	return SUCCESS;
 } /* }}} */
 
 /* {{{ */
 void pthreads_prepare_parent(pthreads_object_t *thread) {
-	/* rebuild exception handlers so we can copy them gracefully from this context */
-	if (zend_stack_count(&EG(user_exception_handlers))) {
-		zend_stack_apply(
-			&EG(user_exception_handlers), 
-			ZEND_STACK_APPLY_TOPDOWN,
-			(int (*)(void*)) pthreads_rebuild_exception_handler);
-	}
-	
-	pthreads_rebuild_exception_handler(&EG(user_exception_handler));
+	if (Z_TYPE(EG(user_exception_handler)) != IS_UNDEF)
+		pthreads_rebuild_object(&EG(user_exception_handler));
 } /* }}} */
 
 /* {{{ */

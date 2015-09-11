@@ -32,6 +32,8 @@
 #define PTHREADS_COUNT_PASSTHRU_C object, count
 #define PTHREADS_CLONE_PASSTHRU_D zval *object
 #define PTHREADS_CLONE_PASSTHRU_C object
+#define PTHREADS_COMPARE_PASSTHRU_D zval *op1, zval *op2
+#define PTHREADS_COMPARE_PASSTHRU_C op1, op2
 
 /* {{{  */
 #define PTHREADS_READ_DEBUG_PASSTHRU_D zval *object, int *is_temp
@@ -88,4 +90,7 @@ int pthreads_cast_object(PTHREADS_CAST_PASSTHRU_D); /* }}} */
 
 /* {{{ clone object handler */
 zend_object* pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D); /* }}} */
+
+/* {{{ */
+int pthreads_compare_objects(PTHREADS_COMPARE_PASSTHRU_D); /* }}} */
 #endif
