@@ -207,7 +207,7 @@ static void pthreads_copy_function(zend_function *function) {
 		op_array->function_name = estrdup(op_array->function_name);
 		op_array->refcount = emalloc(sizeof(zend_uint));
 		(*op_array->refcount) = 1;
-		op_array->prototype = function;
+		op_array->prototype = NULL;
 #if PHP_VERSION_ID >= 50400
 		op_array->run_time_cache = NULL;
 #endif
