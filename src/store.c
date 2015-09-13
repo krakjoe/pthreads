@@ -535,6 +535,7 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 					if (zend_hash_next_index_insert(&EG(regular_list), pzval)) {
 					    pthreads_resources_keep(stored);
 					} else ZVAL_NULL(pzval);
+					Z_ADDREF_P(pzval);
 				} else ZVAL_COPY(pzval, search);
 			} else {
 				ZVAL_RES(pzval, stored->original);
