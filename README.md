@@ -76,8 +76,6 @@ Yes !! Windows support is offered thanks to the pthread-w32 library.
 
 Releases for Windows can be found: http://windows.php.net/downloads/pecl/releases/pthreads/
 
-*Note: Windows builds are not yet available, they are coming ...*
-
 ##### Simple Windows Installation
 
 * Add `pthreadVC2.dll` (included with the Windows releases) to the same directory as `php.exe` eg. `C:\xampp\php`
