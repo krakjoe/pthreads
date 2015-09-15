@@ -597,7 +597,9 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 
 	PTHREADS_ZG(signal) = signo;
 
-	zend_bailout();
+	if (EG(current_execute_data)) {
+		zend_bailout();
+	}
 } /* }}} */
 #endif
 
