@@ -11,7 +11,7 @@ This test both demonstrates and tests volatility and immutability.
 class Member extends Volatile {
 
 	public function method(array $thing) {
-		return $this->thing = $thing; 			# fine, not threaded anyway ...
+		return $this->thing = $thing; 			# fine, coerced to volatile ...
 	}
 
 	public function setThreaded() {
@@ -50,7 +50,7 @@ $test->start();
 $test->join();
 ?>
 --EXPECTF--
-array(5) {
+object(Volatile)#%d (%d) {
   [0]=>
   int(1)
   [1]=>

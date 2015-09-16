@@ -32,10 +32,10 @@ typedef struct _pthreads_store_t {
 
 pthreads_store_t* pthreads_store_alloc();
 int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite);
-int pthreads_store_delete(zval *object, zend_string *key);
-int pthreads_store_read(zval *object, zend_string *key, zval *read);
-zend_bool pthreads_store_isset(zval *object, zend_string *key, int has_set_exists);
-int pthreads_store_write(zval *object, zend_string *key, zval *write);
+int pthreads_store_delete(zval *object, zval *key);
+int pthreads_store_read(zval *object, zval *key, zval *read);
+zend_bool pthreads_store_isset(zval *object, zval *key, int has_set_exists);
+int pthreads_store_write(zval *object, zval *key, zval *write);
 int pthreads_store_separate(zval *pzval, zval *seperated, zend_bool complex);
 void pthreads_store_separate_zval(zval *pzval);
 void pthreads_store_tohash(zval *object, HashTable *hash);

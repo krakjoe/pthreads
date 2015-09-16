@@ -43,10 +43,11 @@ zend_bool pthreads_globals_init(){
 
 #define INIT_STRING(n, v) PTHREADS_G(strings).n = zend_string_init(v, 1)
 		INIT_STRING(run, ZEND_STRL("run"));
-		INIT_STRING(worker, ZEND_STRL("worker"));
 		INIT_STRING(session.cache_limiter, ZEND_STRL("cache_limiter"));
 		INIT_STRING(session.use_cookies, ZEND_STRL("use_cookies"));
 #undef INIT_STRING
+		
+		ZVAL_STR(&PTHREADS_G(strings).worker, zend_string_init(ZEND_STRL("worker"), 1));
 
 		return PTHREADS_G(init);
 	} else return 0;
@@ -153,9 +154,10 @@ void pthreads_globals_shutdown() {
 		PTHREADS_G(failed)=0;
 		zend_hash_destroy(&PTHREADS_G(objects));
 		zend_string_free(PTHREADS_G(strings).run);
-		zend_string_free(PTHREADS_G(strings).worker);
 		zend_string_free(PTHREADS_G(strings).session.cache_limiter);
 		zend_string_free(PTHREADS_G(strings).session.use_cookies);
+		zval_dtor(&PTHREADS_G(strings).worker);
+
 		pthreads_monitor_free(PTHREADS_G(monitor));
 	}
 } /* }}} */

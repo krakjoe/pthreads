@@ -245,8 +245,7 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 /* {{{ */
 static inline void pthreads_base_init(pthreads_object_t* base) {	
 	zend_property_info *info;
-	zend_string *key;
-	zval tmp;
+	zval tmp, key;
 
 	ZVAL_OBJ(&tmp, &base->std);	
 
@@ -265,12 +264,11 @@ static inline void pthreads_base_init(pthreads_object_t* base) {
 		zend_unmangle_property_name_ex(
 			info->name, &clazz, &prop, &plen);
 
-		key = zend_string_init(prop, plen, 0);
+		ZVAL_STR(&key, zend_string_init(prop, plen, 0));
 		pthreads_store_write(
-			&tmp, key,
+			&tmp, &key,
 			&base->std.ce->default_properties_table[offset]);
-		zend_string_release(key);
-	
+		zval_ptr_dtor(&key);
 	} ZEND_HASH_FOREACH_END();
 
 } /* }}} */
@@ -415,7 +413,7 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 	pthreads_monitor_add(object->monitor, PTHREADS_MONITOR_RUNNING);
 
 	if (work)
-		pthreads_store_write(work, PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
+		pthreads_store_write(work, &PTHREADS_G(strings).worker, &PTHREADS_ZG(this));
 
 	zend_try {
 		if ((run = zend_hash_find_ptr(&connection->std.ce->function_table, PTHREADS_G(strings).run))) {							

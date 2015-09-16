@@ -14,7 +14,6 @@ class WebWorker extends Worker {
 		$this->config = $config;
 	}
 
-	
 	/*
 	* The only thing to do here is setup the PDO object
 	*/

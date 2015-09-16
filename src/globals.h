@@ -54,7 +54,7 @@ struct _pthreads_globals {
 	*/
 	struct _strings {
 		zend_string *run;
-		zend_string *worker;
+		zval         worker;
 		struct _session {
 			zend_string *cache_limiter;
 			zend_string *use_cookies;

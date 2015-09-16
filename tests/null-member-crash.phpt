@@ -13,6 +13,6 @@ var_dump($test);
 ?>
 --EXPECTF--
 object(Test)#1 (1) {
-  ["0"]=>
+  [0]=>
   string(4) "what"
 }

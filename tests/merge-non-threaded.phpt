@@ -23,26 +23,26 @@ $safe->merge($stdClass, false);
 var_dump($safe);
 ?>
 --EXPECTF--
-object(Threaded)#%d (13) {
-  ["0"]=>
+object(Threaded)#%d (%d) {
+  [0]=>
   int(0)
-  ["1"]=>
+  [1]=>
   int(1)
-  ["2"]=>
+  [2]=>
   int(2)
-  ["3"]=>
+  [3]=>
   int(3)
-  ["4"]=>
+  [4]=>
   int(4)
-  ["5"]=>
+  [5]=>
   int(5)
-  ["6"]=>
+  [6]=>
   int(6)
-  ["7"]=>
+  [7]=>
   int(7)
-  ["8"]=>
+  [8]=>
   int(8)
-  ["9"]=>
+  [9]=>
   int(9)
   ["foo"]=>
   string(3) "bar"
@@ -51,4 +51,3 @@ object(Threaded)#%d (13) {
   ["baz"]=>
   string(3) "baz"
 }
-

@@ -22,12 +22,12 @@ $test->string = strrev($test->string);
 $test->start();
 $test->join();
 ?>
---EXPECT--
-object(Test)#1 (4) {
+--EXPECTF--
+object(Test)#%d (%d) {
   ["string"]=>
   string(11) "dlrow olleh"
   ["array"]=>
-  array(3) {
+  object(Volatile)#%d (%d) {
     [0]=>
     int(1)
     [1]=>
@@ -38,7 +38,7 @@ object(Test)#1 (4) {
   ["pstring"]=>
   string(11) "world hello"
   ["parray"]=>
-  array(3) {
+  object(Volatile)#%d (%d) {
     [0]=>
     int(3)
     [1]=>
@@ -47,4 +47,5 @@ object(Test)#1 (4) {
     int(1)
   }
 }
+
 
