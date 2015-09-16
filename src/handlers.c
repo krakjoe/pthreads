@@ -98,8 +98,9 @@ HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 
 	rebuild_object_properties(&threaded->std);
 
-	pthreads_store_tohash(object, threaded->std.properties);
-			
+	pthreads_store_tohash(
+		object, threaded->std.properties);
+		
 	return threaded->std.properties;
 } /* }}} */
 

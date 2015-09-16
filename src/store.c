@@ -276,7 +276,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 	zval vol, member;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_bool coerced = pthreads_store_coerce(key, &member);
-
+	
 	if (Z_TYPE_P(write) == IS_ARRAY) {
 		/* coerce arrays into volatile objects */
 		object_init_ex(
@@ -488,9 +488,6 @@ int pthreads_store_pop(zval *object, zval *member) {
 void pthreads_store_tohash(zval *object, HashTable *hash) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
-	/* php is reusing this hash and making things misbehave */
-	zend_hash_clean(hash);
-    
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_string *name = NULL;
 		zend_ulong idx;
@@ -500,6 +497,17 @@ void pthreads_store_tohash(zval *object, HashTable *hash) {
 			zval pzval;
 			zend_string *rename;
 			ZVAL_NULL(&pzval);
+
+			/* don't overwrite pthreads objects */
+			if (storage->type == IS_PTHREADS) {
+				if (!name) {
+					if (zend_hash_index_exists(hash, idx))
+						continue;
+				} else {
+					if (zend_hash_exists(hash, name))
+						continue;
+				}
+			}
 
 			if (pthreads_store_convert(storage, &pzval)!=SUCCESS) {
 				continue;
