@@ -100,7 +100,7 @@ static inline zend_bool pthreads_store_is_immutable(zval *object, zval *key) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	pthreads_storage *storage;
 
-	if (instanceof_function(Z_OBJCE_P(object), pthreads_volatile_entry)) {
+	if (IS_PTHREADS_VOLATILE(object)) {
 		return 0;
 	}
 
@@ -498,8 +498,8 @@ void pthreads_store_tohash(zval *object, HashTable *hash) {
 			zend_string *rename;
 			ZVAL_NULL(&pzval);
 
-			/* don't overwrite pthreads objects */
-			if (storage->type == IS_PTHREADS) {
+			/* don't overwrite pthreads objects for non volatile objects */
+			if (!IS_PTHREADS_VOLATILE(object) && storage->type == IS_PTHREADS) {
 				if (!name) {
 					if (zend_hash_index_exists(hash, idx))
 						continue;
