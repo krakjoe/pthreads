@@ -218,7 +218,7 @@ zend_bool pthreads_store_isset(zval *object, zval *key, int has_set_exists) {
 } /* }}} */
 
 /* {{{ */
-int pthreads_store_read(zval *object, zval *key, zval *read) {
+int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 	int result = FAILURE;
 	zval member, *property = NULL;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));

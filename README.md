@@ -56,6 +56,7 @@ The following things have significant changes:
  * Unified monitor (cond/mutex/state) for ```Threaded``` objects
  * ```Threaded``` members of ```Threaded``` objects are immutable
  * ```Volatile``` objects, excempt from immutability
+ * ```array``` coerced to ```Volatile``` when set as member of ```Threaded```
 
 Some blog posts explaining these changes:
 

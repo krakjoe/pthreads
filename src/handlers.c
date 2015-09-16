@@ -130,7 +130,7 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 
 		zend_fcall_info_args_clear(&fci, 1);
 	} else {
-		pthreads_store_read(object, member, rv);
+		pthreads_store_read(object, member, type, rv);
 	}
 	
 	return rv;
