@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-09-13</date>
- <time>05:09:58</time>
+ <date>2015-09-17</date>
+ <time>09:09:37</time>
  <version>
-  <release>3.0.2</release>
-  <api>3.0.2</api>
+  <release>3.0.3</release>
+  <api>3.0.3</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,9 +22,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix gh issue #484
- support object comparison
- do not allow exception handlers that are inconsistent with thread options to be inherited
+ fix on store of resource type in threaded object causing resource to be dtored early
+ fix for Thread::kill to stop it bailing out during thread shutdown
+ coerce arrays to Volatile objects so they behave as expected when set as members of Threaded objects
+ fix for the copying of classes which implement iterators, caused execution to be unsafe
  </notes>
  <contents>
   <dir name="/">
@@ -76,6 +77,7 @@
 	<file name="tests/interfaces.phpt" role="test" />
 	<file name="tests/isset-empty-compat.phpt" role="test" />
 	<file name="tests/isset-unset.phpt" role="test" />
+	<file name="tests/iterator-funcs.phpt" role="test" />
 	<file name="tests/iterator-no-refs.phpt" role="test" />
 	<file name="tests/killed-info.phpt" role="test" />
 	<file name="tests/legacy-ctor.phpt" role="test" />
@@ -114,6 +116,7 @@
 	<file name="tests/traits-scope.inc" role="test" />
 	<file name="tests/traits-scope.phpt" role="test" />
 	<file name="tests/unset-defaults.phpt" role="test" />
+	<file name="tests/volatile-arrays.phpt" role="test" />
 	<file name="tests/volatile-objects.phpt" role="test" />
 	<file name="tests/wait.phpt" role="test" />
 	<file name="tests/waiting-timeouts.phpt" role="test" />
