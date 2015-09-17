@@ -219,7 +219,7 @@ static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_in
 
 /* {{{ */
 static inline zend_function* pthreads_copy_user_function(zend_function *function) {
-	zend_function  *copy;	
+	zend_function  *copy;
 	zend_op_array  *op_array;
 	zend_string   **variables;
 	zval           *literals;
