@@ -129,6 +129,8 @@ int pthreads_store_delete(zval *object, zval *key) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_bool coerced = pthreads_store_coerce(key, &member);	
 
+	rebuild_object_properties(&threaded->std);
+
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		if (!pthreads_store_is_immutable(object, &member)) {
 			if (Z_TYPE_P(key) == IS_LONG) {
@@ -223,6 +225,8 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 	zval member, *property = NULL;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_bool coerced = pthreads_store_coerce(key, &member);
+
+	rebuild_object_properties(&threaded->std);
 
 	if (!IS_PTHREADS_VOLATILE(object)) {
 		if (Z_TYPE(member) == IS_LONG) {
@@ -383,6 +387,8 @@ int pthreads_store_count(zval *object, zend_long *count) {
 int pthreads_store_shift(zval *object, zval *member) {
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
+	rebuild_object_properties(&threaded->std);
+
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zval key;
 		HashPosition position;
@@ -413,7 +419,9 @@ int pthreads_store_shift(zval *object, zval *member) {
 /* {{{ */
 int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval *chunk) {
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-   
+
+	rebuild_object_properties(&threaded->std);
+
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		HashPosition position;
 		pthreads_storage *storage;
@@ -453,6 +461,8 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 /* {{{ */
 int pthreads_store_pop(zval *object, zval *member) {
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	rebuild_object_properties(&threaded->std);
    
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zval key;
@@ -487,6 +497,8 @@ int pthreads_store_pop(zval *object, zval *member) {
 /* {{{ */
 void pthreads_store_tohash(zval *object, HashTable *hash) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	rebuild_object_properties(&threaded->std);
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_string *name = NULL;
