@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-09-17</date>
- <time>09:09:37</time>
+ <date>2015-09-18</date>
+ <time>11:09:11</time>
  <version>
-  <release>3.0.3</release>
-  <api>3.0.3</api>
+  <release>3.0.4</release>
+  <api>3.0.4</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,10 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix on store of resource type in threaded object causing resource to be dtored early
- fix for Thread::kill to stop it bailing out during thread shutdown
- coerce arrays to Volatile objects so they behave as expected when set as members of Threaded objects
- fix for the copying of classes which implement iterators, caused execution to be unsafe
+ fix fault caused by manipulation of uninitialized properties table by various handlers
  </notes>
  <contents>
   <dir name="/">
