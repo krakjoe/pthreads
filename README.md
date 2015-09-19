@@ -132,7 +132,42 @@ Here are some links to articles I have prepared for users: everybody should read
 
 If you have had the time to put any cool demo's together and would like them showcased on pthreads.org please get in touch.
 
-*Note: the documentation in the manual refers to pthreads v2, it has not yet been updated ... anyone want to help ?*
+*Note: the documentation in the manual and the documents above refer to pthreads v2, it has not yet been updated ... anyone want to help ?*
+
+### Polyfill
+
+It's possible to write code that optionally takes advantage of parallelism where the environment has ```pthreads``` loaded.
+
+This is made possible by [http://github.com/krakjoe/pthreads-polyfill](pthreads-polyfill) which can be found on [packagist](https://packagist.org/packages/krakjoe/pthreads-polyfill).
+
+Having required the appropriate package in your composer.json, the following code is executable everywhere:
+
+```php
+<?php
+require_once("vendor/autoload.php");
+
+if (extension_loaded("pthreads")) {
+	    echo "Using pthreads\n";
+} else  echo "Using polyfill\n";
+
+$pool = new Pool(4);
+
+$pool->submit(new class extends Collectable{
+	    public function run() {
+	            echo "Hello World\n";
+	            $this->setGarbage();
+	    }
+});
+
+while ($pool->collect(function(Collectable $task){
+	    return $task->isGarbage();
+})) continue;
+
+$pool->shutdown();
+?>
+```
+
+Some guidance on getting started, and detail regarding how the polyfill came to exist can be found [here](http://blog.krakjoe.ninja/2015/09/what-polly-really-wants.html).
 
 ### Feedback
 
