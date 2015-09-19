@@ -138,7 +138,7 @@ If you have had the time to put any cool demo's together and would like them sho
 
 It's possible to write code that optionally takes advantage of parallelism where the environment has ```pthreads``` loaded.
 
-This is made possible by [http://github.com/krakjoe/pthreads-polyfill](pthreads-polyfill) which can be found on [packagist](https://packagist.org/packages/krakjoe/pthreads-polyfill).
+This is made possible by [pthreads-polyfill](http://github.com/krakjoe/pthreads-polyfill) which can be found on [packagist](https://packagist.org/packages/krakjoe/pthreads-polyfill).
 
 Having required the appropriate package in your composer.json, the following code is executable everywhere:
 
