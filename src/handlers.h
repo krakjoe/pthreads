@@ -28,7 +28,7 @@
 
 #define PTHREADS_CAST_PASSTHRU_D zval *from, zval *to, int type
 #define PTHREADS_CAST_PASSTHRU_C from, to, type
-#define PTHREADS_COUNT_PASSTHRU_D zval *object, long *count
+#define PTHREADS_COUNT_PASSTHRU_D zval *object, zend_long *count
 #define PTHREADS_COUNT_PASSTHRU_C object, count
 #define PTHREADS_CLONE_PASSTHRU_D zval *object
 #define PTHREADS_CLONE_PASSTHRU_C object

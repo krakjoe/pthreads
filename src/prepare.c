@@ -710,6 +710,8 @@ int pthreads_prepared_shutdown(pthreads_object_t* thread) {
 	php_request_shutdown((void*)NULL);
 
 	ts_free_thread();
+
+	return SUCCESS;
 } /* }}} */
 
 /* {{{ */

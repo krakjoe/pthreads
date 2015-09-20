@@ -106,7 +106,6 @@ HashTable* pthreads_read_properties(PTHREADS_READ_PROPERTIES_PASSTHRU_D) {
 
 /* {{{ */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
-	zval mstring;
 	zend_long *guard = NULL;
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 

@@ -26,7 +26,7 @@
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate); /* }}} */
 
 /* {{{ */
-void pthreads_prepared_parent(pthreads_object_t *thread); /* }}} */
+void pthreads_prepare_parent(pthreads_object_t *thread); /* }}} */
 
 /* {{{ */
 int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready); /* }}} */

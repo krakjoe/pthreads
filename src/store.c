@@ -78,8 +78,6 @@ pthreads_store_t* pthreads_store_alloc() {
 } /* }}} */
 
 static inline zend_bool pthreads_store_coerce(zval *key, zval *member) {
-	zval coerced;
-	
 	if (!key)
 		return 0;
 	
@@ -425,7 +423,6 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		HashPosition position;
 		pthreads_storage *storage;
-		zend_ulong index;
 
 		array_init(chunk);
 		zend_hash_internal_pointer_reset_ex(&threaded->store->table, &position);
@@ -637,9 +634,8 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 				zval *search;
 				zend_ulong index;
 				zend_string *name;
-				HashPosition position;
 				zend_resource *resource, *found = NULL;
-										
+	
 				ZEND_HASH_FOREACH_KEY_VAL(&EG(regular_list), index, name, search) {
 					resource = Z_RES_P(search);
 					if (resource->ptr == stored->original->ptr) {
@@ -860,7 +856,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                for (zend_hash_internal_pointer_reset_ex(table, &position);
                     (pzval = zend_hash_get_current_data_ex(table, &position));
                     zend_hash_move_forward_ex(table, &position)) {
-                    zval tmp, key;
+                    zval key;
 
 					zend_hash_get_current_key_zval_ex(table, &key, &position);
 					if (Z_TYPE(key) == IS_STRING)

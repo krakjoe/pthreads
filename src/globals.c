@@ -28,6 +28,8 @@ struct _pthreads_globals pthreads_globals;
 #	define PTHREADS_G () ?  : (void***) &pthreads_globals
 #endif
 
+extern int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination);
+
 /* {{{ */
 zend_bool pthreads_globals_init(){
 	if (!PTHREADS_G(init)&&!PTHREADS_G(failed)) {
