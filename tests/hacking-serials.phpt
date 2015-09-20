@@ -13,13 +13,19 @@ This test ensures the hack is right.
 <?php
 class Wrapper {
     public $worker;
+
     public function __construct() {
         $this->worker = new Worker;
         $this->worker->start();
     }
+
     public function stack(Collectable $work) {
         $this->worker->stack($work);
     }
+
+	public function shutdown() {
+		$this->worker->shutdown();
+	}
 }
 
 class Work extends Collectable {
@@ -37,5 +43,7 @@ class Work extends Collectable {
 $wrapper = new Wrapper;
 $work = new Work($wrapper);
 $work->stack();
+$wrapper->shutdown();
+
 --EXPECT--
 Foo
