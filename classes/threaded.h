@@ -166,7 +166,7 @@ PHP_METHOD(Threaded, synchronized)
 	uint argc = 0;
 	zval *argv = NULL;
 	pthreads_object_t* threaded= PTHREADS_FETCH;
-	
+
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f|+", &call.fci, &call.fcc, &argv, &argc) != SUCCESS) {
 		return;
 	}
@@ -175,7 +175,7 @@ PHP_METHOD(Threaded, synchronized)
 
 	call.fci.retval = return_value;
 	call.fci.no_separation = 1;
-	
+
 	call.fci.object = &threaded->std;
 	call.fcc.object = &threaded->std;
 
@@ -186,10 +186,10 @@ PHP_METHOD(Threaded, synchronized)
 		} zend_catch {
 			ZVAL_UNDEF(return_value);
 		} zend_end_try ();
-		
+
 		pthreads_monitor_unlock(threaded->monitor);
 	}
-	
+
 	zend_fcall_info_args_clear(&call.fci, 1);
 } /* }}} */
 

@@ -162,13 +162,14 @@ PHP_METHOD(Thread, getCreatorId)
 	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->creator.id);
 } /* }}} */
 
-/* {{{ proto boolean Thread::kill()
+/* {{{ proto boolean Thread::kill([int signo])
 	Will kill the referenced thread, forcefully */
 PHP_METHOD(Thread, kill) 
 {
 	pthreads_object_t* thread = PTHREADS_FETCH;
+	zend_long signo = PTHREADS_KILL_SIGNAL;
 
-    if (zend_parse_parameters_none() != SUCCESS) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &signo) != SUCCESS) {
         return;
     }
 
@@ -176,7 +177,7 @@ PHP_METHOD(Thread, kill)
 		return;
 	}
 
-	RETURN_BOOL(pthread_kill(thread->thread, PTHREADS_KILL_SIGNAL)==SUCCESS);
+	RETURN_BOOL(pthread_kill(thread->thread, signo)==SUCCESS);
 } /* }}} */
 
 /* {{{ */

@@ -54,21 +54,11 @@ pthreads_monitor_t* pthreads_monitor_alloc() {
 }
 
 zend_bool pthreads_monitor_lock(pthreads_monitor_t *m) {
-	zend_bool success;
-
-	HANDLE_BLOCK_INTERRUPTIONS();
-	success = 
-		(pthread_mutex_lock(&m->mutex) == 0);
-
-	return success;
+	return (pthread_mutex_lock(&m->mutex) == 0);
 }
 
 zend_bool pthreads_monitor_unlock(pthreads_monitor_t *m) {
-	zend_bool success = 
-		(pthread_mutex_unlock(&m->mutex) == 0);
-	HANDLE_UNBLOCK_INTERRUPTIONS();
-	
-	return success;
+	return (pthread_mutex_unlock(&m->mutex) == 0);
 }
 
 pthreads_monitor_state_t pthreads_monitor_check(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
