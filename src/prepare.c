@@ -609,14 +609,18 @@ static inline void pthreads_kill_handler(int signo) /* {{{ */
 {
 	ZEND_TSRMLS_CACHE_UPDATE();
 
-	pthreads_object_t* current = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
+	pthreads_object_t* current = 
+		PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
 
-	pthreads_monitor_set(
-		current->monitor, PTHREADS_MONITOR_ERROR);
-
+	/* the thread needs to know what signal was sent */
 	PTHREADS_ZG(signal) = signo;
 
 	if (EG(current_execute_data)) {
+		/* if not executing then not safe to change current object
+			state */
+		pthreads_monitor_set(
+			current->monitor, PTHREADS_MONITOR_ERROR);
+
 		zend_bailout();
 	}
 } /* }}} */

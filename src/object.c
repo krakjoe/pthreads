@@ -454,8 +454,9 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 static void * pthreads_routine(pthreads_routine_arg_t *routine) {
 	pthreads_object_t* thread = routine->thread;
 	pthreads_monitor_t* ready = routine->ready;
-
+	
 	if (pthreads_prepared_startup(thread, ready) == SUCCESS) {
+		
 		zend_first_try {
 			ZVAL_UNDEF(&PTHREADS_ZG(this));
 			object_init_ex(&PTHREADS_ZG(this), pthreads_prepared_entry(thread, thread->std.ce));
