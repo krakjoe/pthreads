@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-09-18</date>
- <time>11:09:11</time>
+ <date>2015-09-20</date>
+ <time>19:09:48</time>
  <version>
-  <release>3.0.4</release>
-  <api>3.0.4</api>
+  <release>3.0.5</release>
+  <api>3.0.5</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix fault caused by manipulation of uninitialized properties table by various handlers
+ fix gh issue #489 (errors on WIN64)
  </notes>
  <contents>
   <dir name="/">
