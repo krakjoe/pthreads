@@ -172,11 +172,18 @@ zend_object* pthreads_threaded_ctor(zend_class_entry *entry) {
 /* {{{ */
 int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *buflen, zend_serialize_data *data) {
 	pthreads_object_t *address = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-
+#ifdef _WIN64
+	(*buflen) = snprintf(NULL, 0, ":%I64u:", (unsigned __int64) address);
+#else
 	(*buflen) = snprintf(NULL, 0, ":%lu:", (long unsigned int) address);
+#endif
 	(*buffer) = emalloc((*buflen) + 1);
 	sprintf(
+#ifdef _WIN64
+		(*buffer), ":%I64u:", (unsigned __int64) address);
+#else
 		(*buffer), ":%lu:", (long unsigned int) address);
+#endif
 	(*buffer)[(*buflen)] = 0;
 
 	return SUCCESS;
@@ -186,7 +193,11 @@ int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *bu
 int pthreads_threaded_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t buflen, zend_unserialize_data *data) {
 	pthreads_object_t *address = NULL;	
 
+#ifdef _WIN64
+	if (!sscanf((const char*) buffer, ":%I64u:", (unsigned __int64*)&address)) {
+#else
 	if (!sscanf((const char*) buffer, ":%lu:", (long unsigned int*)&address)) {
+#endif
 		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
 			"pthreads detected an attempt to connect to a corrupted object");
 		return FAILURE;
