@@ -56,6 +56,7 @@ extern zend_class_entry *spl_ce_Countable;
 #include <Zend/zend_hash.h>
 #include <Zend/zend_ts_hash.h>
 #include <Zend/zend_interfaces.h>
+#include <Zend/zend_inheritance.h>
 #include <Zend/zend_list.h>
 #include <Zend/zend_object_handlers.h>
 #include <Zend/zend_smart_str.h>

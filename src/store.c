@@ -631,11 +631,11 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 			pthreads_resource stored = (pthreads_resource) storage->data;
 
 			if (stored->ls != TSRMLS_CACHE) {
-				zval *search;
+				zval *search = NULL;
 				zend_ulong index;
 				zend_string *name;
 				zend_resource *resource, *found = NULL;
-	
+
 				ZEND_HASH_FOREACH_KEY_VAL(&EG(regular_list), index, name, search) {
 					resource = Z_RES_P(search);
 					if (resource->ptr == stored->original->ptr) {
@@ -643,7 +643,7 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 						break;
 					}
 				} ZEND_HASH_FOREACH_END();
-				
+
 				if (!found) {
 					ZVAL_RES(pzval, stored->original);
 					if (zend_hash_next_index_insert(&EG(regular_list), pzval)) {
