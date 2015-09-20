@@ -28,6 +28,7 @@
 #include <sys/time.h>
 #include <signal.h>
 #else
+#include <win32/time.h>
 #include <pthread.h>
 #include <signal.h>
 #endif
