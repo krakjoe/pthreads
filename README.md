@@ -11,7 +11,6 @@ This project provides multi-threading that is compatible with PHP based on Posix
 * An easy to use, quick to learn OO Threading API for PHP7
 * Execute any and all predefined and user declared methods and functions, including closures.
 * Ready made synchronization included
-* Seamless operation in multi-threaded SAPI environments
 * A world of possibilities ...
 
 ## Technical Features
