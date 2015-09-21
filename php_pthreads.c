@@ -104,6 +104,32 @@ zend_class_entry *spl_ce_RuntimeException;
 
 ZEND_DECLARE_MODULE_GLOBALS(pthreads)
 
+typedef struct _pthreads_supported_sapi_t {
+	const char *name;
+	size_t      nlen;
+} pthreads_supported_sapi_t;
+
+const static pthreads_supported_sapi_t whitelist[] = {
+	{ZEND_STRL("cli")},
+	{ZEND_STRL("phpdbg")}, /* not really supported, needs work */
+	{NULL, 0}
+};
+
+static inline zend_bool pthreads_is_supported_sapi(char *name) {
+	const pthreads_supported_sapi_t *sapi = whitelist;
+	zend_long nlen = strlen(name);
+
+	while (sapi->name) {
+		if (nlen == sapi->nlen && 
+			memcmp(sapi->name, name, nlen) == SUCCESS) {
+			return 1;
+		}
+		sapi++;
+	}
+
+	return 0;
+}
+
 static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
 	ZVAL_UNDEF(&pg->this);
 	pg->pid = 0L;
@@ -164,6 +190,12 @@ static inline void pthreads_replace_internal_function(char *oname, size_t olen, 
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry ce;
+
+	if (!pthreads_is_supported_sapi(sapi_module.name)) {
+		zend_error(E_ERROR, "The %s SAPI is not supported by pthreads",
+			sapi_module.name);
+		return FAILURE;
+	}
 
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_ALL", PTHREADS_INHERIT_ALL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_NONE", PTHREADS_INHERIT_NONE, CONST_CS | CONST_PERSISTENT);
