@@ -274,7 +274,10 @@ PHP_METHOD(Pool, collect) {
 	}
 	
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
-	
+
+	if (Z_TYPE_P(workers) != IS_ARRAY)
+		RETURN_LONG(0);
+
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(workers), worker) {
 		pthreads_object_t *thread = 
 			PTHREADS_FETCH_FROM(Z_OBJ_P(worker));
