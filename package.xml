@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-09-20</date>
- <time>19:09:48</time>
+ <date>2015-09-22</date>
+ <time>04:09:09</time>
  <version>
-  <release>3.0.5</release>
-  <api>3.0.5</api>
+  <release>3.0.6</release>
+  <api>3.0.6</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix gh issue #489 (errors on WIN64)
+ only allow execution in CLI, the only place it is really sensible
  </notes>
  <contents>
   <dir name="/">
