@@ -1,5 +1,7 @@
 PHP_ARG_ENABLE(pthreads, whether to enable Threading API,
 [  --enable-pthreads     Enable Threading API])
+PHP_ARG_WITH(pthreads-sanitize, wether to enable AddressSanitizer for pthreads,
+[  --with-pthreads-sanitize   Enable AddressSanitizer for pthreads])
 
 if test "$PHP_PTHREADS" != "no"; then
 	AC_DEFINE(HAVE_PTHREADS, 1, [Wether you have user-land threading support])
@@ -9,9 +11,17 @@ if test "$PHP_PTHREADS" != "no"; then
 	else
 		AC_MSG_ERROR([pthreads requires ZTS, please re-compile PHP with ZTS enabled])
 	fi
+
+	if test "$PHP_PTHREADS_SANITIZE" != "no"; then
+		EXTRA_LDFLAGS="-lasan"
+		EXTRA_CFLAGS="-fsanitize=address -fno-omit-frame-pointer"
+	fi
+
 	PHP_NEW_EXTENSION(pthreads, php_pthreads.c src/monitor.c src/stack.c src/globals.c src/prepare.c src/store.c src/resources.c src/handlers.c src/object.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 	PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 	PHP_ADD_INCLUDE($ext_builddir)
 	PHP_SUBST(PTHREADS_SHARED_LIBADD)
+    PHP_SUBST(EXTRA_LDFLAGS)
+    PHP_SUBST(EXTRA_CFLAGS)
 	PHP_ADD_MAKEFILE_FRAGMENT
 fi
