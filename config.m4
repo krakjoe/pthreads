@@ -1,17 +1,18 @@
-PHP_ARG_ENABLE(pthreads, whether to enable Threading API,
-[  --enable-pthreads     Enable Threading API])
+PHP_ARG_ENABLE(pthreads, whether to enable pthreads,
+[  --enable-pthreads          Enable pthreads])
 
 PHP_ARG_WITH(pthreads-sanitize, wether to enable AddressSanitizer for pthreads,
 [  --with-pthreads-sanitize   Enable AddressSanitizer for pthreads], no, no)
 
 if test "$PHP_PTHREADS" != "no"; then
-	AC_DEFINE(HAVE_PTHREADS, 1, [Wether you have user-land threading support])
 	AC_MSG_CHECKING([for ZTS])   
 	if test "$PHP_THREAD_SAFETY" != "no"; then
 		AC_MSG_RESULT([ok])
 	else
 		AC_MSG_ERROR([pthreads requires ZTS, please re-compile PHP with ZTS enabled])
 	fi
+
+	AC_DEFINE(HAVE_PTHREADS, 1, [Wether you have pthreads support])
 
 	if test "$PHP_PTHREADS_SANITIZE" != "no"; then
 		EXTRA_LDFLAGS="-lasan"
