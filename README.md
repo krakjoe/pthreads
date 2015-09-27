@@ -42,6 +42,7 @@ The API for v3 has changed, the following things have been removed:
  * ```Threaded::lock``` and ```Threaded::unlock```
  * ```Threaded::isWaiting```
  * ```Threaded::from```
+ * ```Threaded::kill``` (there be dragons)
  * ```Threaded::getTerminationInfo``` (this was unsafe, a better, safe impl can be done in userland)
  * Special behaviour of ```protected``` and ```private``` methods on ```Threaded``` objects
 
