@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-09-22</date>
- <time>04:09:09</time>
+ <date>2015-09-27</date>
+ <time>12:09:32</time>
  <version>
-  <release>3.0.6</release>
-  <api>3.0.6</api>
+  <release>3.0.7</release>
+  <api>3.0.7</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,11 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- only allow execution in CLI, the only place it is really sensible
+ fix issue destroying monitors (deadlocking on shutdown)
+ remove Thread::kill
+ disable auto-join on __destruct of Thread
+ use global persistent shared strings table
+ support compiling and linking with AddressSanitizer support
  </notes>
  <contents>
   <dir name="/">
@@ -76,7 +80,6 @@
 	<file name="tests/isset-unset.phpt" role="test" />
 	<file name="tests/iterator-funcs.phpt" role="test" />
 	<file name="tests/iterator-no-refs.phpt" role="test" />
-	<file name="tests/killed-info.phpt" role="test" />
 	<file name="tests/legacy-ctor.phpt" role="test" />
 	<file name="tests/lexical-vars.phpt" role="test" />
 	<file name="tests/magic-methods-get-set.phpt" role="test" />
