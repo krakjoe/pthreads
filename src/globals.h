@@ -48,6 +48,11 @@ struct _pthreads_globals {
 	* Objects Cache
 	*/
 	HashTable objects;
+	
+	/*
+	* Strings cache
+	*/
+	HashTable gstrings;
 
 	/*
 	* High Frequency Strings
@@ -78,6 +83,9 @@ zend_bool pthreads_globals_object_connect(zend_ulong address, zend_class_entry *
 
 /* {{{ */
 void* pthreads_globals_object_alloc(size_t length); /* }}} */
+
+/* {{{ */
+zend_string* pthreads_globals_string(zend_string *str); /* }}} */
 
 /* {{{ initialize (true) globals */
 zend_bool pthreads_globals_init(); /* }}} */

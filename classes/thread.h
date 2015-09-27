@@ -25,8 +25,6 @@ PHP_METHOD(Thread, getThreadId);
 PHP_METHOD(Thread, getCurrentThreadId);
 PHP_METHOD(Thread, getCurrentThread);
 PHP_METHOD(Thread, getCreatorId);
-PHP_METHOD(Thread, kill);
-PHP_METHOD(Thread, __destruct);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
     ZEND_ARG_TYPE_INFO(0, options, IS_LONG, 1)
@@ -64,12 +62,6 @@ ZEND_BEGIN_ARG_INFO_EX(Thread_merge, 0, 0, 1)
     ZEND_ARG_TYPE_INFO(0, overwrite, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_kill, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(Thread_destruct, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
 extern zend_function_entry pthreads_thread_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREAD
@@ -83,8 +75,6 @@ zend_function_entry pthreads_thread_methods[] = {
 	PHP_ME(Thread, getCreatorId, Thread_getThreadId, ZEND_ACC_PUBLIC)
 	PHP_ME(Thread, getCurrentThreadId, Thread_getCurrentThreadId, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Thread, getCurrentThread, Thread_getCurrentThread, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-	PHP_ME(Thread, kill, Thread_kill, ZEND_ACC_PUBLIC)
-	PHP_ME(Thread, __destruct, Thread_destruct, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -160,37 +150,6 @@ PHP_METHOD(Thread, getCurrentThread)
 PHP_METHOD(Thread, getCreatorId)
 {
 	ZVAL_LONG(return_value, (PTHREADS_FETCH_FROM(Z_OBJ_P(getThis())))->creator.id);
-} /* }}} */
-
-/* {{{ proto boolean Thread::kill([int signo])
-	Will kill the referenced thread, forcefully */
-PHP_METHOD(Thread, kill) 
-{
-	pthreads_object_t* thread = PTHREADS_FETCH;
-	zend_long signo = PTHREADS_KILL_SIGNAL;
-
-    if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &signo) != SUCCESS) {
-        return;
-    }
-
-	if (!pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_STARTED)) {
-		return;
-	}
-
-	RETURN_BOOL(pthread_kill(thread->thread, signo)==SUCCESS);
-} /* }}} */
-
-/* {{{ */
-PHP_METHOD(Thread, __destruct)
-{
-	pthreads_object_t* thread = PTHREADS_FETCH;
-
-	if (PTHREADS_IN_CREATOR(thread) && !PTHREADS_IS_CONNECTION(thread)) {
-		if (pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_STARTED) &&
-			!pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_JOINED)) {
-			pthreads_join(thread);
-		}
-	}
 } /* }}} */
 #	endif
 #endif

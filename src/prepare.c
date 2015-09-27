@@ -521,7 +521,9 @@ static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
 		value = pthreads_copy_function(value);
 		zend_hash_add_ptr(
 			CG(function_table), name, value);
-		zend_string_release(name);
+		if (!(GC_FLAGS(name) & IS_STR_PERSISTENT)) {
+			zend_string_release(name);
+		}
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
@@ -604,28 +606,6 @@ static inline void pthreads_prepare_sapi(pthreads_object_t* thread) {
 	}
 } /* }}} */
 
-#ifdef PTHREADS_KILL_SIGNAL
-static inline void pthreads_kill_handler(int signo) /* {{{ */
-{
-	ZEND_TSRMLS_CACHE_UPDATE();
-
-	pthreads_object_t* current = 
-		PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
-
-	/* the thread needs to know what signal was sent */
-	PTHREADS_ZG(signal) = signo;
-
-	if (EG(current_execute_data)) {
-		/* if not executing then not safe to change current object
-			state */
-		pthreads_monitor_set(
-			current->monitor, PTHREADS_MONITOR_ERROR);
-
-		zend_bailout();
-	}
-} /* }}} */
-#endif
-
 /* {{{ */
 static inline void pthreads_rebuild_object(zval *zv) {
 	if (Z_TYPE_P(zv) == IS_OBJECT) {
@@ -647,14 +627,6 @@ void pthreads_prepare_parent(pthreads_object_t *thread) {
 /* {{{ */
 int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready) {
 	int result = SUCCESS;
-
-#ifdef PTHREADS_KILL_SIGNAL
-#ifdef ZEND_SIGNAL
-	zend_signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
-#else
-	signal(PTHREADS_KILL_SIGNAL, pthreads_kill_handler);
-#endif
-#endif
 
 	thread->local.id = pthreads_self();
 	thread->local.ls = ts_resource(0);

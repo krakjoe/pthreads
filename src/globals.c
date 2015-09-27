@@ -41,6 +41,8 @@ zend_bool pthreads_globals_init(){
 		} else {
 		    zend_hash_init(
 		    	&PTHREADS_G(objects), 64, NULL, (dtor_func_t) NULL, 1);
+			zend_hash_init(
+				&PTHREADS_G(gstrings), 64, NULL, (dtor_func_t) NULL, 1);
 		}
 
 #define INIT_STRING(n, v) PTHREADS_G(strings).n = zend_string_init(v, 1)
@@ -134,6 +136,40 @@ zend_bool pthreads_globals_object_connect(zend_ulong address, zend_class_entry *
 } /* }}} */
 
 /* {{{ */
+zend_string* pthreads_globals_string(zend_string *str) {
+	/*
+	 This is sourcery of the darkest kind ...
+	
+	 We don't need all threads to have a copy of every string used as the name for a threaded objects property.
+	 
+	 In addition, Zend has troubles with persistent strings in non-persistent hashes and vice versa, to avoid these
+	 we have a global table of strings that is used when writing to threaded objects properties, this table is detroyed
+	 on shutdown of the process, so will show as leaked, but we don't care, we want stable !
+	*/
+	zend_string* p = NULL;
+	if (pthreads_globals_lock()) {
+		if (!(p = zend_hash_find_ptr(&PTHREADS_G(gstrings), str)) && 
+			(p = (zend_string*) malloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(ZSTR_LEN(str)))))) {
+			memset(p, 0, sizeof(zend_string));
+
+			GC_REFCOUNT(p) = 1;
+			GC_TYPE_INFO(p) = IS_STR_PERSISTENT;
+
+			memcpy(ZSTR_VAL(p), ZSTR_VAL(str), ZSTR_LEN(str));
+			p->len = ZSTR_LEN(str);
+			ZSTR_VAL(p)[ZSTR_LEN(p)] = '\0';
+			zend_string_forget_hash_val(p);
+			zend_hash_update_ptr(
+				&PTHREADS_G(gstrings), p, p);
+		}
+
+		pthreads_globals_unlock();
+	}
+
+	return p;
+} /* }}} */
+
+/* {{{ */
 zend_bool pthreads_globals_object_delete(void *address) {
 	zend_bool deleted = 0;
 	
@@ -154,12 +190,7 @@ void pthreads_globals_shutdown() {
 	if (PTHREADS_G(init)) {
 		PTHREADS_G(init)=0;
 		PTHREADS_G(failed)=0;
-		zend_hash_destroy(&PTHREADS_G(objects));
-		zend_string_free(PTHREADS_G(strings).run);
-		zend_string_free(PTHREADS_G(strings).session.cache_limiter);
-		zend_string_free(PTHREADS_G(strings).session.use_cookies);
-		zval_dtor(&PTHREADS_G(strings).worker);
-
+		/* we allow proc shutdown to destroy tables */
 		pthreads_monitor_free(PTHREADS_G(monitor));
 	}
 } /* }}} */

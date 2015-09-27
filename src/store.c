@@ -303,14 +303,11 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 				if (zend_hash_index_update_ptr(&threaded->store->table, Z_LVAL(member), storage))
 					result = SUCCESS;
 			} else {
-				/* must be a persistent key */
-				zend_string *keyed = zend_string_init(Z_STRVAL(member), Z_STRLEN(member), 1);
-				
+				/* we need to use a global string here, among other things it reduces memory usage */
+				zend_string *keyed = pthreads_globals_string(Z_STR(member));
 				if (zend_hash_update_ptr(&threaded->store->table, keyed, storage)) {
 					result = SUCCESS;
 				}
-
-				zend_string_release(keyed);
 			}
 		}
 		pthreads_monitor_unlock(threaded->monitor);
@@ -809,25 +806,25 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
 							}
 							
                             if (storage->type != IS_RESOURCE) {
-                                pthreads_storage copy;
+                                pthreads_storage *copy = malloc(sizeof(pthreads_storage));
 
-								memcpy(&copy, storage, sizeof(pthreads_storage));
+								memcpy(copy, storage, sizeof(pthreads_storage));
 
-                                switch (copy.type) {
+                                switch (copy->type) {
                                     case IS_STRING:
                                     case IS_OBJECT:
 			        				case IS_ARRAY: if (storage->length) {
-                                        copy.data = (char*) malloc(copy.length+1);
-										if (!copy.data) {
+                                        copy->data = (char*) malloc(copy->length+1);
+										if (!copy->data) {
 											break;
 										}
-										memcpy(copy.data, (const void*) storage->data, copy.length);
+										memcpy(copy->data, (const void*) storage->data, copy->length);
                                 	} break;
                                 }
 
                                 if (Z_TYPE(key) == IS_LONG) {
-									zend_hash_index_update_mem(tables[0], Z_LVAL(key), &copy, sizeof(pthreads_storage));
-								} else zend_hash_update_mem(tables[0], Z_STR(key), &copy, sizeof(pthreads_storage));
+									zend_hash_index_update_ptr(tables[0], Z_LVAL(key), copy);
+								} else zend_hash_update_ptr(tables[0], Z_STR(key), copy);
                             }
                         }
 

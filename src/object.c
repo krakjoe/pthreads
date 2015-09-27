@@ -281,7 +281,6 @@ static inline void pthreads_base_init(pthreads_object_t* base) {
 			&base->std.ce->default_properties_table[offset]);
 		zval_ptr_dtor(&key);
 	} ZEND_HASH_FOREACH_END();
-
 } /* }}} */
 
 /* {{{ */
@@ -419,6 +418,10 @@ static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object,
 		return 0;
 	}
 
+	if (pthreads_monitor_check(object->monitor, PTHREADS_MONITOR_ERROR)) {
+		return 0;
+	}
+
 	ZVAL_UNDEF(&zresult);
 
 	pthreads_monitor_add(object->monitor, PTHREADS_MONITOR_RUNNING);
@@ -487,6 +490,7 @@ static void * pthreads_routine(pthreads_routine_arg_t *routine) {
 			}
 
 			zval_ptr_dtor(&PTHREADS_ZG(this));
+			ZVAL_UNDEF(&PTHREADS_ZG(this));
 		} zend_end_try();	
 	}
 
