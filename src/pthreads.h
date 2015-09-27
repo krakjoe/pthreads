@@ -115,7 +115,7 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 #define PTHREADS_PG(ls, v) PTHREADS_FETCH_CTX(ls, core_globals_id, php_core_globals*, v)
 #define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
 
-#define zend_string_new(s) zend_string_dup((s), 0)
+#define zend_string_new(s) zend_string_dup((s), GC_FLAGS((s)) & IS_STR_PERSISTENT)
 
 /* {{{ */
 typedef struct _pthreads_call_t {
