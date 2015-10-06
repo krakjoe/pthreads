@@ -379,14 +379,15 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 	zend_class_entry *prepared = NULL;
 	zend_string *lookup = NULL;
 
-	if (!candidate) {
-		return NULL;
+	if (!candidate || 
+		(prepared = zend_hash_find_ptr(EG(class_table), candidate->name))) {
+		return prepared;
 	}
 
 	lookup = zend_string_tolower(candidate->name);
 
 	if ((prepared = zend_hash_find_ptr(EG(class_table), lookup))) {
-	    	zend_string_release(lookup);
+	    zend_string_release(lookup);
 		return prepared;
 	}
 	
@@ -513,14 +514,23 @@ static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
 
 /* {{{ */
 static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
-	zend_string *key;
-	zend_function *value;
+	zend_string *key, *name;
+	zend_function *value = NULL, *prepared = NULL;
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, function_table), key, value) {
-		zend_string *name = zend_string_new(key);
-		value = pthreads_copy_function(value);
-		zend_hash_add_ptr(
-			CG(function_table), name, value);
+		if (value->type == ZEND_INTERNAL_FUNCTION ||
+			zend_hash_exists(PTHREADS_CG(thread->local.ls, function_table), key))
+			continue;
+
+		name = zend_string_new(key);
+		prepared = pthreads_copy_function(value);
+
+		if (!zend_hash_add_ptr(CG(function_table), name, prepared)) {
+			destroy_op_array((zend_op_array*)prepared);
+			zend_string_release(name);
+			continue;
+		}
+
 		if (!(GC_FLAGS(name) & IS_STR_PERSISTENT)) {
 			zend_string_release(name);
 		}
@@ -537,12 +547,26 @@ static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, class_table), name, entry) {
 		if (entry->type == ZEND_USER_CLASS) {
-			if (!zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name)) {
-				prepared = pthreads_prepared_entry(thread, entry);
-				if (!prepared)
-					continue;
-				zend_hash_next_index_insert_ptr(&inherited, prepared);
+			zend_string *lookup;
+
+			if (zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name)) {
+				continue;
 			}
+
+			lookup = zend_string_tolower(name);
+			
+			if (zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), lookup)) {
+				zend_string_release(lookup);
+				continue;
+			}
+
+			zend_string_release(lookup);
+
+			if (!(prepared = pthreads_prepared_entry(thread, entry))) {
+				continue;
+			}
+
+			zend_hash_next_index_insert_ptr(&inherited, prepared);			
 		}
 	} ZEND_HASH_FOREACH_END();		
 
