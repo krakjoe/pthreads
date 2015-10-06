@@ -38,6 +38,9 @@
 #   include <src/copy.h>
 #endif
 
+#define PTHREADS_PREPARATION_BEGIN_CRITICAL() pthreads_globals_lock();
+#define PTHREADS_PREPARATION_END_CRITICAL()   pthreads_globals_unlock()
+
 /* {{{ */
 static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_t* thread, zend_trait_alias *alias); 
 static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(pthreads_object_t* thread, zend_trait_precedence *precedence);
@@ -650,44 +653,42 @@ void pthreads_prepare_parent(pthreads_object_t *thread) {
 
 /* {{{ */
 int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready) {
-	int result = SUCCESS;
 
-	thread->local.id = pthreads_self();
-	thread->local.ls = ts_resource(0);
-	TSRMLS_CACHE_UPDATE();
+	PTHREADS_PREPARATION_BEGIN_CRITICAL() {
+		thread->local.id = pthreads_self();
+		thread->local.ls = ts_resource(0);
+		TSRMLS_CACHE_UPDATE();
 
-	SG(server_context) = 
-		PTHREADS_SG(thread->creator.ls, server_context);
+		SG(server_context) = 
+			PTHREADS_SG(thread->creator.ls, server_context);
 
-	PG(expose_php) = 0;
-	PG(auto_globals_jit) = 0;
+		PG(expose_php) = 0;
+		PG(auto_globals_jit) = 0;
 
-	php_request_startup();
-
-	pthreads_prepare_sapi(thread);
+		php_request_startup();
+		pthreads_prepare_sapi(thread);
 	
-	if (thread->options & PTHREADS_INHERIT_INI)
-		pthreads_prepare_ini(thread);
+		if (thread->options & PTHREADS_INHERIT_INI)
+			pthreads_prepare_ini(thread);
 
-	if (thread->options & PTHREADS_INHERIT_CONSTANTS)
-		pthreads_prepare_constants(thread);
+		if (thread->options & PTHREADS_INHERIT_CONSTANTS)
+			pthreads_prepare_constants(thread);
 
-	if (thread->options & PTHREADS_INHERIT_FUNCTIONS)
-		pthreads_prepare_functions(thread);
+		if (thread->options & PTHREADS_INHERIT_FUNCTIONS)
+			pthreads_prepare_functions(thread);
 
-	if (thread->options & PTHREADS_INHERIT_CLASSES)
-		pthreads_prepare_classes(thread);
+		if (thread->options & PTHREADS_INHERIT_CLASSES)
+			pthreads_prepare_classes(thread);
 
-	if (thread->options & PTHREADS_INHERIT_INCLUDES)
-		pthreads_prepare_includes(thread);
+		if (thread->options & PTHREADS_INHERIT_INCLUDES)
+			pthreads_prepare_includes(thread);
 
-	pthreads_prepare_exception_handler(thread);
+		pthreads_prepare_exception_handler(thread);
+		pthreads_prepare_resource_destructor(thread);
+		pthreads_monitor_add(ready, PTHREADS_MONITOR_READY);
+	} PTHREADS_PREPARATION_END_CRITICAL();
 
-	pthreads_prepare_resource_destructor(thread);
-
-	pthreads_monitor_add(ready, PTHREADS_MONITOR_READY);
-
-	return result;
+	return SUCCESS;
 } /* }}} */
 
 /* {{{ */
@@ -699,13 +700,15 @@ static inline int pthreads_resources_cleanup(zval *bucket) {
 
 /* {{{ */
 int pthreads_prepared_shutdown(pthreads_object_t* thread) {
-	zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
+	PTHREADS_PREPARATION_BEGIN_CRITICAL() {
+		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
 
-	PG(report_memleaks) = 0;
+		PG(report_memleaks) = 0;
 
-	php_request_shutdown((void*)NULL);
+		php_request_shutdown((void*)NULL);
 
-	ts_free_thread();
+		ts_free_thread();
+	} PTHREADS_PREPARATION_END_CRITICAL();
 
 	return SUCCESS;
 } /* }}} */
