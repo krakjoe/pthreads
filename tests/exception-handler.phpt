@@ -6,7 +6,7 @@ This test verifies that user exception handler is invoked by pthreads if set
 <?php
 class ExceptionHandler
 {
-    static public function handle(Exception $e)
+    static public function handle(Throwable $e)
     {
         var_dump($e);
     }

@@ -9,7 +9,7 @@ property tables.
 <?php
 class ExceptionHandler
 {
-    public function handle(Exception $e)
+    public function handle(Throwable $e)
     {
         echo $e->getMessage();
     }

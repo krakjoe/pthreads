@@ -47,10 +47,6 @@
 #	include <src/copy.h>
 #endif
 
-typedef void (*zend_throw_exception_hook_func)(zval * TSRMLS_DC);
-
-zend_throw_exception_hook_func zend_throw_exception_hook_function = NULL;
-
 ZEND_BEGIN_ARG_INFO_EX(pthreads_no_sleeping_arginfo, 0, 0, 1)
 	ZEND_ARG_INFO(0, timeout)
 ZEND_END_ARG_INFO()
@@ -130,46 +126,15 @@ static inline zend_bool pthreads_is_supported_sapi(char *name) {
 	return 0;
 }
 
-static inline void pthreads_globals_ctor(zend_pthreads_globals *pg TSRMLS_DC) {
+typedef void (*zend_execute_ex_function)(zend_execute_data *);
+
+zend_execute_ex_function zend_execute_ex_hook = NULL;
+
+static inline void pthreads_globals_ctor(zend_pthreads_globals *pg) {
 	ZVAL_UNDEF(&pg->this);
 	pg->pid = 0L;
 	pg->signal = 0;
 	pg->resources = NULL;
-}
-
-void pthreads_throw_exception_hook(zval *ex TSRMLS_DC) {
-	if (!ex)
-		return;
-	
-	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
-		if (Z_TYPE(EG(user_exception_handler)) != IS_UNDEF) {
-			zend_fcall_info fci = empty_fcall_info;
-			zend_fcall_info_cache fcc = empty_fcall_info_cache;
-			zval retval;
-			zend_string *cname;
-
-			ZVAL_UNDEF(&retval);
-			
-			if (zend_fcall_info_init(&EG(user_exception_handler), IS_CALLABLE_CHECK_SILENT, &fci, &fcc, &cname, NULL) == SUCCESS) {
-				fci.retval = &retval;
-
-				EG(exception) = NULL;
-				zend_fcall_info_argn(&fci, 1, ex);
-				zend_call_function(&fci, &fcc);
-				zend_fcall_info_args_clear(&fci, 1);
-			}
-
-			if (Z_TYPE(retval) != IS_UNDEF)
-				zval_dtor(&retval);
-
-			if (cname)
-				zend_string_release(cname);
-		}
-	}
-
-	if (zend_throw_exception_hook_function) {
-		zend_throw_exception_hook_function(ex);
-	}
 }
 
 static inline void pthreads_replace_internal_function(char *oname, size_t olen, char *rname, size_t rlen) {
@@ -187,6 +152,16 @@ static inline void pthreads_replace_internal_function(char *oname, size_t olen, 
 	}
 }
 
+/* {{{ */
+static inline void pthreads_execute_ex(zend_execute_data *data) {
+	if (zend_execute_ex_hook) {
+		zend_execute_ex_hook(data);
+	} else execute_ex(data);
+	
+	if (EG(exception))
+		zend_try_exception_handler();
+} /* }}} */
+
 PHP_MINIT_FUNCTION(pthreads)
 {
 	zend_class_entry ce;
@@ -196,6 +171,9 @@ PHP_MINIT_FUNCTION(pthreads)
 			sapi_module.name);
 		return FAILURE;
 	}
+
+	zend_execute_ex_hook = zend_execute_ex;
+	zend_execute_ex = pthreads_execute_ex;	
 
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_ALL", PTHREADS_INHERIT_ALL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_NONE", PTHREADS_INHERIT_NONE, CONST_CS | CONST_PERSISTENT);
@@ -294,9 +272,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	spl_ce_RuntimeException		= zend_exception_get_default();
 #endif
 
-	zend_throw_exception_hook_function = zend_throw_exception_hook;
-	zend_throw_exception_hook = pthreads_throw_exception_hook;
-
 	return SUCCESS;
 }
 
@@ -319,8 +294,8 @@ PHP_MSHUTDOWN_FUNCTION(pthreads)
 			sapi_module.deactivate = sapi_cli_deactivate;
 		}
 	}
-	
-	zend_throw_exception_hook = zend_throw_exception_hook_function;
+
+	zend_execute_ex = zend_execute_ex_hook;
 
 	return SUCCESS;
 }

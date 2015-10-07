@@ -7,7 +7,7 @@ This test ensures that the various options are sensibly covered, and hopefully n
 --FILE--
 <?php
 class Handler {
-	public function handle(Exception $ex) {
+	public function handle(Throwable $ex) {
 		var_dump(__METHOD__, $ex->getMessage());
 	}
 }
