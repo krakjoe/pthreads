@@ -158,8 +158,10 @@ static inline void pthreads_execute_ex(zend_execute_data *data) {
 		zend_execute_ex_hook(data);
 	} else execute_ex(data);
 	
-	if (EG(exception))
-		zend_try_exception_handler();
+	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
+		if (EG(exception))
+			zend_try_exception_handler();
+	}
 } /* }}} */
 
 PHP_MINIT_FUNCTION(pthreads)
@@ -185,10 +187,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_COMMENTS", PTHREADS_INHERIT_COMMENTS, CONST_CS | CONST_PERSISTENT);
 
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
-
-#ifdef PTHREADS_KILL_SIGNAL
-	REGISTER_LONG_CONSTANT("PTHREADS_KILL_THREAD", PTHREADS_KILL_SIGNAL, CONST_CS | CONST_PERSISTENT);
-#endif
 
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
 	pthreads_threaded_entry=zend_register_internal_class(&ce);

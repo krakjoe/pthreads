@@ -97,14 +97,6 @@ static inline pthreads_object_t* _pthreads_fetch_object(zend_object *object) {
 #define PTHREADS_IS_THREADED(t)         ((t)->scope & PTHREADS_SCOPE_THREADED)
 #define PTHREADS_IS_NOT_THREADED(t)     (!PTHREADS_IS_THREADED(t)) /* }}} */
 
-#ifdef HAVE_SIGNAL_H
-#ifdef _WIN32
-#	define PTHREADS_KILL_SIGNAL			SIGBREAK
-#else
-#	define PTHREADS_KILL_SIGNAL			SIGUSR1
-#endif
-#endif
-
 /* {{{ pthread_self wrapper */
 static inline ulong pthreads_self() {
 #ifdef _WIN32
