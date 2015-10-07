@@ -107,26 +107,27 @@ static zend_brk_cont_element* pthreads_copy_brk(zend_brk_cont_element *old, int 
 } /* }}} */
 
 /* {{{ */
-static zval* pthreads_copy_literals(zval *old, int end) {
-	zval *literals = (zval*) safe_emalloc(end, sizeof(zval), 0);
-	int it = 0;
-	
-	while (it < end) {
-		memcpy(&literals[it], &old[it], sizeof(zval));
-		
-		switch (Z_TYPE(old[it])) {
-			case IS_CONSTANT:
-			case IS_STRING:
-				Z_STR(literals[it]) = zend_string_new(Z_STR(literals[it]));
-			break;
+static zval* pthreads_copy_literals(zval *old, int last) {
+	zval *literals = (zval*) safe_emalloc(last, sizeof(zval), 0);
+	zval *literal = literals,
+		 *end = literals + last;
 
+	memcpy(literals, old, sizeof(zval) * last);	
+
+	while (literal < end) {
+		switch (Z_TYPE_P(literal)) {
 			case IS_ARRAY:
-				pthreads_store_separate(&old[it], &literals[it], 1);
+				pthreads_store_separate(literal, literal, 1);
 			break;
 			
-			/* TODO deal with constant AST and arrays (?) */
+			case IS_CONSTANT:
+			case IS_STRING:
+			case IS_CONSTANT_AST:
+				zval_copy_ctor(literal);
+			break;
+
 		}
-		it++;
+		literal++;
 	}
 	
 	return literals;
