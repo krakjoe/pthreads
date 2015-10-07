@@ -409,41 +409,6 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 } /* }}} */
 
 /* {{{ */
-void pthreads_throw_exception_hook(zval *ex) {
-	if (!ex)
-		return;
-
-	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
-		if (Z_TYPE(EG(user_exception_handler)) != IS_UNDEF) {
-			zend_fcall_info fci = empty_fcall_info;
-			zend_fcall_info_cache fcc = empty_fcall_info_cache;
-			zval retval;
-			zend_string *cname;
-
-			ZVAL_UNDEF(&retval);
-			
-			if (zend_fcall_info_init(&EG(user_exception_handler), IS_CALLABLE_CHECK_SILENT, &fci, &fcc, &cname, NULL) == SUCCESS) {
-				zend_object *saved = EG(exception);
-				
-				fci.retval = &retval;
-
-				EG(exception) = NULL;
-				zend_fcall_info_argn(&fci, 1, ex);
-				zend_call_function(&fci, &fcc);
-				zend_fcall_info_args_clear(&fci, 1);
-				EG(exception) = saved;
-			}
-
-			if (Z_TYPE(retval) != IS_UNDEF)
-				zval_dtor(&retval);
-
-			if (cname)
-				zend_string_release(cname);
-		}
-	}
-} /* }}} */
-
-/* {{{ */
 static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object, pthreads_object_t* connection, zval *work) {
 	zend_function *run;
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
