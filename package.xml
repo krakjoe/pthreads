@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-09-27</date>
- <time>12:09:32</time>
+ <date>2015-10-07</date>
+ <time>13:10:47</time>
  <version>
-  <release>3.0.7</release>
-  <api>3.0.7</api>
+  <release>3.0.8</release>
+  <api>3.0.8</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,11 +22,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix issue destroying monitors (deadlocking on shutdown)
- remove Thread::kill
- disable auto-join on __destruct of Thread
- use global persistent shared strings table
- support compiling and linking with AddressSanitizer support
+ fix gh issue #493 (exception handling bug)
+ fix gh issue #495 (constant AST bug)
+ creation/destruction of additional contexts done inside critical section for stability
+ remove a bunch of redundant code, various
  </notes>
  <contents>
   <dir name="/">
@@ -56,11 +55,13 @@
 	<file name="tests/closures-as-members.phpt" role="test" />
 	<file name="tests/complex-statics-set-null.phpt" role="test" />
 	<file name="tests/complex-statics.phpt" role="test" />
+	<file name="tests/constant-ast-copy.phpt" role="test" />
 	<file name="tests/constants.phpt" role="test" />
 	<file name="tests/corrupted-resources.phpt" role="test" />
 	<file name="tests/counting-members.phpt" role="test" />
 	<file name="tests/crazy-refcounting-stuff.phpt" role="test" />
 	<file name="tests/doc-comments.phpt" role="test" />
+	<file name="tests/exception-handler-caught-uncaught.phpt" role="test" />
 	<file name="tests/exception-handler-fail.phpt" role="test" />
 	<file name="tests/exception-handler-options.phpt" role="test" />
 	<file name="tests/exception-handler.phpt" role="test" />
