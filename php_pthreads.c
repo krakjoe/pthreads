@@ -159,7 +159,8 @@ static inline void pthreads_execute_ex(zend_execute_data *data) {
 	} else execute_ex(data);
 	
 	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
-		if (EG(exception))
+		if (EG(exception) && 
+			(!EG(current_execute_data) || !EG(current_execute_data)->prev_execute_data))
 			zend_try_exception_handler();
 	}
 } /* }}} */
