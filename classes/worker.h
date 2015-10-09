@@ -72,6 +72,13 @@ PHP_METHOD(Worker, stack)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry) != SUCCESS) {
 		return;
 	}
+
+	if (!instanceof_function(Z_OBJCE_P(work), pthreads_threaded_entry)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException,
+			0, "only Threaded objects may be stacked, %s is not Threaded",
+			ZSTR_VAL(Z_OBJCE_P(work)->name));
+		return;
+	}
 	
 	RETURN_LONG(pthreads_stack_add(thread->stack, work));	
 } /* }}} */

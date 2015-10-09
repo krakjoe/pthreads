@@ -31,7 +31,7 @@ class WebWorker extends Worker {
 	private static $connection;
 }
 
-class WebWork extends Collectable {
+class WebWork extends Threaded implements Collectable {
 	/*
 	* An example of some work that depends upon a shared logger
 	* and a thread-local PDO connection
@@ -56,6 +56,11 @@ class WebWork extends Collectable {
 			$this->setGarbage();
 		}
 	}
+
+	public function setGarbage() { $this->garbage = true; }
+	public function isGarbage() : bool { return $this->garbage; }
+
+	protected $garbage = false;
 }
 
 class SafeLog extends Threaded {

@@ -4,10 +4,12 @@ Test pool defaults
 This test verifies pool defaults
 --FILE--
 <?php
-class Work extends Collectable {
+class Work extends Threaded implements Collectable {
 	public function run() {
 		var_dump($this);
 	}
+
+	public function isGarbage() : bool { return true; }
 }
 
 $pool = new Pool(1);
@@ -15,15 +17,13 @@ $pool->submit(new Work());
 $pool->shutdown();
 
 $pool->collect(function(Work $work) {
-	return true;
+	return $work->isGarbage();
 });
 
 var_dump($pool);
 ?>
 --EXPECTF--
 object(Work)#%d (%d) {
-  ["garbage"]=>
-  bool(false)
   ["worker"]=>
   object(Worker)#%d (0) {
   }

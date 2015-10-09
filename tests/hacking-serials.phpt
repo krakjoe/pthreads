@@ -28,7 +28,7 @@ class Wrapper {
 	}
 }
 
-class Work extends Collectable {
+class Work extends Threaded implements Collectable {
     public $wrapper;
     public function __construct(Wrapper $wrapper) {
         $this->wrapper = $wrapper;
@@ -39,6 +39,7 @@ class Work extends Collectable {
     public function run() {
         echo "Foo\n";
     }
+	public function isGarbage() : bool { return true; }
 }
 $wrapper = new Wrapper;
 $work = new Work($wrapper);

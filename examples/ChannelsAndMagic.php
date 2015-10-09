@@ -26,7 +26,7 @@ class Channel extends Threaded {
     }
 }
 
-class Routine extends Collectable {
+class Routine extends Threaded implements Collectable {
     public function __construct(Channel $channel) {
         $this->channel = $channel;
     }
@@ -38,6 +38,8 @@ class Routine extends Collectable {
         $this
             ->channel["gold"] = 3.462;
     }
+
+	public function isGarbage() : bool { return true; }
     
     protected $channel;
 }

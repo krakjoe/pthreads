@@ -12,7 +12,7 @@ class WebWorker extends Worker {
 	protected $loger;	
 }
 
-class WebWork extends Collectable {
+class WebWork extends Threaded implements Collectable {
 	public function __construct(int $id) {
 		$this->id = $id;
 	}
@@ -23,6 +23,8 @@ class WebWork extends Collectable {
 			->log("%s(%d) executing in Thread #%lu",
 				  __CLASS__, $this->id, $this->worker->getThreadId());
 	}
+
+	public function isGarbage() : bool { return true; }
 
 	protected $id;
 }

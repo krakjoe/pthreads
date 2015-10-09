@@ -126,7 +126,7 @@ PHP_METHOD(Pool, resize) {
 	ZVAL_LONG(size, newsize);
 } /* }}} */
 
-/* {{{ proto integer Pool::submit(Threaded task) 
+/* {{{ proto integer Pool::submit(Collectable task) 
 	Will submit the given task to the next worker in the pool, by default workers are selected round robin */
 PHP_METHOD(Pool, submit) {
 	zval *task = NULL;
@@ -141,7 +141,14 @@ PHP_METHOD(Pool, submit) {
 	
 	zend_class_entry *ce = NULL;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &task, pthreads_threaded_entry) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &task, pthreads_collectable_entry) != SUCCESS) {
+		return;
+	}
+
+	if (!instanceof_function(Z_OBJCE_P(task), pthreads_threaded_entry)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException,
+			0, "only Threaded objects may be submitted, %s is not Threaded",
+			ZSTR_VAL(Z_OBJCE_P(task)->name));
 		return;
 	}
 	
