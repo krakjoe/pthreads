@@ -249,6 +249,13 @@ PHP_METHOD(Pool, submitTo) {
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lO", &worker, &task, pthreads_collectable_entry) != SUCCESS) {
 		return;
 	}
+
+	if (!instanceof_function(Z_OBJCE_P(task), pthreads_threaded_entry)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException,
+			0, "only Threaded objects may be submitted, %s is not Threaded",
+			ZSTR_VAL(Z_OBJCE_P(task)->name));
+		return;
+	}
 	
 	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
 
