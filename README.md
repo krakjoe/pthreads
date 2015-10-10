@@ -58,6 +58,7 @@ The following things have significant changes:
  * ```Threaded``` members of ```Threaded``` objects are immutable
  * ```Volatile``` objects, excempt from immutability
  * ```array``` coerced to ```Volatile``` when set as member of ```Threaded```
+ * ```Collectable``` converted to interface, to make ```extends Volatile implements Collectable``` possible.
 
 Some blog posts explaining these changes:
 
@@ -148,11 +149,17 @@ if (extension_loaded("pthreads")) {
 
 $pool = new Pool(4);
 
-$pool->submit(new class extends Collectable{
+$pool->submit(new class extends Threaded Implements Collectable {
 	    public function run() {
 	            echo "Hello World\n";
-	            $this->setGarbage();
+	            $this->garbage = true;
 	    }
+
+		public function isGarbage() : bool { 
+			return $this->garbage; 
+		}
+
+		private $garbage = false;
 });
 
 while ($pool->collect(function(Collectable $task){
