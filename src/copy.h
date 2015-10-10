@@ -34,13 +34,12 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 		ZEND_HASH_FOREACH_STR_KEY_VAL(old, key, value) {
 			zend_string *name = zend_string_new(key);
 			zval *next = value;
-			while (Z_TYPE_P(next) == IS_REFERENCE) {
+			while (Z_TYPE_P(next) == IS_REFERENCE)
 				next = &Z_REF_P(next)->val;
-			}
 
 			if (Z_REFCOUNTED_P(next)) {
 				zval copy;
-again:
+
 				switch (Z_TYPE_P(next)) {
 					case IS_STRING:
 						ZVAL_STR(&copy, 
@@ -64,12 +63,7 @@ again:
 					default:
 						zend_hash_add_empty_element(statics, name);					
 				}
-			} else {
-				zval *next = value;
-				while (Z_TYPE_P(next) == IS_REFERENCE)
-					next = &Z_REF_P(value)->val;
-				zend_hash_add(statics, name, next);
-			}
+			} else zend_hash_add(statics, name, next);
 			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
 	}
