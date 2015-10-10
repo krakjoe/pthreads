@@ -435,10 +435,12 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 					zend_hash_index_update(
 						Z_ARRVAL_P(chunk), Z_LVAL(key), &zv);
 					zend_hash_index_del(&threaded->store->table, Z_LVAL(key));
+					zend_hash_index_del(threaded->std.properties, Z_LVAL(key));
 				} else {
 					zend_hash_update(
 						Z_ARRVAL_P(chunk), Z_STR(key), &zv);
 					zend_hash_del(&threaded->store->table, Z_STR(key));
+					zend_hash_del(threaded->std.properties, Z_STR(key));
 				}
 			} else break;
 
@@ -472,10 +474,14 @@ int pthreads_store_pop(zval *object, zval *member) {
 
 				if (Z_TYPE(key) == IS_LONG) {
 					zend_hash_index_del(
-						&threaded->store->table, Z_LVAL(key));	
+						&threaded->store->table, Z_LVAL(key));
+					zend_hash_index_del(
+						threaded->std.properties, Z_LVAL(key));	
 				} else {
 					zend_hash_del(
-						&threaded->store->table, Z_STR(key));				
+						&threaded->store->table, Z_STR(key));	
+					zend_hash_del(
+						threaded->std.properties, Z_STR(key));			
 				}
 			}
 		} else ZVAL_NULL(member);
