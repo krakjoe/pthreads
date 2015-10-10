@@ -118,6 +118,30 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 #define zend_string_new(s) zend_string_dup((s), GC_FLAGS((s)) & IS_STR_PERSISTENT)
 
 /* {{{ */
+static inline const zend_op* pthreads_check_opline(zend_execute_data *ex, zend_long offset, zend_uchar opcode) {
+	if (ex && ex->func && ex->func->type == ZEND_USER_FUNCTION) {
+		zend_op_array *ops = &ex->func->op_array;
+		const zend_op *opline = ex->opline;
+
+		if ((opline + offset) >= ops->opcodes) {
+			opline += offset;
+			if (opline->opcode == opcode) {
+				return opline;			
+			}
+		}
+	}
+	return NULL;
+} /* }}} */
+
+/* {{{ */
+static inline zend_bool pthreads_check_opline_ex(zend_execute_data *ex, zend_long offset, zend_uchar opcode, uint32_t extended_value) {
+	const zend_op *opline = pthreads_check_opline(ex, offset, opcode);
+	if (opline && opline->extended_value == extended_value)
+		return 1;
+	return 0;
+} /* }}} */
+
+/* {{{ */
 typedef struct _pthreads_call_t {
 	zend_fcall_info fci;
 	zend_fcall_info_cache fcc;
