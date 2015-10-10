@@ -303,9 +303,18 @@ PHP_METHOD(Pool, collect) {
 
 /* {{{ */
 static inline int pthreads_pool_shutdown_worker(zval *worker) {
-	zend_call_method(
-		worker, Z_OBJCE_P(worker), NULL, ZEND_STRL("shutdown"), NULL, 0, NULL, NULL);
-	
+	zend_execute_data *ex = EG(current_execute_data);
+	zval retval;
+
+	EG(current_execute_data) = NULL;
+	ZVAL_UNDEF(&retval);
+
+	zend_call_method_with_0_params(
+		worker, Z_OBJCE_P(worker), NULL, "shutdown", &retval);
+	EG(current_execute_data) = ex;
+	if (Z_TYPE(retval) != IS_UNDEF)
+		zval_ptr_dtor(&retval);
+
 	return ZEND_HASH_APPLY_REMOVE;
 } /* }}} */
 
