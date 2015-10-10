@@ -18,7 +18,7 @@ class Future extends Thread {
     public function run() {
         $this->synchronized(function() {
             $this->result = 
-                ($this->closure)(...$this->args);
+               (array) ($this->closure)(...$this->args);
             $this->notify();
         });
     }

@@ -278,15 +278,31 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 	zval vol, member;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_bool coerced = pthreads_store_coerce(key, &member);
-	
+
 	if (Z_TYPE_P(write) == IS_ARRAY) {
-		/* coerce arrays into volatile objects */
-		object_init_ex(
-			&vol, pthreads_volatile_entry);
-		pthreads_store_merge(&vol, write, 1);
-		/* this will be addref'd when caching the object */
-		Z_SET_REFCOUNT(vol, 0);
-		write = &vol;
+#define CED (EG(current_execute_data))
+#define CEF (CED)->func
+#define CEO (CED)->opline
+#define LEO ((CEO)-1)
+#define CEC (CEF)->op_array.opcodes
+#define CEE ((LEO)->opcode == ZEND_CAST && (LEO)->extended_value == IS_ARRAY)
+		if (!(CED && CEF->type == ZEND_USER_FUNCTION && CEO) ||
+			!(CEO > CEC) ||
+			!(CEE)) {
+			/* coerce arrays into volatile objects unless explicitly cast as array */
+			object_init_ex(
+				&vol, pthreads_volatile_entry);
+			pthreads_store_merge(&vol, write, 1);
+			/* this will be addref'd when caching the object */
+			Z_SET_REFCOUNT(vol, 0);
+			write = &vol;
+		}
+#undef CED
+#undef CEF
+#undef CEO
+#undef LEO
+#undef CEC
+#undef CEE
 	}
 
 	if (Z_TYPE_P(write) == IS_OBJECT) {
