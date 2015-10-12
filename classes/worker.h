@@ -23,6 +23,7 @@ PHP_METHOD(Worker, stack);
 PHP_METHOD(Worker, unstack);
 PHP_METHOD(Worker, getStacked);
 PHP_METHOD(Worker, collect);
+PHP_METHOD(Worker, collector);
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_shutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -37,11 +38,29 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_unstack, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_getStacked, 0, 0, 0)
 ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO_EX(Worker_collect, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(Worker_collect, 0, 0, 0)
 	ZEND_ARG_OBJ_INFO(0, function, Closure, 0)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(Worker_collector, 0, 0, 1)
+	ZEND_ARG_OBJ_INFO(0, collectable, Collectable, 0)
 ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_worker_methods[];
+
+#define PTHREADS_WORKER_COLLECTOR_INIT(call, w) do { \
+	memset(&call, 0, sizeof(pthreads_call_t)); \
+	call.fci.size = sizeof(zend_fcall_info); \
+	call.fci.function_table = &(w)->ce->function_table; \
+	ZVAL_STR(&call.fci.function_name, zend_string_init(ZEND_STRL("collector"), 0)); \
+	call.fcc.function_handler = zend_hash_find_ptr(call.fci.function_table, Z_STR(call.fci.function_name)); \
+	call.fci.object = (w); \
+	call.fcc.initialized = 1; \
+	call.fcc.calling_scope = (w)->ce; \
+	call.fcc.called_scope = (w)->ce; \
+	call.fcc.object = (w); \
+} while(0)
+
+#define PTHREADS_WORKER_COLLECTOR_DTOR(call) zval_ptr_dtor(&call.fci.function_name)
 #else
 #	ifndef HAVE_PTHREADS_CLASS_WORKER
 #	define HAVE_PTHREADS_CLASS_WORKER
@@ -52,6 +71,7 @@ zend_function_entry pthreads_worker_methods[] = {
 	PHP_ME(Worker, getStacked, Worker_getStacked, ZEND_ACC_PUBLIC)
 	PHP_ME(Worker, isShutdown, Worker_isShutdown, ZEND_ACC_PUBLIC)
 	PHP_ME(Worker, collect, Worker_collect, ZEND_ACC_PUBLIC)
+	PHP_ME(Worker, collector, Worker_collector, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -145,6 +165,11 @@ PHP_METHOD(Worker, getCreatorId)
 } /* }}} */
 
 /* {{{ */
+static zend_bool pthreads_worker_collectable_running_function(zval *value) {
+	return pthreads_monitor_check((PTHREADS_FETCH_FROM(Z_OBJ_P(value)))->monitor, PTHREADS_MONITOR_RUNNING);
+} /* }}} */
+
+/* {{{ */
 static zend_bool pthreads_worker_collect_function(pthreads_call_t *call, zval *collectable) {
 	zval result;
 	zend_bool remove = 0;
@@ -172,13 +197,26 @@ static zend_bool pthreads_worker_collect_function(pthreads_call_t *call, zval *c
 	return remove;
 } /* }}} */
 
-/* {{{ proto int Worker::collect(callable function) */
+/* {{{ proto bool Worker::collector(Collectable collectable) */
+PHP_METHOD(Worker, collector) {
+	zval *collectable;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "o", &collectable, pthreads_collectable_entry) != SUCCESS) {
+		return;
+	}
+
+	zend_call_method_with_0_params(collectable, Z_OBJCE_P(collectable), NULL, "isgarbage", return_value);
+} /* }}} */
+
+/* {{{ proto int Worker::collect([callable collector]) */
 PHP_METHOD(Worker, collect)
 {
 	pthreads_object_t *thread = PTHREADS_FETCH;
-	pthreads_call_t call = PTHREADS_CALL_EMPTY;
-	
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &call.fci, &call.fcc) != SUCCESS) {
+	pthreads_call_t call = PTHREADS_CALL_EMPTY;	
+
+	if (!ZEND_NUM_ARGS()) {
+		PTHREADS_WORKER_COLLECTOR_INIT(call, Z_OBJ_P(getThis()));
+	} else if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &call.fci, &call.fcc) != SUCCESS) {
 		return;
 	}
 
@@ -189,7 +227,11 @@ PHP_METHOD(Worker, collect)
 		return;
 	}
 
-	RETURN_LONG(pthreads_stack_collect(thread->stack, &call, pthreads_worker_collect_function));
+	RETVAL_LONG(pthreads_stack_collect(thread->stack, &call, pthreads_worker_collectable_running_function, pthreads_worker_collect_function));
+
+	if (!ZEND_NUM_ARGS()) {
+		PTHREADS_WORKER_COLLECTOR_DTOR(call);
+	}
 }
 #	endif
 #endif

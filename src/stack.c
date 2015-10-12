@@ -183,7 +183,7 @@ zend_long pthreads_stack_del(pthreads_stack_t *stack, zval *value) {
 	return size;
 }
 
-zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call, pthreads_stack_collect_function_t collect) {
+zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call, pthreads_stack_running_function_t running, pthreads_stack_collect_function_t collect) {
 	zend_long size = 0;
 
 	if (pthreads_monitor_lock(stack->monitor)) {
@@ -192,16 +192,16 @@ zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call,
 		if (stack->gc) {
 			item = stack->gc->head;
 			while (item) {
-				pthreads_stack_item_t *garbage = item;
+				if (!running(&item->value) && collect(call, &item->value)) {
+					pthreads_stack_item_t *garbage = item;
 
-				if (collect(call, &garbage->value)) {
 					pthreads_stack_remove(stack->gc, garbage, NULL, PTHREADS_STACK_NOTHING);
 					item = garbage->next;
 					zval_ptr_dtor(&garbage->value);
 					efree(garbage);
-				} else item = garbage->next;
+				} else item = item->next;
 			}
-			size = stack->gc->size;
+			size = stack->size + stack->gc->size;
 		}
 
 		pthreads_monitor_unlock(stack->monitor);

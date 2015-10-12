@@ -273,7 +273,7 @@ PHP_METHOD(Pool, submitTo) {
 	}
 } /* }}} */
 
-/* {{{ proto void Pool::collect(Callable collector)
+/* {{{ proto void Pool::collect([callable collector])
 	Shall execute the collector on each of the tasks in the working set 
 		removing the task if the collector returns positively
 		the collector should be a function accepting a single task */
@@ -283,7 +283,7 @@ PHP_METHOD(Pool, collect) {
 	     *worker = NULL;
 	zend_long collectable = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "f", &call.fci, &call.fcc) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|f", &call.fci, &call.fcc) != SUCCESS) {
 		return;
 	}
 	
@@ -295,23 +295,27 @@ PHP_METHOD(Pool, collect) {
 	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(workers), worker) {
 		pthreads_object_t *thread = 
 			PTHREADS_FETCH_FROM(Z_OBJ_P(worker));
-		collectable += pthreads_stack_collect(thread->stack, &call, pthreads_worker_collect_function);
+		if (!ZEND_NUM_ARGS())
+			PTHREADS_WORKER_COLLECTOR_INIT(call, Z_OBJ_P(worker));
+		collectable += pthreads_stack_collect(
+			thread->stack, 
+			&call, 
+			pthreads_worker_collectable_running_function, 
+			pthreads_worker_collect_function);
+		if (!ZEND_NUM_ARGS())
+			PTHREADS_WORKER_COLLECTOR_DTOR(call);
 	} ZEND_HASH_FOREACH_END();
-	
+
 	RETURN_LONG(collectable);
 } /* }}} */
 
 /* {{{ */
 static inline int pthreads_pool_shutdown_worker(zval *worker) {
-	zend_execute_data *ex = EG(current_execute_data);
 	zval retval;
 
-	EG(current_execute_data) = NULL;
 	ZVAL_UNDEF(&retval);
-
 	zend_call_method_with_0_params(
 		worker, Z_OBJCE_P(worker), NULL, "shutdown", &retval);
-	EG(current_execute_data) = ex;
 	if (Z_TYPE(retval) != IS_UNDEF)
 		zval_ptr_dtor(&retval);
 
