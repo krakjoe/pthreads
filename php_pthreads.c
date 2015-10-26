@@ -137,21 +137,6 @@ static inline void pthreads_globals_ctor(zend_pthreads_globals *pg) {
 	pg->resources = NULL;
 }
 
-static inline void pthreads_replace_internal_function(char *oname, size_t olen, char *rname, size_t rlen) {
-	zend_function *functions[2];
-
-	functions[0] = zend_hash_str_find_ptr(EG(function_table), oname, olen);
-	functions[1] = zend_hash_str_find_ptr(EG(function_table), rname, rlen);
-
-	if (functions[0] && functions[1]) {
-		zend_string *rename = zend_string_copy(functions[0]->common.function_name);
-		if ((functions[1] = zend_hash_str_update_mem(
-				EG(function_table), oname, olen, functions[1], sizeof(zend_internal_function)))) {
-			functions[1]->common.function_name = rename;
-		} else zend_string_release(rename);
-	}
-}
-
 /* {{{ */
 static inline void pthreads_execute_ex(zend_execute_data *data) {
 	if (zend_execute_ex_hook) {
@@ -319,9 +304,6 @@ PHP_RINIT_FUNCTION(pthreads) {
 			sapi_module.deactivate = NULL;
 		}
 	}
-
-	pthreads_replace_internal_function(ZEND_STRL("usleep"), ZEND_STRL("pthreads_no_sleeping"));
-	pthreads_replace_internal_function(ZEND_STRL("sleep"),  ZEND_STRL("pthreads_no_sleeping"));
 
 	return SUCCESS;
 }
