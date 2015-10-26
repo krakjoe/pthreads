@@ -312,12 +312,14 @@ PHP_METHOD(Pool, collect) {
 /* {{{ */
 static inline int pthreads_pool_shutdown_worker(zval *worker) {
 	zval retval;
-
+	zend_execute_data *ex = EG(current_execute_data);
 	ZVAL_UNDEF(&retval);
+	EG(current_execute_data) = NULL;
 	zend_call_method_with_0_params(
 		worker, Z_OBJCE_P(worker), NULL, "shutdown", &retval);
 	if (Z_TYPE(retval) != IS_UNDEF)
 		zval_ptr_dtor(&retval);
+	EG(current_execute_data) = ex;
 
 	return ZEND_HASH_APPLY_REMOVE;
 } /* }}} */
