@@ -325,21 +325,21 @@ while(0)
 				continue;
 			}
 
-			name = zend_string_new(key);
-
 			switch (Z_TYPE_P(value)) {
 				case IS_STRING:
 				case IS_ARRAY:
 				case IS_OBJECT: {
 					if (pthreads_store_separate(value, &separated, 1) != SUCCESS) {
-						continue;					
+						continue;				
 					}
 				} break;
 
 				default: ZVAL_COPY(&separated, value);	
 			}
-			
-			zend_hash_update(&prepared->constants_table, name, &separated);
+
+			name = zend_string_new(key);
+			zend_hash_update(
+				&prepared->constants_table, name, &separated);
 			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
 	}
