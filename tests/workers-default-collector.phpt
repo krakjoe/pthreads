@@ -15,8 +15,6 @@ while ($i<10) {
 		}
 
 		public function isGarbage() : bool {
-			if ($this->garbage)
-				var_dump($this->garbage);
 			return $this->garbage;
 		}
 
@@ -32,14 +30,4 @@ $worker->shutdown();
 ?>
 --EXPECTF--
 int(10)
-bool(true)
-bool(true)
-bool(true)
-bool(true)
-bool(true)
-bool(true)
-bool(true)
-bool(true)
-bool(true)
-bool(true)
 int(0)
