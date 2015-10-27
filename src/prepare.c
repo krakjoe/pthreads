@@ -339,8 +339,7 @@ while(0)
 				default: ZVAL_COPY(&separated, value);	
 			}
 			
-			zend_hash_update(&prepared->constants_table, key, &separated);
-
+			zend_hash_update(&prepared->constants_table, name, &separated);
 			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
 	}
