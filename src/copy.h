@@ -97,6 +97,7 @@ static zend_try_catch_element* pthreads_copy_try(zend_try_catch_element *old, in
 	return try_catch;
 } /* }}} */
 
+#if PHP_VERSION_ID < 70100
 /* {{{ */
 static zend_brk_cont_element* pthreads_copy_brk(zend_brk_cont_element *old, int end) {
 	zend_brk_cont_element *brk_cont = safe_emalloc(end, sizeof(zend_brk_cont_element), 0);
@@ -108,6 +109,18 @@ static zend_brk_cont_element* pthreads_copy_brk(zend_brk_cont_element *old, int 
 	
 	return brk_cont;
 } /* }}} */
+#else
+static zend_live_range* pthreads_copy_live(zend_live_range *old, int end) {
+	zend_live_range *range = safe_emalloc(end, sizeof(zend_live_range), 0);
+
+	memcpy(
+		range,
+		old,
+		sizeof(zend_live_range) * end);
+
+	return range;
+}
+#endif
 
 /* {{{ */
 static zval* pthreads_copy_literals(zval *old, int last) {
@@ -257,7 +270,11 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	op_array->opcodes = pthreads_copy_opcodes(op_array, literals);
 	
 	if (op_array->arg_info) 	op_array->arg_info = pthreads_copy_arginfo(op_array, arg_info, op_array->num_args);
+#if PHP_VERSION_ID < 70100
 	if (op_array->brk_cont_array) 	op_array->brk_cont_array = pthreads_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont);
+#else
+	if (op_array->live_range)		op_array->live_range = pthreads_copy_live(op_array->live_range, op_array->last_live_range);
+#endif
 	if (op_array->try_catch_array)  op_array->try_catch_array = pthreads_copy_try(op_array->try_catch_array, op_array->last_try_catch);
 	if (op_array->vars) 		op_array->vars = pthreads_copy_variables(variables, op_array->last_var);
 	if (op_array->static_variables) op_array->static_variables = pthreads_copy_statics(op_array->static_variables);
