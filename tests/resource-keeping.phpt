@@ -47,7 +47,7 @@ class myWorker extends Worker {
 
 }
 
-class Work extends Threaded implements Collectable {
+class Work extends Threaded {
 
     public function run () {
 	$foreignResource = $this->worker->foreignResource;
@@ -60,8 +60,6 @@ class Work extends Threaded implements Collectable {
         ));
 
     }
-
-	public function isGarbage() : bool { return true; }
 }
 
 $fp = tmpfile();

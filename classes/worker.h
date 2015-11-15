@@ -32,7 +32,7 @@ ZEND_BEGIN_ARG_INFO_EX(Worker_isShutdown, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Worker_stack, 0, 0, 1)
-	ZEND_ARG_OBJ_INFO(0, work, Collectable, 0)
+	ZEND_ARG_OBJ_INFO(0, work, Threaded, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Worker_unstack, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -75,7 +75,7 @@ zend_function_entry pthreads_worker_methods[] = {
 	{NULL, NULL, NULL}
 };
 
-/* {{{ proto int Worker::stack(Collectable $work)
+/* {{{ proto int Worker::stack(Threaded $work)
 	Pushes an item onto the stack, returns the size of stack */
 PHP_METHOD(Worker, stack)
 {
@@ -89,14 +89,7 @@ PHP_METHOD(Worker, stack)
 		return;
 	}
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_collectable_entry) != SUCCESS) {
-		return;
-	}
-
-	if (!instanceof_function(Z_OBJCE_P(work), pthreads_threaded_entry)) {
-		zend_throw_exception_ex(spl_ce_RuntimeException,
-			0, "only Threaded objects may be stacked, %s is not Threaded",
-			ZSTR_VAL(Z_OBJCE_P(work)->name));
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "O", &work, pthreads_threaded_entry) != SUCCESS) {
 		return;
 	}
 	
@@ -165,8 +158,18 @@ PHP_METHOD(Worker, getCreatorId)
 } /* }}} */
 
 /* {{{ */
-static zend_bool pthreads_worker_collectable_running_function(zval *value) {
-	return pthreads_monitor_check((PTHREADS_FETCH_FROM(Z_OBJ_P(value)))->monitor, PTHREADS_MONITOR_RUNNING);
+static zend_bool pthreads_worker_running_function(zval *value) {
+	pthreads_object_t *worker = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
+	pthreads_object_t *running = NULL;
+
+	if (worker->running) {
+		running = PTHREADS_FETCH_FROM(*worker->running);
+
+		if (running->monitor == (PTHREADS_FETCH_FROM(Z_OBJ_P(value)))->monitor)
+			return 1;
+	}
+	
+	return 0;
 } /* }}} */
 
 /* {{{ */
@@ -227,7 +230,7 @@ PHP_METHOD(Worker, collect)
 		return;
 	}
 
-	RETVAL_LONG(pthreads_stack_collect(thread->stack, &call, pthreads_worker_collectable_running_function, pthreads_worker_collect_function));
+	RETVAL_LONG(pthreads_stack_collect(thread->stack, &call, pthreads_worker_running_function, pthreads_worker_collect_function));
 
 	if (!ZEND_NUM_ARGS()) {
 		PTHREADS_WORKER_COLLECTOR_DTOR(call);

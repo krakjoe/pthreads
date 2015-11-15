@@ -68,7 +68,7 @@ define('PTHREADS_ALLOW_GLOBALS', 0x10000000);
  * @link http://www.php.net/manual/en/class.threaded.php
  * @since 2.0.0
  */
-class Threaded implements Traversable, Countable, ArrayAccess
+class Threaded implements Traversable, Countable, ArrayAccess, Collectable
 {
     /**
      * Fetches a chunk of the objects properties table of the given size
@@ -556,13 +556,6 @@ class Pool
     protected $workers;
 
     /**
-     * The array of Stackables submitted to this Pool for execution
-     *
-     * @var array|Threaded[]
-     */
-    protected $work;
-
-    /**
      * The constructor arguments to be passed by this Pool to new Workers upon construction
      *
      * @var array
@@ -644,26 +637,16 @@ class Pool
 /**
  * Collectable Class
  *
- * Represents a garbage-collectable object.
- *
- * Collectable objects are intended to be used by the Pool class, replacing Threaded objects as the unit of work.
- * They provide methods to set and detect the collectability of an object.
+ * Garbage Collection interface for references to objects on Worker stacks
  *
  * @link http://www.php.net/manual/en/class.collectable.php
  */
-class Collectable extends Threaded
+interface Collectable
 {
 	/**
-	 * Determine whether an object has been marked as garbage
+	 * Determine whether an object is ready to be destroyed
 	 *
-	 * @return bool Whether the referenced object is marked as garbage
+	 * @return bool Whether the referenced object can be destroyed
 	 */
-	public function isGarbage() {}
-
-	/**
-	 * Mark an object as garbage
-	 *
-	 * @return void
-	 */
-	public function setGarbage() {}
+	public function isGarbage() : bool;
 }

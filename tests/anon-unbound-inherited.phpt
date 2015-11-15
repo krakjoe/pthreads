@@ -8,16 +8,13 @@ $worker = new Worker();
 
 $worker->start();
 
-$collectable = new class extends Threaded implements Collectable {
+$collectable = new class extends Threaded {
 	public function run() {
 		var_dump($this instanceof Collectable);	
 	}
-
-	public function isGarbage() : bool { return true; }
 };
 
 $worker->stack($collectable);
-
 $worker->shutdown();
 --EXPECT--
 bool(true)

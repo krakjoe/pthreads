@@ -31,36 +31,21 @@ class WebWorker extends Worker {
 	private static $connection;
 }
 
-class WebWork extends Threaded implements Collectable {
+class WebWork extends Threaded {
 	/*
 	* An example of some work that depends upon a shared logger
 	* and a thread-local PDO connection
 	*/
 	public function run() {
-		try {
-			$logger = $this->worker->getLogger();
-			$logger->log("%s executing in Thread #%lu", 
-				__CLASS__, $this->worker->getThreadId());
+		$logger = $this->worker->getLogger();
+		$logger->log("%s executing in Thread #%lu", 
+			__CLASS__, $this->worker->getThreadId());
 
-			if ($this->worker->getConnection()) {
-				$logger->log("%s has PDO in Thread #%lu", 
-					__CLASS__, $this->worker->getThreadId());
-			}
-		} catch(Throwable $thrown) { 
-			var_dump($thrown);
-		} finally {
-			/*
-			* You must setGarbage to avoid infinite loops in the main context
-			* doing it in finally is probably best
-			*/
-			$this->setGarbage();
+		if ($this->worker->getConnection()) {
+			$logger->log("%s has PDO in Thread #%lu", 
+				__CLASS__, $this->worker->getThreadId());
 		}
 	}
-
-	public function setGarbage() { $this->garbage = true; }
-	public function isGarbage() : bool { return $this->garbage; }
-
-	protected $garbage = false;
 }
 
 class SafeLog extends Threaded {

@@ -174,13 +174,16 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	REGISTER_LONG_CONSTANT("PTHREADS_ALLOW_HEADERS", PTHREADS_ALLOW_HEADERS, CONST_CS | CONST_PERSISTENT);
 
+	INIT_CLASS_ENTRY(ce, "Collectable", pthreads_collectable_methods);
+	pthreads_collectable_entry = zend_register_internal_interface(&ce);
+
 	INIT_CLASS_ENTRY(ce, "Threaded", pthreads_threaded_methods);
 	pthreads_threaded_entry=zend_register_internal_class(&ce);
 	pthreads_threaded_entry->get_iterator = pthreads_object_iterator_create;
 	pthreads_threaded_entry->create_object = pthreads_threaded_ctor;
 	pthreads_threaded_entry->serialize = pthreads_threaded_serialize;
 	pthreads_threaded_entry->unserialize = pthreads_threaded_unserialize;
-	zend_class_implements(pthreads_threaded_entry, 1, zend_ce_traversable);
+	zend_class_implements(pthreads_threaded_entry, 2, zend_ce_traversable, pthreads_collectable_entry);
 
 	INIT_CLASS_ENTRY(ce, "Volatile", NULL);
 	pthreads_volatile_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
@@ -188,9 +191,6 @@ PHP_MINIT_FUNCTION(pthreads)
 	INIT_CLASS_ENTRY(ce, "Thread", pthreads_thread_methods);
 	pthreads_thread_entry=zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	pthreads_thread_entry->create_object = pthreads_thread_ctor;
-
-	INIT_CLASS_ENTRY(ce, "Collectable", pthreads_collectable_methods);
-	pthreads_collectable_entry = zend_register_internal_interface(&ce);
 
 	INIT_CLASS_ENTRY(ce, "Worker", pthreads_worker_methods);
 	pthreads_worker_entry=zend_register_internal_class_ex(&ce, pthreads_thread_entry);

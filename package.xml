@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-10-07</date>
- <time>13:10:47</time>
+ <date>2015-11-15</date>
+ <time>09:11:23</time>
  <version>
-  <release>3.0.8</release>
-  <api>3.0.8</api>
+  <release>3.1.0</release>
+  <api>3.1.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,10 +22,10 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix gh issue #493 (exception handling bug)
- fix gh issue #495 (constant AST bug)
- creation/destruction of additional contexts done inside critical section for stability
- remove a bunch of redundant code, various
+ Initial development of v3 is complete, this release is the first supported
+ release of pthreads v3 for PHP7.
+ SemVer will be (roughly) followed from this release onward.
+ Everyone must upgrade!
  </notes>
  <contents>
   <dir name="/">
@@ -61,10 +61,12 @@
 	<file name="tests/counting-members.phpt" role="test" />
 	<file name="tests/crazy-refcounting-stuff.phpt" role="test" />
 	<file name="tests/doc-comments.phpt" role="test" />
+	<file name="tests/exception-handler-caught-nested.phpt" role="test" />
 	<file name="tests/exception-handler-caught-uncaught.phpt" role="test" />
 	<file name="tests/exception-handler-fail.phpt" role="test" />
 	<file name="tests/exception-handler-options.phpt" role="test" />
 	<file name="tests/exception-handler.phpt" role="test" />
+	<file name="tests/explicit-cast-arrays.phpt" role="test" />
 	<file name="tests/foreign-private-members.phpt" role="test" />
 	<file name="tests/functions.phpt" role="test" />
 	<file name="tests/global-constants.phpt" role="test" />
@@ -89,7 +91,6 @@
 	<file name="tests/merging-members.phpt" role="test" />
 	<file name="tests/merging-range.phpt" role="test" />
 	<file name="tests/no-cloning.phpt" role="test" />
-	<file name="tests/no-sleeping.phpt" role="test" />
 	<file name="tests/norefs.phpt" role="test" />
 	<file name="tests/normal-reads.phpt" role="test" />
 	<file name="tests/normalize-members.phpt" role="test" />
@@ -100,12 +101,14 @@
 	<file name="tests/pools.phpt" role="test" />
 	<file name="tests/resource-keeping.phpt" role="test" />
 	<file name="tests/return-types.phpt" role="test" />
+	<file name="tests/run-time-cache-corruption.phpt" role="test" />
 	<file name="tests/runtime-inheritance.phpt" role="test" />
 	<file name="tests/selective-inheritance.phpt" role="test" />
 	<file name="tests/shift-pop.phpt" role="test" />
 	<file name="tests/shutdown-handler.phpt" role="test" />
 	<file name="tests/stateful-fatalities.phpt" role="test" />
 	<file name="tests/static-resolution.phpt" role="test" />
+	<file name="tests/static-scope-vars.phpt" role="test" />
 	<file name="tests/staticmethods.phpt" role="test" />
 	<file name="tests/statics-thorn-in-other-side.phpt" role="test" />
 	<file name="tests/statics.phpt" role="test" />
@@ -121,6 +124,7 @@
 	<file name="tests/volatile-objects.phpt" role="test" />
 	<file name="tests/wait.phpt" role="test" />
 	<file name="tests/waiting-timeouts.phpt" role="test" />
+	<file name="tests/workers-default-collector.phpt" role="test" />
 	<file name="tests/workers-no-collect.phpt" role="test" />
 	<file name="tests/workers-no-join.phpt" role="test" />
 	<file name="tests/workers-no-stack.phpt" role="test" />

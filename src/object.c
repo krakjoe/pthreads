@@ -235,7 +235,8 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 				pthreads_stack_free(destination->stack);
 			}
 
-			pthreads_monitor_free(destination->monitor);	
+			pthreads_monitor_free(destination->monitor);
+			free(destination->running);
 
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
 
@@ -248,7 +249,8 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 		destination->monitor = source->monitor;
 		destination->store = source->store;
 		destination->stack = source->stack;	
-		
+		destination->running = source->running;
+
 		return SUCCESS;
 	} else return FAILURE;
 } /* }}} */
@@ -295,6 +297,7 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();
 		base->store   = pthreads_store_alloc();
+		base->running = malloc(sizeof(pthreads_object_t**));
 
 		if (PTHREADS_IS_WORKER(base)) {
 			base->stack = pthreads_stack_alloc(base->monitor);
@@ -322,7 +325,9 @@ void pthreads_base_free(zend_object *object) {
 				pthreads_stack_free(base->stack);	
 			}
 
-			pthreads_monitor_free(base->monitor);	
+			pthreads_monitor_unlock(base->monitor);
+			pthreads_monitor_free(base->monitor);
+			free(base->running);
 		}
 	}
 
@@ -473,7 +478,7 @@ static void * pthreads_routine(pthreads_routine_arg_t *routine) {
 			if (PTHREADS_IS_WORKER(thread)) {
 				zval stacked;
 
-				while (pthreads_stack_next(thread->stack, &stacked) != PTHREADS_MONITOR_JOINED) {
+				while (pthreads_stack_next(thread->stack, &stacked, thread->running) != PTHREADS_MONITOR_JOINED) {
 					zval that;
 					pthreads_object_t* work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
 

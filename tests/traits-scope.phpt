@@ -2,14 +2,12 @@
 Test traits scope (gh issue #484)
 --FILE--
 <?php
-class MyWork extends \Threaded implements Collectable {
+class MyWork extends \Threaded {
 	use \MyTrait;
 
 	public function run() {
     	$this->getSomething();
 	}
-	
-	public function isGarbage() : bool { return true; }
 }
 
 trait MyTrait {

@@ -7,11 +7,10 @@ This test verifies that unstack functions as intended
 
 $worker = new Worker();
 
-$worker->stack(new class extends Threaded implements Collectable {
+$worker->stack(new class extends Threaded {
 	public function run() {
 		var_dump($this);
 	}
-	public function isGarbage() : bool { return true; }
 });
 
 var_dump($worker->unstack());

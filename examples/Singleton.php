@@ -47,12 +47,10 @@ $pool = new Pool(4, PDOWorker::class, [["sqlite:example.db"]]);
 */
 
 while (@$i++<10) {
-	$pool->submit(new class extends Threaded implements Collectable {
+	$pool->submit(new class extends Threaded {
 		public function run() {
 			var_dump($this->worker->getConnection());
 		}
-
-		public function isGarbage() : bool { return true; }
 	});
 }
 

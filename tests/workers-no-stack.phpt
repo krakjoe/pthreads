@@ -4,8 +4,7 @@ Test pthreads workers rules (stack)
 This test verifies that workers cannot be misused (stack)
 --FILE--
 <?php
-class Work extends Threaded implements Collectable {
-	public function isGarbage() : bool { return true; }
+class Work extends Threaded {
 }
 
 class Test extends Thread {

@@ -33,7 +33,7 @@ void pthreads_stack_free(pthreads_stack_t *stack);
 zend_long pthreads_stack_add(pthreads_stack_t *stack, zval *value);
 zend_long pthreads_stack_del(pthreads_stack_t *stack, zval *value);
 zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call, pthreads_stack_running_function_t running, pthreads_stack_collect_function_t collect);
-pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *value);
+pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *value, zend_object **running);
 
 void pthreads_stack_tohash(pthreads_stack_t *stack, HashTable *hash);
 #endif

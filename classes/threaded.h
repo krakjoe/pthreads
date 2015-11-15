@@ -30,6 +30,7 @@ PHP_METHOD(Threaded, chunk);
 PHP_METHOD(Threaded, pop);
 PHP_METHOD(Threaded, count);
 PHP_METHOD(Threaded, extend);
+PHP_METHOD(Threaded, isGarbage);
 
 PHP_METHOD(Threaded, addRef);
 PHP_METHOD(Threaded, delRef);
@@ -84,6 +85,9 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_getRefCount, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Threaded_isGarbage, 0, 0, _IS_BOOL, NULL, 0)
+ZEND_END_ARG_INFO()
+
 extern zend_function_entry pthreads_threaded_methods[];
 #else
 #	ifndef HAVE_PTHREADS_CLASS_THREADED
@@ -100,6 +104,7 @@ zend_function_entry pthreads_threaded_methods[] = {
 	PHP_ME(Threaded, chunk, Threaded_chunk, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, pop, Threaded_pop, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, count, Threaded_count, ZEND_ACC_PUBLIC)
+	PHP_ME(Threaded, isGarbage, Threaded_isGarbage, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, addRef, Threaded_addRef, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, delRef, Threaded_delRef, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, getRefCount, Threaded_getRefCount, ZEND_ACC_PUBLIC)
@@ -255,6 +260,14 @@ PHP_METHOD(Threaded, count)
 	
 	pthreads_store_count(
 		getThis(), &Z_LVAL_P(return_value));
+} /* }}} */
+
+/* {{{ proto Threaded::isGarbage(void) : bool */
+PHP_METHOD(Threaded, isGarbage) {
+	if (zend_parse_parameters_none() != SUCCESS) {
+		return;
+	}
+	RETURN_TRUE;
 } /* }}} */
 
 /* {{{ proto bool Threaded::extend(string class) */

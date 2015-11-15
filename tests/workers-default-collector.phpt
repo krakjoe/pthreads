@@ -9,16 +9,16 @@ $worker->start();
 
 $i = 0;
 while ($i<10) {
-	$worker->stack(new class extends Threaded implements Collectable {
+	$worker->stack(new class extends Threaded {
 		public function run() {
-			$this->garbage = true;
+			$this->g = true;
 		}
-
+		
 		public function isGarbage() : bool {
-			return $this->garbage;
+			return $this->g;
 		}
 
-		private $garbage = false;
+		public $g = false;
 	});
 	$i++;
 }

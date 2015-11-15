@@ -41,6 +41,7 @@ typedef struct _pthreads_object_t {
 	pthreads_stack_t    *stack;
 	pthreads_ident_t 	creator;
 	pthreads_ident_t	local;
+	zend_object         **running;
 	zend_object std;
 } pthreads_object_t; /* }}} */
 

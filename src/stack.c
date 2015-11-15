@@ -210,7 +210,7 @@ zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call,
 	return size;
 }
 
-pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *value) {
+pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *value, zend_object **running) {
 	pthreads_monitor_state_t state = PTHREADS_MONITOR_RUNNING;
 	if (pthreads_monitor_lock(stack->monitor)) {
 		do {
@@ -222,6 +222,8 @@ pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *valu
 
 				pthreads_monitor_wait(stack->monitor, 0);
 			} else {
+				*running = 
+					Z_OBJ_P(value);
 				pthreads_stack_remove(stack, stack->head, value, PTHREADS_STACK_GARBAGE);
 				break;
 			}

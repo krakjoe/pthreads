@@ -28,18 +28,19 @@ class Wrapper {
 	}
 }
 
-class Work extends Threaded implements Collectable {
+class Work extends Threaded {
     public $wrapper;
     public function __construct(Wrapper $wrapper) {
         $this->wrapper = $wrapper;
     }
+
     public function stack() {
         $this->wrapper->stack($this);
     }
+
     public function run() {
         echo "Foo\n";
     }
-	public function isGarbage() : bool { return true; }
 }
 $wrapper = new Wrapper;
 $work = new Work($wrapper);
