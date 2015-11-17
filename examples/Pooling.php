@@ -56,15 +56,19 @@ class SafeLog extends Threaded {
 	*/
 	public function log($message, ... $args) {
 		$this->synchronized(function($message, ... $args){
-			echo vsprintf("{$message}\n", ... $args);
+			if (is_callable($message)) {
+				$message(...$args);
+			} else echo vsprintf("{$message}\n", ... $args);
 		}, $message, $args);
 	}
 }
 
+$logger = new SafeLog();
+
 /*
 * Constructing the Pool does not create any Threads
 */
-$pool = new Pool(8, 'WebWorker', [new SafeLog(), ["sqlite:example.db"]]);
+$pool = new Pool(8, 'WebWorker', [$logger, ["sqlite:example.db"]]);
 
 /*
 * Only when there is work to do are threads created
@@ -106,7 +110,9 @@ while ($pool->collect(function($work) {
 /*
 * We could submit more stuff here, the Pool is still waiting for Collectables
 */
-var_dump($pool);
+$logger->log(function($pool) {
+	var_dump($pool);
+}, $pool);
 
 /*
 * Shutdown Pools at the appropriate time, don't leave it to chance !
