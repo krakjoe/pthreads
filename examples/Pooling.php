@@ -64,7 +64,7 @@ class SafeLog extends Threaded {
 /*
 * Constructing the Pool does not create any Threads
 */
-$pool = new Pool(16, 'WebWorker', [new SafeLog(), ["sqlite:example.db"]]);
+$pool = new Pool(8, 'WebWorker', [new SafeLog(), ["sqlite:example.db"]]);
 
 /*
 * Only when there is work to do are threads created
@@ -97,9 +97,9 @@ $pool->submit(new WebWork());
 * Worker::collect returns the size of the garbage list, Pool::collect returns the sum of the size of
 * the garbage list of all Workers in the Pool. 
 *
-* Collecting in a continuous loop will cause the garbage list to be emptied. 
+* Collecting in a continuous loop will cause the garbage list to be emptied.
 */
-while ($pool->collect(function($work){
+while ($pool->collect(function($work) {
 	return $work->isGarbage();
 })) continue;
 

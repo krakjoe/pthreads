@@ -196,7 +196,10 @@ zend_long pthreads_stack_collect(zend_object *std, pthreads_stack_t *stack, pthr
 				if (running(std, &item->value)) {
 					item = item->next;
 					offset++;
-					continue;
+					/* we break out of gc if the worker is executing something on the stack */
+					/* this means gc is only performed while the worker is idle */
+					/* this means we avoid contention for locks on objects the programmer thinks are executing */
+					break;
 				}
 
 				if (collect(call, &item->value)) {
@@ -208,8 +211,7 @@ zend_long pthreads_stack_collect(zend_object *std, pthreads_stack_t *stack, pthr
 					zval_ptr_dtor(&garbage->value);
 					efree(garbage);
 					continue;
-
-				} 
+				}
 
 				item = item->next;
 			}
@@ -228,6 +230,7 @@ pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *valu
 	if (pthreads_monitor_lock(stack->monitor)) {
 		do {
 			if (!stack->head) {
+
 				if (pthreads_monitor_check(stack->monitor, PTHREADS_MONITOR_JOINED)) {
 					state = PTHREADS_MONITOR_JOINED;
 					break;
