@@ -158,18 +158,24 @@ PHP_METHOD(Worker, getCreatorId)
 } /* }}} */
 
 /* {{{ */
-static zend_bool pthreads_worker_running_function(zval *value) {
-	pthreads_object_t *worker = PTHREADS_FETCH_FROM(Z_OBJ(PTHREADS_ZG(this)));
-	pthreads_object_t *running = NULL;
+static zend_bool pthreads_worker_running_function(zend_object *std, zval *value) {
+	pthreads_object_t *worker = PTHREADS_FETCH_FROM(std),
+					  *running = NULL,
+					  *checking = NULL;
+	zend_bool result = 0;
 
-	if (worker->running) {
-		running = PTHREADS_FETCH_FROM(*worker->running);
+	if (pthreads_monitor_lock(worker->monitor)) {
+		if (worker->running) {
+			running = PTHREADS_FETCH_FROM(*worker->running);
+			checking = PTHREADS_FETCH_FROM(Z_OBJ_P(value));
 
-		if (running->monitor == (PTHREADS_FETCH_FROM(Z_OBJ_P(value)))->monitor)
-			return 1;
+			if (running->monitor == checking->monitor)
+				result = 1;
+		}	
+		pthreads_monitor_unlock(worker->monitor);
 	}
 	
-	return 0;
+	return result;
 } /* }}} */
 
 /* {{{ */
@@ -230,7 +236,7 @@ PHP_METHOD(Worker, collect)
 		return;
 	}
 
-	RETVAL_LONG(pthreads_stack_collect(thread->stack, &call, pthreads_worker_running_function, pthreads_worker_collect_function));
+	RETVAL_LONG(pthreads_stack_collect(&thread->std, thread->stack, &call, pthreads_worker_running_function, pthreads_worker_collect_function));
 
 	if (!ZEND_NUM_ARGS()) {
 		PTHREADS_WORKER_COLLECTOR_DTOR(call);

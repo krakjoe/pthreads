@@ -64,7 +64,7 @@ class SafeLog extends Threaded {
 /*
 * Constructing the Pool does not create any Threads
 */
-$pool = new Pool(8, 'WebWorker', [new SafeLog(), ["sqlite:example.db"]]);
+$pool = new Pool(16, 'WebWorker', [new SafeLog(), ["sqlite:example.db"]]);
 
 /*
 * Only when there is work to do are threads created

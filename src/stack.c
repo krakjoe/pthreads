@@ -183,8 +183,8 @@ zend_long pthreads_stack_del(pthreads_stack_t *stack, zval *value) {
 	return size;
 }
 
-zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call, pthreads_stack_running_function_t running, pthreads_stack_collect_function_t collect) {
-	zend_long size = 0;
+zend_long pthreads_stack_collect(zend_object *std, pthreads_stack_t *stack, pthreads_call_t *call, pthreads_stack_running_function_t running, pthreads_stack_collect_function_t collect) {
+	zend_long size = 0, offset = 0;
 
 	if (pthreads_monitor_lock(stack->monitor)) {
 		pthreads_stack_item_t *item;
@@ -192,16 +192,29 @@ zend_long pthreads_stack_collect(pthreads_stack_t *stack, pthreads_call_t *call,
 		if (stack->gc) {
 			item = stack->gc->head;
 			while (item) {
-				if (!running(&item->value) && collect(call, &item->value)) {
+
+				if (running(std, &item->value)) {
+					item = item->next;
+					offset++;
+					continue;
+				}
+
+				if (collect(call, &item->value)) {
 					pthreads_stack_item_t *garbage = item;
 
-					pthreads_stack_remove(stack->gc, garbage, NULL, PTHREADS_STACK_NOTHING);
+					pthreads_stack_remove(
+						stack->gc, garbage, NULL, PTHREADS_STACK_NOTHING);
 					item = garbage->next;
 					zval_ptr_dtor(&garbage->value);
 					efree(garbage);
-				} else item = item->next;
+					continue;
+
+				} 
+
+				item = item->next;
 			}
-			size = stack->size + stack->gc->size;
+
+			size = (stack->size + stack->gc->size) + -offset;
 		}
 
 		pthreads_monitor_unlock(stack->monitor);
@@ -222,9 +235,9 @@ pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *valu
 
 				pthreads_monitor_wait(stack->monitor, 0);
 			} else {
+				pthreads_stack_remove(stack, stack->head, value, PTHREADS_STACK_GARBAGE);
 				*running = 
 					Z_OBJ_P(value);
-				pthreads_stack_remove(stack, stack->head, value, PTHREADS_STACK_GARBAGE);
 				break;
 			}
 		} while (state != PTHREADS_MONITOR_JOINED);
