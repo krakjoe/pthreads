@@ -192,9 +192,7 @@ zend_long pthreads_stack_collect(zend_object *std, pthreads_stack_t *stack, pthr
 		if (stack->gc) {
 			item = stack->gc->head;
 			while (item) {
-
 				if (running(std, &item->value)) {
-					item = item->next;
 					offset++;
 					/* we break out of gc if the worker is executing something on the stack */
 					/* this means gc is only performed while the worker is idle */

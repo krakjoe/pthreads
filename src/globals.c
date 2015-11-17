@@ -152,7 +152,7 @@ zend_string* pthreads_globals_string(zend_string *str) {
 			(p = (zend_string*) malloc(ZEND_MM_ALIGNED_SIZE(_ZSTR_STRUCT_SIZE(ZSTR_LEN(str)))))) {
 			memset(p, 0, sizeof(zend_string));
 
-			GC_REFCOUNT(p) = 1;
+			GC_REFCOUNT(p) = 2;
 			GC_TYPE_INFO(p) = IS_STR_PERSISTENT;
 
 			memcpy(ZSTR_VAL(p), ZSTR_VAL(str), ZSTR_LEN(str));
