@@ -248,7 +248,7 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 		destination->local.ls = source->local.ls;
 		destination->monitor = source->monitor;
 		destination->store = source->store;
-		destination->stack = source->stack;	
+		destination->stack = source->stack;
 		destination->running = source->running;
 
 		return SUCCESS;
@@ -310,7 +310,7 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 /* {{{ */
 void pthreads_base_free(zend_object *object) {
 	pthreads_object_t* base = PTHREADS_FETCH_FROM(object);
-	
+
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		if ((PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) &&
 			pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_STARTED) &&
@@ -326,7 +326,11 @@ void pthreads_base_free(zend_object *object) {
 			}
 
 			pthreads_monitor_unlock(base->monitor);
-			pthreads_monitor_free(base->monitor);
+		}
+
+		pthreads_monitor_free(base->monitor);
+		
+		if (base->running) {
 			free(base->running);
 		}
 	}
