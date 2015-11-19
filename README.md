@@ -1,6 +1,6 @@
 # Threading for PHP - Share Nothing, Do Everything :)
 
-[![Build Status](https://travis-ci.org/krakjoe/pthreads.svg?branch=master)](https://travis-ci.org/krakjoe/pthreads)
+[![Build Status](https://travis-ci.org/krakjoe/pthreads.svg?branch=PHP5)](https://travis-ci.org/krakjoe/pthreads)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/krakjoe/pthreads.svg)](http://isitmaintained.com/project/krakjoe/pthreads "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/krakjoe/pthreads.svg)](http://isitmaintained.com/project/krakjoe/pthreads "Percentage of issues still open")
 
