@@ -13,8 +13,8 @@
  <date>2015-11-20</date>
  <time>11:00:00</time>
  <version>
-  <release>3.1.0</release>
-  <api>3.1.0</api>
+  <release>3.1.1</release>
+  <api>3.1.1</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,11 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- Initial development of v3 is complete, this release is the first supported
- release of pthreads v3 for PHP7.
- Breaking changes for Collectables in this release.
- SemVer will be (roughly) followed from this release onward.
- Everyone on PHP7 must upgrade!
+ Fix fault when ::shutdown is called on Thread preceeding ::start
  </notes>
  <contents>
   <dir name="/">
@@ -128,6 +124,7 @@
 	<file name="tests/workers-default-collector.phpt" role="test" />
 	<file name="tests/workers-no-collect.phpt" role="test" />
 	<file name="tests/workers-no-join.phpt" role="test" />
+	<file name="tests/workers-no-shutdown-before-start.phpt" role="test" />
 	<file name="tests/workers-no-stack.phpt" role="test" />
 	<file name="tests/workers-no-start.phpt" role="test" />
 	<file name="tests/workers-no-unstack.phpt" role="test" />

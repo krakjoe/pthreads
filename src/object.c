@@ -412,6 +412,13 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 		return 0;
 	}
 
+	if (!pthreads_monitor_check(thread->monitor, PTHREADS_MONITOR_STARTED)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+			"%s has not been started",
+			thread->std.ce->name->val);
+		return 0;
+	}
+
 	pthreads_monitor_add(thread->monitor, PTHREADS_MONITOR_JOINED);
 
 	return (pthread_join(thread->thread, NULL) == SUCCESS);

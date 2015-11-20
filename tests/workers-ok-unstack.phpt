@@ -4,7 +4,6 @@ Test pthreads Worker::unstack
 This test verifies that unstack functions as intended
 --FILE--
 <?php
-
 $worker = new Worker();
 
 $worker->stack(new class extends Threaded {
@@ -14,8 +13,6 @@ $worker->stack(new class extends Threaded {
 });
 
 var_dump($worker->unstack());
-
-$worker->shutdown();
 ?>
 --EXPECTF--
 object(class@anonymous)#%d (%d) {
