@@ -503,7 +503,7 @@ static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
 					    } break;
 					    case IS_DOUBLE: Z_DVAL(constant.value)=Z_DVAL(zconstant->value); break;
 					    case IS_STRING: {
-						    Z_STR(constant.value)=zend_string_new(Z_STR(zconstant->value));
+							ZVAL_NEW_STR(&constant.value, zend_string_new(Z_STR(zconstant->value)));
 					    } break;
 				    }
 			
