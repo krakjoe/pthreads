@@ -10,8 +10,8 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-11-15</date>
- <time>09:11:23</time>
+ <date>2015-11-20</date>
+ <time>11:00:00</time>
  <version>
   <release>3.1.0</release>
   <api>3.1.0</api>
@@ -24,8 +24,9 @@
  <notes>
  Initial development of v3 is complete, this release is the first supported
  release of pthreads v3 for PHP7.
+ Breaking changes for Collectables in this release.
  SemVer will be (roughly) followed from this release onward.
- Everyone must upgrade!
+ Everyone on PHP7 must upgrade!
  </notes>
  <contents>
   <dir name="/">
@@ -166,7 +167,7 @@
  <dependencies>
   <required>
    <php>
-    <min>7.0.0RC5</min>
+    <min>7.0.0RC7</min>
    </php>
    <pearinstaller>
     <min>1.4.0b1</min>
