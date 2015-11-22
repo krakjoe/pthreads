@@ -617,7 +617,7 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 /* {{{ */
 static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 	int result = SUCCESS;
-	
+
 	switch(storage->type) {
 		case IS_NULL: ZVAL_NULL(pzval); break;
 
@@ -678,6 +678,12 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 
 		case IS_PTHREADS: {
 			pthreads_object_t* threaded = PTHREADS_FETCH_FROM(storage->data);
+
+			if (pthreads_check_opline_ex(EG(current_execute_data), 1, ZEND_CAST, IS_OBJECT)) {
+				ZVAL_OBJ(pzval, &threaded->std);
+				Z_ADDREF_P(pzval);
+				break;
+			}
 
 			if (!pthreads_globals_object_connect((zend_ulong)threaded, NULL, pzval)) {
 				zend_throw_exception_ex(
