@@ -169,7 +169,7 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 						 *instance = NULL;
 
 		ce = *cached ? 
-				(zend_class_entry*)*CACHE_ADDR(EX(opline)->op2.num) :
+				*cached :
 				zend_lookup_class(info->class_name);
 	
 		if (!ce)
