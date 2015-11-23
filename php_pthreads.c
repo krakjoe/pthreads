@@ -151,6 +151,44 @@ static inline void pthreads_execute_ex(zend_execute_data *data) {
 } /* }}} */
 
 /* {{{ */
+static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zval *var, zend_arg_info *info) {
+	pthreads_object_t *threaded = NULL;
+
+	if (!var ||
+		info->type_hint != Z_TYPE_P(var) ||
+		info->type_hint != IS_OBJECT ||
+		!instanceof_function(Z_OBJCE_P(var), pthreads_threaded_entry)) {
+		return 0;
+	}
+
+	threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(var));
+	if (!PTHREADS_IN_CREATOR(threaded)) {
+		zend_class_entry **cached = 
+			(zend_class_entry**) CACHE_ADDR(EX(opline)->op2.num),
+						 *ce = NULL,
+						 *instance = NULL;
+
+		ce = *cached ? 
+				(zend_class_entry*)*CACHE_ADDR(EX(opline)->op2.num) :
+				zend_lookup_class(info->class_name);
+	
+		if (!ce)
+			return ZEND_USER_OPCODE_DISPATCH;
+
+		if (*cached == NULL)
+			*cached = ce;
+
+		instance = zend_lookup_class(threaded->std.ce->name);
+
+		if (instanceof_function(instance, ce)) {
+			return 1;
+		}
+	}
+
+	return 0;
+} /* }}} */
+
+/* {{{ */
 static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
 	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
 		zend_execute_data *execute_data = EG(current_execute_data);
@@ -163,37 +201,33 @@ static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
 		if (UNEXPECTED((EX(func)->op_array.fn_flags & ZEND_ACC_HAS_TYPE_HINTS) != 0)) {
 			zval *param = EX_VAR(EX(opline)->result.var);
 			zend_arg_info *info = &EX(func)->common.arg_info[arg_num-1];
-			pthreads_object_t *threaded = NULL;
-
-			if (!param ||
-				info->type_hint != Z_TYPE_P(param) ||
-				info->type_hint != IS_OBJECT ||
-				!instanceof_function(Z_OBJCE_P(param), pthreads_threaded_entry)) {
-				return ZEND_USER_OPCODE_DISPATCH;
-			}
-
-			threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(param));
-			if (!PTHREADS_IN_CREATOR(threaded)) {
-				zend_class_entry **cached = 
-					(zend_class_entry**) CACHE_ADDR(EX(opline)->op2.num),
-								 *ce = zend_lookup_class(info->class_name),
-								 *instance = NULL;
-
-				if (!ce)
-					return ZEND_USER_OPCODE_DISPATCH;
-
-				if (*cached == NULL)
-					*cached = ce;
-
-				instance = zend_lookup_class(threaded->std.ce->name);
-
-				if (instanceof_function(instance, ce)) {
-					EX(opline)++;
-					return ZEND_USER_OPCODE_CONTINUE;
-				}
+			
+			if (pthreads_verify_type(execute_data, param, info)) {
+				EX(opline)++;
+				return ZEND_USER_OPCODE_CONTINUE;
 			}
 		}
 	}
+	return ZEND_USER_OPCODE_DISPATCH;
+} /* }}} */
+
+/* {{{ */
+static inline int php_pthreads_verify_return_type(ZEND_OPCODE_HANDLER_ARGS) {
+	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
+		zend_execute_data *execute_data = EG(current_execute_data);
+		zval *result = EX_VAR(EX(opline)->op1.num);
+		zend_arg_info *info = (EX(func)->common.arg_info - 1);
+
+		if (EX(opline)->op1_type == IS_UNUSED) {
+			return ZEND_USER_OPCODE_DISPATCH;
+		}
+
+		if (pthreads_verify_type(execute_data, result, info)) {
+			EX(opline)++;
+			return ZEND_USER_OPCODE_CONTINUE;
+		}
+	}
+
 	return ZEND_USER_OPCODE_DISPATCH;
 } /* }}} */
 
@@ -282,7 +316,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.set = NULL;
 	pthreads_handlers.get_gc = pthreads_base_gc;
 
-	pthreads_handlers.clone_obj = pthreads_base_clone; 
+	pthreads_handlers.clone_obj = pthreads_base_clone;
 	pthreads_handlers.compare_objects = pthreads_compare_objects;
 
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
@@ -303,6 +337,7 @@ PHP_MINIT_FUNCTION(pthreads)
 #endif
 
 	zend_set_user_opcode_handler(ZEND_RECV, php_pthreads_recv);
+	zend_set_user_opcode_handler(ZEND_VERIFY_RETURN_TYPE, php_pthreads_verify_return_type);
 
 	return SUCCESS;
 }
