@@ -199,10 +199,9 @@ static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
 		}
 
 		if (UNEXPECTED((EX(func)->op_array.fn_flags & ZEND_ACC_HAS_TYPE_HINTS) != 0)) {
-			zval *param = EX_VAR(EX(opline)->result.var);
-			zend_arg_info *info = &EX(func)->common.arg_info[arg_num-1];
-			
-			if (pthreads_verify_type(execute_data, param, info)) {
+			if (pthreads_verify_type(execute_data, 
+				EX_VAR(EX(opline)->result.var), 
+				&EX(func)->common.arg_info[arg_num-1])) {
 				EX(opline)++;
 				return ZEND_USER_OPCODE_CONTINUE;
 			}
@@ -215,14 +214,14 @@ static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
 static inline int php_pthreads_verify_return_type(ZEND_OPCODE_HANDLER_ARGS) {
 	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
 		zend_execute_data *execute_data = EG(current_execute_data);
-		zval *result = EX_VAR(EX(opline)->op1.num);
-		zend_arg_info *info = (EX(func)->common.arg_info - 1);
 
 		if (EX(opline)->op1_type == IS_UNUSED) {
 			return ZEND_USER_OPCODE_DISPATCH;
 		}
 
-		if (pthreads_verify_type(execute_data, result, info)) {
+		if (pthreads_verify_type(execute_data, 
+			EX_VAR(EX(opline)->op1.num), 
+			EX(func)->common.arg_info - 1)) {
 			EX(opline)++;
 			return ZEND_USER_OPCODE_CONTINUE;
 		}
