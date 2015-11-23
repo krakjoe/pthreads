@@ -155,7 +155,7 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 	pthreads_object_t *threaded = NULL;
 
 	if (!var ||
-		info->type_hint != Z_TYPE_P(var) ||
+		!ZEND_SAME_FAKE_TYPE(info->type_hint, Z_TYPE_P(var)) ||
 		info->type_hint != IS_OBJECT ||
 		!instanceof_function(Z_OBJCE_P(var), pthreads_threaded_entry)) {
 		return 0;
