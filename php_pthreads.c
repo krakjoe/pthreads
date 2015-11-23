@@ -171,9 +171,9 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 		ce = *cached ? 
 				*cached :
 				zend_lookup_class(info->class_name);
-	
+
 		if (!ce)
-			return ZEND_USER_OPCODE_DISPATCH;
+			return 0;
 
 		if (*cached == NULL)
 			*cached = ce;
