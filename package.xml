@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-11-22</date>
- <time>20:11:00</time>
+ <date>2015-11-25</date>
+ <time>10:11:10</time>
  <version>
-  <release>3.1.2</release>
-  <api>3.1.2</api>
+  <release>3.1.3</release>
+  <api>3.1.3</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- introduce explicit object cast (see test)
+ fix gh issue #482
  </notes>
  <contents>
   <dir name="/">
@@ -97,6 +97,7 @@
 	<file name="tests/oomethods.phpt" role="test" />
 	<file name="tests/pools-default.phpt" role="test" />
 	<file name="tests/pools.phpt" role="test" />
+	<file name="tests/recv-overload.phpt" role="test" />
 	<file name="tests/resource-keeping.phpt" role="test" />
 	<file name="tests/return-types.phpt" role="test" />
 	<file name="tests/run-time-cache-corruption.phpt" role="test" />
@@ -118,6 +119,7 @@
 	<file name="tests/traits-scope.inc" role="test" />
 	<file name="tests/traits-scope.phpt" role="test" />
 	<file name="tests/unset-defaults.phpt" role="test" />
+	<file name="tests/verify-overload.phpt" role="test" />
 	<file name="tests/volatile-arrays.phpt" role="test" />
 	<file name="tests/volatile-objects.phpt" role="test" />
 	<file name="tests/wait.phpt" role="test" />
