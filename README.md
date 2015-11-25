@@ -71,7 +71,7 @@ More detail to come ...
 
 ### Supported PHP Versions
 
-pthreads v3 requires PHP7 or above. PHP5 needs to use pthreads v2 which can be found in the master branch.
+pthreads v3 requires PHP7 or above. PHP5 needs to use pthreads v2 which can be found in the PHP5 branch.
 
 ### Windows Support
 
