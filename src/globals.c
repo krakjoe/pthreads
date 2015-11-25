@@ -45,13 +45,19 @@ zend_bool pthreads_globals_init(){
 				&PTHREADS_G(gstrings), 64, NULL, (dtor_func_t) NULL, 1);
 		}
 
-#define INIT_STRING(n, v) PTHREADS_G(strings).n = zend_string_init(v, 1)
+#define INIT_STRING(n, v) do { \
+	PTHREADS_G(strings).n = zend_string_init(v, 1); \
+	GC_REFCOUNT(PTHREADS_G(strings).n)++; \
+} while(0)
 		INIT_STRING(run, ZEND_STRL("run"));
 		INIT_STRING(session.cache_limiter, ZEND_STRL("cache_limiter"));
 		INIT_STRING(session.use_cookies, ZEND_STRL("use_cookies"));
 #undef INIT_STRING
-		
-		ZVAL_STR(&PTHREADS_G(strings).worker, zend_string_init(ZEND_STRL("worker"), 1));
+
+		ZVAL_NEW_STR(
+			&PTHREADS_G(strings).worker, 
+			zend_string_init(ZEND_STRL("worker"), 1));
+		Z_ADDREF(PTHREADS_G(strings).worker);
 
 		return PTHREADS_G(init);
 	} else return 0;
@@ -190,7 +196,7 @@ void pthreads_globals_shutdown() {
 	if (PTHREADS_G(init)) {
 		PTHREADS_G(init)=0;
 		PTHREADS_G(failed)=0;
-		/* we allow proc shutdown to destroy tables */
+		/* we allow proc shutdown to destroy tables, and global strings */
 		pthreads_monitor_free(PTHREADS_G(monitor));
 	}
 } /* }}} */
