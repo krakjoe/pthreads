@@ -226,23 +226,24 @@ zend_long pthreads_stack_collect(zend_object *std, pthreads_stack_t *stack, pthr
 pthreads_monitor_state_t pthreads_stack_next(pthreads_stack_t *stack, zval *value, zend_object **running) {
 	pthreads_monitor_state_t state = PTHREADS_MONITOR_RUNNING;
 	if (pthreads_monitor_lock(stack->monitor)) {
+#define SET_RUNNING_TO(t) *running = t
 		do {
 			if (!stack->head) {
-
 				if (pthreads_monitor_check(stack->monitor, PTHREADS_MONITOR_JOINED)) {
 					state = PTHREADS_MONITOR_JOINED;
+					SET_RUNNING_TO(NULL);
 					break;
 				}
-
+				
+				SET_RUNNING_TO(NULL);
 				pthreads_monitor_wait(stack->monitor, 0);
 			} else {
 				pthreads_stack_remove(stack, stack->head, value, PTHREADS_STACK_GARBAGE);
-				*running = 
-					Z_OBJ_P(value);
+				SET_RUNNING_TO(Z_OBJ_P(value));
 				break;
 			}
 		} while (state != PTHREADS_MONITOR_JOINED);
-		
+#undef SET_RUNNING_TO
 		pthreads_monitor_unlock(stack->monitor);
 	}
 

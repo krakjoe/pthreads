@@ -165,7 +165,7 @@ static zend_bool pthreads_worker_running_function(zend_object *std, zval *value)
 	zend_bool result = 0;
 
 	if (pthreads_monitor_lock(worker->monitor)) {
-		if (worker->running) {
+		if (*worker->running) {
 			running = PTHREADS_FETCH_FROM(*worker->running);
 			checking = PTHREADS_FETCH_FROM(Z_OBJ_P(value));
 
