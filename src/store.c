@@ -276,7 +276,8 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 	int result = FAILURE;
 	pthreads_storage *storage;
 	zval vol, member;
-	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	pthreads_object_t *threaded = 
+		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_bool coerced = pthreads_store_coerce(key, &member);
 
 	if (Z_TYPE_P(write) == IS_ARRAY) {
@@ -305,8 +306,9 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 				if (zend_hash_index_update_ptr(&threaded->store->table, Z_LVAL(member), storage))
 					result = SUCCESS;
 			} else {
-				/* we need to use a global string here, among other things it reduces memory usage */
-				zend_string *keyed = pthreads_globals_string(Z_STR(member));
+				/* we can't use global strings here */
+				zend_string *keyed = zend_string_dup(Z_STR(member), 1);
+
 				if (zend_hash_update_ptr(&threaded->store->table, keyed, storage)) {
 					result = SUCCESS;
 				}
