@@ -312,6 +312,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 				if (zend_hash_update_ptr(&threaded->store->table, keyed, storage)) {
 					result = SUCCESS;
 				}
+				zend_string_release(keyed);
 			}
 		}
 		pthreads_monitor_unlock(threaded->monitor);
@@ -328,7 +329,14 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 			rebuild_object_properties(&threaded->std);
 			if (Z_TYPE(member) == IS_LONG) {
 				zend_hash_index_update(threaded->std.properties, Z_LVAL(member), write);
-			} else zend_hash_update(threaded->std.properties, Z_STR(member), write);
+			} else {
+				zend_string *keyed = zend_string_dup(Z_STR(member), 1);
+				if (zend_hash_update(
+					threaded->std.properties, keyed, write)) {
+					result = SUCCESS;
+				}
+				zend_string_release(keyed);
+			}
 			Z_ADDREF_P(write);
 		}
 	}

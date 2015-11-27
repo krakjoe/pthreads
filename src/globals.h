@@ -27,7 +27,7 @@ struct _pthreads_globals {
 	/*
 	* Initialized flag
 	*/
-	zend_bool init;
+	volatile zend_bool init;
 	
 	/*
 	* Failed flag
