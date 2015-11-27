@@ -65,6 +65,10 @@ extern zend_class_entry *spl_ce_Countable;
 #include <Zend/zend_vm.h>
 #include <TSRM/TSRM.h>
 
+#ifdef DMALLOC
+#include <dmalloc.h>
+#endif
+
 extern zend_class_entry *pthreads_threaded_entry;
 extern zend_class_entry *pthreads_volatile_entry;
 extern zend_class_entry *pthreads_thread_entry;

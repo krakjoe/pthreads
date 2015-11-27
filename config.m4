@@ -4,6 +4,9 @@ PHP_ARG_ENABLE(pthreads, whether to enable pthreads,
 PHP_ARG_WITH(pthreads-sanitize, wether to enable AddressSanitizer for pthreads,
 [  --with-pthreads-sanitize   Enable AddressSanitizer for pthreads], no, no)
 
+PHP_ARG_WITH(pthreads-dmalloc, wether to enable dmalloc for pthreads,
+[  --with-pthreads-dmalloc   Enable dmalloc for pthreads], no, no)
+
 if test "$PHP_PTHREADS" != "no"; then
 	AC_MSG_CHECKING([for ZTS])   
 	if test "$PHP_THREAD_SAFETY" != "no"; then
@@ -17,6 +20,11 @@ if test "$PHP_PTHREADS" != "no"; then
 	if test "$PHP_PTHREADS_SANITIZE" != "no"; then
 		EXTRA_LDFLAGS="-lasan"
 		EXTRA_CFLAGS="-fsanitize=address -fno-omit-frame-pointer"
+	fi
+	
+	if test "$PHP_PTHREADS_DMALLOC" != "no"; then
+		EXTRA_LDFLAGS="$EXTRA_LDFLAGS -ldmalloc"
+		EXTRA_CFLAGS="$EXTRA_CFLAGS -DDMALLOC"
 	fi
 
 	PHP_NEW_EXTENSION(pthreads, php_pthreads.c src/monitor.c src/stack.c src/globals.c src/prepare.c src/store.c src/resources.c src/handlers.c src/object.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)

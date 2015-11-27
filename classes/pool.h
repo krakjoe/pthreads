@@ -95,6 +95,7 @@ PHP_METHOD(Pool, __construct)
 	Resize the pool to the given number of workers, if the pool size is being reduced 
 	then the last workers started will be shutdown until the pool is the requested size */
 PHP_METHOD(Pool, resize) {
+	zval tmp[2];
 	zend_long newsize = 0;
 	zval *workers = NULL;
 	zval *size = NULL;
@@ -103,8 +104,8 @@ PHP_METHOD(Pool, resize) {
 		return;
 	}
 	
-	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
-	size    = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"),    1, size);
+	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, &tmp[0]);
+	size    = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"),    1, &tmp[1]);
 	
 	if (Z_TYPE_P(workers) == IS_ARRAY &&
 		newsize < zend_hash_num_elements(Z_ARRVAL_P(workers))) {
@@ -129,6 +130,7 @@ PHP_METHOD(Pool, resize) {
 /* {{{ proto integer Pool::submit(Threaded task) 
 	Will submit the given task to the next worker in the pool, by default workers are selected round robin */
 PHP_METHOD(Pool, submit) {
+	zval tmp[5];
 	zval *task = NULL;
 	zval *last = NULL;
 	zval *size = NULL;
@@ -152,9 +154,9 @@ PHP_METHOD(Pool, submit) {
 		return;
 	}
 	
-	last = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("last"), 1, last);
-	size = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"), 1, size);
-	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
+	last = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("last"), 1, &tmp[0]);
+	size = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"), 1, &tmp[1]);
+	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, &tmp[2]);
 
 	if (Z_TYPE_P(workers) != IS_ARRAY)
 		array_init(workers);
@@ -163,7 +165,7 @@ PHP_METHOD(Pool, submit) {
 		ZVAL_LONG(last, 0);
 
 	if (!(selected = zend_hash_index_find(Z_ARRVAL_P(workers), Z_LVAL_P(last)))) {
-		clazz = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("class"), 1, clazz);
+		clazz = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("class"), 1, &tmp[3]);
 		
 		if (Z_TYPE_P(clazz) != IS_STRING) {
 			zend_throw_exception_ex(spl_ce_RuntimeException, 0,
@@ -179,7 +181,7 @@ PHP_METHOD(Pool, submit) {
 			return;
 		}
 		
-		ctor  = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("ctor"), 1, ctor);
+		ctor  = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("ctor"), 1, &tmp[4]);
 		
 		object_init_ex(&worker, ce);
 		
@@ -195,11 +197,8 @@ PHP_METHOD(Pool, submit) {
 			EG(scope) = scope;
 			
 			if (constructor) {
-				zend_fcall_info fci;
-				zend_fcall_info_cache fcc;
-				
-				memset(&fci, 0, sizeof(zend_fcall_info));
-				memset(&fcc, 0, sizeof(zend_fcall_info_cache));
+				zend_fcall_info fci = empty_fcall_info;
+				zend_fcall_info_cache fcc = empty_fcall_info_cache;
 				
 				fci.size = sizeof(zend_fcall_info);
 				fci.function_table = EG(function_table);
@@ -241,6 +240,7 @@ PHP_METHOD(Pool, submit) {
 /* {{{ proto integer Pool::submitTo(integer $worker, Threaded task) 
 	Will submit the given task to the specified worker */
 PHP_METHOD(Pool, submitTo) {
+	zval tmp;
 	zval *task = NULL;
 	zval *workers = NULL;
 	zend_long worker = 0;
@@ -250,7 +250,7 @@ PHP_METHOD(Pool, submitTo) {
 		return;
 	}
 	
-	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
+	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, &tmp);
 
 	if (Z_TYPE_P(workers) != IS_ARRAY)
 		array_init(workers);
@@ -271,6 +271,7 @@ PHP_METHOD(Pool, submitTo) {
 		removing the task if the collector returns positively
 		the collector should be a function accepting a single task */
 PHP_METHOD(Pool, collect) {
+	zval tmp;
 	pthreads_call_t call;
 	zval *workers = NULL,
 	     *worker = NULL;
@@ -280,7 +281,7 @@ PHP_METHOD(Pool, collect) {
 		return;
 	}
 	
-	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, workers);
+	workers = zend_read_property(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("workers"), 1, &tmp);
 
 	if (Z_TYPE_P(workers) != IS_ARRAY)
 		RETURN_LONG(0);
