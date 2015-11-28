@@ -243,6 +243,12 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 			return pthreads_connect(source, destination);
 		}
 
+		if(source->originObj) {
+                    destination->originObj = source->originObj;
+                } else {
+                    destination->originObj = (long unsigned int)source;
+                }
+                destination->sourceObj = (long unsigned int)source;
 		destination->thread = source->thread;
 		destination->local.id = source->local.id;
 		destination->local.ls = source->local.ls;
@@ -293,6 +299,8 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 	base->creator.ls = TSRMLS_CACHE;
 	base->creator.id = pthreads_self();
 	base->options = PTHREADS_INHERIT_ALL;
+        base->sourceObj = 0;
+        base->originObj = 0;
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();

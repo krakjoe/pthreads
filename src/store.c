@@ -40,6 +40,8 @@
 
 typedef struct _pthreads_storage {
 	zend_uchar 	type;
+        zend_ulong originObj;
+        zend_ulong sourceObj;
 	size_t 	length;
 	zend_bool 	exists;
 	union {
@@ -610,6 +612,10 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 			if (instanceof_function(Z_OBJCE_P(unstore), pthreads_threaded_entry)) {
 				storage->type = IS_PTHREADS;
 				storage->data = Z_OBJ_P(unstore);
+                                
+                                pthreads_object_t* threaded = PTHREADS_FETCH_FROM(storage->data);
+                                storage->sourceObj = threaded->sourceObj;
+                                storage->originObj = threaded->originObj;
 				break;
 			}
 
@@ -696,10 +702,24 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 			}
 
 			if (!pthreads_globals_object_connect((zend_ulong)threaded, NULL, pzval)) {
-				zend_throw_exception_ex(
-					spl_ce_RuntimeException, 0,
-					"pthreads detected an attempt to connect to an object which has already been destroyed");
-				result = FAILURE;
+                            
+                                if(storage->sourceObj != 0 && pthreads_globals_object_connect(storage->sourceObj, NULL, pzval)) {
+                                    pthreads_object_t* sourceObj = (pthreads_object_t*)storage->sourceObj;
+                                    
+                                    storage->data = &sourceObj->std;
+                                }
+                                else if(storage->originObj != 0 && pthreads_globals_object_connect(storage->originObj, NULL, pzval)) {
+                                    pthreads_object_t* originObj = (pthreads_object_t*)storage->originObj;
+                                    
+                                    storage->data = &originObj->std;
+                                }
+                                else
+                                {
+                                    zend_throw_exception_ex(
+                                            spl_ce_RuntimeException, 0,
+                                            "pthreads detected an attempt to connect to an object which has already been destroyed");
+                                    result = FAILURE;
+                                }
 			}
 		} break;
 
