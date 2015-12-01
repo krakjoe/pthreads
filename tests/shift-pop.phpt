@@ -32,7 +32,7 @@ string(4) "help"
 object(S)#1 (0) {
 }
 object(S)#1 (1) {
-  [0]=>
+  [1]=>
   string(4) "next"
 }
 string(4) "next"
