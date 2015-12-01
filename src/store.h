@@ -25,10 +25,7 @@
 #define IS_CLOSURE  (IS_PTR + 1)
 #define IS_PTHREADS (IS_PTR + 2)
 
-typedef struct _pthreads_store_t {
-	HashTable         table;
-	zend_ulong        next;
-} pthreads_store_t;
+typedef HashTable pthreads_store_t;
 
 pthreads_store_t* pthreads_store_alloc();
 int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite);

@@ -148,7 +148,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		pthreads_monitor_lock(threaded->monitor);
 		{
 			ZVAL_LONG(
-				&mstring, zend_hash_next_free_element(&threaded->store->table));
+				&mstring, zend_hash_next_free_element(threaded->store));
 			member = &mstring;
 		}
 		pthreads_monitor_unlock(threaded->monitor);
