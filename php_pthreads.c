@@ -201,7 +201,7 @@ static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
 
 #if ZEND_USE_ABS_CONST_ADDR
 		if (EX(opline)->result_type == IS_CONST) {
-				var = EX(opline)->result.var;	
+				var = (zval*) EX(opline)->result.var;	
 		} else var = EX_VAR(EX(opline)->result.num);
 #else
 		var = EX_VAR(EX(opline)->result.num);
@@ -225,14 +225,14 @@ static inline int php_pthreads_verify_return_type(ZEND_OPCODE_HANDLER_ARGS) {
 		zend_execute_data *execute_data = EG(current_execute_data);
 		zval *var = NULL;
 		
-		if (EX(opline)->op1_type == IS_UNUSED) {
+		if (EX(opline)->op1_type == IS_UNUSED) {	
 			return ZEND_USER_OPCODE_DISPATCH;
 		}
 
 #if ZEND_USE_ABS_CONST_ADDR
-		if (EX(opline)->op1_type == IS_CONST) {
-			var = EX(opline)->op1.var;
-		} else EX_VAR(EX(opline)->op1.num);
+		if (EX(opline)->op1_type & IS_CONST) {
+			var = (zval*) EX(opline)->op1.var;
+		} else var = EX_VAR(EX(opline)->op1.num);
 #else
 		var = EX_VAR(EX(opline)->op1.num);
 #endif
