@@ -200,7 +200,9 @@ static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
 		}
 
 #if ZEND_USE_ABS_CONST_ADDR
-		var = EX(opline)->result.var;
+		if (EX(opline)->result_type == IS_CONST) {
+				var = EX(opline)->result.var;	
+		} else var = EX_VAR(EX(opline)->result.num);
 #else
 		var = EX_VAR(EX(opline)->result.num);
 #endif
@@ -228,7 +230,9 @@ static inline int php_pthreads_verify_return_type(ZEND_OPCODE_HANDLER_ARGS) {
 		}
 
 #if ZEND_USE_ABS_CONST_ADDR
-		var = EX(opline)->op1.var;
+		if (EX(opline)->op1_type == IS_CONST) {
+			var = EX(opline)->op1.var;
+		} else EX_VAR(EX(opline)->op1.num);
 #else
 		var = EX_VAR(EX(opline)->op1.num);
 #endif
