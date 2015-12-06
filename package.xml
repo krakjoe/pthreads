@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-12-02</date>
- <time>06:12:55</time>
+ <date>2015-12-06</date>
+ <time>07:12:25</time>
  <version>
-  <release>3.1.4</release>
-  <api>3.1.4</api>
+  <release>3.1.5</release>
+  <api>3.1.5</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,8 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix various faults caused by globally allocated strings (removed)
- minor stability improvements
+ fix issue with return/param verification overload (32bit), gh issue #523
  </notes>
  <contents>
   <dir name="/">
