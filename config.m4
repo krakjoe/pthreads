@@ -1,7 +1,7 @@
 PHP_ARG_ENABLE(pthreads, whether to enable pthreads,
 [  --enable-pthreads          Enable pthreads])
 
-PHP_ARG_WITH(pthreads-sanitize, wether to enable AddressSanitizer for pthreads,
+PHP_ARG_WITH(pthreads-sanitize, whether to enable AddressSanitizer for pthreads,
 [  --with-pthreads-sanitize   Enable AddressSanitizer for pthreads], no, no)
 
 PHP_ARG_WITH(pthreads-dmalloc, wether to enable dmalloc for pthreads,
