@@ -326,6 +326,23 @@ while(0)
 			}
 
 			switch (Z_TYPE_P(value)) {
+				case IS_PTR: {
+					zend_constant *zc = Z_PTR_P(value),	
+									rc;
+
+					memcpy(&rc, zc, sizeof(zend_constant));
+
+					if (pthreads_store_separate(&zc->value, &rc.value, 1) == SUCCESS) {
+						name = zend_string_new(key);
+						if (!zend_hash_add_mem(
+							&prepared->constants_table, name, &rc, sizeof(zend_constant))) {
+							zend_string_release(name);
+						}
+						zend_string_release(name);
+					}
+					continue;
+				}
+
 				case IS_STRING:
 				case IS_ARRAY:
 				case IS_OBJECT: {
