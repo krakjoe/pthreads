@@ -1,10 +1,10 @@
 PHP_ARG_ENABLE(pthreads, whether to enable pthreads,
 [  --enable-pthreads          Enable pthreads])
 
-PHP_ARG_WITH(pthreads-sanitize, wether to enable AddressSanitizer for pthreads,
+PHP_ARG_WITH(pthreads-sanitize, whether to enable AddressSanitizer for pthreads,
 [  --with-pthreads-sanitize   Enable AddressSanitizer for pthreads], no, no)
 
-PHP_ARG_WITH(pthreads-dmalloc, wether to enable dmalloc for pthreads,
+PHP_ARG_WITH(pthreads-dmalloc, whether to enable dmalloc for pthreads,
 [  --with-pthreads-dmalloc   Enable dmalloc for pthreads], no, no)
 
 if test "$PHP_PTHREADS" != "no"; then
@@ -15,7 +15,7 @@ if test "$PHP_PTHREADS" != "no"; then
 		AC_MSG_ERROR([pthreads requires ZTS, please re-compile PHP with ZTS enabled])
 	fi
 
-	AC_DEFINE(HAVE_PTHREADS, 1, [Wether you have pthreads support])
+	AC_DEFINE(HAVE_PTHREADS, 1, [Whether you have pthreads support])
 
 	if test "$PHP_PTHREADS_SANITIZE" != "no"; then
 		EXTRA_LDFLAGS="-lasan"
