@@ -737,7 +737,10 @@ static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_
 			copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, alias->trait_method);
 		}
 		
-		copy->alias = zend_string_new(alias->alias);
+		if (copy->alias) {
+			copy->alias = zend_string_new(alias->alias);
+		}
+
 		copy->modifiers = alias->modifiers;
 	}
 	return copy;
