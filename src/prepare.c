@@ -686,8 +686,10 @@ static zend_trait_alias * pthreads_preparation_copy_trait_alias(PTHREAD thread, 
 	zend_trait_alias *copy = emalloc(sizeof(zend_trait_alias));
 	if (copy) {
 		copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, alias->trait_method TSRMLS_CC);
-		copy->alias = estrndup(alias->alias, alias->alias_len);
-		copy->alias_len = alias->alias_len;
+		if (alias->alias) {
+			copy->alias = estrndup(alias->alias, alias->alias_len);
+			copy->alias_len = alias->alias_len;
+		}
 		copy->modifiers = alias->modifiers;
 #if PHP_VERSION_ID < 50500
 		copy->function = alias->function;
