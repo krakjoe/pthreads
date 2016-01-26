@@ -546,6 +546,22 @@ int pthreads_prepare(PTHREAD thread TSRMLS_DC){
 			(copy_ctor_func_t) pthreads_copy_function,
 			&function, sizeof(zend_function), 0
 		);
+	} else {
+		/* inherit closures regardless of options */
+		zend_function *function,
+					  *copied;
+		HashPosition pos;
+
+		for (zend_hash_internal_pointer_reset_ex(PTHREADS_EG(thread->cls, function_table), &pos);
+			 zend_hash_get_current_data_ex(PTHREADS_EG(thread->cls, function_table), (void**) &function, &pos) == SUCCESS;
+			 zend_hash_move_forward_ex(PTHREADS_EG(thread->cls, function_table), &pos)) {
+			 if (function->common.fn_flags & ZEND_ACC_CLOSURE) {
+				Bucket *bucket = (Bucket*) pos;
+			 	if (zend_hash_add(EG(function_table), bucket->arKey, bucket->nKeyLength, function, sizeof(zend_function), (void**) &copied) == SUCCESS) {
+					pthreads_copy_function(copied);
+				}
+			 }
+		}
 	}
 	
 	/* inherit class table from parent ... */
