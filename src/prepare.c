@@ -557,6 +557,37 @@ static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
 } /* }}} */
 
 /* {{{ */
+static inline void pthreads_prepare_closures(pthreads_object_t *thread) {
+	Bucket *bucket;
+
+	ZEND_HASH_FOREACH_BUCKET(PTHREADS_CG(thread->creator.ls, function_table), bucket) {
+		zend_function *function = Z_PTR(bucket->val),
+					  *prepared;
+		zend_string   *named;
+
+
+		if (function->common.fn_flags & ZEND_ACC_CLOSURE) {
+			if (zend_hash_exists(CG(function_table), bucket->key)) {
+				continue;
+			}
+
+			named = zend_string_new(bucket->key);
+			prepared = pthreads_copy_function(function);
+
+			if (!zend_hash_add_ptr(CG(function_table), named, prepared)) {
+				zend_string_release(named);
+				destroy_op_array((zend_op_array*) prepared);
+				continue;
+			}
+
+			if (!(GC_FLAGS(named) & IS_STR_PERSISTENT)) {
+				zend_string_release(named);
+			}
+		}
+	} ZEND_HASH_FOREACH_END();
+} /* }}} */
+
+/* {{{ */
 static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 	zend_class_entry *entry, *prepared;
 	zend_string *name;
@@ -692,6 +723,7 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 
 		if (thread->options & PTHREADS_INHERIT_FUNCTIONS)
 			pthreads_prepare_functions(thread);
+		else pthreads_prepare_closures(thread);
 
 		if (thread->options & PTHREADS_INHERIT_CLASSES)
 			pthreads_prepare_classes(thread);
