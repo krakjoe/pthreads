@@ -40,7 +40,7 @@ build_script:
 
     buildconf.bat
 
-    configure.bat --disable-all --enable-cli --enable-zts --with-pthreads=shared --with-config-file-scan-dir=C:\php\modules.d --with-prefix=C:\php --with-php-build=C:\php-src\deps --enable-debug
+    configure.bat --disable-all --enable-cli --enable-zts --with-pthreads=shared --with-config-file-scan-dir=C:\php\modules.d --with-prefix=C:\php --with-php-build=C:\php-src\deps
 
     nmake
 
@@ -55,3 +55,8 @@ build_script:
     copy C:\php-src\pthreads-w32\Pre-built.2\dll\x86\pthreadVC2.dll C:\php\pthreadVC2.dll
 test_script:
 - cmd: C:\php\php.exe -doutput_buffering=0 run-tests.php ext\pthreads -p C:\php\php.exe -q --show-diff
+artifacts:
+  - path: C:\php
+    name: pthreads master rolling test build
+	type: zip
+
