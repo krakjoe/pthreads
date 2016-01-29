@@ -10,56 +10,52 @@ build_script:
 
     wget http://windows.php.net/downloads/php-sdk/php-sdk-binary-tools-20110915.zip
 
-    7z x -y php-sdk-binary-tools-20110915.zip -oC:\php-sdk
+    7z x -y php-sdk-binary-tools-20110915.zip -ophp-sdk
 
-    C:\php-sdk\bin\phpsdk_setvars.bat
+    php-sdk\bin\phpsdk_setvars.bat
 
-    git clone https://github.com/php/php-src C:\php-src
+    git clone https://github.com/php/php-src php-src
 
-    mkdir C:\php-src\ext\pthreads
+    mkdir php-src\ext\pthreads
 
-    xcopy C:\projects\pthreads C:\php-src\ext\pthreads /s /e /y
+    xcopy C:\projects\pthreads php-src\ext\pthreads /s /e /y
 
     wget http://windows.php.net/downloads/php-sdk/deps-7.0-vc14-x86.7z
 
-    7z x -y deps-7.0-vc14-x86.7z -oC:\php-src
+    7z x -y deps-7.0-vc14-x86.7z -ophp-src
 
     wget http://www.mirrorservice.org/sites/sources.redhat.com/pub/pthreads-win32/pthreads-w32-2-9-1-release.zip
 
-    7z x -y pthreads-w32-2-9-1-release.zip -oC:\php-src\pthreads-w32
+    7z x -y pthreads-w32-2-9-1-release.zip -opthreads-w32
 
-    copy C:\php-src\pthreads-w32\Pre-built.2\include\pthread.h C:\php-src\deps\include\pthread.h
+    copy pthreads-w32\Pre-built.2\include\pthread.h php-src\deps\include\pthread.h
 
-    copy C:\php-src\pthreads-w32\Pre-built.2\include\sched.h C:\php-src\deps\include\sched.h
+    copy pthreads-w32\Pre-built.2\include\sched.h php-src\deps\include\sched.h
 
-    copy C:\php-src\pthreads-w32\Pre-built.2\include\semaphore.h C:\php-src\deps\include\semaphore.h
+    copy pthreads-w32\Pre-built.2\include\semaphore.h php-src\deps\include\semaphore.h
 
-    copy C:\php-src\pthreads-w32\Pre-built.2\lib\x86\pthreadVC2.lib C:\php-src\deps\lib\pthreadVC2.lib
+    copy pthreads-w32\Pre-built.2\lib\x86\pthreadVC2.lib php-src\deps\lib\pthreadVC2.lib
 
-    cd C:\php-src
+    cd php-src
 
     buildconf.bat
 
-    configure.bat --disable-all --enable-cli --enable-zts --with-pthreads=shared --with-config-file-scan-dir=C:\php\modules.d --with-prefix=C:\php --with-php-build=C:\php-src\deps
+    configure.bat --disable-all --enable-cli --enable-zts --with-pthreads=shared --with-config-file-scan-dir=C:\projects\pthreads\build\modules.d --with-prefix=C:\projects\pthreads\build --with-php-build=deps
 
     nmake
 
     nmake install
 
-    copy php.ini-development C:\php\php.ini
+    copy php.ini-development C:\projects\pthreads\build\php.ini
 
-    mkdir C:\php\modules.d
+    mkdir C:\projects\pthreads\build\modules.d
 
-    echo extension=php_pthreads.dll > C:\php\modules.d\php.ini
+    echo extension=php_pthreads.dll > C:\projects\pthreads\build\modules.d\php.ini
 
-    copy C:\php-src\pthreads-w32\Pre-built.2\dll\x86\pthreadVC2.dll C:\php\pthreadVC2.dll
-
-    dir C:\php
-
-    xcopy C:\php C:\projects\pthreads\master /s /e /y
+    copy pthreads-w32\Pre-built.2\dll\x86\pthreadVC2.dll C:\projects\pthreads\build\pthreadVC2.dll
 test_script:
-- cmd: C:\php\php.exe -doutput_buffering=0 run-tests.php ext\pthreads -p C:\php\php.exe -q --show-diff
+- cmd: C:\projects\pthreads\build\php.exe -doutput_buffering=0 run-tests.php ext\pthreads -p C:\projects\pthreads\build\php.exe -q --show-diff
 artifacts:
-  - path: master
+  - path: build
     name: pthreads master rolling test build
     type: zip
