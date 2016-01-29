@@ -28,6 +28,7 @@
 #include <sys/time.h>
 #include <signal.h>
 #else
+#define HAVE_STRUCT_TIMESPEC
 #include <win32/time.h>
 #include <pthread.h>
 #include <signal.h>
