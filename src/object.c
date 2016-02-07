@@ -239,7 +239,7 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 			free(destination->running);
 
 			destination->scope |= PTHREADS_SCOPE_CONNECTION;
-
+			
 			return pthreads_connect(source, destination);
 		}
 
@@ -251,6 +251,9 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 		destination->stack = source->stack;
 		destination->running = source->running;
 
+		if (destination->std.properties)
+			zend_hash_clean(destination->std.properties);
+		
 		return SUCCESS;
 	} else return FAILURE;
 } /* }}} */
