@@ -91,6 +91,10 @@ int pthreads_monitor_notify(pthreads_monitor_t *m) {
 	return pthread_cond_broadcast(&m->cond);
 }
 
+int pthreads_monitor_notify_one(pthreads_monitor_t *m) {
+	return pthread_cond_signal(&m->cond);
+}
+
 void pthreads_monitor_wait_until(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
 	if (pthreads_monitor_lock(m)) {
 		while (!pthreads_monitor_check(m, state)) {

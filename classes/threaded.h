@@ -20,6 +20,7 @@
 PHP_METHOD(Threaded, run);
 PHP_METHOD(Threaded, wait);
 PHP_METHOD(Threaded, notify);
+PHP_METHOD(Threaded, notifyOne);
 PHP_METHOD(Threaded, isRunning);
 PHP_METHOD(Threaded, isTerminated);
 
@@ -96,6 +97,7 @@ zend_function_entry pthreads_threaded_methods[] = {
 	PHP_ME(Threaded, run, Threaded_run, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, wait, Threaded_wait, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, notify, Threaded_notify, ZEND_ACC_PUBLIC)
+	PHP_ME(Threaded, notifyOne, Threaded_notify, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, isRunning, Threaded_isRunning, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, isTerminated, Threaded_isTerminated, ZEND_ACC_PUBLIC)
 	PHP_ME(Threaded, synchronized, Threaded_synchronized, ZEND_ACC_PUBLIC)
@@ -141,7 +143,17 @@ PHP_METHOD(Threaded, notify)
 {
 	pthreads_object_t* threaded = PTHREADS_FETCH;
 
-	RETURN_BOOL(pthreads_monitor_notify(threaded->monitor));
+	RETURN_BOOL(pthreads_monitor_notify(threaded->monitor) == SUCCESS);
+} /* }}} */
+
+/* {{{ proto boolean Threaded::notifyOne()
+		Send notification to one context waiting on the Threaded
+		Will return a boolean indication of success */
+PHP_METHOD(Threaded, notifyOne)
+{
+	pthreads_object_t* threaded = PTHREADS_FETCH;
+
+	RETURN_BOOL(pthreads_monitor_notify_one(threaded->monitor) == SUCCESS);
 } /* }}} */
 
 /* {{{ proto boolean Threaded::isRunning() 

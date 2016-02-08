@@ -35,6 +35,7 @@ zend_bool pthreads_monitor_unlock(pthreads_monitor_t *m);
 pthreads_monitor_state_t pthreads_monitor_check(pthreads_monitor_t *m, pthreads_monitor_state_t state);
 int pthreads_monitor_wait(pthreads_monitor_t *m, long timeout);
 int pthreads_monitor_notify(pthreads_monitor_t *m);
+int pthreads_monitor_notify_one(pthreads_monitor_t *m);
 void pthreads_monitor_wait_until(pthreads_monitor_t *m, pthreads_monitor_state_t state);
 void pthreads_monitor_add(pthreads_monitor_t *m, pthreads_monitor_state_t state);
 void pthreads_monitor_set(pthreads_monitor_t *m, pthreads_monitor_state_t state);
