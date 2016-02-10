@@ -281,7 +281,8 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 	zend_bool coerced = pthreads_store_coerce(key, &member);
 
 	if (Z_TYPE_P(write) == IS_ARRAY) {
-		if (!pthreads_check_opline_ex(EG(current_execute_data), -1, ZEND_CAST, IS_ARRAY)) {
+		if (!pthreads_check_opline_ex(EG(current_execute_data), -1, ZEND_CAST, IS_ARRAY) &&
+			!pthreads_check_opline_ex(EG(current_execute_data), -2, ZEND_CAST, IS_ARRAY)) {
 			/* coerce arrays into volatile objects unless explicitly cast as array */
 			object_init_ex(
 				&vol, pthreads_volatile_entry);

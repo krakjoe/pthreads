@@ -14,6 +14,14 @@ $threaded->member = (array) [
 ];
 
 var_dump($threaded);
+
+$threaded->member = new Threaded;
+$threaded->member[0] = (array) [
+	"hello",
+	"world"
+];
+
+var_dump($threaded);
 ?>
 --EXPECTF--
 object(Threaded)#%d (%d) {
@@ -25,4 +33,15 @@ object(Threaded)#%d (%d) {
     string(5) "world"
   }
 }
-
+object(Threaded)#%d (%d) {
+  ["member"]=>
+  object(Threaded)#%d (%d) {
+    [0]=>
+    array(2) {
+      [0]=>
+      string(5) "hello"
+      [1]=>
+      string(5) "world"
+    }
+  }
+}
