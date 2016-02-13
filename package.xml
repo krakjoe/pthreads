@@ -10,11 +10,11 @@
   <email>krakjoe@php.net</email>
   <active>yes</active>
  </lead>
- <date>2015-12-06</date>
- <time>07:12:25</time>
+ <date>2016-02-13</date>
+ <time>07:02:36</time>
  <version>
-  <release>3.1.5</release>
-  <api>3.1.5</api>
+  <release>3.1.6</release>
+  <api>3.1.6</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,7 +22,7 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix issue with return/param verification overload (32bit), gh issue #523
+ fix gh issue #482
  </notes>
  <contents>
   <dir name="/">
@@ -73,6 +73,7 @@
 	<file name="tests/immutable-threaded-members.phpt" role="test" />
 	<file name="tests/included-files.phpt" role="test" />
 	<file name="tests/includeme.inc" role="test" />
+	<file name="tests/inherit-non-closures.phpt" role="test" />
 	<file name="tests/ini.phpt" role="test" />
 	<file name="tests/interface.phpt" role="test" />
 	<file name="tests/interfaces.phpt" role="test" />
@@ -115,6 +116,7 @@
 	<file name="tests/thorn-in-side.phpt" role="test" />
 	<file name="tests/thread.phpt" role="test" />
 	<file name="tests/threaded-extend-abstract.phpt" role="test" />
+	<file name="tests/trait-alias-bug.phpt" role="test" />
 	<file name="tests/trait-aliases.phpt" role="test" />
 	<file name="tests/traits-scope.inc" role="test" />
 	<file name="tests/traits-scope.phpt" role="test" />
