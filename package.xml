@@ -22,7 +22,12 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix gh issue #482
+ fix explicit array cast for ASSIGN_DIM
+ add Threaded::notifyOne
+ fix bug in Threaded properties causing incorrect objects to be fetched by read
+ fix bug in trait aliases
+ fix INHERIT_NONE breaking lambdas
+ fix bug in constant copy routine for 7.1
  </notes>
  <contents>
   <dir name="/">
