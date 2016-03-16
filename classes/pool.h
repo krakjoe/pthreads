@@ -81,7 +81,7 @@ PHP_METHOD(Pool, __construct)
 	
 	if (!instanceof_function(clazz, pthreads_worker_entry)) {
 		zend_throw_exception_ex(NULL, 0, 
-			"The class provided (%s) does not extend Worker", clazz->name);
+			"The class provided (%s) does not extend Worker", clazz->name->val);
 	}
 	
 	zend_update_property_long(Z_OBJCE_P(getThis()), getThis(), ZEND_STRL("size"), size);
