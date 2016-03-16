@@ -522,6 +522,9 @@ static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
 					    case IS_STRING: {
 							ZVAL_NEW_STR(&constant.value, zend_string_new(Z_STR(zconstant->value)));
 					    } break;
+						case IS_ARRAY: {
+							pthreads_store_separate(&zconstant->value, &constant.value, 1);
+						} break;
 				    }
 			
 				    zend_register_constant(&constant);
