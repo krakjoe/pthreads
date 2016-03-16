@@ -294,7 +294,7 @@ PHP_METHOD(Threaded, extend) {
 #ifdef ZEND_ACC_TRAIT
     if ((ce->ce_flags & ZEND_ACC_TRAIT) == ZEND_ACC_TRAIT) {
         zend_throw_exception_ex(spl_ce_RuntimeException, 0, 
-            "cannot extend trait %s", ce->name);
+            "cannot extend trait %s", ce->name->val);
         return;
     }
 #endif
@@ -302,15 +302,15 @@ PHP_METHOD(Threaded, extend) {
     if (ce->ce_flags & ZEND_ACC_INTERFACE) {
         zend_throw_exception_ex(spl_ce_RuntimeException, 0, 
             "cannot extend interface %s", 
-            ce->name);
+            ce->name->val);
         return;
     }
     
     if (ce->parent) {
         zend_throw_exception_ex(spl_ce_RuntimeException, 0, 
             "cannot extend class %s, it already extends %s", 
-            ce->name,
-            ce->parent->name);
+            ce->name->val,
+            ce->parent->name->val);
         return;
     }
     
