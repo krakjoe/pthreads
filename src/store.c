@@ -312,8 +312,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 
 				if (zend_hash_update_ptr(threaded->store, keyed, storage)) {
 					result = SUCCESS;
-				}
-				zend_string_release(keyed);
+				} else zend_string_release(keyed);
 			}
 		}
 		pthreads_monitor_unlock(threaded->monitor);
@@ -335,8 +334,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 				if (zend_hash_update(
 					threaded->std.properties, keyed, write)) {
 					result = SUCCESS;
-				}
-				zend_string_release(keyed);
+				} else zend_string_release(keyed);
 			}
 			Z_ADDREF_P(write);
 		}
