@@ -77,10 +77,12 @@ pthreads_store_t* pthreads_store_alloc() {
 	return store;
 } /* }}} */
 
-static inline zend_bool pthreads_store_coerce(zval *key, zval *member) {
-	if (!key)
+static inline zend_bool pthreads_store_coerce(HashTable *table, zval *key, zval *member) {
+	if (!key || Z_TYPE_P(key) == IS_NULL) {
+		ZVAL_LONG(member, zend_hash_next_free_element(table));
 		return 0;
-	
+	}
+
 	switch (Z_TYPE_P(key)) {
 		case IS_STRING:
 		case IS_LONG:
@@ -125,7 +127,7 @@ int pthreads_store_delete(zval *object, zval *key) {
 	int result = FAILURE;
 	zval member;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	zend_bool coerced = pthreads_store_coerce(key, &member);	
+	zend_bool coerced = pthreads_store_coerce(threaded->store, key, &member);	
 
 	rebuild_object_properties(&threaded->std);
 
@@ -156,7 +158,7 @@ zend_bool pthreads_store_isset(zval *object, zval *key, int has_set_exists) {
 	zend_bool isset = 0;
 	zval member;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	zend_bool coerced = pthreads_store_coerce(key, &member);
+	zend_bool coerced = pthreads_store_coerce(threaded->store, key, &member);
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		pthreads_storage *storage;
@@ -222,7 +224,7 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 	int result = FAILURE;
 	zval member, *property = NULL;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	zend_bool coerced = pthreads_store_coerce(key, &member);
+	zend_bool coerced = pthreads_store_coerce(threaded->store, key, &member);
 
 	rebuild_object_properties(&threaded->std);
 
@@ -278,7 +280,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 	zval vol, member;
 	pthreads_object_t *threaded = 
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	zend_bool coerced = pthreads_store_coerce(key, &member);
+	zend_bool coerced = 0;
 
 	if (Z_TYPE_P(write) == IS_ARRAY) {
 		if (!pthreads_check_opline_ex(EG(current_execute_data), -1, ZEND_CAST, IS_ARRAY) &&
@@ -302,7 +304,8 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 	storage = pthreads_store_create(write, 1);
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
-		if (!pthreads_store_is_immutable(object, key)) {
+		coerced = pthreads_store_coerce(threaded->store, key, &member);
+		if (!pthreads_store_is_immutable(object, &member)) {
 			if (Z_TYPE(member) == IS_LONG) {
 				if (zend_hash_index_update_ptr(threaded->store, Z_LVAL(member), storage))
 					result = SUCCESS;

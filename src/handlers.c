@@ -142,18 +142,6 @@ zval* pthreads_read_dimension(PTHREADS_READ_DIMENSION_PASSTHRU_D) { return pthre
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_bool nulled = 0;
-	zval mstring;
-
-	if (member == NULL || Z_TYPE_P(member) == IS_NULL) {
-		pthreads_monitor_lock(threaded->monitor);
-		{
-			ZVAL_LONG(
-				&mstring, zend_hash_next_free_element(threaded->store));
-			zend_hash_index_update_ptr(threaded->store, Z_LVAL(mstring), NULL);
-			member = &mstring;
-		}
-		pthreads_monitor_unlock(threaded->monitor);
-	}
 
 	rebuild_object_properties(&threaded->std);
 
@@ -169,7 +157,9 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		case IS_TRUE:
 		case IS_FALSE: {
 			zend_long *guard = NULL;
-			if (Z_OBJCE_P(object)->__set && (guard = pthreads_get_guard(&threaded->std, member)) && !((*guard) & IN_SET)) {
+			if ((member && Z_TYPE_P(member) != IS_NULL) && 
+				Z_OBJCE_P(object)->__set && 
+				(guard = pthreads_get_guard(&threaded->std, member)) && !((*guard) & IN_SET)) {
 				zend_fcall_info fci = empty_fcall_info;
 				zend_fcall_info_cache fcc = empty_fcall_info_cache;
 				zval rv;
