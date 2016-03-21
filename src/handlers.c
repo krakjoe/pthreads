@@ -149,6 +149,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		{
 			ZVAL_LONG(
 				&mstring, zend_hash_next_free_element(threaded->store));
+			zend_hash_index_update_ptr(threaded->store, Z_LVAL(mstring), NULL);
 			member = &mstring;
 		}
 		pthreads_monitor_unlock(threaded->monitor);

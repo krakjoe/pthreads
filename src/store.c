@@ -912,18 +912,20 @@ next:
 
 /* {{{ Will free store element */
 static void pthreads_store_storage_dtor (pthreads_storage *storage){
-	switch (storage->type) {
-	    case IS_CLOSURE:
-		case IS_OBJECT:
-		case IS_STRING:
-		case IS_ARRAY:
-		case IS_RESOURCE:
-			if (storage->data) {
-				free(storage->data);
-			}
-		break;
+	if (storage) {
+		switch (storage->type) {
+			case IS_CLOSURE:
+			case IS_OBJECT:
+			case IS_STRING:
+			case IS_ARRAY:
+			case IS_RESOURCE:
+				if (storage->data) {
+					free(storage->data);
+				}
+			break;
+		}
+		free(storage);
 	}
-	free(storage);
 } /* }}} */
 
 /* {{{ iteration helpers */
