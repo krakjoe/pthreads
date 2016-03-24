@@ -551,15 +551,17 @@ void pthreads_store_tohash(zval *object, HashTable *hash) {
 		} ZEND_HASH_FOREACH_END();
 		
 		/* make props consistent with store */
-		ZEND_HASH_FOREACH_KEY(threaded->std.properties, idx, name) {
-			if (!name) {
-				if (!zend_hash_index_exists(threaded->store, idx))
-					zend_hash_index_del(threaded->std.properties, idx);
-			} else {
-				if (!zend_hash_exists(threaded->store, name))
-					zend_hash_del(threaded->std.properties, name);
-			}
-		} ZEND_HASH_FOREACH_END();
+		if (zend_hash_num_elements(threaded->store) != zend_hash_num_elements(threaded->std.properties)) {
+			ZEND_HASH_FOREACH_KEY(threaded->std.properties, idx, name) {
+				if (!name) {
+					if (!zend_hash_index_exists(threaded->store, idx))
+						zend_hash_index_del(threaded->std.properties, idx);
+				} else {
+					if (!zend_hash_exists(threaded->store, name))
+						zend_hash_del(threaded->std.properties, name);
+				}
+			} ZEND_HASH_FOREACH_END();
+		}
 
 		pthreads_monitor_unlock(threaded->monitor);
 	}
