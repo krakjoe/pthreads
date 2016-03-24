@@ -197,6 +197,9 @@ PHP_METHOD(Threaded, synchronized)
 	call.fcc.object = &threaded->std;
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
+		/* synchronize property tables */
+		pthreads_store_sync(getThis());
+
 		zend_try {
 			/* call the closure */
 			zend_call_function(&call.fci, &call.fcc);

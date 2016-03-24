@@ -28,6 +28,7 @@
 typedef HashTable pthreads_store_t;
 
 pthreads_store_t* pthreads_store_alloc();
+void pthreads_store_sync(zval *object);
 int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite);
 int pthreads_store_delete(zval *object, zval *key);
 int pthreads_store_read(zval *object, zval *key, int type, zval *read);
