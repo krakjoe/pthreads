@@ -31,4 +31,4 @@ Please include the expected output, properly formatted.
 Actual Output
 ============
 
-Please incldue the actual output, properly formatted.
+Please include the actual output, properly formatted.
