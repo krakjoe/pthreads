@@ -84,9 +84,6 @@ void pthreads_store_sync(zval *object) { /* {{{ */
 
 	rebuild_object_properties(&threaded->std);
 
-	if (zend_hash_num_elements(threaded->std.properties) == zend_hash_num_elements(threaded->store))
-		return;
-
 	ZEND_HASH_FOREACH_KEY(threaded->std.properties, idx, name) {
 		if (!name) {
 			if (!zend_hash_index_exists(threaded->store, idx))
