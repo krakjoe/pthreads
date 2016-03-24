@@ -92,6 +92,11 @@ extern zend_class_entry *pthreads_condition_entry;
         (Z_TYPE_P(o) == IS_OBJECT && instanceof_function(Z_OBJCE_P(o), pthreads_volatile_entry))
 #endif
 
+#ifndef IS_PTHREADS_CLOSURE
+#define IS_PTHREADS_CLOSURE(z) \
+	Z_TYPE_P(z) == IS_OBJECT && instanceof_function(Z_OBJCE_P(z), zend_ce_closure)
+#endif
+
 extern zend_object_handlers pthreads_handlers;
 extern zend_object_handlers *zend_handlers;
 

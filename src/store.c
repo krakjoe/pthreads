@@ -324,7 +324,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 	if (result != SUCCESS) {
 		pthreads_store_storage_dtor(storage);
 	} else {
-		if (IS_PTHREADS_OBJECT(write)) {
+		if (IS_PTHREADS_OBJECT(write) || IS_PTHREADS_CLOSURE(write)) {
 			/*
 				This could be a volatile object, but, we don't want to break
 				normal refcounting, we'll just never read the reference
