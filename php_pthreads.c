@@ -108,6 +108,7 @@ typedef struct _pthreads_supported_sapi_t {
 const static pthreads_supported_sapi_t whitelist[] = {
 	{ZEND_STRL("cli")},
 	{ZEND_STRL("phpdbg")}, /* not really supported, needs work */
+	{ZEND_STRL("homegear")},
 	{NULL, 0}
 };
 
