@@ -289,7 +289,8 @@ PHP_METHOD(Threaded, isGarbage) {
 PHP_METHOD(Threaded, extend) {
     zend_class_entry *ce = NULL;
     zend_bool is_final = 0;
-    
+	zend_class_entry *parent;
+
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "C", &ce) != SUCCESS) {
         return;
     }
@@ -322,12 +323,18 @@ PHP_METHOD(Threaded, extend) {
     if (is_final)
         ce->ce_flags = ce->ce_flags &~ ZEND_ACC_FINAL;
 
-    zend_do_inheritance(ce, EX(called_scope));
+#if PHP_VERSION_ID >= 70100
+	parent = EG(scope);
+#else
+	parent = EX(called_scope);
+#endif
+
+	zend_do_inheritance(ce, parent);
 
     if (is_final)
         ce->ce_flags |= ZEND_ACC_FINAL;
 
-    RETURN_BOOL(instanceof_function(ce, EX(called_scope)));
+    RETURN_BOOL(instanceof_function(ce, parent));
 } /* }}} */
 #	endif
 #endif
