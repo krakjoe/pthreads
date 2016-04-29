@@ -471,8 +471,6 @@ PHP_RINIT_FUNCTION(pthreads) {
 		}
 	}
 
-	CG(compiler_options) |= ZEND_COMPILE_GUARDS;
-
 	return SUCCESS;
 }
 
