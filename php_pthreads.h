@@ -47,6 +47,10 @@ ZEND_MODULE_POST_ZEND_DEACTIVATE_D(pthreads);
 #	include <classes/pool.h>
 #endif
 
+#ifndef HAVE_PTHREADS_CLASS_SOCKET_H
+#	include <classes/socket.h>
+#endif
+
 extern zend_module_entry pthreads_module_entry;
 #define phpext_pthreads_ptr &pthreads_module_entry
 

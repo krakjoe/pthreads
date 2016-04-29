@@ -37,6 +37,10 @@
 #include <php.h>
 #include <php_globals.h>
 #include <php_main.h>
+#include <php_network.h>
+#ifdef AF_UNIX
+#include <sys/un.h>
+#endif
 #include <php_ticks.h>
 #include <ext/standard/info.h>
 #include <ext/standard/basic_functions.h>
@@ -74,8 +78,7 @@ extern zend_class_entry *pthreads_threaded_entry;
 extern zend_class_entry *pthreads_volatile_entry;
 extern zend_class_entry *pthreads_thread_entry;
 extern zend_class_entry *pthreads_worker_entry;
-extern zend_class_entry *pthreads_mutex_entry;
-extern zend_class_entry *pthreads_condition_entry;
+extern zend_class_entry *pthreads_socket_entry;
 
 #ifndef IS_PTHREADS_CLASS
 #define IS_PTHREADS_CLASS(c) \
@@ -98,6 +101,7 @@ extern zend_class_entry *pthreads_condition_entry;
 #endif
 
 extern zend_object_handlers pthreads_handlers;
+extern zend_object_handlers pthreads_socket_handlers;
 extern zend_object_handlers *zend_handlers;
 
 extern struct _pthreads_globals pthreads_globals;

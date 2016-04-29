@@ -86,10 +86,10 @@ void pthreads_store_sync(zval *object) { /* {{{ */
 
 	ZEND_HASH_FOREACH_KEY(threaded->std.properties, idx, name) {
 		if (!name) {
-			if (!zend_hash_index_exists(threaded->store, idx))
+			if (!zend_hash_index_exists(threaded->store.props, idx))
 				zend_hash_index_del(threaded->std.properties, idx);
 		} else {
-			if (!zend_hash_exists(threaded->store, name))
+			if (!zend_hash_exists(threaded->store.props, name))
 				zend_hash_del(threaded->std.properties, name);
 		}
 	} ZEND_HASH_FOREACH_END();
@@ -123,8 +123,8 @@ static inline zend_bool pthreads_store_is_immutable(zval *object, zval *key) {
 	}
 
 	if (Z_TYPE_P(key) == IS_LONG) {
-		storage = zend_hash_index_find_ptr(threaded->store, Z_LVAL_P(key));
-	} else storage = zend_hash_find_ptr(threaded->store, Z_STR_P(key));
+		storage = zend_hash_index_find_ptr(threaded->store.props, Z_LVAL_P(key));
+	} else storage = zend_hash_find_ptr(threaded->store.props, Z_STR_P(key));
 
 	if ((storage) && (storage->type == IS_PTHREADS)) {
 		if (Z_TYPE_P(key) == IS_LONG) {
@@ -145,15 +145,15 @@ int pthreads_store_delete(zval *object, zval *key) {
 	int result = FAILURE;
 	zval member;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	zend_bool coerced = pthreads_store_coerce(threaded->store, key, &member);	
+	zend_bool coerced = pthreads_store_coerce(threaded->store.props, key, &member);	
 
 	rebuild_object_properties(&threaded->std);
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		if (!pthreads_store_is_immutable(object, &member)) {
 			if (Z_TYPE_P(key) == IS_LONG) {
-				result = zend_hash_index_del(threaded->store, Z_LVAL(member));
-			} else result = zend_hash_del(threaded->store, Z_STR(member));
+				result = zend_hash_index_del(threaded->store.props, Z_LVAL(member));
+			} else result = zend_hash_del(threaded->store.props, Z_STR(member));
 		}
 		pthreads_monitor_unlock(threaded->monitor);
 	} else result = FAILURE;
@@ -176,14 +176,14 @@ zend_bool pthreads_store_isset(zval *object, zval *key, int has_set_exists) {
 	zend_bool isset = 0;
 	zval member;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	zend_bool coerced = pthreads_store_coerce(threaded->store, key, &member);
+	zend_bool coerced = pthreads_store_coerce(threaded->store.props, key, &member);
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		pthreads_storage *storage;
 
 		if (Z_TYPE(member) == IS_LONG) {
-			storage = zend_hash_index_find_ptr(threaded->store, Z_LVAL(member));
-		} else storage = zend_hash_find_ptr(threaded->store, Z_STR(member));
+			storage = zend_hash_index_find_ptr(threaded->store.props, Z_LVAL(member));
+		} else storage = zend_hash_find_ptr(threaded->store.props, Z_STR(member));
 
 		isset = storage != NULL;
 
@@ -242,7 +242,7 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 	int result = FAILURE;
 	zval member, *property = NULL;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	zend_bool coerced = pthreads_store_coerce(threaded->store, key, &member);
+	zend_bool coerced = pthreads_store_coerce(threaded->store.props, key, &member);
 
 	rebuild_object_properties(&threaded->std);
 
@@ -267,8 +267,8 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 		pthreads_store_sync(object);
 
 		if (Z_TYPE(member) == IS_LONG) {
-			storage = zend_hash_index_find_ptr(threaded->store, Z_LVAL(member));
-		} else storage = zend_hash_find_ptr(threaded->store, Z_STR(member));
+			storage = zend_hash_index_find_ptr(threaded->store.props, Z_LVAL(member));
+		} else storage = zend_hash_find_ptr(threaded->store.props, Z_STR(member));
 		
 		if (storage) {
 			result = pthreads_store_convert(storage, read);
@@ -325,16 +325,16 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 	storage = pthreads_store_create(write, 1);
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
-		coerced = pthreads_store_coerce(threaded->store, key, &member);
+		coerced = pthreads_store_coerce(threaded->store.props, key, &member);
 		if (!pthreads_store_is_immutable(object, &member)) {
 			if (Z_TYPE(member) == IS_LONG) {
-				if (zend_hash_index_update_ptr(threaded->store, Z_LVAL(member), storage))
+				if (zend_hash_index_update_ptr(threaded->store.props, Z_LVAL(member), storage))
 					result = SUCCESS;
 			} else {
 				/* we can't use global strings here */
 				zend_string *keyed = zend_string_dup(Z_STR(member), 1);
 
-				if (zend_hash_update_ptr(threaded->store, keyed, storage)) {
+				if (zend_hash_update_ptr(threaded->store.props, keyed, storage)) {
 					result = SUCCESS;
 				} else zend_string_release(keyed);
 			}
@@ -405,7 +405,7 @@ int pthreads_store_count(zval *object, zend_long *count) {
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
-		(*count) = zend_hash_num_elements(threaded->store);
+		(*count) = zend_hash_num_elements(threaded->store.props);
 		pthreads_monitor_unlock(threaded->monitor);
 	} else (*count) = 0L;
    
@@ -423,16 +423,16 @@ int pthreads_store_shift(zval *object, zval *member) {
 		HashPosition position;
 		pthreads_storage *storage;
 
-		zend_hash_internal_pointer_reset_ex(threaded->store, &position);
-		if ((storage = zend_hash_get_current_data_ptr_ex(threaded->store, &position))) {
-			zend_hash_get_current_key_zval_ex(threaded->store, &key, &position);
+		zend_hash_internal_pointer_reset_ex(threaded->store.props, &position);
+		if ((storage = zend_hash_get_current_data_ptr_ex(threaded->store.props, &position))) {
+			zend_hash_get_current_key_zval_ex(threaded->store.props, &key, &position);
 			if (!pthreads_store_is_immutable(object, &key)) {
 				pthreads_store_convert(storage, member);
 				if (Z_TYPE(key) == IS_LONG) {
-					zend_hash_index_del(threaded->store, Z_LVAL(key));
+					zend_hash_index_del(threaded->store.props, Z_LVAL(key));
 					zend_hash_index_del(threaded->std.properties, Z_LVAL(key));
 				} else {
-					zend_hash_del(threaded->store, Z_STR(key));
+					zend_hash_del(threaded->store.props, Z_STR(key));
 					zend_hash_del(threaded->std.properties, Z_STR(key));
 				}
 			}
@@ -456,29 +456,29 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 		pthreads_storage *storage;
 
 		array_init(chunk);
-		zend_hash_internal_pointer_reset_ex(threaded->store, &position);
+		zend_hash_internal_pointer_reset_ex(threaded->store.props, &position);
 		while((zend_hash_num_elements(Z_ARRVAL_P(chunk)) < size) &&
-			(storage = zend_hash_get_current_data_ptr_ex(threaded->store, &position))) {
+			(storage = zend_hash_get_current_data_ptr_ex(threaded->store.props, &position))) {
 			zval key, zv;
 
-			zend_hash_get_current_key_zval_ex(threaded->store, &key, &position);		
+			zend_hash_get_current_key_zval_ex(threaded->store.props, &key, &position);		
 
 			if (!pthreads_store_is_immutable(object, &key)) {
 				pthreads_store_convert(storage, &zv);
 				if (Z_TYPE(key) == IS_LONG) {
 					zend_hash_index_update(
 						Z_ARRVAL_P(chunk), Z_LVAL(key), &zv);
-					zend_hash_index_del(threaded->store, Z_LVAL(key));
+					zend_hash_index_del(threaded->store.props, Z_LVAL(key));
 					zend_hash_index_del(threaded->std.properties, Z_LVAL(key));
 				} else {
 					zend_hash_update(
 						Z_ARRVAL_P(chunk), Z_STR(key), &zv);
-					zend_hash_del(threaded->store, Z_STR(key));
+					zend_hash_del(threaded->store.props, Z_STR(key));
 					zend_hash_del(threaded->std.properties, Z_STR(key));
 				}
 			} else break;
 
-			zend_hash_move_forward_ex(threaded->store, &position);
+			zend_hash_move_forward_ex(threaded->store.props, &position);
 		}
 		pthreads_monitor_unlock(threaded->monitor);
 
@@ -499,21 +499,21 @@ int pthreads_store_pop(zval *object, zval *member) {
 		HashPosition position;
 		pthreads_storage *storage;
 
-		zend_hash_internal_pointer_end_ex(threaded->store, &position);
-		if ((storage = zend_hash_get_current_data_ptr_ex(threaded->store, &position))) {
-			zend_hash_get_current_key_zval_ex(threaded->store, &key, &position);
+		zend_hash_internal_pointer_end_ex(threaded->store.props, &position);
+		if ((storage = zend_hash_get_current_data_ptr_ex(threaded->store.props, &position))) {
+			zend_hash_get_current_key_zval_ex(threaded->store.props, &key, &position);
 
 			if (!pthreads_store_is_immutable(object, &key)) {
 				pthreads_store_convert(storage, member);
 
 				if (Z_TYPE(key) == IS_LONG) {
 					zend_hash_index_del(
-						threaded->store, Z_LVAL(key));
+						threaded->store.props, Z_LVAL(key));
 					zend_hash_index_del(
 						threaded->std.properties, Z_LVAL(key));	
 				} else {
 					zend_hash_del(
-						threaded->store, Z_STR(key));	
+						threaded->store.props, Z_STR(key));	
 					zend_hash_del(
 						threaded->std.properties, Z_STR(key));			
 				}
@@ -541,7 +541,7 @@ void pthreads_store_tohash(zval *object, HashTable *hash) {
 
 		pthreads_store_sync(object);
 
-		ZEND_HASH_FOREACH_KEY_PTR(threaded->store, idx, name, storage) {
+		ZEND_HASH_FOREACH_KEY_PTR(threaded->store.props, idx, name, storage) {
 			zval pzval;
 			zend_string *rename;
 			ZVAL_NULL(&pzval);
@@ -831,7 +831,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                     if (pthreads_monitor_lock(threaded[1]->monitor)) {
                         HashPosition position;
                         pthreads_storage *storage;
-                        HashTable *tables[2] = {threaded[0]->store, threaded[1]->store};
+                        HashTable *tables[2] = {threaded[0]->store.props, threaded[1]->store.props};
 						zval key;
 
                         for (zend_hash_internal_pointer_reset_ex(tables[1], &position);
@@ -909,14 +909,14 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
                     
 					switch (Z_TYPE(key)) {
 						case IS_LONG:
-		                    if (!overwrite && zend_hash_index_exists(threaded->store, Z_LVAL(key))) {
+		                    if (!overwrite && zend_hash_index_exists(threaded->store.props, Z_LVAL(key))) {
 		                        goto next;
 		                    }
 		                    pthreads_store_write(destination, &key, pzval);
 						break;
 
                         case IS_STRING:
-							if (!overwrite && zend_hash_exists(threaded->store, Z_STR(key))) {
+							if (!overwrite && zend_hash_exists(threaded->store.props, Z_STR(key))) {
                                 goto next;
                             }
                             pthreads_store_write(destination, &key, pzval);
@@ -959,7 +959,7 @@ void pthreads_store_reset(zval *object, HashPosition *position) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
-		zend_hash_internal_pointer_reset_ex(threaded->store, position);
+		zend_hash_internal_pointer_reset_ex(threaded->store.props, position);
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 }
@@ -968,7 +968,7 @@ void pthreads_store_key(zval *object, zval *key, HashPosition *position) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
-		zend_hash_get_current_key_zval_ex(threaded->store, key, position);
+		zend_hash_get_current_key_zval_ex(threaded->store.props, key, position);
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 }
@@ -978,7 +978,7 @@ void pthreads_store_data(zval *object, zval *value, HashPosition *position) {
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		pthreads_storage *storage = (pthreads_storage*) 
-			zend_hash_get_current_data_ptr_ex(threaded->store, position);
+			zend_hash_get_current_data_ptr_ex(threaded->store.props, position);
 
 		if (storage) {
 			pthreads_store_convert(storage, value);
@@ -993,7 +993,7 @@ void pthreads_store_forward(zval *object, HashPosition *position) {
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_hash_move_forward_ex(
-			threaded->store, position);
+			threaded->store.props, position);
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 } /* }}} */

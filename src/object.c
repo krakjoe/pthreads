@@ -170,6 +170,18 @@ zend_object* pthreads_threaded_ctor(zend_class_entry *entry) {
 } /* }}} */
 
 /* {{{ */
+zend_object* pthreads_socket_ctor(zend_class_entry *entry) {
+	pthreads_object_t* threaded = pthreads_globals_object_alloc(
+		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
+
+	threaded->scope = PTHREADS_SCOPE_SOCKET;
+	pthreads_base_ctor(threaded, entry);
+	threaded->std.handlers = &pthreads_socket_handlers;
+
+	return &threaded->std;
+} /* }}} */
+
+/* {{{ */
 int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *buflen, zend_serialize_data *data) {
 	pthreads_object_t *address = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 #ifdef _WIN64
@@ -229,27 +241,22 @@ void pthreads_current_thread(zval *return_value) {
 int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) {
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
-			pthreads_store_free(destination->store);	
-
-			if (PTHREADS_IS_WORKER(destination)) {
-				pthreads_stack_free(destination->stack);
+			if (!PTHREADS_IS_SOCKET(destination)) {
+				pthreads_store_free(destination->store.props);
+				if (PTHREADS_IS_WORKER(destination)) {
+					pthreads_stack_free(destination->stack);
+				}
+				free(destination->running);
+			} else {
+				pthreads_socket_free(destination->store.sock, 1);
 			}
 
 			pthreads_monitor_free(destination->monitor);
-			free(destination->running);
-
-			destination->scope |= PTHREADS_SCOPE_CONNECTION;
-			
-			return pthreads_connect(source, destination);
 		}
 
-		destination->thread = source->thread;
-		destination->local.id = source->local.id;
-		destination->local.ls = source->local.ls;
-		destination->monitor = source->monitor;
-		destination->store = source->store;
-		destination->stack = source->stack;
-		destination->running = source->running;
+		memcpy(destination, source, sizeof(pthreads_object_t) - sizeof(zend_object));
+
+		destination->scope |= PTHREADS_SCOPE_CONNECTION;
 
 		if (destination->std.properties)
 			zend_hash_clean(destination->std.properties);
@@ -299,14 +306,17 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();
-		base->store   = pthreads_store_alloc();
-		base->running = malloc(sizeof(pthreads_object_t**));
+		if (!PTHREADS_IS_SOCKET(base)) {
+			base->store.props   = pthreads_store_alloc();
+			base->running = malloc(sizeof(pthreads_object_t**));
 
-		if (PTHREADS_IS_WORKER(base)) {
-			base->stack = pthreads_stack_alloc(base->monitor);
+			if (PTHREADS_IS_WORKER(base)) {
+				base->stack = pthreads_stack_alloc(base->monitor);
+			}
+			pthreads_base_init(base);
+		} else {
+			base->store.sock = pthreads_socket_alloc();
 		}
-
-		pthreads_base_init(base);
 	}
 } /* }}} */
 
@@ -315,27 +325,29 @@ void pthreads_base_free(zend_object *object) {
 	pthreads_object_t* base = PTHREADS_FETCH_FROM(object);
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
-		if ((PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) &&
-			pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_STARTED) &&
-			!pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_JOINED)) {
-			pthreads_join(base);
-		}
-
-		if (pthreads_monitor_lock(base->monitor)) {
-			pthreads_store_free(base->store);
-
-			if (PTHREADS_IS_WORKER(base)) {
-				pthreads_stack_free(base->stack);	
+		if (!PTHREADS_IS_SOCKET(base)) {
+			if ((PTHREADS_IS_THREAD(base)||PTHREADS_IS_WORKER(base)) &&
+				pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_STARTED) &&
+				!pthreads_monitor_check(base->monitor, PTHREADS_MONITOR_JOINED)) {
+				pthreads_join(base);
 			}
 
-			pthreads_monitor_unlock(base->monitor);
+			if (pthreads_monitor_lock(base->monitor)) {
+				pthreads_store_free(base->store.props);
+				if (PTHREADS_IS_WORKER(base)) {
+					pthreads_stack_free(base->stack);	
+				}
+				pthreads_monitor_unlock(base->monitor);
+			}
+
+			if (base->running) {
+				free(base->running);
+			}
+		} else {
+			pthreads_socket_free(base->store.sock, 1);
 		}
 
 		pthreads_monitor_free(base->monitor);
-		
-		if (base->running) {
-			free(base->running);
-		}
 	}
 
 	zend_object_std_dtor(object);

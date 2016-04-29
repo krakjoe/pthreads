@@ -83,8 +83,10 @@ zend_class_entry *pthreads_thread_entry;
 zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_collectable_entry;
 zend_class_entry *pthreads_pool_entry;
+zend_class_entry *pthreads_socket_entry;
 
 zend_object_handlers pthreads_handlers;
+zend_object_handlers pthreads_socket_handlers;
 zend_object_handlers *zend_handlers;
 void ***pthreads_instance = NULL;
 
@@ -283,6 +285,54 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_threaded_entry->unserialize = pthreads_threaded_unserialize;
 	zend_class_implements(pthreads_threaded_entry, 2, zend_ce_traversable, pthreads_collectable_entry);
 
+	INIT_CLASS_ENTRY(ce, "Socket", pthreads_socket_methods);
+	pthreads_socket_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
+	pthreads_socket_entry->create_object = pthreads_socket_ctor;
+
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("AF_UNIX"), AF_UNIX);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("AF_INET"), AF_INET);
+#ifdef HAVE_IPV6
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("AF_INET6"), AF_INET6);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_STREAM"), SOCK_STREAM);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_DGRAM"), SOCK_DGRAM);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_RAW"), SOCK_RAW);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_SEQPACKET"), SOCK_SEQPACKET);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_RDM"), SOCK_RDM);
+
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_DEBUG"), SO_DEBUG);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_REUSEADDR"), SO_REUSEADDR);
+#ifdef SO_REUSEPORT
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_REUSEPORT"), SO_REUSEPORT);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_KEEPALIVE"), SO_KEEPALIVE);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_DONTROUTE"), SO_DONTROUTE);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_LINGER"), SO_LINGER);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_BROADCAST"), SO_BROADCAST);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_OOBINLINE"), SO_OOBINLINE);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDBUF"), SO_SNDBUF);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RECBUF"), SO_RCVBUF);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDLOWAT"), SO_SNDLOWAT);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RCVLOWAT"), SO_RCVLOWAT);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDTIMEO"), SO_SNDTIMEO);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RCVTIMEO"), SO_RCVTIMEO);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_TYPE"), SO_TYPE);
+#ifdef SO_FAMILY
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_FAMILY"), SO_FAMILY);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_ERROR"), SO_ERROR);
+#ifdef SO_BINDTODEVICE
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_BINDTODEVICE"), SO_BINDTODEVICE);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOMAXCONN"), SOMAXCONN);
+#ifdef TCP_NODELAY
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("TCP_NODELAY"), TCP_NODELAY);
+#endif
+
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOL_SOCKET"), SOL_SOCKET);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOL_TCP"), IPPROTO_TCP);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOL_UDP"), IPPROTO_UDP);
+	
 	INIT_CLASS_ENTRY(ce, "Volatile", NULL);
 	pthreads_volatile_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	
@@ -336,6 +386,21 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.clone_obj = pthreads_base_clone;
 	pthreads_handlers.compare_objects = pthreads_compare_objects;
 
+	memcpy(&pthreads_socket_handlers, &pthreads_handlers, sizeof(zend_object_handlers));
+
+	pthreads_socket_handlers.count_elements = pthreads_count_properties_disallow;
+
+	pthreads_socket_handlers.cast_object = zend_handlers->cast_object;
+	pthreads_socket_handlers.get_properties = pthreads_read_properties_disallow;
+	pthreads_socket_handlers.read_property = pthreads_read_property_disallow;
+	pthreads_socket_handlers.write_property = pthreads_write_property_disallow;
+	pthreads_socket_handlers.has_property = pthreads_has_property_disallow;
+	pthreads_socket_handlers.unset_property = pthreads_unset_property_disallow;
+	pthreads_socket_handlers.read_dimension = pthreads_read_dimension_disallow;
+	pthreads_socket_handlers.write_dimension = pthreads_write_dimension_disallow;
+	pthreads_socket_handlers.has_dimension = pthreads_has_dimension_disallow;
+	pthreads_socket_handlers.unset_dimension = pthreads_unset_dimension_disallow;
+	
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 
 	if (pthreads_globals_init()) {
@@ -440,6 +505,10 @@ PHP_MINFO_FUNCTION(pthreads)
 
 #ifndef HAVE_PTHREADS_CLASS_POOL
 #	include <classes/pool.h>
+#endif
+
+#ifndef HAVE_PTHREADS_CLASS_SOCKET
+#	include <classes/socket.h>
 #endif
 
 #endif
