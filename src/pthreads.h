@@ -38,6 +38,7 @@
 #include <php_globals.h>
 #include <php_main.h>
 #include <php_network.h>
+#include <netdb.h>
 #ifdef AF_UNIX
 #include <sys/un.h>
 #endif
