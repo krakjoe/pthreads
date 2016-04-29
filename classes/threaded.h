@@ -324,7 +324,7 @@ PHP_METHOD(Threaded, extend) {
         ce->ce_flags = ce->ce_flags &~ ZEND_ACC_FINAL;
 
 #if PHP_VERSION_ID >= 70100
-	parent = EG(scope);
+	parent = zend_get_executed_scope();
 #else
 	parent = EX(called_scope);
 #endif

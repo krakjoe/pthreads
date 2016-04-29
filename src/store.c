@@ -701,7 +701,11 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 			size_t name_len;
 			zend_function *closure = pthreads_copy_function((zend_function*) storage->data);
 
+#if PHP_VERSION_ID >= 70100
+			zend_create_closure(pzval, closure, zend_get_executed_scope(), closure->common.scope, NULL);
+#else
 			zend_create_closure(pzval, closure, EG(scope), closure->common.scope, NULL);
+#endif
 			name_len = spprintf(&name, 0, "Closure@%p", zend_get_closure_method_def(pzval));
 			if (!zend_hash_str_update_ptr(EG(function_table), name, name_len, closure)) {
 				result = FAILURE;
