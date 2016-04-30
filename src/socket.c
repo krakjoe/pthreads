@@ -274,7 +274,7 @@ void pthreads_socket_listen(zval *object, zend_long backlog, zval *return_value)
 	RETURN_TRUE;
 }
 
-void pthreads_socket_accept(zval *object, zval *return_value) {
+void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_value) {
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	pthreads_object_t *accepted;
@@ -284,7 +284,14 @@ void pthreads_socket_accept(zval *object, zval *return_value) {
 
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
-	object_init_ex(return_value, pthreads_socket_entry);
+	if (!instanceof_function(ce, pthreads_socket_entry)) {
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+			"%s is not an instance of Socket",
+			ZSTR_VAL(ce->name));
+		return;
+	}
+
+	object_init_ex(return_value, ce);
 
 	accepted = PTHREADS_FETCH_FROM(Z_OBJ_P(return_value));
 	accepted->store.sock->fd = 

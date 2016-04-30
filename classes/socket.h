@@ -78,6 +78,10 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_setBlocking, 0, 1, _IS_BOOL, NULL
 	ZEND_ARG_TYPE_INFO(0, blocking, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Socket_accept, 0, 0, 0)
+	ZEND_ARG_INFO(0, class)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(Socket_void, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -91,7 +95,7 @@ zend_function_entry pthreads_socket_methods[] = {
 	PHP_ME(Socket, getOption, Socket_getOption, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, bind, Socket_bind, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, listen, Socket_listen, ZEND_ACC_PUBLIC)
-	PHP_ME(Socket, accept, Socket_void, ZEND_ACC_PUBLIC)
+	PHP_ME(Socket, accept, Socket_accept, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, connect, Socket_connect, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, read, Socket_read, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, write, Socket_write, ZEND_ACC_PUBLIC)
@@ -164,13 +168,15 @@ PHP_METHOD(Socket, listen) {
 	pthreads_socket_listen(getThis(), backlog, return_value);
 } /* }}} */
 
-/* {{{ proto Socket Socket::accept(void) */
+/* {{{ proto Socket Socket::accept([string class = Socket::class]) */
 PHP_METHOD(Socket, accept) {
-	if (zend_parse_parameters_none() != SUCCESS) {
+	zend_class_entry *ce = pthreads_socket_entry;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|C", &ce) != SUCCESS) {
 		return;
 	}
 
-	pthreads_socket_accept(getThis(), return_value);
+	pthreads_socket_accept(getThis(), ce, return_value);
 } /* }}} */
 
 /* {{{ proto bool Socket::connect(string host, int port) */
