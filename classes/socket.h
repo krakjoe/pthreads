@@ -168,9 +168,9 @@ PHP_METHOD(Socket, listen) {
 	pthreads_socket_listen(getThis(), backlog, return_value);
 } /* }}} */
 
-/* {{{ proto Socket Socket::accept([string class = Socket::class]) */
+/* {{{ proto Socket Socket::accept([string class = self::class]) */
 PHP_METHOD(Socket, accept) {
-	zend_class_entry *ce = pthreads_socket_entry;
+	zend_class_entry *ce = zend_get_called_scope(execute_data);
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|C", &ce) != SUCCESS) {
 		return;
