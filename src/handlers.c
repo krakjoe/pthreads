@@ -36,8 +36,9 @@
 #define IN_ISSET    (1<<3)
 
 #if PHP_VERSION_ID >= 70100
-#define pthreads_get_guard(o, m) zend_get_property_guard(o, Z_STR_P(m))
 typedef uint32_t zend_guard;
+#define pthreads_get_guard(o, m) \
+	((Z_TYPE_P(m) == IS_STRING) ? zend_get_property_guard(o, Z_STR_P(m)) : NULL)
 /* }}} */
 #else
 typedef zend_long zend_guard;
