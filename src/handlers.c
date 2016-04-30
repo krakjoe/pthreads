@@ -35,14 +35,20 @@
 #define IN_UNSET    (1<<2)
 #define IN_ISSET    (1<<3)
 
+#if PHP_VERSION_ID >= 70100
+#define pthreads_get_guard(o, m) zend_get_property_guard(o, Z_STR_P(m))
+typedef uint32_t zend_guard;
+/* }}} */
+#else
+typedef zend_long zend_guard;
 static inline void pthreads_guard_dtor(zval *el) {
 	efree(Z_PTR_P(el));
 }
 
-static inline zend_long *pthreads_get_guard(zend_object *zobj, zval *member) /* {{{ */
+static inline zend_guard *pthreads_get_guard(zend_object *zobj, zval *member) /* {{{ */
 {
     HashTable *guards;
-    zend_long stub, *guard;
+    zend_guard stub, *guard;
     zval tmp;
 
     ZEND_ASSERT(GC_FLAGS(zobj) & IS_OBJ_USE_GUARDS);
@@ -73,6 +79,7 @@ static inline zend_long *pthreads_get_guard(zend_object *zobj, zval *member) /* 
 	} else return (zend_long *)zend_hash_add_mem(guards, Z_STR_P(member), &stub, sizeof(zend_ulong));
 }
 /* }}} */
+#endif
 
 /* {{{ */
 int pthreads_count_properties(PTHREADS_COUNT_PASSTHRU_D) {
@@ -132,7 +139,7 @@ HashTable* pthreads_read_properties_disallow(PTHREADS_READ_PROPERTIES_PASSTHRU_D
 
 /* {{{ */
 zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
-	zend_long *guard = NULL;
+	zend_guard *guard = NULL;
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	rebuild_object_properties(&threaded->std);
@@ -196,7 +203,7 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 		case IS_RESOURCE:
 		case IS_TRUE:
 		case IS_FALSE: {
-			zend_long *guard = NULL;
+			zend_guard *guard = NULL;
 			if ((member && Z_TYPE_P(member) != IS_NULL) && 
 				Z_OBJCE_P(object)->__set && 
 				(guard = pthreads_get_guard(&threaded->std, member)) && !((*guard) & IN_SET)) {
@@ -254,7 +261,7 @@ void pthreads_write_dimension_disallow(PTHREADS_WRITE_DIMENSION_PASSTHRU_D) { pt
 /* {{{ */
 int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 	int isset = 0;
-	zend_long *guard = NULL;
+	zend_guard *guard = NULL;
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	cache = NULL;
@@ -309,7 +316,7 @@ int pthreads_has_dimension_disallow(PTHREADS_HAS_DIMENSION_PASSTHRU_D) { return 
 
 /* {{{ */
 void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
-	zend_long *guard = NULL;
+	zend_guard *guard = NULL;
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	cache = NULL;
