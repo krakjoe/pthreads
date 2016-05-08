@@ -38,9 +38,13 @@ void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zv
 void pthreads_socket_listen(zval *object, zend_long backlog, zval *return_value);
 void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_value);
 void pthreads_socket_connect(zval *object, zend_string *address, zend_long port, zval *return_value);
-void pthreads_socket_read(zval *object, zend_long length, zval *return_value);
+void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zval *return_value);
 void pthreads_socket_write(zval *object, zend_string *buf, zend_long length, zval *return_value);
+void pthreads_socket_send(zval *object, zend_string *buf, zend_long length, zend_long flags, zval *return_value);
 void pthreads_socket_close(zval *object, zval *return_value);
 void pthreads_socket_set_blocking(zval *object, zend_bool blocking, zval *return_value);
+void pthreads_socket_get_peer_name(zval *object, zend_bool port, zval *return_value);
+void pthreads_socket_get_sock_name(zval *object, zend_bool port, zval *return_value);
+void pthreads_socket_select(zval *read, zval *write, zval *except, uint32_t sec, uint32_t usec, zval *return_value);
 void pthreads_socket_free(pthreads_socket_t *socket, zend_bool closing);
 #endif

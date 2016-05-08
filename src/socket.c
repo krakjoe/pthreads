@@ -40,7 +40,7 @@
 		php_socket_strerror(eno, NULL, 0) : \
 		NULL; \
 	zend_throw_exception_ex(spl_ce_RuntimeException, eno, \
-		"socket error (%d): %s", eno, estr ? estr : "unknown"); \
+		"Error (%d): %s", eno, estr ? estr : "unknown"); \
 	if (eno != SUCCESS) { \
 		if (estr) { \
 			efree(estr); \
@@ -64,7 +64,10 @@ void pthreads_socket_construct(zval *object, zend_long domain, zend_long type, z
 		threaded->store.sock->domain = domain;
 		threaded->store.sock->type = type;
 		threaded->store.sock->protocol = protocol;
+		return;
 	}
+
+	PTHREADS_SOCKET_ERROR();
 }
 
 void pthreads_socket_set_option(zval *object, zend_long level, zend_long name, zend_long value, zval *return_value) {
@@ -234,7 +237,7 @@ void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zv
 			RETURN_TRUE;
 		} break;
 
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
 		case AF_INET6: {
 			struct sockaddr_in6 *sa = (struct sockaddr_in6 *) sock_type;
 			socklen_t			  sock_len;
@@ -309,7 +312,7 @@ void pthreads_socket_connect(zval *object, zend_string *address, zend_long port,
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
 	switch (threaded->store.sock->domain) {
-#ifdef HAVE_IPV6
+#if HAVE_IPV6
 		case AF_INET6: {
 			struct sockaddr_in6 sin6 = {0};
 
@@ -368,7 +371,7 @@ void pthreads_socket_connect(zval *object, zend_string *address, zend_long port,
 	}
 }
 
-void pthreads_socket_read(zval *object, zend_long length, zval *return_value) {
+void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zval *return_value) {
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_string *buf;
@@ -377,7 +380,7 @@ void pthreads_socket_read(zval *object, zend_long length, zval *return_value) {
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
 	buf = zend_string_alloc(length, 0);
-	bytes = recv(threaded->store.sock->fd, ZSTR_VAL(buf), length, 0);
+	bytes = recv(threaded->store.sock->fd, ZSTR_VAL(buf), length, flags);
 
 	if (bytes == -1) {
 		if (errno != EAGAIN
@@ -428,6 +431,22 @@ void pthreads_socket_write(zval *object, zend_string *buf, zend_long length, zva
 	ZVAL_LONG(return_value, bytes);
 }
 
+void pthreads_socket_send(zval *object, zend_string *buf, zend_long length, zend_long flags, zval *return_value) {
+	pthreads_object_t *threaded =
+		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	int bytes;
+
+	PTHREADS_SOCKET_CHECK(threaded->store.sock);
+
+	bytes = send(threaded->store.sock->fd, ZSTR_VAL(buf), (ZSTR_LEN(buf) < length ? ZSTR_LEN(buf) : length), flags);
+
+	if (bytes == -1) {
+		PTHREADS_SOCKET_ERROR();
+	}
+
+	ZVAL_LONG(return_value, bytes);
+}
+
 void pthreads_socket_close(zval *object, zval *return_value) {
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
@@ -453,6 +472,212 @@ void pthreads_socket_set_blocking(zval *object, zend_bool blocking, zval *return
 
 	threaded->store.sock->blocking = blocking;
 	RETURN_TRUE;
+}
+
+void pthreads_socket_get_sockaddr(zval *object, zend_long port, struct sockaddr *sa, zval *return_value) {
+	array_init(return_value);
+
+	switch (sa->sa_family) {
+#if HAVE_IPV6
+		case AF_INET6: {
+			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) sa;
+			char                 addr6[INET6_ADDRSTRLEN+1];
+
+			inet_ntop(AF_INET6, &sin6->sin6_addr, addr6, INET6_ADDRSTRLEN);
+
+			add_assoc_string(return_value, "host", addr6);
+			if (port) {
+				add_assoc_long(return_value, "port", htons(sin6->sin6_port));
+			}
+		} break;
+#endif
+		case AF_INET: {
+			struct sockaddr_in  *sin = (struct sockaddr_in *) sa;
+
+			add_assoc_string(return_value, "host", inet_ntoa(sin->sin_addr));
+			if (port) {
+				add_assoc_long(return_value, "port", htons(sin->sin_port));
+			}
+		} break;
+
+		case AF_UNIX: {
+			struct sockaddr_un  *s_un = (struct sockaddr_un *) sa;
+
+			add_assoc_string(return_value, "host", s_un->sun_path);
+		} break;
+	}
+}
+
+void pthreads_socket_get_peer_name(zval *object, zend_bool port, zval *return_value) {
+	pthreads_object_t *threaded =
+		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	php_sockaddr_storage  sa_storage;
+    struct sockaddr     *sa = (struct sockaddr *) &sa_storage;
+	socklen_t            salen = sizeof(php_sockaddr_storage);
+
+	PTHREADS_SOCKET_CHECK(threaded->store.sock);
+
+	if (getpeername(threaded->store.sock->fd, sa, &salen) < 0) {
+		PTHREADS_SOCKET_ERROR();
+	}
+
+	pthreads_socket_get_sockaddr(object, port, sa, return_value);
+}
+
+void pthreads_socket_get_sock_name(zval *object, zend_bool port, zval *return_value) {
+	pthreads_object_t *threaded =
+		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	php_sockaddr_storage  sa_storage;
+    struct sockaddr     *sa = (struct sockaddr *) &sa_storage;
+	socklen_t            salen = sizeof(php_sockaddr_storage);
+
+	PTHREADS_SOCKET_CHECK(threaded->store.sock);
+
+	if (getsockname(threaded->store.sock->fd, sa, &salen) < 0) {
+		PTHREADS_SOCKET_ERROR();
+	}
+
+	pthreads_socket_get_sockaddr(object, port, sa, return_value);
+}
+
+static inline int pthreads_sockets_to_fd_set(zval *sockets, fd_set *fds, php_socket_t *max_fd) /* {{{ */
+{
+	zval		*element;
+	int			num = 0;
+
+	if (Z_TYPE_P(sockets) != IS_ARRAY) {
+		return 0;
+	}
+
+	ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(sockets), element) {
+		pthreads_object_t *threaded;
+
+		if (Z_TYPE_P(element) != IS_OBJECT ||
+			!instanceof_function(Z_OBJCE_P(element), pthreads_socket_entry)) {
+			continue;
+		}
+
+		threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(element));
+
+		PTHREADS_SOCKET_CHECK(threaded->store.sock);
+
+		PHP_SAFE_FD_SET(threaded->store.sock->fd, fds);
+
+		if (threaded->store.sock->fd > *max_fd) {
+			*max_fd = threaded->store.sock->fd;
+		}
+		num++;
+	} ZEND_HASH_FOREACH_END();
+
+	return num ? 1 : 0;
+}
+/* }}} */
+
+static int pthreads_sockets_from_fd_set(zval *sockets, fd_set *fds) /* {{{ */
+{
+	zval		*element;
+	zval		set;
+	int			num = 0;
+	zend_ulong  idx;
+	zend_string *key;
+
+	if (Z_TYPE_P(sockets) != IS_ARRAY) {
+		return 0;
+	}
+
+	array_init(&set);
+	ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(sockets), idx, key, element) {
+		pthreads_object_t	*threaded;
+
+		if (Z_TYPE_P(element) != IS_OBJECT || 
+			!instanceof_function(Z_OBJCE_P(element), pthreads_socket_entry)) {
+			continue;
+		}
+
+		threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(element));
+
+		if (PHP_SAFE_FD_ISSET(threaded->store.sock->fd, fds)) {
+			if (key) {
+				if (!add_assoc_str_zval(&set, key, element)) {
+					continue;
+				}
+			} else {
+				if (!add_index_zval(&set, idx, element)) {
+					continue;
+				}
+			}
+
+			Z_ADDREF_P(element);
+		}
+
+		num++;
+	} ZEND_HASH_FOREACH_END();
+
+	zval_ptr_dtor(sockets);
+
+	ZVAL_COPY_VALUE(sockets, &set);
+
+	return num ? 1 : 0;
+}
+/* }}} */
+
+void pthreads_socket_select(zval *read, zval *write, zval *except, uint32_t sec, uint32_t usec, zval *return_value) {
+	fd_set rfds, wfds, efds;
+	php_socket_t mfd = 0;
+	int result = SUCCESS, sets = 0;
+	struct timeval  tv;
+
+	FD_ZERO(&rfds);
+	FD_ZERO(&wfds);
+	FD_ZERO(&efds);
+
+	if (read && Z_TYPE_P(read) == IS_ARRAY) {
+		sets += pthreads_sockets_to_fd_set(read, &rfds, &mfd);
+	}
+
+	if (write && Z_TYPE_P(write) == IS_ARRAY) {
+		sets += pthreads_sockets_to_fd_set(write, &wfds, &mfd);
+	}
+
+	if (except && Z_TYPE_P(except) == IS_ARRAY) {
+		sets += pthreads_sockets_to_fd_set(except, &efds, &mfd);
+	}
+
+	if (!sets) {
+		return;
+	}
+
+	PHP_SAFE_MAX_FD(mfd, 0);
+	
+	if (sec || usec) {
+		if (usec > 999999) {
+			tv.tv_sec = sec + (usec / 1000000);
+			tv.tv_usec = usec % 1000000;
+		} else {
+			tv.tv_sec = sec;
+			tv.tv_usec = usec;
+		}
+	}
+
+	result = select(mfd + 1, &rfds, &wfds, &efds, sec || usec ? &tv : NULL);
+
+	if (result == -1) {
+		PTHREADS_SOCKET_ERROR();
+	}
+
+	if (read) {
+		pthreads_sockets_from_fd_set(read, &rfds);
+	}
+
+	if (write) {
+		pthreads_sockets_from_fd_set(write, &wfds);
+	}
+
+	if (except) {
+		pthreads_sockets_from_fd_set(except, &efds);
+	}
+
+	ZVAL_LONG(return_value, result);
 }
 
 void pthreads_socket_free(pthreads_socket_t *socket, zend_bool closing) {

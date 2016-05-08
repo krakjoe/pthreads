@@ -39,6 +39,8 @@
 #include <php_main.h>
 #include <php_network.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #ifdef AF_UNIX
 #include <sys/un.h>
 #endif
