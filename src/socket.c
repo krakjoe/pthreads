@@ -34,6 +34,14 @@
 	} \
 } while(0)
 
+#define PTHREADS_SOCKET_CHECK_EX(sock, retval) do { \
+	if ((sock)->fd < 0) { \
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0, \
+			"socket found in invalid state"); \
+		return (retval); \
+	} \
+} while(0)
+
 #define PTHREADS_SOCKET_ERROR() do { \
 	int eno = php_socket_errno(); \
 	char *estr = eno != SUCCESS ? \
@@ -559,7 +567,7 @@ static inline int pthreads_sockets_to_fd_set(zval *sockets, fd_set *fds, php_soc
 
 		threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(element));
 
-		PTHREADS_SOCKET_CHECK(threaded->store.sock);
+		PTHREADS_SOCKET_CHECK_EX(threaded->store.sock, 0);
 
 		PHP_SAFE_FD_SET(threaded->store.sock->fd, fds);
 
