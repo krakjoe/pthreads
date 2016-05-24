@@ -701,6 +701,17 @@ void pthreads_prepare_parent(pthreads_object_t *thread) {
 		pthreads_rebuild_object(&EG(user_exception_handler));
 } /* }}} */
 
+#if PHP_VERSION_ID >= 70100
+/*
+ It doesn't seem right that I should have to do this ... think bug in php-src
+*/
+/* {{{ */
+int pthreads_prepare_compiler(pthreads_object_t *thread) {
+	CG(known_strings) = PTHREADS_CG(thread->creator.ls, known_strings);
+	CG(known_strings_count) = PTHREADS_CG(thread->creator.ls, known_strings_count);
+} /* }}} */
+#endif
+
 /* {{{ */
 int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready) {
 
@@ -716,6 +727,11 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 		PG(auto_globals_jit) = 0;
 
 		php_request_startup();
+
+#if PHP_VERSION_ID >= 70100
+		pthreads_prepare_compiler(thread);
+#endif
+
 		pthreads_prepare_sapi(thread);
 	
 		if (thread->options & PTHREADS_INHERIT_INI)
@@ -752,7 +768,7 @@ static inline int pthreads_resources_cleanup(zval *bucket) {
 /* {{{ */
 int pthreads_prepared_shutdown(pthreads_object_t* thread) {
 	PTHREADS_PREPARATION_BEGIN_CRITICAL() {
-		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);		
+		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);
 
 		PG(report_memleaks) = 0;
 
