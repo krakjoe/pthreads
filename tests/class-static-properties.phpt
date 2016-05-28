@@ -22,6 +22,7 @@ class Test extends Threaded {
    public static $prop6;
    public static $prop7;
    public static $prop8;
+   public static $prop9;
 }
 
 Test::$prop4 = new Threaded;
@@ -32,6 +33,11 @@ Test::$prop6 = function() { /* will be copied with voodoo */
 
 Test::$prop7 = fopen("php://stdin", "r");
 Test::$prop8 = [fopen("php://stdin", "r")];
+Test::$prop9 = [new Threaded, new stdClass, [
+	new Threaded, new stdClass, [
+		new Threaded, new stdClass
+	]
+]];
 
 $test = new class extends Thread {
 	public function run() {
@@ -42,7 +48,8 @@ $test = new class extends Thread {
 				 Test::$prop5,
 				 Test::$prop6, (Test::$prop6)(),
 				 Test::$prop7,
-				 Test::$prop8);
+				 Test::$prop8,
+				 Test::$prop9);
 	}
 }; 
 
@@ -92,5 +99,22 @@ array(3) {
 }
 NULL
 array(0) {
+}
+array(2) {
+  [0]=>
+  object(Threaded)#3 (0) {
+  }
+  [2]=>
+  array(2) {
+    [0]=>
+    object(Threaded)#4 (0) {
+    }
+    [2]=>
+    array(1) {
+      [0]=>
+      object(Threaded)#5 (0) {
+      }
+    }
+  }
 }
 
