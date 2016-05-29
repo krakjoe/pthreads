@@ -192,9 +192,9 @@ int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *bu
 	(*buffer) = emalloc((*buflen) + 1);
 	sprintf(
 #ifdef _WIN64
-		(*buffer), ":%I64u:", (unsigned __int64) address);
+		(char*) (*buffer), ":%I64u:", (unsigned __int64) address);
 #else
-		(*buffer), ":%lu:", (long unsigned int) address);
+		(char*) (*buffer), ":%lu:", (long unsigned int) address);
 #endif
 	(*buffer)[(*buflen)] = 0;
 

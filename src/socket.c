@@ -248,7 +248,6 @@ void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zv
 #if HAVE_IPV6
 		case AF_INET6: {
 			struct sockaddr_in6 *sa = (struct sockaddr_in6 *) sock_type;
-			socklen_t			  sock_len;
 
 			sa->sin6_family = AF_INET6;
 			sa->sin6_port = htons((unsigned short) port);
@@ -606,7 +605,7 @@ static int pthreads_sockets_from_fd_set(zval *sockets, fd_set *fds) /* {{{ */
 
 		if (PHP_SAFE_FD_ISSET(threaded->store.sock->fd, fds)) {
 			if (key) {
-				if (!add_assoc_str_zval(&set, key, element)) {
+				if (!add_assoc_zval_ex(&set, ZSTR_VAL(key), ZSTR_LEN(key), element)) {
 					continue;
 				}
 			} else {

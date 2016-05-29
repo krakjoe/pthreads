@@ -642,7 +642,7 @@ static inline void pthreads_prepare_includes(pthreads_object_t* thread) {
 static inline void pthreads_prepare_exception_handler(pthreads_object_t* thread) {
 	zval *handler = &PTHREADS_EG(thread->creator.ls, user_exception_handler);
 
-	if (thread->options & PTHREADS_INHERIT_CLASSES|PTHREADS_INHERIT_FUNCTIONS) {
+	if (thread->options & (PTHREADS_INHERIT_CLASSES|PTHREADS_INHERIT_FUNCTIONS)) {
 		if (Z_TYPE_P(handler) != IS_UNDEF) {
 			if (Z_TYPE_P(handler) == IS_ARRAY) {
 				if (zend_hash_num_elements(Z_ARRVAL_P(handler)) > 1) {
@@ -699,7 +699,7 @@ void pthreads_prepare_parent(pthreads_object_t *thread) {
  It doesn't seem right that I should have to do this ... think bug in php-src
 */
 /* {{{ */
-int pthreads_prepare_compiler(pthreads_object_t *thread) {
+void pthreads_prepare_compiler(pthreads_object_t *thread) {
 	CG(known_strings) = PTHREADS_CG(thread->creator.ls, known_strings);
 	CG(known_strings_count) = PTHREADS_CG(thread->creator.ls, known_strings_count);
 } /* }}} */

@@ -676,8 +676,8 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 
 			if (stored->ls != TSRMLS_CACHE) {
 				zval *search = NULL;
-				zend_ulong index;
-				zend_string *name;
+				zend_ulong index = 0;
+				zend_string *name = NULL;
 				zend_resource *resource, *found = NULL;
 
 				ZEND_HASH_FOREACH_KEY_VAL(&EG(regular_list), index, name, search) {

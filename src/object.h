@@ -37,7 +37,7 @@ HashTable*   pthreads_base_gc(zval *object, zval **table, int *n); /* }}} */
 
 /* {{{ */
 int pthreads_threaded_unserialize(zval *object, zend_class_entry *ce, const unsigned char *buffer, size_t buflen, zend_unserialize_data *data);
-int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *buflen, zend_serialize_data *data); /* }}} 
+int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *buflen, zend_serialize_data *data); /* }}} */
 
 /* {{{ */
 void pthreads_current_thread(zval *return_value); /* }}} */

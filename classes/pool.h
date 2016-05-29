@@ -138,7 +138,6 @@ PHP_METHOD(Pool, submit) {
 	zval worker;
 	zval *clazz = NULL;
 	zval *ctor = NULL;
-	zval *working = NULL;
 	zval *selected = NULL;
 	
 	zend_class_entry *ce = NULL;
@@ -187,7 +186,7 @@ PHP_METHOD(Pool, submit) {
 		
 		{
 #if PHP_VERSION_ID >= 70100
-			zend_class_entry *scope = EG(fake_scope);
+			zend_class_entry *scope = zend_get_executed_scope();
 #else
 			zend_class_entry *scope = EG(scope);
 #endif

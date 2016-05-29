@@ -44,6 +44,12 @@
 #ifdef AF_UNIX
 #include <sys/un.h>
 #endif
+#ifndef _WIN32
+#	ifdef HAVE_IF_NAMETOINDEX
+#		include <net/if.h>
+#	endif
+#endif
+
 #include <php_ticks.h>
 #include <ext/standard/info.h>
 #include <ext/standard/basic_functions.h>
@@ -100,7 +106,7 @@ extern zend_class_entry *pthreads_socket_entry;
 
 #ifndef IS_PTHREADS_CLOSURE
 #define IS_PTHREADS_CLOSURE(z) \
-	Z_TYPE_P(z) == IS_OBJECT && instanceof_function(Z_OBJCE_P(z), zend_ce_closure)
+	(Z_TYPE_P(z) == IS_OBJECT && instanceof_function(Z_OBJCE_P(z), zend_ce_closure))
 #endif
 
 extern zend_object_handlers pthreads_handlers;

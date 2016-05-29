@@ -189,7 +189,6 @@ zval* pthreads_read_dimension_disallow(PTHREADS_READ_DIMENSION_PASSTHRU_D) { ret
 /* {{{ */
 void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	zend_bool nulled = 0;
 
 	rebuild_object_properties(&threaded->std);
 

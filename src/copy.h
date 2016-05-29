@@ -308,10 +308,5 @@ static zend_function* pthreads_copy_function(zend_function *function) {
 
 	return zend_hash_index_update_ptr(&PTHREADS_ZG(resolve), (zend_ulong) function, copy);
 } /* }}} */
-
-/* {{{ */
-static void pthreads_copy_function_ctor(zval *bucket) {
-	Z_PTR_P(bucket) = pthreads_copy_function(Z_PTR_P(bucket));
-} /* }}} */
 #endif
 
