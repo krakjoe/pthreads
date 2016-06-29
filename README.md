@@ -83,8 +83,9 @@ Releases for Windows can be found: http://windows.php.net/downloads/pecl/release
 
 ##### Simple Windows Installation
 
-* Add `pthreadVC2.dll` (included with the Windows releases) to the same directory as `php.exe` eg. `C:\xampp\php`
+* Add `pthreadVC2.dll` (included with the Windows releases) to the bin directory into the Apache folder, e.g. the same directory as `httpd.exe` eg. `C:\xampp\apache\bin`
 * Add `php_pthreads.dll` to PHP extention folder eg. `C:\xampp\php\ext`
+* Add `extension=php_pthreads.dll` in a new row in your `php.ini` config file eg. `C:\xampp\php\php.ini`
 
 ### Mac OSX Support
 
