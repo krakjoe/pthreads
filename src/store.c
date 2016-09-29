@@ -758,6 +758,8 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 		case IS_ARRAY: {
 			HashTable *tmp = zend_array_dup(Z_ARRVAL_P(pzval));
 			
+			zval_ptr_dtor(pzval);
+
 			ZVAL_ARR(pzval, tmp);
 
 			zend_hash_apply(tmp, pthreads_store_remove_complex);
@@ -766,6 +768,7 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 		case IS_OBJECT:
 			if (instanceof_function(Z_OBJCE_P(pzval), pthreads_threaded_entry))
 				break;
+
 		case IS_RESOURCE:
 			return ZEND_HASH_APPLY_REMOVE; 
 	}
