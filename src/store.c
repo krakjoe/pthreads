@@ -760,9 +760,9 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 
 			zend_hash_apply(tmp, pthreads_store_remove_complex);
 
-			zval_ptr_dtor(pzval);
+			zval_dtor(pzval);
 
-			Z_ARRVAL_P(pzval) = tmp;
+			ZVAL_ARR(pzval, tmp);
 		} break;
 
 		case IS_OBJECT:
