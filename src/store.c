@@ -762,7 +762,7 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 
 			zval_ptr_dtor(pzval);
 
-			ZVAL_ARR(pzval, tmp);
+			Z_ARRVAL_P(pzval) = tmp;
 		} break;
 
 		case IS_OBJECT:
