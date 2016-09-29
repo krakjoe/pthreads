@@ -760,7 +760,9 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 
 			zend_hash_apply(tmp, pthreads_store_remove_complex);
 
-			zval_dtor(pzval);
+			if (GC_REFCOUNT(Z_COUNTED_P(pzval)) > 1) {
+				zval_ptr_dtor(pzval);
+			}
 
 			ZVAL_ARR(pzval, tmp);
 		} break;
