@@ -197,7 +197,7 @@ zend_bool pthreads_store_isset(zval *object, zval *key, int has_set_exists) {
 				break;
 		
 				case IS_ARRAY:
-					if (storage->length == 0)
+					if (storage->exists == 0)
 					isset = 0;
 				break;
 		
