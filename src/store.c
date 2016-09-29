@@ -757,12 +757,12 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 	switch (Z_TYPE_P(pzval)) {
 		case IS_ARRAY: {
 			HashTable *tmp = zend_array_dup(Z_ARRVAL_P(pzval));
-			
+
+			zend_hash_apply(tmp, pthreads_store_remove_complex);
+
 			zval_ptr_dtor(pzval);
 
 			ZVAL_ARR(pzval, tmp);
-
-			zend_hash_apply(tmp, pthreads_store_remove_complex);
 		} break;
 
 		case IS_OBJECT:
