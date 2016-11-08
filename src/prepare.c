@@ -585,11 +585,8 @@ static inline void pthreads_prepare_closures(pthreads_object_t *thread) {
 
 /* {{{ */
 static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
-	zend_class_entry *entry, *prepared;
+	zend_class_entry *entry;
 	zend_string *name;
-	HashTable inherited;
-
-	zend_hash_init(&inherited, zend_hash_num_elements(PTHREADS_CG(thread->creator.ls, class_table)), NULL, NULL, 0);
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, class_table), name, entry) {
 		if (entry->type == ZEND_USER_CLASS) {
@@ -608,24 +605,9 @@ static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 
 			zend_string_release(lookup);
 
-			if (!(prepared = pthreads_prepared_entry(thread, entry))) {
-				continue;
-			}
-
-			zend_hash_next_index_insert_ptr(&inherited, prepared);			
+			pthreads_prepared_entry(thread, entry);
 		}
-	} ZEND_HASH_FOREACH_END();		
-
-	ZEND_HASH_FOREACH_PTR(&inherited, entry) {
-		if (entry->parent) {
-			prepared = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) entry->parent);
-			if (prepared) {
-				entry->parent = prepared;
-			}
-		}
-	} ZEND_HASH_FOREACH_END();
-
-	zend_hash_destroy(&inherited);  
+	} ZEND_HASH_FOREACH_END(); 
 } /* }}} */
 
 /* {{{ */
