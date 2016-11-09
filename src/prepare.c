@@ -741,46 +741,46 @@ int pthreads_prepared_shutdown(pthreads_object_t* thread) {
 /* {{{ */
 static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_t* thread, zend_trait_alias *alias) {
 	zend_trait_alias *copy = ecalloc(1, sizeof(zend_trait_alias));
-	if (copy) {
-		if (copy->trait_method) {
-			copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, alias->trait_method);
-		}
-		
-		if (copy->alias) {
-			copy->alias = zend_string_new(alias->alias);
-		}
 
-		copy->modifiers = alias->modifiers;
+	if (copy->trait_method) {
+		copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, alias->trait_method);
 	}
+	
+	if (copy->alias) {
+		copy->alias = zend_string_new(alias->alias);
+	}
+
+	copy->modifiers = alias->modifiers;
+
 	return copy;
 } /* }}} */
 
 /* {{{ */
 static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(pthreads_object_t* thread, zend_trait_precedence *precedence) {
 	zend_trait_precedence *copy = ecalloc(1, sizeof(zend_trait_precedence));
-	if (copy) {
-		copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, precedence->trait_method);
-		if (precedence->exclude_from_classes) {
-			copy->exclude_from_classes = emalloc(sizeof(*copy->exclude_from_classes));
-			copy->exclude_from_classes->ce = pthreads_prepared_entry(
-				thread, precedence->exclude_from_classes->ce
-			);
-			copy->exclude_from_classes->class_name = zend_string_new(precedence->exclude_from_classes->class_name);
-		}
+
+	copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, precedence->trait_method);
+	if (precedence->exclude_from_classes) {
+		copy->exclude_from_classes = emalloc(sizeof(*copy->exclude_from_classes));
+		copy->exclude_from_classes->ce = pthreads_prepared_entry(
+			thread, precedence->exclude_from_classes->ce
+		);
+		copy->exclude_from_classes->class_name = zend_string_new(precedence->exclude_from_classes->class_name);
 	}
+
 	return copy;
 } /* }}} */
 
 /* {{{  */
 static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference) {
 	zend_trait_method_reference *copy = ecalloc(1, sizeof(zend_trait_method_reference));
-	if (copy) {
-		copy->method_name = zend_string_new(reference->method_name);
-		if (reference->class_name) {
-			copy->class_name = zend_string_new(reference->class_name);
-		}
-		copy->ce = pthreads_prepared_entry(thread, (zend_class_entry*) reference->ce);
+
+	copy->method_name = zend_string_new(reference->method_name);
+	if (reference->class_name) {
+		copy->class_name = zend_string_new(reference->class_name);
 	}
+	copy->ce = pthreads_prepared_entry(thread, (zend_class_entry*) reference->ce);
+
 	return copy;
 } /* }}} */
 
