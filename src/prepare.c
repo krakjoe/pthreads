@@ -69,11 +69,9 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 	prepared->refcount = 1;
 
 	if (candidate->parent) {
-		if (candidate->parent->type == ZEND_USER_CLASS) {
-			if (zend_hash_index_exists(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent)) {
-				prepared->parent = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent);
-			} else prepared->parent = pthreads_prepared_entry(thread, candidate->parent);
-		} else prepared->parent = zend_lookup_class(candidate->parent->name);
+		if (zend_hash_index_exists(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent)) {
+			prepared->parent = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent);
+		} else prepared->parent = pthreads_prepared_entry(thread, candidate->parent);
 	}
 
 	if (candidate->num_interfaces) {
@@ -392,6 +390,10 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 		return NULL;
 	}
 
+	if (candidate->type == ZEND_INTERNAL_CLASS) {
+		return zend_lookup_class(candidate->name);
+	}
+
 	lookup = zend_string_tolower(candidate->name);
 
 	if ((prepared = zend_hash_find_ptr(EG(class_table), lookup))) {
@@ -585,11 +587,7 @@ static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 	zend_string *name;
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, class_table), name, entry) {
-		if (entry->type == ZEND_USER_CLASS) {
-			if (zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name)) {
-				continue;
-			}
-
+		if (!zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name)) {
 			pthreads_prepared_entry(thread, entry);
 		}
 	} ZEND_HASH_FOREACH_END(); 
