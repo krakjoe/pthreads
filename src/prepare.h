@@ -32,5 +32,5 @@ void pthreads_prepare_parent(pthreads_object_t *thread); /* }}} */
 int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready); /* }}} */
 
 /* {{{ */
-int pthreads_prepared_shutdown(pthreads_object_t* thread); /* }}} */
+int pthreads_prepared_shutdown(void); /* }}} */
 #endif

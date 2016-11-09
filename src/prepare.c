@@ -724,7 +724,7 @@ static inline int pthreads_resources_cleanup(zval *bucket) {
 } /* }}} */
 
 /* {{{ */
-int pthreads_prepared_shutdown(pthreads_object_t* thread) {
+int pthreads_prepared_shutdown(void) {
 	PTHREADS_PREPARATION_BEGIN_CRITICAL() {
 		zend_hash_apply(&EG(regular_list), pthreads_resources_cleanup);
 

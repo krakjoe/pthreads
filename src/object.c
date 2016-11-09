@@ -519,7 +519,7 @@ static void * pthreads_routine(pthreads_routine_arg_t *routine) {
 		} zend_end_try();	
 	}
 
-	pthreads_prepared_shutdown(thread);
+	pthreads_prepared_shutdown();
 
 	pthread_exit(NULL);
 
