@@ -787,12 +787,9 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 /* {{{ */
 static void pthreads_prepared_resource_dtor(zval *zv) {
 	zend_try {
-		if (!pthreads_resources_kept(Z_RES_P(zv))){
-			if (PTHREADS_G(default_resource_dtor))
-				PTHREADS_G(default_resource_dtor)(zv);
-		} else if (PTHREADS_ZG(resources)) {
-                
-                }
+		if (!pthreads_resources_kept(Z_RES_P(zv)) && PTHREADS_G(default_resource_dtor)){
+			PTHREADS_G(default_resource_dtor)(zv);
+		}
 	} zend_end_try();
 } /* }}} */
 #endif
