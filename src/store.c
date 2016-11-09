@@ -393,7 +393,7 @@ void pthreads_store_separate_zval(zval *zv) {
         	storage = pthreads_store_create(&in, 1);
 		pthreads_store_convert(storage, zv);
 	    pthreads_store_storage_dtor(storage);
-	} else ZVAL_NULL(zv);
+	}
 } /* }}} */
 
 /* {{{ */
