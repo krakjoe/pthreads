@@ -544,9 +544,7 @@ static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
 			continue;
 		}
 
-		if (!(GC_FLAGS(name) & IS_STR_PERSISTENT)) {
-			zend_string_release(name);
-		}
+		zend_string_release(name);
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
