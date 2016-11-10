@@ -540,8 +540,6 @@ static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
 
 		if (!zend_hash_add_ptr(CG(function_table), name, prepared)) {
 			destroy_op_array((zend_op_array*)prepared);
-			zend_string_release(name);
-			continue;
 		}
 
 		zend_string_release(name);
@@ -567,14 +565,10 @@ static inline void pthreads_prepare_closures(pthreads_object_t *thread) {
 			prepared = pthreads_copy_function(function);
 
 			if (!zend_hash_add_ptr(CG(function_table), named, prepared)) {
-				zend_string_release(named);
 				destroy_op_array((zend_op_array*) prepared);
-				continue;
 			}
 
-			if (!(GC_FLAGS(named) & IS_STR_PERSISTENT)) {
-				zend_string_release(named);
-			}
+			zend_string_release(named);
 		}
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
