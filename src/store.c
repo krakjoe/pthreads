@@ -377,9 +377,7 @@ int pthreads_store_separate(zval * pzval, zval *separated, zend_bool complex) {
 	
 	if (Z_TYPE_P(pzval) != IS_NULL) {
 		storage = pthreads_store_create(pzval, complex);
-		if (pthreads_store_convert(storage, separated) != SUCCESS) {
-			ZVAL_NULL(separated);
-		} else result = SUCCESS;
+		result = pthreads_store_convert(storage, separated);
 		pthreads_store_storage_dtor(storage);
 	} else ZVAL_NULL(separated);
 
@@ -393,11 +391,9 @@ void pthreads_store_separate_zval(zval *zv) {
 
 	if (Z_TYPE(in) != IS_NULL) {
         	storage = pthreads_store_create(&in, 1);
-		if (pthreads_store_convert(storage, zv) != SUCCESS) {
-			ZVAL_NULL(zv);
-		}
+		pthreads_store_convert(storage, zv);
 	    pthreads_store_storage_dtor(storage);
-	} else ZVAL_NULL(zv);
+	}
 } /* }}} */
 
 /* {{{ */
@@ -544,7 +540,6 @@ void pthreads_store_tohash(zval *object, HashTable *hash) {
 		ZEND_HASH_FOREACH_KEY_PTR(threaded->store.props, idx, name, storage) {
 			zval pzval;
 			zend_string *rename;
-			ZVAL_NULL(&pzval);
 
 			/* don't overwrite pthreads objects for non volatile objects */
 			if (!IS_PTHREADS_VOLATILE(object) && storage->type == IS_PTHREADS) {
@@ -738,14 +733,14 @@ static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 
 		case IS_OBJECT:
 		case IS_ARRAY:
-		
 			result = pthreads_store_tozval(pzval, (char*) storage->data, storage->length);
-			if (result == FAILURE) {
-			    ZVAL_NULL(pzval);
-			}
 		break;
 
 		default: ZVAL_NULL(pzval);
+	}
+
+	if (result == FAILURE) {
+	    ZVAL_NULL(pzval);
 	}
 
 	return result;
