@@ -73,7 +73,6 @@ void pthreads_globals_unlock() {
 
 /* {{{ */
 void* pthreads_globals_object_alloc(size_t length) {
-	zend_bool locked = 0;
 	void *bucket     = (void*) ecalloc(1, length);
 
 	if (pthreads_globals_lock()) {
