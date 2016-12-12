@@ -34,6 +34,10 @@
 #	include <src/prepare.h>
 #endif
 
+#ifndef HAVE_PTHREADS_QUEUE_H
+#	include <src/queue.h>
+#endif
+
 /* {{{ */
 extern zend_module_entry pthreads_module_entry; /* }}} */
 
@@ -182,6 +186,18 @@ zend_object* pthreads_socket_ctor(zend_class_entry *entry) {
 } /* }}} */
 
 /* {{{ */
+zend_object* pthreads_queue_ctor(zend_class_entry *entry) {
+	pthreads_object_t* threaded = pthreads_globals_object_alloc(
+		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
+
+	threaded->scope = PTHREADS_SCOPE_QUEUE;
+	pthreads_base_ctor(threaded, entry);
+	threaded->std.handlers = &pthreads_handlers;
+
+	return &threaded->std;
+} /* }}} */
+
+/* {{{ */
 int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *buflen, zend_serialize_data *data) {
 	pthreads_object_t *address = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 #ifdef _WIN64
@@ -241,7 +257,9 @@ void pthreads_current_thread(zval *return_value) {
 int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) {
 	if (source && destination) {
 		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
-			if (!PTHREADS_IS_SOCKET(destination)) {
+			if (PTHREADS_IS_QUEUE(destination)) {
+				pthreads_queue_free(destination->store.queue);
+			} else if (!PTHREADS_IS_SOCKET(destination)) {
 				pthreads_store_free(destination->store.props);
 				if (PTHREADS_IS_WORKER(destination)) {
 					pthreads_stack_free(destination->stack);
@@ -307,13 +325,17 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();
 		if (!PTHREADS_IS_SOCKET(base)) {
-			base->store.props   = pthreads_store_alloc();
-			base->running = malloc(sizeof(pthreads_object_t**));
+			if (PTHREADS_IS_QUEUE(base)) {
+				base->store.queue = pthreads_queue_alloc(base->monitor);
+			} else {
+				base->store.props   = pthreads_store_alloc();
+				base->running = malloc(sizeof(pthreads_object_t**));
 
-			if (PTHREADS_IS_WORKER(base)) {
-				base->stack = pthreads_stack_alloc(base->monitor);
+				if (PTHREADS_IS_WORKER(base)) {
+					base->stack = pthreads_stack_alloc(base->monitor);
+				}
+				pthreads_base_init(base);
 			}
-			pthreads_base_init(base);
 		} else {
 			base->store.sock = pthreads_socket_alloc();
 		}
@@ -333,7 +355,11 @@ void pthreads_base_free(zend_object *object) {
 			}
 
 			if (pthreads_monitor_lock(base->monitor)) {
-				pthreads_store_free(base->store.props);
+				if (PTHREADS_IS_QUEUE(base)) {
+					pthreads_queue_free(base->store.queue);
+				} else {
+					pthreads_store_free(base->store.props);
+				}
 				if (PTHREADS_IS_WORKER(base)) {
 					pthreads_stack_free(base->stack);	
 				}

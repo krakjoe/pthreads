@@ -88,6 +88,7 @@ extern zend_class_entry *pthreads_volatile_entry;
 extern zend_class_entry *pthreads_thread_entry;
 extern zend_class_entry *pthreads_worker_entry;
 extern zend_class_entry *pthreads_socket_entry;
+extern zend_class_entry *pthreads_queue_entry;
 
 #ifndef IS_PTHREADS_CLASS
 #define IS_PTHREADS_CLASS(c) \

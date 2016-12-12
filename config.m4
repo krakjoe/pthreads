@@ -27,7 +27,7 @@ if test "$PHP_PTHREADS" != "no"; then
 		EXTRA_CFLAGS="$EXTRA_CFLAGS -DDMALLOC"
 	fi
 
-	PHP_NEW_EXTENSION(pthreads, php_pthreads.c src/monitor.c src/stack.c src/globals.c src/prepare.c src/store.c src/resources.c src/handlers.c src/object.c src/socket.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+	PHP_NEW_EXTENSION(pthreads, php_pthreads.c src/monitor.c src/stack.c src/globals.c src/prepare.c src/store.c src/resources.c src/handlers.c src/object.c src/socket.c src/queue.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 	PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 	PHP_ADD_INCLUDE($ext_builddir)
 	PHP_SUBST(PTHREADS_SHARED_LIBADD)
