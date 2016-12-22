@@ -193,9 +193,6 @@ PHP_METHOD(Threaded, synchronized)
 	call.fci.retval = return_value;
 	call.fci.no_separation = 1;
 
-	call.fci.object = &threaded->std;
-	call.fcc.object = &threaded->std;
-
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		/* synchronize property tables */
 		pthreads_store_sync(getThis());
