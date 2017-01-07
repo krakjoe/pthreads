@@ -71,6 +71,11 @@ define('PTHREADS_ALLOW_GLOBALS', 0x10000000);
 class Threaded implements Traversable, Countable, ArrayAccess, Collectable
 {
     /**
+     * Increments the object's reference count
+     */
+    public function addRef() {}
+
+    /**
      * Fetches a chunk of the objects properties table of the given size
      *
      * @param int $size The number of items to fetch
@@ -86,12 +91,31 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
     public function count() {}
 
     /**
-     * Retrieves terminal error information from the referenced object
-     *
-     * @link http://www.php.net/manual/en/threaded.getterminationinfo.php
-     * @return array|bool array containing the termination conditions of the referenced object
+     * Decrements the object's reference count
      */
-    public function getTerminationInfo() {}
+    public function delRef() {}
+
+    /**
+     * Runtime extending of the Threaded class
+     *
+     * @param string $class The name of the class to extend Threaded
+     * @return bool A boolean indication of success
+     */
+    public static function extend($class) {}
+
+    /**
+     * Gets the object's reference count
+     *
+     * @return int The object's reference count
+     */
+    public function getRefCount() {}
+
+    /**
+     * A default method for marking an object as ready to be destroyed
+     *
+     * @return bool(true) The referenced object can be destroyed
+     */
+    public function isGarbage() {}
 
     /**
      * Tell if the referenced object is executing
@@ -108,22 +132,6 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
      * @return bool A boolean indication of state
      */
     public function isTerminated() {}
-
-    /**
-     * Tell if the referenced object is waiting for notification
-     *
-     * @link http://www.php.net/manual/en/threaded.iswaiting.php
-     * @return bool A boolean indication of state
-     */
-    public function isWaiting() {}
-
-    /**
-     * Lock the referenced objects property table
-     *
-     * @link http://www.php.net/manual/en/threaded.lock.php
-     * @return bool A boolean indication of state
-     */
-    public function lock() {}
 
     /**
      * Merges data into the current object
@@ -143,6 +151,13 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
      * @return bool A boolean indication of success
      */
     public function notify() {}
+
+    /**
+     * Send notification to one context waiting on the Threaded
+     *
+     * @return bool A boolean indication of success
+     */
+    public function notifyOne() {}
 
     /**
      * {@inheritdoc}
@@ -200,14 +215,6 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
     public function synchronized(\Closure $function, $args = null) {}
 
     /**
-     * Unlock the referenced objects storage for the calling context
-     *
-     * @link http://www.php.net/manual/en/threaded.unlock.php
-     * @return bool A boolean indication of success
-     */
-    public function unlock() {}
-
-    /**
      * Waits for notification from the Stackable
      *
      * @param int $timeout An optional timeout in microseconds
@@ -228,13 +235,6 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
  */
 class Thread extends Threaded
 {
-
-    /**
-     * Detaches a thread
-     *
-     * @return bool A boolean indication of success
-     */
-    public function detach() {}
 
     /**
      * Will return the identity of the Thread that created the referenced Thread
@@ -292,13 +292,6 @@ class Thread extends Threaded
     public function join() {}
 
     /**
-     * Kills the referenced thread, dangerously !
-     *
-     * @link http://www.php.net/manual/en/thread.kill.php
-     */
-    public function kill() {}
-
-    /**
      * Will start a new Thread to execute the implemented run method
      *
      * @param int $options An optional mask of inheritance constants, by default PTHREADS_INHERIT_ALL
@@ -328,6 +321,22 @@ class Worker extends Thread
 {
 
     /**
+     * Executes the optional collector on each of the tasks, removing the task if true is returned
+     *
+     * @param callable $collector The collector to be executed upon each task
+     * @return int The number of tasks left to be collected
+     */
+    public function collect($collector = null) {}
+
+    /**
+     * Executes the collector on the collectable object passed
+     *
+     * @param callable $collectable The collectable object to run the collector on
+     * @return bool The referenced object can be destroyed
+     */
+    public function collector($collectable) {}
+
+    /**
      * Returns the number of threaded tasks waiting to be executed by the referenced Worker
      *
      * @link http://www.php.net/manual/en/worker.getstacked.php
@@ -342,14 +351,6 @@ class Worker extends Thread
      * @return bool A boolean indication of state
      */
     public function isShutdown() {}
-
-    /**
-     * Tell if a Worker is executing threaded tasks
-     *
-     * @link http://www.php.net/manual/en/worker.isworking.php
-     * @return bool A boolean indication of state
-     */
-    public function isWorking() {}
 
     /**
      * Shuts down the Worker after executing all the threaded tasks previously stacked
