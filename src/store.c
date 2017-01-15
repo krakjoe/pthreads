@@ -583,9 +583,9 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 	pthreads_storage *storage = NULL;
 
 	if (Z_TYPE_P(unstore) == IS_INDIRECT)
-		return pthreads_store_create(Z_INDIRECT_P(unstore), 1);
+		return pthreads_store_create(Z_INDIRECT_P(unstore), complex);
 	if (Z_TYPE_P(unstore) == IS_REFERENCE)
-		return pthreads_store_create(&Z_REF_P(unstore)->val, 1);
+		return pthreads_store_create(&Z_REF_P(unstore)->val, complex);
 
 	storage = (pthreads_storage*) calloc(1, sizeof(pthreads_storage));
 	
