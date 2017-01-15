@@ -15,7 +15,7 @@ class Caller extends Thread {
 	/**
 	* Provide a passthrough to call_user_func_array
 	**/
-	public function __construct(callable $method, $params){
+	public function __construct(callable $method, ...$params){
 		$this->method = $method;
 		$this->params = $params;
 		$this->result = null;
@@ -33,8 +33,8 @@ class Caller extends Thread {
 	/**
 	* Static method to create your threads from functions ...
 	**/
-	public static function call($method, $params){
-		$thread = new Caller($method, $params);
+	public static function call($method, ...$params){
+		$thread = new Caller($method, ...$params);
 		if($thread->start()){
 			return $thread;
 		}
@@ -60,14 +60,14 @@ class Caller extends Thread {
 }
 
 /* here's us calling file_get_contents in a thread of it's own */
-$future = Caller::call("file_get_contents", array("http://www.php.net"));
+$future = Caller::call("file_get_contents", "http://www.php.net");
 /* here's us counting the bytes out, note, __toString() magic joined so no need to join explicitly */
 printf("Got %d bytes from php.net\n", strlen((string)$future));
 /* you can reference again as a string because you cached the result, YOU CANNOT JOIN TWICE */
 printf("First 16 chars: %s\n", substr((string)$future, 0, 16));
 
 /* here's us calling a closure in a thread of it's own */
-$future = Caller::call(function($params) {
+$future = Caller::call(function(...$params) {
 	printf("and how about this: %s, %s %s %s %s!\n", ...$params);
 }, [["also", "you", "can", "use", "closures"]]);
 ?>

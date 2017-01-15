@@ -40,11 +40,13 @@ While documentation on php.net is waiting to be updated and translated, I will g
 
 The API for v3 has changed, the following things have been removed:
 
- * ```Mutex``` and ```Cond```
+ * ```Mutex```, ```Cond```, and ```Stackable```
  * ```Threaded::lock``` and ```Threaded::unlock```
  * ```Threaded::isWaiting```
  * ```Threaded::from```
  * ```Thread::kill``` (there be dragons)
+ * ```Thread::detach```
+ * ```Worker::isWorking```
  * ```Threaded::getTerminationInfo``` (this was unsafe, a better, safe impl can be done in userland)
  * Special behaviour of ```protected``` and ```private``` methods on ```Threaded``` objects
 
@@ -151,22 +153,13 @@ if (extension_loaded("pthreads")) {
 
 $pool = new Pool(4);
 
-$pool->submit(new class extends Threaded Implements Collectable {
-	    public function run() {
-	            echo "Hello World\n";
-	            $this->garbage = true;
-	    }
-
-		public function isGarbage() : bool { 
-			return $this->garbage; 
-		}
-
-		private $garbage = false;
+$pool->submit(new class extends Threaded {
+        public function run() {
+                echo "Hello World\n";
+        }
 });
 
-while ($pool->collect(function(Collectable $task){
-	    return $task->isGarbage();
-})) continue;
+while ($pool->collect()) continue;
 
 $pool->shutdown();
 ?>

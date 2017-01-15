@@ -186,7 +186,7 @@ PHP_METHOD(Pool, submit) {
 		
 		{
 #if PHP_VERSION_ID >= 70100
-			zend_class_entry *scope = zend_get_executed_scope();
+			zend_class_entry *scope = EG(fake_scope);
 #else
 			zend_class_entry *scope = EG(scope);
 #endif
@@ -218,7 +218,11 @@ PHP_METHOD(Pool, submit) {
 				
 				fcc.initialized = 1;
 				fcc.function_handler = constructor;
+#if PHP_VERSION_ID >= 70100
+				fcc.calling_scope = zend_get_executed_scope();
+#else
 				fcc.calling_scope = scope;
+#endif
 				fcc.called_scope = Z_OBJCE(worker);
 				fcc.object = Z_OBJ(worker);
 				
