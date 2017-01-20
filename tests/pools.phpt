@@ -9,7 +9,7 @@ class WebWorker extends Worker {
 		$this->logger = $logger;
 	}
 	
-	protected $loger;	
+	protected $logger;	
 }
 
 class WebWork extends Threaded {
