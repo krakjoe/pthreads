@@ -158,8 +158,13 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 	pthreads_object_t *threaded = NULL;
 
 	if (!var ||
+#if PHP_VERSION_ID >= 70200
+		!ZEND_SAME_FAKE_TYPE(ZEND_TYPE_CODE(info->type), Z_TYPE_P(var)) &&
+		!ZEND_TYPE_IS_CLASS(info->type) ||
+#else
 		!ZEND_SAME_FAKE_TYPE(info->type_hint, Z_TYPE_P(var)) ||
 		info->type_hint != IS_OBJECT ||
+#endif
 		!instanceof_function(Z_OBJCE_P(var), pthreads_threaded_entry)) {
 		return 0;
 	}
@@ -173,7 +178,11 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 
 		ce = *cached ? 
 				*cached :
+#if PHP_VERSION_ID >= 70200
+				zend_lookup_class(ZEND_TYPE_NAME(info->type));
+#else
 				zend_lookup_class(info->class_name);
+#endif
 
 		if (!ce)
 			return 0;
