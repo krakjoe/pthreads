@@ -22,6 +22,10 @@
 #	include <src/globals.h>
 #endif
 
+#ifndef HAVE_PTHREADS_PREPARE_H
+#	include <src/prepare.h>
+#endif
+
 struct _pthreads_globals pthreads_globals;
 
 #ifndef PTHREADS_G
@@ -102,7 +106,8 @@ zend_bool pthreads_globals_object_connect(zend_ulong address, zend_class_entry *
 	}
 
 	if (valid) {
-		
+		pthreads_object_t *pthreads = (pthreads_object_t*) address;
+
 		/*
 		* This can be done outside of a critical section because there are only two possibilities:
 		*	We own the object: no possible pathway to fault (read free'd memory)
@@ -116,22 +121,19 @@ zend_bool pthreads_globals_object_connect(zend_ulong address, zend_class_entry *
 		* in a critical section would be unecessarily slow, not to mention recursively lock mutex (which is fine, but not ideal).
 		*/
 
-		if (PTHREADS_IN_CREATOR(((pthreads_object_t*)address))) {
+		if (PTHREADS_IN_CREATOR(pthreads)) {
 			/* we own the object in this context */
-			ZVAL_OBJ(object, &((pthreads_object_t*)address)->std);
+			ZVAL_OBJ(object, &pthreads->std);
 			Z_ADDREF_P(object);
 		} else {
 			/* we do not own the object, create a connection */
 			if (!ce) {
 				/* we may not know the class, can't use ce directly
 					from zend_object because it is from another context */
-				ce = zend_lookup_class(
-					((pthreads_object_t*)address)->std.ce->name);
+				ce = pthreads_prepared_entry(pthreads, pthreads->std.ce);
 			}
 			object_init_ex(object, ce);
-			pthreads_connect(
-				(pthreads_object_t*) address,
-				PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
+			pthreads_connect(pthreads, PTHREADS_FETCH_FROM(Z_OBJ_P(object)));
 		}
 	}
 	
