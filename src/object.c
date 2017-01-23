@@ -443,7 +443,11 @@ zend_bool pthreads_join(pthreads_object_t* thread) {
 static inline zend_bool pthreads_routine_run_function(pthreads_object_t* object, pthreads_object_t* connection, zval *work) {
 	zend_function *run;
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
-	zval zresult;	
+	zval zresult;
+
+	if (PTHREADS_IS_THREAD(object)) {
+		PTHREADS_ZG(parent) = object;
+	}
 
 	if (pthreads_connect(object, connection) != SUCCESS) {
 		return 0;

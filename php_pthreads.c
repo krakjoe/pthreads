@@ -30,6 +30,10 @@
 #	include <src/object.h>
 #endif
 
+#ifndef HAVE_PTHREADS_PREPARE_H
+#	include <src/prepare.h>
+#endif
+
 #ifndef ZTS
 #	error "pthreads requires that Thread Safety is enabled, add --enable-maintainer-zts to your PHP build configuration"
 #endif
@@ -255,6 +259,20 @@ static inline int php_pthreads_verify_return_type(ZEND_OPCODE_HANDLER_ARGS) {
 			EX(opline)++;
 			return ZEND_USER_OPCODE_CONTINUE;
 		}
+	}
+
+	return ZEND_USER_OPCODE_DISPATCH;
+} /* }}} */
+
+/* {{{ */
+static inline int php_pthreads_prepare_anon_class(zend_execute_data *execute_data) {
+	zend_string *type = 
+		Z_STR_P(EX_CONSTANT(EX(opline)->op1));
+	zend_class_entry *ce = 
+		zend_hash_find_ptr(EG(class_table), type);
+
+	if (!ce) {
+		pthreads_prepared_anon(PTHREADS_ZG(parent), type);
 	}
 
 	return ZEND_USER_OPCODE_DISPATCH;
@@ -820,6 +838,8 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	zend_set_user_opcode_handler(ZEND_RECV, php_pthreads_recv);
 	zend_set_user_opcode_handler(ZEND_VERIFY_RETURN_TYPE, php_pthreads_verify_return_type);
+	zend_set_user_opcode_handler(ZEND_DECLARE_ANON_CLASS, php_pthreads_prepare_anon_class);
+	zend_set_user_opcode_handler(ZEND_DECLARE_ANON_INHERITED_CLASS, php_pthreads_prepare_anon_class);
 
 	return SUCCESS;
 }
