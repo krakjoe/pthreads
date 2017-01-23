@@ -48,12 +48,11 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 static void pthreads_prepared_resource_dtor(zval *zv); /* }}} */
 
 /* {{{ */
-static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool allow_unbound_anon) {
+static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
 	zend_class_entry *prepared;
 
 	if (candidate->ce_flags & ZEND_ACC_ANON_CLASS) {
-		if (!allow_unbound_anon && 
-			!(candidate->ce_flags & ZEND_ACC_ANON_BOUND)) {
+		if (!(candidate->ce_flags & ZEND_ACC_ANON_BOUND)) {
 			return NULL;
 		}
 	}
@@ -383,45 +382,6 @@ static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int arg
 } /* }}} */
 
 /* {{{ */
-zend_class_entry* pthreads_prepared_anon(pthreads_object_t* thread, zend_string *name) {
-	HashTable *table = PTHREADS_EG(thread->creator.ls, class_table);
-	zend_class_entry *candidate = zend_hash_find_ptr(table, name);
-	zend_class_entry *prepared;
-	zend_string *lookup;
-
-	if (!candidate) {
-		return NULL;
-	}
-
-	if (candidate->type == ZEND_INTERNAL_CLASS) {
-		return zend_lookup_class(candidate->name);
-	}
-
-	lookup = zend_string_tolower(candidate->name);
-
-	if ((prepared = zend_hash_find_ptr(EG(class_table), lookup))) {
-	    zend_string_release(lookup);
-		return prepared;
-	}
-	
-	if (!(prepared = pthreads_copy_entry(thread, candidate, 1))) {
-		zend_string_release(lookup);
-		return NULL;
-	}
-
-	zend_hash_apply_with_arguments(
-		&prepared->function_table, 
-		pthreads_prepared_entry_function_prepare, 
-		3, thread, prepared, candidate);	
-	
-	zend_hash_update_ptr(EG(class_table), lookup, prepared);
-
-	zend_string_release(lookup);
-
-	return prepared;
-} /* }}} */
-
-/* {{{ */
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
 	zend_class_entry *prepared = NULL;
 	zend_string *lookup = NULL;
@@ -441,7 +401,7 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 		return prepared;
 	}
 	
-	if (!(prepared = pthreads_copy_entry(thread, candidate, 0))) {
+	if (!(prepared = pthreads_copy_entry(thread, candidate))) {
 		zend_string_release(lookup);
 		return NULL;
 	}
@@ -457,8 +417,6 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 
 	return prepared;
 } /* }}} */
-
-
 
 /* {{{ */
 static inline zend_bool pthreads_constant_exists(zend_string *name) {
