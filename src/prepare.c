@@ -152,7 +152,7 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 
 	{
 		uint umethod = 0;
-		void *usources[7] = {
+		void *usources[6] = {
 			candidate->create_object,
 			candidate->serialize,
 			candidate->unserialize,
