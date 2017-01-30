@@ -48,7 +48,27 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 static void pthreads_prepared_resource_dtor(zval *zv); /* }}} */
 
 /* {{{ */
-static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
+static void pthreads_prepared_entry_static_members(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
+	if (candidate->default_static_members_count) {
+		int i;
+		prepared->default_static_members_table = (zval*) ecalloc(
+			sizeof(zval), candidate->default_static_members_count);
+		prepared->default_static_members_count = candidate->default_static_members_count;
+		memcpy(prepared->default_static_members_table,
+		       candidate->default_static_members_table,
+			sizeof(zval) * candidate->default_static_members_count);
+
+		for (i=0; i<prepared->default_static_members_count; i++) {
+			pthreads_store_separate(
+				&candidate->default_static_members_table[i],
+				&prepared->default_static_members_table[i], 0);
+		}	
+		prepared->static_members_table = prepared->default_static_members_table;
+	} else prepared->default_static_members_count = 0;
+} /* }}} */
+
+/* {{{ */
+static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool prepare_static_members) {
 	zend_class_entry *prepared;
 
 	if (candidate->ce_flags & ZEND_ACC_ANON_CLASS) {
@@ -274,23 +294,10 @@ while(0)
 		prepared->default_properties_count = candidate->default_properties_count;
 	} else prepared->default_properties_count = 0;
 
-	if (candidate->default_static_members_count) {
-		int i;
-		prepared->default_static_members_table = (zval*) ecalloc(
-			sizeof(zval), candidate->default_static_members_count);
-		prepared->default_static_members_count = candidate->default_static_members_count;
-		memcpy(prepared->default_static_members_table,
-		       candidate->default_static_members_table,
-			sizeof(zval) * candidate->default_static_members_count);
-
-		for (i=0; i<prepared->default_static_members_count; i++) {
-			pthreads_store_separate(
-				&candidate->default_static_members_table[i],
-				&prepared->default_static_members_table[i], 0);
-		}	
-		prepared->static_members_table = prepared->default_static_members_table;
-	} else prepared->default_static_members_count = 0;
-
+	if(prepare_static_members) {
+		pthreads_prepared_entry_static_members(thread, candidate, prepared);
+	}
+	
 	memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
 
 	if ((thread->options & PTHREADS_INHERIT_COMMENTS) &&
@@ -383,6 +390,11 @@ static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int arg
 
 /* {{{ */
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
+	return pthreads_prepared_entry_internal(thread, candidate, 1);
+} /* }}} */
+
+/* {{{ */
+zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool prepare_static_members) {
 	zend_class_entry *prepared = NULL;
 	zend_string *lookup = NULL;
 
@@ -401,7 +413,7 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 		return prepared;
 	}
 	
-	if (!(prepared = pthreads_copy_entry(thread, candidate))) {
+	if (!(prepared = pthreads_copy_entry(thread, candidate, prepare_static_members))) {
 		zend_string_release(lookup);
 		return NULL;
 	}
@@ -576,13 +588,20 @@ static inline void pthreads_prepare_closures(pthreads_object_t *thread) {
 /* {{{ */
 static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 	zend_class_entry *entry;
+	zend_class_entry *prepared;
 	zend_string *name;
-
+	
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, class_table), name, entry) {
 		if (!zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name)) {
-			pthreads_prepared_entry(thread, entry);
+			pthreads_prepared_entry_internal(thread, entry, 0);
 		}
-	} ZEND_HASH_FOREACH_END(); 
+	} ZEND_HASH_FOREACH_END();
+
+	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, class_table), name, entry) {
+		if ((prepared = zend_hash_find_ptr(PTHREADS_CG(thread->local.ls, class_table), name)) && prepared->type != ZEND_INTERNAL_CLASS) {
+			pthreads_prepared_entry_static_members(thread, entry, prepared);
+		}
+	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
 /* {{{ */
