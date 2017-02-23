@@ -253,9 +253,11 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 
 			pthreads_monitor_free(destination->monitor);
 		}
+		pthreads_ident_t creator = destination->creator;
 
 		memcpy(destination, source, sizeof(pthreads_object_t) - sizeof(zend_object));
-
+		
+		destination->creator = creator;
 		destination->scope |= PTHREADS_SCOPE_CONNECTION;
 
 		if (destination->std.properties)
