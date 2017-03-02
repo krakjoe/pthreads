@@ -132,7 +132,7 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 
 	{
 		uint umethod = 0;
-		void *usources[7] = {
+		void *usources[6] = {
 			candidate->create_object,
 			candidate->serialize,
 			candidate->unserialize,
@@ -155,7 +155,7 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 					case 5: prepared->get_static_method = candidate->get_static_method; break;
 				}
 			}
-		} while(++umethod < 7);
+		} while(++umethod < 6);
 	}
 	
 	{
