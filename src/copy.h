@@ -59,7 +59,12 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 						pthreads_store_separate(next, &copy, 1);
 						zend_hash_add(statics, name, &copy);
 					break;
-					
+
+					case IS_CONSTANT_AST:
+						ZVAL_NEW_AST(&copy, zend_ast_copy(Z_AST_P(next)->ast));
+						zend_hash_add(statics, name, &copy);
+					break;
+
 					default:
 						zend_hash_add_empty_element(statics, name);					
 				}
