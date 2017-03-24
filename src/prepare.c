@@ -651,7 +651,7 @@ void pthreads_prepare_parent(pthreads_object_t *thread) {
 		pthreads_rebuild_object(&EG(user_exception_handler));
 } /* }}} */
 
-#if PHP_VERSION_ID < 70200
+#if PHP_VERSION_ID < 70200 && PHP_VERSION_ID >= 70100
 /*
  It doesn't seem right that I should have to do this ... think bug in php-src
 */
@@ -678,7 +678,7 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 
 		php_request_startup();
 
-#if PHP_VERSION_ID >= 70100
+#if PHP_VERSION_ID < 70200 && PHP_VERSION_ID >= 70100
 		pthreads_prepare_compiler(thread);
 #endif
 
