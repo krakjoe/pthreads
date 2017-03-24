@@ -689,7 +689,7 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, uint32_t sec,
 
 void pthreads_socket_free(pthreads_socket_t *socket, zend_bool closing) {
 	if (closing) {
-		if (socket->fd > -1)
+		if (socket->fd)
 			close(socket->fd);
 	}
 
