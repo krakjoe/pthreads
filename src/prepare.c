@@ -651,7 +651,7 @@ void pthreads_prepare_parent(pthreads_object_t *thread) {
 		pthreads_rebuild_object(&EG(user_exception_handler));
 } /* }}} */
 
-#if PHP_VERSION_ID >= 70100
+#if PHP_VERSION_ID < 70200
 /*
  It doesn't seem right that I should have to do this ... think bug in php-src
 */
