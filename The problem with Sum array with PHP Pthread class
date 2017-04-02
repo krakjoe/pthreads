@@ -1,0 +1,32 @@
+<?php
+class my extends Thread {
+
+  public function __construct($arg){
+    $this->arg = $arg;
+  }
+
+  public function run(){
+    if($this->arg){
+      $temp = $this->arg;
+      $i = ($this->arg) + 1000;
+      echo $i;
+      $j[$temp] = $i;
+      echo '<br>';
+    }
+  }
+}
+$j = array(
+    new my('1'), new my('2')
+);
+
+$thread = $j[0];
+$thread->start();
+$thread->join();
+
+$thread = $j[1];
+$thread->start();
+$thread->join();
+
+$sum = $j[0] + $j[1];
+echo $sum;
+?>
