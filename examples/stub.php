@@ -222,7 +222,7 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
      * @link http://www.php.net/manual/en/threaded.wait.php
      * @return bool A boolean indication of success
      */
-    public function wait($timeout) {}
+    public function wait($timeout = 0) {}
 }
 
 /**
