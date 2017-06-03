@@ -84,6 +84,7 @@ zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_collectable_entry;
 zend_class_entry *pthreads_pool_entry;
 zend_class_entry *pthreads_socket_entry;
+zend_class_entry *pthreads_queue_entry;
 
 zend_object_handlers pthreads_handlers;
 zend_object_handlers pthreads_socket_handlers;
@@ -752,6 +753,10 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("NO_ADDRESS"), WSANO_ADDRESS);
 #endif
 
+	INIT_CLASS_ENTRY(ce, "Queue", pthreads_queue_methods);
+	pthreads_queue_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
+	pthreads_queue_entry->create_object = pthreads_queue_ctor;
+
 	/*
 	* Setup object handlers
 	*/
@@ -909,6 +914,10 @@ PHP_MINFO_FUNCTION(pthreads)
 
 #ifndef HAVE_PTHREADS_CLASS_SOCKET
 #	include <classes/socket.h>
+#endif
+
+#ifndef HAVE_PTHREADS_CLASS_QUEUE
+#	include <classes/queue.h>
 #endif
 
 #endif

@@ -30,6 +30,10 @@
 #	include <src/socket.h>
 #endif
 
+#ifndef HAVE_PTHREADS_QUEUE_H
+#	include <src/queue.h>
+#endif
+
 typedef struct _pthreads_ident_t {
 	zend_ulong id;
 	void*** ls;
@@ -44,6 +48,7 @@ typedef struct _pthreads_object_t {
 	union {
 		pthreads_store_t	*props;
 		pthreads_socket_t	*sock;
+		pthreads_queue_t	*queue;
 	} store;
 	pthreads_stack_t    *stack;
 	pthreads_ident_t 	creator;
@@ -93,7 +98,8 @@ static inline pthreads_object_t* _pthreads_fetch_object(zend_object *object) {
 #define PTHREADS_SCOPE_THREAD      (1<<2)
 #define PTHREADS_SCOPE_WORKER      (1<<3)
 #define PTHREADS_SCOPE_SOCKET	   (1<<4)
-#define PTHREADS_SCOPE_CONNECTION  (1<<5) /* }}} */
+#define PTHREADS_SCOPE_CONNECTION  (1<<5)
+#define PTHREADS_SCOPE_QUEUE       (1<<6) /* }}} */
 
 /* {{{ scope macros */
 #define PTHREADS_IS_KNOWN_ENTRY(t)      ((t)->scope)
@@ -106,7 +112,9 @@ static inline pthreads_object_t* _pthreads_fetch_object(zend_object *object) {
 #define PTHREADS_IS_WORKER(t)           ((t)->scope & PTHREADS_SCOPE_WORKER)
 #define PTHREADS_IS_NOT_WORKER(t)       (!PTHREADS_IS_WORKER(t))
 #define PTHREADS_IS_THREADED(t)         ((t)->scope & PTHREADS_SCOPE_THREADED)
-#define PTHREADS_IS_NOT_THREADED(t)     (!PTHREADS_IS_THREADED(t)) /* }}} */
+#define PTHREADS_IS_NOT_THREADED(t)     (!PTHREADS_IS_THREADED(t))
+#define PTHREADS_IS_QUEUE(t)            ((t)->scope & PTHREADS_SCOPE_QUEUE)
+#define PTHREADS_IS_NOT_QUEUE(t)        (!PTHREADS_IS_QUEUE(t)) /* }}} */
 
 /* {{{ pthread_self wrapper */
 static inline ulong pthreads_self() {
