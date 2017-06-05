@@ -591,7 +591,7 @@ static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 	zend_string *name;
 	
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, class_table), name, entry) {
-		if (!zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name)) {
+		if (!zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name) && ZSTR_VAL(name)[0] != '\0') {
 			pthreads_prepared_entry_internal(thread, entry, 0);
 		}
 	} ZEND_HASH_FOREACH_END();
