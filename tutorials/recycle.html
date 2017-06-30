@@ -57,16 +57,16 @@
 			<section>
 				<!-- title and content -->
 				<h1>Recycling Contexts</h1>
-				<p>In line with our mantra, always consider employing the Worker and Stackable model of execution.</p>
+				<p>In line with our mantra, always consider employing the Worker model of execution.</p>
 				<p>The Worker model allows a context (Thread) to be reused, so if many tasks need to be executed asynchronously to the process (or creating Thread), but those tasks themselves are suitable to be executed synchronously then using a single context rather than many is a huge win.</p>
-                <h2>Worker and Stackable Brief</h2>
-                <p>The patterns used to create Workers and Stackable are much the same as those used to create Threads. </p>
+                <h2>Worker Brief</h2>
+                <p>The patterns used to create Workers are much the same as those used to create Threads. </p>
                 <pre class="brush: php">
                 class WebWorker extends Worker {
                     public function run(){}
                 }
                 
-                class WebRequest extends Stackable {
+                class WebRequest extends Threaded {
                     public $url;
                     public $data;
                     
@@ -80,7 +80,7 @@
                         if ($response) {
                             /* process response */
                             
-                            $this->data = array($response);
+                            $this->data = $response;
                         }
                     }
                 }
@@ -108,12 +108,12 @@
                     var_dump ($task->data);
                 }
                 </pre>
-                <p>In the example above, many requests are processed by the same context. The aim should be to always use Workers and Stackables wherever possible, it is much more efficient to create one context (Worker), rather than many contexts (Threads).</p>
+                <p>In the example above, many requests are processed by the same context. The aim should be to always use Workers wherever possible, it is much more efficient to create one context (Worker), rather than many contexts (Threads).</p>
                 <h2>Asynchronous Logging</h2>
                 <p>A good example of using Workers in the real world might be an implementation of asynchronous logging.</p>
                 <p>In the real world, an asynchronous logger would be much more complex than the following example, for the purposes of a tutorial we will just write logs to standard output.</p>
                 <pre class="brush: php">
-				class LogEntry extends Stackable {
+				class LogEntry extends Threaded {
 					public $message;
 					public $args;
 					 
@@ -143,14 +143,12 @@
 						}
 				
 						$args = func_get_args();
-						if ($args) {
-							$wid = count(self::$work);
-							self::$work[$wid]=new LogEntry(
-								array_shift($args),
-								$args
-							);
-							self::$instance->stack(self::$work[$wid]);
-						}
+						$wid = count(self::$work);
+						self::$work[$wid]=new LogEntry(
+							array_shift($args),
+							$args
+						);
+						self::$instance->stack(self::$work[$wid]);
 					}
 					 
 					public function run() {}
