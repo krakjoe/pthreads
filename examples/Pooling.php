@@ -94,21 +94,15 @@ $pool->submit(new WebWork());
 * context that created the Pool.
 *
 * The Worker::collect method is invoked for every Worker in the Pool, the garbage list
-* for each Worker is traversed and each Collectable is passed to the provided Closure.
-*
-* The Closure must return true if the Collectable can be removed from the garbage list.
-*
-* Worker::collect returns the size of the garbage list, Pool::collect returns the sum of the size of
-* the garbage list of all Workers in the Pool. 
+* for each Worker is traversed and each piece of work (a WebWork object, in this case)
+* is passed to the optionally provided Closure.
 *
 * Collecting in a continuous loop will cause the garbage list to be emptied.
 */
-while ($pool->collect(function($work) {
-	return $work->isGarbage();
-})) continue;
+while ($pool->collect());
 
 /*
-* We could submit more stuff here, the Pool is still waiting for Collectables
+* We could submit more stuff here, the Pool is still waiting for work to be submitted.
 */
 $logger->log(function($pool) {
 	var_dump($pool);
