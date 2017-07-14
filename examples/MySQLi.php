@@ -44,8 +44,9 @@ class Connect extends Worker {
 
 class Query extends Threaded {
 
-    public function __construct($sql) {
+    public function __construct(string $sql, Threaded $store) {
         $this->sql = $sql;
+        $this->result = $store;
     }
     
     public function run() {
@@ -55,15 +56,9 @@ class Query extends Threaded {
         
         if ($result) {    
             while (($row = $result->fetch_assoc())) {
-                $rows[] = $row;
+                $this->result[] = "{$row['Id']}) {$row['User']} ({$row['State']})";
             }
         }
-        
-        $this->result = $rows;
-    }
-    
-    public function getResult() {
-        return $this->result;
     }
     
     protected $sql;
@@ -71,25 +66,17 @@ class Query extends Threaded {
 }
 
 $pool = new Pool(4, "Connect", ["localhost", "root", "", "mysql"]);
-$pool->submit
-    (new Query("SHOW PROCESSLIST;"));
-$pool->submit
-    (new Query("SHOW PROCESSLIST;"));
-$pool->submit
-    (new Query("SHOW PROCESSLIST;"));
-$pool->submit
-    (new Query("SHOW PROCESSLIST;"));
-$pool->submit
-    (new Query("SHOW PROCESSLIST;"));
-$pool->submit
-    (new Query("SHOW PROCESSLIST;"));
-$pool->shutdown();
+$stores = [];
 
-/* ::collect is used here for shorthand to dump query results */
-$pool->collect(function($query){
-    var_dump(
-        $done = $query->getResult());
-    
-    return count($done);
-});
+for ($i = 0; $i < 6; ++$i) {
+    $store = new Threaded(); // store all results in here for the Query object
+    $pool->submit(new Query("SHOW PROCESSLIST;", $store));
+    $stores[] = $store; // maintain a list of stores to retrieve their results later
+}
+
+$pool->collect(); // collect all finished work to free up memory
+$pool->shutdown(); // shutdown the pool to make sure it has completely finished executing
+
+print_r($stores); // output all results for all Query objects
+
 ?>
