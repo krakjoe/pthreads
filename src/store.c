@@ -756,7 +756,8 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 
 			zend_hash_apply(tmp, pthreads_store_remove_complex);
 
-			/* TODO(krakjoe) leaks */
+			zval_ptr_dtor(pzval);
+
 			ZVAL_ARR(pzval, tmp);
 		} break;
 
