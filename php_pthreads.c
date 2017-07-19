@@ -166,7 +166,9 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 	if (ZEND_TYPE_IS_CLASS(info->type)) {
 		pthreads_object_t *threaded;
 
-		if (!var || Z_TYPE_P(var) != IS_OBJECT || !instanceof_function(Z_OBJCE_P(var), pthreads_threaded_entry)) {
+		if (!var || 
+			Z_TYPE_P(var) != IS_OBJECT || 
+			!instanceof_function(Z_OBJCE_P(var), pthreads_threaded_entry)) {
 			return 0;
 		}
 
@@ -179,7 +181,8 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 			if (*cache) {
 				ce = *cache;
 			} else {
-				ce = zend_fetch_class(ZEND_TYPE_NAME(info->type), (ZEND_FETCH_CLASS_AUTO | ZEND_FETCH_CLASS_NO_AUTOLOAD));
+				ce = zend_fetch_class(ZEND_TYPE_NAME(info->type), 
+					(ZEND_FETCH_CLASS_AUTO | ZEND_FETCH_CLASS_NO_AUTOLOAD));
 			
 				if (!ce) {
 					return Z_TYPE_P(var) == IS_NULL && ZEND_TYPE_ALLOW_NULL(info->type);
@@ -189,7 +192,8 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 			}
 
 			if (Z_TYPE_P(var) == IS_OBJECT) {
-				zend_class_entry *instance = zend_fetch_class(threaded->std.ce->name, (ZEND_FETCH_CLASS_AUTO | ZEND_FETCH_CLASS_NO_AUTOLOAD));
+				zend_class_entry *instance = zend_fetch_class(
+					threaded->std.ce->name, (ZEND_FETCH_CLASS_AUTO | ZEND_FETCH_CLASS_NO_AUTOLOAD));
 
 				if (!instance) {
 					return 0;
