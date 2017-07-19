@@ -35,52 +35,10 @@
 #define IN_UNSET    (1<<2)
 #define IN_ISSET    (1<<3)
 
-#if PHP_VERSION_ID >= 70100
 typedef uint32_t zend_guard;
 #define pthreads_get_guard(o, m) \
 	((Z_TYPE_P(m) == IS_STRING) ? zend_get_property_guard(o, Z_STR_P(m)) : NULL)
 /* }}} */
-#else
-typedef zend_long zend_guard;
-static inline void pthreads_guard_dtor(zval *el) {
-	efree(Z_PTR_P(el));
-}
-
-static inline zend_guard *pthreads_get_guard(zend_object *zobj, zval *member) /* {{{ */
-{
-    HashTable *guards;
-    zend_guard stub, *guard;
-    zval tmp;
-
-    ZEND_ASSERT(GC_FLAGS(zobj) & IS_OBJ_USE_GUARDS);
-    if (GC_FLAGS(zobj) & IS_OBJ_HAS_GUARDS) {
-        guards = Z_PTR(zobj->properties_table[zobj->ce->default_properties_count]);
-        ZEND_ASSERT(guards != NULL);
-		if (Z_TYPE_P(member) == IS_LONG) {
-			if ((guard = (zend_long *)zend_hash_index_find_ptr(guards, Z_LVAL_P(member))) != NULL) {
-            	return guard;
-        	}
-		} else {
-			if ((guard = (zend_long *)zend_hash_find_ptr(guards, Z_STR_P(member))) != NULL) {
-            	return guard;
-        	}
-		}
-        
-    } else {
-        ALLOC_HASHTABLE(guards);
-        zend_hash_init(guards, 8, NULL, pthreads_guard_dtor, 0);
-        ZVAL_PTR(&tmp, guards);
-        Z_PTR(zobj->properties_table[zobj->ce->default_properties_count]) = guards;
-        GC_FLAGS(zobj) |= IS_OBJ_HAS_GUARDS;
-    }
-
-    stub = 0;
-	if (Z_TYPE_P(member) == IS_LONG) {
-		return (zend_long *)zend_hash_index_add_mem(guards, Z_LVAL_P(member), &stub, sizeof(zend_ulong));
-	} else return (zend_long *)zend_hash_add_mem(guards, Z_STR_P(member), &stub, sizeof(zend_ulong));
-}
-/* }}} */
-#endif
 
 /* {{{ */
 int pthreads_count_properties(PTHREADS_COUNT_PASSTHRU_D) {

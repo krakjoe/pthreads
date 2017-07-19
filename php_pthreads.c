@@ -34,6 +34,10 @@
 #	error "pthreads requires that Thread Safety is enabled, add --enable-maintainer-zts to your PHP build configuration"
 #endif
 
+#if PHP_VERSION_ID < 70200
+#	error "pthreads requires PHP 7.2, ZTS in versions 7.0 and 7.1 is broken"
+#endif
+
 #if COMPILE_DL_PTHREADS
 	ZEND_TSRMLS_CACHE_DEFINE();
 	ZEND_GET_MODULE(pthreads)
@@ -151,49 +155,46 @@ static inline void pthreads_execute_ex(zend_execute_data *data) {
 			(!EG(current_execute_data) || !EG(current_execute_data)->prev_execute_data))
 			zend_try_exception_handler();
 	}
-} /* }}} */
+} /* }}} */ 
 
 /* {{{ */
 static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zval *var, zend_arg_info *info) {
 	pthreads_object_t *threaded = NULL;
 
-	if (!var ||
-#if PHP_VERSION_ID >= 70200
-		!ZEND_SAME_FAKE_TYPE(ZEND_TYPE_CODE(info->type), Z_TYPE_P(var)) &&
-		!ZEND_TYPE_IS_CLASS(info->type) ||
-#else
-		!ZEND_SAME_FAKE_TYPE(info->type_hint, Z_TYPE_P(var)) ||
-		info->type_hint != IS_OBJECT ||
-#endif
-		!instanceof_function(Z_OBJCE_P(var), pthreads_threaded_entry)) {
-		return 0;
+	if (!ZEND_TYPE_IS_SET(info->type)) {
+		return 1;
 	}
 
-	threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(var));
-	if (!PTHREADS_IN_CREATOR(threaded)) {
-		zend_class_entry **cached = 
-			(zend_class_entry**) CACHE_ADDR(EX(opline)->op2.num),
-						 *ce = NULL,
-						 *instance = NULL;
+	if (ZEND_TYPE_IS_CLASS(info->type)) {
+		pthreads_object_t *threaded;
 
-		ce = *cached ? 
-				*cached :
-#if PHP_VERSION_ID >= 70200
-				zend_lookup_class(ZEND_TYPE_NAME(info->type));
-#else
-				zend_lookup_class(info->class_name);
-#endif
-
-		if (!ce)
+		if (!var || Z_TYPE_P(var) != IS_OBJECT || !instanceof_function(Z_OBJCE_P(var), pthreads_threaded_entry)) {
 			return 0;
+		}
 
-		if (*cached == NULL)
-			*cached = ce;
+		threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(var));
 
-		instance = zend_lookup_class(threaded->std.ce->name);
+		if (!PTHREADS_IN_CREATOR(threaded)) {
+			zend_class_entry *ce, *instance;
+			void **cache = CACHE_ADDR(EX(opline)->op2.num);
 
-		if (instanceof_function(instance, ce)) {
-			return 1;
+			if (*cache) {
+				ce = *cache;
+			} else {
+				ce = zend_fetch_class(ZEND_TYPE_NAME(info->type), (ZEND_FETCH_CLASS_AUTO | ZEND_FETCH_CLASS_NO_AUTOLOAD));
+			
+				if (!ce) {
+					return Z_TYPE_P(var) == IS_NULL && ZEND_TYPE_ALLOW_NULL(info->type);
+				}
+
+				*cache = (void*) ce;
+			}
+
+			if (Z_TYPE_P(var) == IS_OBJECT) {
+				return instanceof_function(
+					zend_fetch_class(threaded->std.ce->name, (ZEND_FETCH_CLASS_AUTO | ZEND_FETCH_CLASS_NO_AUTOLOAD)), 
+					ce);
+			}
 		}
 	}
 

@@ -102,20 +102,8 @@ static zend_try_catch_element* pthreads_copy_try(zend_try_catch_element *old, in
 	return try_catch;
 } /* }}} */
 
-#if PHP_VERSION_ID < 70100
 /* {{{ */
-static zend_brk_cont_element* pthreads_copy_brk(zend_brk_cont_element *old, int end) {
-	zend_brk_cont_element *brk_cont = safe_emalloc(end, sizeof(zend_brk_cont_element), 0);
-	
-	memcpy(
-		brk_cont,
-		old, 
-		sizeof(zend_brk_cont_element) * end);
-	
-	return brk_cont;
-} /* }}} */
-#else
-static zend_live_range* pthreads_copy_live(zend_live_range *old, int end) {
+static zend_live_range* pthreads_copy_live(zend_live_range *old, int end) { 
 	zend_live_range *range = safe_emalloc(end, sizeof(zend_live_range), 0);
 
 	memcpy(
@@ -124,8 +112,7 @@ static zend_live_range* pthreads_copy_live(zend_live_range *old, int end) {
 		sizeof(zend_live_range) * end);
 
 	return range;
-}
-#endif
+} /* }}} */
 
 /* {{{ */
 static zval* pthreads_copy_literals(zval *old, int last) {
@@ -227,17 +214,13 @@ static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_in
 	while (it < end) {
 		if (info[it].name)
 			info[it].name = zend_string_new(old[it].name);
-#if PHP_VERSION_ID >= 70200
+
 		if (ZEND_TYPE_IS_SET(old[it].type) && ZEND_TYPE_IS_CLASS(old[it].type)) {
 			info[it].type = ZEND_TYPE_ENCODE_CLASS(
 				zend_string_new(
 					ZEND_TYPE_NAME(info[it].type)), 
 				ZEND_TYPE_ALLOW_NULL(info[it].type));
 		}
-#else
-		if (info[it].class_name)
-			info[it].class_name = zend_string_new(old[it].class_name);
-#endif
 		it++;
 	}
 	
@@ -284,11 +267,7 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	op_array->opcodes = pthreads_copy_opcodes(op_array, literals);
 	
 	if (op_array->arg_info) 	op_array->arg_info = pthreads_copy_arginfo(op_array, arg_info, op_array->num_args);
-#if PHP_VERSION_ID < 70100
-	if (op_array->brk_cont_array) 	op_array->brk_cont_array = pthreads_copy_brk(op_array->brk_cont_array, op_array->last_brk_cont);
-#else
 	if (op_array->live_range)		op_array->live_range = pthreads_copy_live(op_array->live_range, op_array->last_live_range);
-#endif
 	if (op_array->try_catch_array)  op_array->try_catch_array = pthreads_copy_try(op_array->try_catch_array, op_array->last_try_catch);
 	if (op_array->vars) 		op_array->vars = pthreads_copy_variables(variables, op_array->last_var);
 	if (op_array->static_variables) op_array->static_variables = pthreads_copy_statics(op_array->static_variables);

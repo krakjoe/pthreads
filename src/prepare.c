@@ -464,7 +464,7 @@ static inline void pthreads_prepare_ini(pthreads_object_t* thread) {
 	ZEND_HASH_FOREACH_STR_KEY_PTR(table[0], name, entry[0]) {
 		if ((entry[1] = zend_hash_find_ptr(table[1], name))) {
 			if (entry[0]->value && entry[1]->value) {
-				if (memcmp(ZSTR_VAL(entry[0]->value), ZSTR_VAL(entry[1]->value), ZSTR_LEN(entry[0]->value)) != SUCCESS) {
+				if (strcmp(ZSTR_VAL(entry[0]->value), ZSTR_VAL(entry[1]->value)) != SUCCESS) {
 					zend_bool resmod = entry[1]->modifiable;
 					zend_string *copied = zend_string_new(name); 
 
@@ -669,17 +669,6 @@ void pthreads_prepare_parent(pthreads_object_t *thread) {
 		pthreads_rebuild_object(&EG(user_exception_handler));
 } /* }}} */
 
-#if PHP_VERSION_ID < 70200 && PHP_VERSION_ID >= 70100
-/*
- It doesn't seem right that I should have to do this ... think bug in php-src
-*/
-/* {{{ */
-void pthreads_prepare_compiler(pthreads_object_t *thread) {
-	CG(known_strings) = PTHREADS_CG(thread->creator.ls, known_strings);
-	CG(known_strings_count) = PTHREADS_CG(thread->creator.ls, known_strings_count);
-} /* }}} */
-#endif
-
 /* {{{ */
 int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *ready) {
 
@@ -695,10 +684,6 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 		PG(auto_globals_jit) = 0;
 
 		php_request_startup();
-
-#if PHP_VERSION_ID < 70200 && PHP_VERSION_ID >= 70100
-		pthreads_prepare_compiler(thread);
-#endif
 
 		pthreads_prepare_sapi(thread);
 	
