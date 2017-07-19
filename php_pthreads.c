@@ -159,8 +159,6 @@ static inline void pthreads_execute_ex(zend_execute_data *data) {
 
 /* {{{ */
 static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zval *var, zend_arg_info *info) {
-	pthreads_object_t *threaded = NULL;
-
 	if (!ZEND_TYPE_IS_SET(info->type)) {
 		return 1;
 	}
