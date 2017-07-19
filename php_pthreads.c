@@ -189,9 +189,13 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 			}
 
 			if (Z_TYPE_P(var) == IS_OBJECT) {
-				return instanceof_function(
-					zend_fetch_class(threaded->std.ce->name, (ZEND_FETCH_CLASS_AUTO | ZEND_FETCH_CLASS_NO_AUTOLOAD)), 
-					ce);
+				zend_class_entry *instance = zend_fetch_class(threaded->std.ce->name, (ZEND_FETCH_CLASS_AUTO | ZEND_FETCH_CLASS_NO_AUTOLOAD));
+
+				if (!instance) {
+					return 0;
+				}
+
+				return instanceof_function(instance, ce);
 			}
 		}
 	}
