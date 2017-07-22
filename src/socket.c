@@ -206,7 +206,7 @@ void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zv
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
 	switch (threaded->store.sock->domain) {
-#ifdef AF_UNIX
+#ifndef _WIN32
 		case AF_UNIX: {
 			struct sockaddr_un *sa = (struct sockaddr_un *) sock_type;
 
@@ -357,7 +357,7 @@ void pthreads_socket_connect(zval *object, zend_string *address, zend_long port,
 			RETURN_TRUE;
 		} break;
 
-#ifdef AF_UNIX
+#ifndef _WIN32
 		case AF_UNIX: {
 			struct sockaddr_un s_un = {0};
 
@@ -506,12 +506,13 @@ void pthreads_socket_get_sockaddr(zval *object, zend_long port, struct sockaddr 
 				add_assoc_long(return_value, "port", htons(sin->sin_port));
 			}
 		} break;
-
+#ifndef _WIN32
 		case AF_UNIX: {
 			struct sockaddr_un  *s_un = (struct sockaddr_un *) sa;
 
 			add_assoc_string(return_value, "host", s_un->sun_path);
 		} break;
+#endif
 	}
 }
 

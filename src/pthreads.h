@@ -38,13 +38,11 @@
 #include <php_globals.h>
 #include <php_main.h>
 #include <php_network.h>
+#ifndef _WIN32
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#ifdef AF_UNIX
 #include <sys/un.h>
-#endif
-#ifndef _WIN32
 #	ifdef HAVE_IF_NAMETOINDEX
 #		include <net/if.h>
 #	endif
