@@ -56,21 +56,25 @@ build_script:
 
     buildconf.bat
 
-    configure.bat --disable-all --enable-cli --enable-zts --with-pthreads=shared --with-config-file-scan-dir=C:\projects\pthreads\bin\modules.d --with-prefix=C:\projects\pthreads\bin --with-php-build=deps
+    configure.bat --disable-all --enable-cli --enable-zts --with-pthreads=shared --with-prefix=C:\projects\pthreads\bin --with-php-build=deps
 
     nmake
 
     nmake install
 
-    copy php.ini-development C:\projects\pthreads\bin\php.ini
-
-    mkdir C:\projects\pthreads\bin\modules.d
-
-    echo extension=php_pthreads.dll > C:\projects\pthreads\bin\modules.d\php.ini
+    cd C:\projects\pthreads\bin
 
     copy C:\projects\pthreads-w32\Pre-built.2\dll\%ARCH%\pthreadVC2.dll C:\projects\pthreads\bin\pthreadVC2.dll
+
+    echo [PHP] > php.ini
+
+    echo extension_dir = "ext" >> php.ini
+
+    echo extension=php_pthreads.dll >> php.ini
+
+    set TEST_PHP_EXECUTABLE=%cd%\php.exe
 test_script:
-- cmd: C:\projects\pthreads\bin\php.exe -doutput_buffering=0 run-tests.php ext\pthreads -p C:\projects\pthreads\bin\php.exe -q --show-diff
+- cmd: php.exe /projects/php-src/run-tests.php /projects/php-src/ext/pthreads -q --show-diff
 artifacts:
   - path: bin
     name: master
