@@ -69,5 +69,5 @@ printf("First 16 chars: %s\n", substr((string)$future, 0, 16));
 /* here's us calling a closure in a thread of it's own */
 $future = Caller::call(function(...$params) {
 	printf("and how about this: %s, %s %s %s %s!\n", ...$params);
-}, [["also", "you", "can", "use", "closures"]]);
+}, "also", "you", "can", "use", "closures");
 ?>
