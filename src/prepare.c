@@ -378,7 +378,7 @@ static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int arg
 
 		/* runtime cache relies on immutable scope, so if scope changed, reallocate runtime cache */
 		/* IT WOULD BE NICE IF THIS WERE DOCUMENTED SOMEWHERE OTHER THAN PHP-SRC */
-		if (function->common.scope != scope) {
+		if (!function->op_array.run_time_cache || function->common.scope != scope) {
 			zend_op_array *op_array = &function->op_array;
 			op_array->run_time_cache = emalloc(op_array->cache_size);
 			memset(op_array->run_time_cache, 0, op_array->cache_size);
