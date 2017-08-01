@@ -6,17 +6,20 @@ branches:
 image: Visual Studio 2017
 
 environment:
-  PHP_SDK_BINARY_TOOLS_VER: php-sdk-2.0.7
-  ARCH: x86 # maybe add x64?
+  PHP_SDK_BINARY_TOOLS_VER: php-sdk-2.0.9
 
   matrix:
-    - PHP_VER: 7.2
+    - ARCH: x86
+      PHP_VER: 7.2
+      VC_VER: vc15
+    - ARCH: x64
+      PHP_VER: 7.2
       VC_VER: vc15
 install:
 - cmd: cinst wget
 build_script:
 - cmd: >-
-    "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+    "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %ARCH%
 
     wget https://github.com/OSTC/php-sdk-binary-tools/archive/%PHP_SDK_BINARY_TOOLS_VER%.zip --no-check-certificate -q -O php-sdk-binary-tools-%PHP_SDK_BINARY_TOOLS_VER%.zip
 
@@ -73,6 +76,10 @@ build_script:
     echo extension=php_pthreads.dll >> php.ini
 
     set TEST_PHP_EXECUTABLE=%cd%\php.exe
+
+    php -v
+
+    php -m
 test_script:
 - cmd: php.exe /projects/php-src/run-tests.php /projects/php-src/ext/pthreads -q --show-diff
 artifacts:
