@@ -262,6 +262,8 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 		op_array->doc_comment = zend_string_new(op_array->doc_comment);
 	}
 	
+	op_array->filename = zend_string_new(op_array->filename);
+
 	if (op_array->literals) op_array->literals = pthreads_copy_literals (literals, op_array->last_literal);
 
 	op_array->opcodes = pthreads_copy_opcodes(op_array, literals);
