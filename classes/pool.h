@@ -185,27 +185,17 @@ PHP_METHOD(Pool, submit) {
 		object_init_ex(&worker, ce);
 		
 		{
-#if PHP_VERSION_ID >= 70100
 			zend_class_entry *scope = EG(fake_scope);
-#else
-			zend_class_entry *scope = EG(scope);
-#endif
 			zend_function *constructor = NULL;
 			zval retval;
 
 			ZVAL_UNDEF(&retval);
 			
-#if PHP_VERSION_ID >= 70100
 			EG(fake_scope) = ce;
-#else
-			EG(scope) = ce;
-#endif
+
 			constructor = Z_OBJ_HT(worker)->get_constructor(Z_OBJ(worker));
-#if PHP_VERSION_ID >= 70100
+
 			EG(fake_scope) = scope;
-#else
-			EG(scope) = scope;
-#endif
 			
 			if (constructor) {
 				zend_fcall_info fci = empty_fcall_info;
@@ -218,11 +208,7 @@ PHP_METHOD(Pool, submit) {
 				
 				fcc.initialized = 1;
 				fcc.function_handler = constructor;
-#if PHP_VERSION_ID >= 70100
 				fcc.calling_scope = zend_get_executed_scope();
-#else
-				fcc.calling_scope = scope;
-#endif
 				fcc.called_scope = Z_OBJCE(worker);
 				fcc.object = Z_OBJ(worker);
 				

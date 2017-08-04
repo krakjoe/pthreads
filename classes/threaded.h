@@ -86,11 +86,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_getRefCount, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-#if PHP_VERSION_ID >= 70200
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Threaded_isGarbage, 0, 0, _IS_BOOL, 0)
-#else
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Threaded_isGarbage, 0, 0, _IS_BOOL, NULL, 0)
-#endif
 ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_threaded_methods[];
@@ -324,11 +320,7 @@ PHP_METHOD(Threaded, extend) {
     if (is_final)
         ce->ce_flags = ce->ce_flags &~ ZEND_ACC_FINAL;
 
-#if PHP_VERSION_ID >= 70100
 	parent = zend_get_executed_scope();
-#else
-	parent = EX(called_scope);
-#endif
 
 	zend_do_inheritance(ce, parent);
 
