@@ -221,8 +221,6 @@ while(0)
 		zend_string *name;
 		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->properties_info, name, info) {
 			zend_property_info dup = *info;
-
-			dup.name = zend_string_new(info->name);
 			
 			if (info->doc_comment) {
 				if (thread->options & PTHREADS_INHERIT_COMMENTS) {
@@ -237,7 +235,6 @@ while(0)
 			}
 			
 			if (!zend_hash_str_add_mem(&prepared->properties_info, name->val, name->len, &dup, sizeof(zend_property_info))) {		
-				zend_string_release(dup.name);
 				if (dup.doc_comment)
 					zend_string_release(dup.doc_comment);
 			}
