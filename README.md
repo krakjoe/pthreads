@@ -10,7 +10,7 @@ This project provides multi-threading that is compatible with PHP based on Posix
 
 ## Highlights
 
-* An easy to use, quick to learn OO Threading API for PHP7
+* An easy to use, quick to learn OO Threading API for PHP 7.2
 * Execute any and all predefined and user declared methods and functions, including closures.
 * Ready made synchronization included
 * A world of possibilities ...
@@ -26,7 +26,7 @@ This project provides multi-threading that is compatible with PHP based on Posix
 
 ## Requirements
 
-* PHP7+
+* PHP 7.2+
 * ZTS Enabled ( Thread Safety )
 * Posix Threads Implementation
 
@@ -34,9 +34,7 @@ Testing has been carried out on x86, x64 and ARM, in general you just need a com
 
 ## PHP7
 
-For PHP7, pthreads has been almost completely rewritten to be more efficient, easier to use and more robust.
-
-While documentation on php.net is waiting to be updated and translated, I will give a brief changelog here:
+For PHP7, pthreads has been almost completely rewritten to be more efficient, easier to use and more robust. I will give a brief changelog here:
 
 The API for v3 has changed, the following things have been removed:
 
@@ -69,13 +67,11 @@ Some blog posts explaining these changes:
  * [A Letter from the Future](http://blog.krakjoe.ninja/2015/08/a-letter-from-future.html)
  * [Addendum to A Letter from the Future](http://blog.krakjoe.ninja/2015/09/addendum-letter-from-future.html)
 
-As of yet, documentation has not been updated to reflect these changes ... sorry about that ... one human ...
-
-More detail to come ...
-
 ### Supported PHP Versions
 
 pthreads v3 requires PHP7 or above. PHP5 needs to use pthreads v2 which can be found in the PHP5 branch.
+
+Note that only PHP 7.2+ is now supported (requiring the current master branch of pthreads). This is due to safety issues with ZTS mode on PHP 7.0 and 7.1.
 
 ### Windows Support
 
@@ -132,8 +128,6 @@ Here are some links to articles I have prepared for users: everybody should read
  - https://gist.github.com/krakjoe/9384409
 
 If you have had the time to put any cool demo's together and would like them showcased on pthreads.org please get in touch.
-
-*Note: the documentation in the manual and the documents above refer to pthreads v2, it has not yet been updated ... anyone want to help ?*
 
 ### Polyfill
 
