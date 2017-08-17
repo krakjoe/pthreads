@@ -10,7 +10,7 @@ This project provides multi-threading that is compatible with PHP based on Posix
 
 ## Highlights
 
-* An easy to use, quick to learn OO Threading API for PHP 7.2
+* An easy to use, quick to learn OO Threading API for PHP 7.2+
 * Execute any and all predefined and user declared methods and functions, including closures.
 * Ready made synchronization included
 * A world of possibilities ...
@@ -58,7 +58,7 @@ The following things have significant changes:
  * ```Worker``` objects no longer require that you retain a reference to ```Collectable``` objects on the stack.
  * Unified monitor (cond/mutex/state) for ```Threaded``` objects
  * ```Threaded``` members of ```Threaded``` objects are immutable
- * ```Volatile``` objects, excempt from immutability
+ * ```Volatile``` objects, exempt from immutability
  * ```array``` coerced to ```Volatile``` when set as member of ```Threaded```
  * ```Collectable``` converted to interface, to make ```extends Volatile implements Collectable``` possible.
 
@@ -82,7 +82,7 @@ Releases for Windows can be found: http://windows.php.net/downloads/pecl/release
 ##### Simple Windows Installation
 
 * Add `pthreadVC2.dll` (included with the Windows releases) to the same directory as `php.exe` eg. `C:\xampp\php`
-* Add `php_pthreads.dll` to PHP extention folder eg. `C:\xampp\php\ext`
+* Add `php_pthreads.dll` to PHP extension folder eg. `C:\xampp\php\ext`
 
 ### Mac OSX Support
 
