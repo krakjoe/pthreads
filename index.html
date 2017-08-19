@@ -61,7 +61,7 @@
 <h2>
 	The Basics</h2>
 <p>
-	pthreads is an Object Orientated API that allows user-land multi-threading in PHP. It includes all the tools you need to create multi-threaded applications targeted at the Web or the Console. PHP applications can create, read, write and synchronize with Threads, Workers and Stackables.</p>
+	pthreads is an Object Orientated API that allows user-land multi-threading in PHP. It includes all the tools you need to create multi-threaded applications targeted at the Web or the Console. PHP applications can create, read, write and synchronize with Threads and Workers (Threaded objects).</p>
 <h2>
 	A Thread Object</h2>
 <p>
@@ -69,11 +69,7 @@
 <h2>
 	A Worker Object</h2>
 <p>
-	A Worker Thread has a persistent state, and will be available from the call to start until the object goes out of scope, or is explicitly shutdown. Any context with a reference can pass objects of type Stackable to the Worker which will be executed by the Worker in a separate Thread. The run method of a Worker is executed before any objects on the stack, such that it can initialize resources that the Stackables to come may need.</p>
-<h2>
-	A Stackable Object</h2>
-<p>
-	A Stackable Object can read/write and execute the Worker Thread during the execution of it's run method, additionally, any context with a reference to the Stackable can read, write and execute it's methods before during and after execution.</p>
+	A Worker Thread has a persistent state, and will be available from the call to start until the object goes out of scope, or is explicitly shutdown. Any context with a reference can pass objects of type Threaded to the Worker which will be executed by the Worker in a separate Thread. The run method of a Worker is executed before any objects on the stack, such that it can initialize resources that the Threaded tasks to come may need.</p>
 <h2>
 	Synchronization</h2>
 <p>
@@ -81,13 +77,9 @@
 <h2>
 	Wait, Threaded Objects ?</h2>
 <p>
-	A Stackable, Thread or Worker can be thought of, and should be used as a Threaded stdClass: A Thread, Worker and Stackable all behave in the same way in any context with a reference.</p>
+	A Thread or Worker can be thought of, and should be used as a Threaded stdClass: A Thread and Worker behave in the same way in any context with a reference.</p>
 <p>
-	Any objects that are intended for use in the multi-threaded parts of your application should extend the Stackable, Thread or Worker declaration, which means they must implement run but may not ever be executed; it will often be the case that Objects being used in a multi-threaded environment are intended for execution. Doing so means any context ( that's Thread/Worker/Stackable/Process ) with a reference can read, write and execute the members of the Threaded Object before, during, and after execution.</p>
-<h2>
-	Method Modifiers</h2>
-<p>
-	The protected methods of Threaded Objects are protected by pthreads, such that only one context may call that method at a time. The private methods of Threaded Objects can only be called from within the Threaded Object during execution.</p>
+	Any objects that are intended for use in the multi-threaded parts of your application should extend the Threaded, Thread or Worker declaration, which means they must implement run but may not ever be executed; it will often be the case that Objects being used in a multi-threaded environment are intended for execution. Doing so means any Threaded context (Thread or Worker) with a reference can read, write and execute the members of the Threaded Object before, during, and after execution.</p>
 <h2>
 	Data Storage</h2>
 <p>
@@ -130,8 +122,7 @@
 <li>Posix Threading</li>
 <li>Synchronization</li>
 <li>Worker Threads</li>
-<li>Mutex</li>
-<li>Condition Variables</li>
+<li>Thread Pools</li>
 </ul>
 <h2>Requirements</h2>
 <ul>
