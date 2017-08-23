@@ -20,8 +20,23 @@ class Test extends Thread {
 		return (object) $this->custom;
 	}
 
+	public function checkReturnType():int {
+		return 1;
+	}
+
+	public function wrongReturnType():string {
+		return 1;
+	}
+
+	public function checkOptionalNull():?Threaded {
+		return ($var = null);
+	}
+
 	public function run() {
 		var_dump($this->method());
+		var_dump($this->checkReturnType());
+		var_dump($this->wrongReturnType());
+		var_dump($this->checkOptionalNull());
 	}
 }
 
@@ -32,8 +47,7 @@ $test->start() && $test->join();
 --EXPECT--
 object(Custom)#1 (0) {
 }
-
-
-
-
+int(1)
+string(1) "1"
+NULL
 
