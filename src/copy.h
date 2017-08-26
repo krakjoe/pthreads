@@ -279,8 +279,6 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 static inline zend_function* pthreads_copy_internal_function(zend_function *function) {
 	zend_function *copy = calloc(1, sizeof(zend_internal_function));
 	memcpy(copy, function, sizeof(zend_internal_function));
-	copy->common.function_name = 
-		zend_string_new(function->common.function_name);
 	return copy;
 } /* }}} */
 
