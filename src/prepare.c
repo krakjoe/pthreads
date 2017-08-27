@@ -290,49 +290,18 @@ while(0)
 
 	{
 		zend_string *key;
-		zval *value;
+		zend_constant *zc, rc;
 
-		ZEND_HASH_FOREACH_STR_KEY_VAL(&candidate->constants_table, key, value) {
-			zend_string *name;
-			zval separated;
-
+		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->constants_table, key, zc) {
 			if (zend_hash_exists(&prepared->constants_table, key)) {
 				continue;
 			}
 
-			switch (Z_TYPE_P(value)) {
-				case IS_PTR: {
-					zend_constant *zc = Z_PTR_P(value),	
-									rc;
+			rc = *zc;
 
-					memcpy(&rc, zc, sizeof(zend_constant));
-
-					if (pthreads_store_separate(&zc->value, &rc.value, 1) == SUCCESS) {
-						name = zend_string_new(key);
-						if (!zend_hash_add_mem(
-							&prepared->constants_table, name, &rc, sizeof(zend_constant))) {
-							zend_string_release(name);
-						}
-						zend_string_release(name);
-					}
-					continue;
-				}
-
-				case IS_STRING:
-				case IS_ARRAY:
-				case IS_OBJECT: {
-					if (pthreads_store_separate(value, &separated, 1) != SUCCESS) {
-						continue;				
-					}
-				} break;
-
-				default: ZVAL_COPY(&separated, value);	
+			if (pthreads_store_separate(&zc->value, &rc.value, 1) == SUCCESS) {
+				zend_hash_add_mem(&prepared->constants_table, key, &rc, sizeof(zend_constant));
 			}
-
-			name = zend_string_new(key);
-			zend_hash_update(
-				&prepared->constants_table, name, &separated);
-			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
 	}
 
