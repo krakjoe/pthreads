@@ -48,18 +48,18 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 static void pthreads_prepared_resource_dtor(zval *zv); /* }}} */
 
 /* {{{ */
-static void pthreads_prepared_entry_static_members(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
+static void pthreads_prepared_entry_static_members(zend_class_entry *candidate, zend_class_entry *prepared) {
 	if (candidate->default_static_members_count) {
 		int i;
 
-                if(prepared->default_static_members_table != NULL) {
-                        efree(prepared->default_static_members_table);
-                }
+		if(prepared->default_static_members_table != NULL) {
+			efree(prepared->default_static_members_table);
+		}
 		prepared->default_static_members_table = (zval*) ecalloc(
 			sizeof(zval), candidate->default_static_members_count);
 		prepared->default_static_members_count = candidate->default_static_members_count;
 		memcpy(prepared->default_static_members_table,
-		       candidate->default_static_members_table,
+			candidate->default_static_members_table,
 			sizeof(zval) * candidate->default_static_members_count);
 
 		for (i=0; i<prepared->default_static_members_count; i++) {
@@ -72,12 +72,11 @@ static void pthreads_prepared_entry_static_members(pthreads_object_t* thread, ze
 } /* }}} */
 
 /* {{{ */
-static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared, zend_bool prepare_static_members) {
-    
+static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
 	if (candidate->parent) {
 		if (zend_hash_index_exists(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent)) {
 			prepared->parent = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent);
-		} else prepared->parent = pthreads_prepared_entry_internal(thread, candidate->parent, prepare_static_members);
+		} else prepared->parent = pthreads_prepared_entry(thread, candidate->parent);
 	}
 
 	if (candidate->num_interfaces) {
@@ -115,19 +114,19 @@ static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend
 		
 		if (candidate->trait_precedences) {
 			size_t precedence = 0;
-			            
-            while (candidate->trait_precedences[precedence]) {
-                precedence++;
-            }
-            prepared->trait_precedences = emalloc(sizeof(zend_trait_precedence*) * (precedence+1));
-            precedence = 0;
-            
-            while (candidate->trait_precedences[precedence]) {
-	            prepared->trait_precedences[precedence] = pthreads_preparation_copy_trait_precedence(
-		            thread, candidate->trait_precedences[precedence]
-	            );
-	            precedence++;
-            }
+
+			while (candidate->trait_precedences[precedence]) {
+				precedence++;
+			}
+			prepared->trait_precedences = emalloc(sizeof(zend_trait_precedence*) * (precedence+1));
+			precedence = 0;
+
+			while (candidate->trait_precedences[precedence]) {
+				prepared->trait_precedences[precedence] = pthreads_preparation_copy_trait_precedence(
+					thread, candidate->trait_precedences[precedence]
+				);
+				precedence++;
+			}
 			prepared->trait_precedences[precedence]=NULL;
 		} else prepared->trait_precedences = NULL;
 	} else {
@@ -163,56 +162,102 @@ static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend
 			}
 		} while(++umethod < 6);
 	}
+
+#define SET_ITERATOR_FUNC(f) do { \
+	if (candidate->iterator_funcs.f) { \
+		prepared->iterator_funcs.f = zend_hash_index_find_ptr( \
+			&PTHREADS_ZG(resolve), (zend_ulong) candidate->iterator_funcs.f); \
+	} \
+} while (0)
+
+	memcpy(&prepared->iterator_funcs, &candidate->iterator_funcs, sizeof(zend_class_iterator_funcs));
+
+	SET_ITERATOR_FUNC(zf_new_iterator);
+	SET_ITERATOR_FUNC(zf_valid);
+	SET_ITERATOR_FUNC(zf_current);
+	SET_ITERATOR_FUNC(zf_key);
+	SET_ITERATOR_FUNC(zf_next);
+	SET_ITERATOR_FUNC(zf_rewind);
+
+#undef SET_ITERATOR_FUNC
+
+	return prepared;
+} /* }}} */
+
+/* {{{ */
+static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
+	zend_class_entry *prepared;
+
+	prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
+	prepared->name = zend_string_new(candidate->name);
+	prepared->type = candidate->type;
+
+	zend_initialize_class_data(prepared, 1);
+
+	zend_hash_index_update_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate, prepared);
+
+	prepared->ce_flags = candidate->ce_flags;
+	prepared->refcount = 1;
 	
+	memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
+
+	if ((thread->options & PTHREADS_INHERIT_COMMENTS) &&
+	   (candidate->info.user.doc_comment)) {
+			prepared->info.user.doc_comment = zend_string_new(candidate->info.user.doc_comment);
+		} else prepared->info.user.doc_comment = NULL;
+
+	if (prepared->info.user.filename) {
+		prepared->info.user.filename = zend_string_new(candidate->info.user.filename);
+	}
+
 	{
 		zend_string *key;
 		zend_function *value;
-		
+
 		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->function_table, key, value) {	
 			zend_string *name = zend_string_new(key);
-                        
-                        if (!zend_hash_exists(&prepared->function_table, name)) {
-                                value = pthreads_copy_function(value);
-                                zend_hash_add_ptr(
-                                        &prepared->function_table, name, value);
-                        }
+			if (!zend_hash_exists(&prepared->function_table, name)) {
+				value = pthreads_copy_function(value);
+				zend_hash_add_ptr(&prepared->function_table, name, value);
+			}
 			zend_string_release(name);
 		} ZEND_HASH_FOREACH_END();
 	}
-	
-	{
-	    zend_function *func;
 
-	    if (!prepared->constructor && zend_hash_num_elements(&prepared->function_table)) {
-	        if ((func = zend_hash_str_find_ptr(&prepared->function_table, "__construct", sizeof("__construct")-1))) {
-	            prepared->constructor = func;
-	        } else {
-			if ((func = zend_hash_find_ptr(&prepared->function_table, prepared->name))) {
+	{
+		zend_function *func;
+
+		if (!prepared->constructor && zend_hash_num_elements(&prepared->function_table)) {
+			if ((func = zend_hash_str_find_ptr(&prepared->function_table, "__construct", sizeof("__construct")-1))) {
 				prepared->constructor = func;
+			} else {
+				if ((func = zend_hash_find_ptr(&prepared->function_table, prepared->name))) {
+					prepared->constructor = func;
+				}
 			}
 		}
-	    }
-	    
+
 #define FIND_AND_SET(f, n) do {\
-    if (!prepared->f && zend_hash_num_elements(&prepared->function_table)) { \
-        if ((func = zend_hash_str_find_ptr(&prepared->function_table, n, sizeof(n)-1))) { \
-            prepared->f = func; \
-        } \
-    } \
+	if (!prepared->f && zend_hash_num_elements(&prepared->function_table)) { \
+		if ((func = zend_hash_str_find_ptr(&prepared->function_table, n, sizeof(n)-1))) { \
+			prepared->f = func; \
+		} \
+	} \
 } \
 while(0)
-        
-        FIND_AND_SET(clone, "__clone");
-        FIND_AND_SET(__get, "__get");
-        FIND_AND_SET(__set, "__set");
-        FIND_AND_SET(__unset, "__unset");
-        FIND_AND_SET(__isset, "__isset");
-        FIND_AND_SET(__call, "__call");
-        FIND_AND_SET(__callstatic, "__callstatic");
-        FIND_AND_SET(serialize_func, "serialize");
-        FIND_AND_SET(unserialize_func, "unserialize");
-        FIND_AND_SET(__tostring, "__tostring");
-        FIND_AND_SET(destructor, "__destruct");
+
+		FIND_AND_SET(clone, "__clone");
+		FIND_AND_SET(__get, "__get");
+		FIND_AND_SET(__set, "__set");
+		FIND_AND_SET(__unset, "__unset");
+		FIND_AND_SET(__isset, "__isset");
+		FIND_AND_SET(__call, "__call");
+		FIND_AND_SET(__callstatic, "__callstatic");
+		FIND_AND_SET(serialize_func, "serialize");
+		FIND_AND_SET(unserialize_func, "unserialize");
+		FIND_AND_SET(__tostring, "__tostring");
+		FIND_AND_SET(destructor, "__destruct");
+
 #undef FIND_AND_SET
 	}
 
@@ -231,7 +276,7 @@ while(0)
 			if (info->ce) {
 				if (info->ce == candidate) {
 					dup.ce = prepared;
-				} else dup.ce = pthreads_prepared_entry_internal(thread, info->ce, prepare_static_members);
+				} else dup.ce = pthreads_prepared_entry(thread, info->ce);
 			}
 			
 			if (!zend_hash_str_add_mem(&prepared->properties_info, name->val, name->len, &dup, sizeof(zend_property_info))) {		
@@ -240,35 +285,15 @@ while(0)
 			}
 		} ZEND_HASH_FOREACH_END();
 	}
-
-#define SET_ITERATOR_FUNC(f) do { \
-	if (candidate->iterator_funcs.f) { \
-		prepared->iterator_funcs.f = zend_hash_index_find_ptr( \
-			&PTHREADS_ZG(resolve), (zend_ulong) candidate->iterator_funcs.f); \
-	} \
-} while (0)
-	
-	memcpy(&prepared->iterator_funcs, &candidate->iterator_funcs, sizeof(zend_class_iterator_funcs));
-
-	SET_ITERATOR_FUNC(zf_new_iterator);
-	SET_ITERATOR_FUNC(zf_valid);
-	SET_ITERATOR_FUNC(zf_current);
-	SET_ITERATOR_FUNC(zf_key);
-	SET_ITERATOR_FUNC(zf_next);
-	SET_ITERATOR_FUNC(zf_rewind);
-
-
-#undef SET_ITERATOR_FUNC
 	
 	if (candidate->default_properties_count) {
 		int i;
-                
-                if(prepared->default_properties_table != NULL) {
-                        efree(prepared->default_properties_table);
-                }
+
+		if(prepared->default_properties_table != NULL) {
+			efree(prepared->default_properties_table);
+		}
 		prepared->default_properties_table = emalloc(
 			sizeof(zval) * candidate->default_properties_count);
-
 		memcpy(
 			prepared->default_properties_table,
 			candidate->default_properties_table,
@@ -283,10 +308,6 @@ while(0)
 		}
 		prepared->default_properties_count = candidate->default_properties_count;
 	} else prepared->default_properties_count = 0;
-
-	if(prepare_static_members) {
-		pthreads_prepared_entry_static_members(thread, candidate, prepared);
-	}
 
 	{
 		zend_string *key;
@@ -305,36 +326,11 @@ while(0)
 		} ZEND_HASH_FOREACH_END();
 	}
 
-	return prepared;
-} /* }}} */
-
-/* {{{ */
-static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool prepare_static_members) {
-	zend_class_entry *prepared;
-
-	prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
-	prepared->name = zend_string_new(candidate->name);
-	prepared->type = candidate->type;
-
-	zend_initialize_class_data(prepared, 1);
-
-	zend_hash_index_update_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate, prepared);
-
-	prepared->ce_flags = candidate->ce_flags;
-	prepared->refcount = 1;
-	
-	memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
-
-	if ((thread->options & PTHREADS_INHERIT_COMMENTS) &&
-	   (candidate->info.user.doc_comment)) {
-        	prepared->info.user.doc_comment = zend_string_new(candidate->info.user.doc_comment);
-    	} else prepared->info.user.doc_comment = NULL;
-	
-	if (prepared->info.user.filename) {
-		prepared->info.user.filename = zend_string_new(candidate->info.user.filename);
+	if (prepared->ce_flags & ZEND_ACC_ANON_BOUND) {
+		return prepared;
 	}
-	
-	return pthreads_complete_entry(thread, candidate, prepared, prepare_static_members);
+
+	return pthreads_complete_entry(thread, candidate, prepared);
 } /* }}} */
 
 /* {{{ */
@@ -368,11 +364,6 @@ static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int arg
 
 /* {{{ */
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
-	return pthreads_prepared_entry_internal(thread, candidate, 1);
-} /* }}} */
-
-/* {{{ */
-zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool prepare_static_members) {
 	zend_class_entry *prepared = NULL;
 	zend_string *lookup = NULL;
 
@@ -387,15 +378,15 @@ zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, ze
 	lookup = zend_string_tolower(candidate->name);
 
 	if ((prepared = zend_hash_find_ptr(EG(class_table), lookup))) {
-	    zend_string_release(lookup);
+		zend_string_release(lookup);
 		
 		if(prepared->create_object == NULL && candidate->create_object != NULL) {
-			return pthreads_complete_entry(thread, candidate, prepared, prepare_static_members);
+			return pthreads_complete_entry(thread, candidate, prepared);
 		}
 		return prepared;
 	}
 	
-	if (!(prepared = pthreads_copy_entry(thread, candidate, prepare_static_members))) {
+	if (!(prepared = pthreads_copy_entry(thread, candidate))) {
 		zend_string_release(lookup);
 		return NULL;
 	}
@@ -574,13 +565,13 @@ static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 	
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->creator.ls, class_table), name, entry) {
 		if (!zend_hash_exists(PTHREADS_CG(thread->local.ls, class_table), name) && ZSTR_VAL(name)[0] != '\0') {
-			pthreads_prepared_entry_internal(thread, entry, 0);
+			pthreads_prepared_entry(thread, entry);
 		}
 	} ZEND_HASH_FOREACH_END();
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->local.ls, class_table), name, entry) {
 		if (entry->type != ZEND_INTERNAL_CLASS) {
-			pthreads_prepared_entry_static_members(thread, zend_hash_find_ptr(PTHREADS_CG(thread->creator.ls, class_table), name), entry);
+			pthreads_prepared_entry_static_members(zend_hash_find_ptr(PTHREADS_CG(thread->creator.ls, class_table), name), entry);
 		}
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
