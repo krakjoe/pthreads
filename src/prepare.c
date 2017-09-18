@@ -71,6 +71,21 @@ static void pthreads_prepared_entry_static_members(zend_class_entry *candidate, 
 	} else prepared->default_static_members_count = 0;
 } /* }}} */
 
+static void prepare_class_function_table(zend_class_entry *candidate, zend_class_entry *prepared) {
+	zend_string *key;
+	zend_function *value;
+
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->function_table, key, value) {
+		if (!zend_hash_exists(&prepared->function_table, key)) {
+			zend_string *name = zend_string_new(key);
+
+			value = pthreads_copy_function(value);
+			zend_hash_add_ptr(&prepared->function_table, name, value);
+			zend_string_release(name);
+		}
+	} ZEND_HASH_FOREACH_END();
+}
+
 /* {{{ */
 static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
     
@@ -163,23 +178,11 @@ static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend
 			}
 		} while(++umethod < 6);
 	}
-	
-	{
-		zend_string *key;
-		zend_function *value;
-		
-		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->function_table, key, value) {	
-			zend_string *name = zend_string_new(key);
-                        
-                        if (!zend_hash_exists(&prepared->function_table, name)) {
-                                value = pthreads_copy_function(value);
-                                zend_hash_add_ptr(
-                                        &prepared->function_table, name, value);
-                        }
-			zend_string_release(name);
-		} ZEND_HASH_FOREACH_END();
-	}
-	
+
+	// if this is an unbound anonymous class, then this will be the second copy,
+	// where all inherited functions will be copied
+	prepare_class_function_table(candidate, prepared);
+
 	{
 	    zend_function *func;
 
@@ -216,6 +219,53 @@ while(0)
 #undef FIND_AND_SET
 	}
 
+#define SET_ITERATOR_FUNC(f) do { \
+	if (candidate->iterator_funcs.f) { \
+		prepared->iterator_funcs.f = zend_hash_index_find_ptr( \
+			&PTHREADS_ZG(resolve), (zend_ulong) candidate->iterator_funcs.f); \
+	} \
+} while (0)
+
+	memcpy(&prepared->iterator_funcs, &candidate->iterator_funcs, sizeof(zend_class_iterator_funcs));
+
+	SET_ITERATOR_FUNC(zf_new_iterator);
+	SET_ITERATOR_FUNC(zf_valid);
+	SET_ITERATOR_FUNC(zf_current);
+	SET_ITERATOR_FUNC(zf_key);
+	SET_ITERATOR_FUNC(zf_next);
+	SET_ITERATOR_FUNC(zf_rewind);
+
+#undef SET_ITERATOR_FUNC
+
+	return prepared;
+} /* }}} */
+
+/* {{{ */
+static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
+	zend_class_entry *prepared;
+
+	prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
+	prepared->name = zend_string_new(candidate->name);
+	prepared->type = candidate->type;
+
+	zend_initialize_class_data(prepared, 1);
+
+	zend_hash_index_update_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate, prepared);
+
+	prepared->ce_flags = candidate->ce_flags;
+	prepared->refcount = 1;
+
+	memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
+
+	if ((thread->options & PTHREADS_INHERIT_COMMENTS) &&
+	   (candidate->info.user.doc_comment)) {
+			prepared->info.user.doc_comment = zend_string_new(candidate->info.user.doc_comment);
+		} else prepared->info.user.doc_comment = NULL;
+
+	if (prepared->info.user.filename) {
+		prepared->info.user.filename = zend_string_new(candidate->info.user.filename);
+	}
+
 	{
 		zend_property_info *info;
 		zend_string *name;
@@ -240,25 +290,6 @@ while(0)
 			}
 		} ZEND_HASH_FOREACH_END();
 	}
-
-#define SET_ITERATOR_FUNC(f) do { \
-	if (candidate->iterator_funcs.f) { \
-		prepared->iterator_funcs.f = zend_hash_index_find_ptr( \
-			&PTHREADS_ZG(resolve), (zend_ulong) candidate->iterator_funcs.f); \
-	} \
-} while (0)
-	
-	memcpy(&prepared->iterator_funcs, &candidate->iterator_funcs, sizeof(zend_class_iterator_funcs));
-
-	SET_ITERATOR_FUNC(zf_new_iterator);
-	SET_ITERATOR_FUNC(zf_valid);
-	SET_ITERATOR_FUNC(zf_current);
-	SET_ITERATOR_FUNC(zf_key);
-	SET_ITERATOR_FUNC(zf_next);
-	SET_ITERATOR_FUNC(zf_rewind);
-
-
-#undef SET_ITERATOR_FUNC
 	
 	if (candidate->default_properties_count) {
 		int i;
@@ -301,35 +332,13 @@ while(0)
 		} ZEND_HASH_FOREACH_END();
 	}
 
-	return prepared;
-} /* }}} */
+	if (candidate->ce_flags & ZEND_ACC_ANON_CLASS && !(prepared->ce_flags & ZEND_ACC_ANON_BOUND)) {
+		// this first copy will copy all declared functions on the unbound anonymous class
+		prepare_class_function_table(candidate, prepared);
 
-/* {{{ */
-static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
-	zend_class_entry *prepared;
-
-	prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
-	prepared->name = zend_string_new(candidate->name);
-	prepared->type = candidate->type;
-
-	zend_initialize_class_data(prepared, 1);
-
-	zend_hash_index_update_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate, prepared);
-
-	prepared->ce_flags = candidate->ce_flags;
-	prepared->refcount = 1;
-	
-	memcpy(&prepared->info.user, &candidate->info.user, sizeof(candidate->info.user));
-
-	if ((thread->options & PTHREADS_INHERIT_COMMENTS) &&
-	   (candidate->info.user.doc_comment)) {
-        	prepared->info.user.doc_comment = zend_string_new(candidate->info.user.doc_comment);
-    	} else prepared->info.user.doc_comment = NULL;
-	
-	if (prepared->info.user.filename) {
-		prepared->info.user.filename = zend_string_new(candidate->info.user.filename);
+		return prepared;
 	}
-	
+
 	return pthreads_complete_entry(thread, candidate, prepared);
 } /* }}} */
 
