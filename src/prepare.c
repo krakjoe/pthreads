@@ -87,7 +87,7 @@ static void prepare_class_function_table(zend_class_entry *candidate, zend_class
 }
 
 /* {{{ */
-static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared, zend_bool prepare_static_members) {
+static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
     
 	if (candidate->parent) {
 		if (zend_hash_index_exists(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent)) {
@@ -343,7 +343,7 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 		return prepared;
 	}
 
-	return pthreads_complete_entry(thread, candidate, prepared, prepare_static_members);
+	return pthreads_complete_entry(thread, candidate, prepared);
 } /* }}} */
 
 /* {{{ */
@@ -394,7 +394,7 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 	    zend_string_release(lookup);
 		
 		if(prepared->create_object == NULL && candidate->create_object != NULL) {
-			return pthreads_complete_entry(thread, candidate, prepared, 1);
+			return pthreads_complete_entry(thread, candidate, prepared);
 		}
 		return prepared;
 	}
@@ -414,7 +414,7 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 	zend_string_release(lookup);
 
 	if(PTHREADS_ZG(prepare_static_members)) {
-		pthreads_prepared_entry_static_members(thread, candidate, prepared);
+		pthreads_prepared_entry_static_members(candidate, prepared);
 	}
 	return prepared;
 } /* }}} */
