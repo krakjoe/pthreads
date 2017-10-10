@@ -208,9 +208,8 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 } /* }}} */
 
 /* {{{ */
-static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
+static inline int php_pthreads_recv(zend_execute_data *execute_data) {
 	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
-		zend_execute_data *execute_data = EG(current_execute_data);
 		uint32_t arg_num = EX(opline)->op1.num;	
 		zval *var = NULL;
 
@@ -239,9 +238,8 @@ static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
 } /* }}} */
 
 /* {{{ */
-static inline int php_pthreads_verify_return_type(ZEND_OPCODE_HANDLER_ARGS) {
+static inline int php_pthreads_verify_return_type(zend_execute_data *execute_data) {
 	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
-		zend_execute_data *execute_data = EG(current_execute_data);
 		zval *var = NULL;
 		
 		if (EX(opline)->op1_type == IS_UNUSED) {	
