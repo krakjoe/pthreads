@@ -175,7 +175,7 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 		threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(var));
 
 		if (!PTHREADS_IN_CREATOR(threaded)) {
-			zend_class_entry *ce, *instance;
+			zend_class_entry *ce;
 			void **cache = CACHE_ADDR(EX(opline)->op2.num);
 
 			if (*cache) {
