@@ -48,7 +48,7 @@ static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_ref
 static void pthreads_prepared_resource_dtor(zval *zv); /* }}} */
 
 /* {{{ */
-static void pthreads_prepared_entry_static_members(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
+static void pthreads_prepared_entry_static_members(zend_class_entry *candidate, zend_class_entry *prepared) {
 	if (candidate->default_static_members_count) {
 		int i;
 
@@ -69,57 +69,6 @@ static void pthreads_prepared_entry_static_members(pthreads_object_t* thread, ze
 		}	
 		prepared->static_members_table = prepared->default_static_members_table;
 	} else prepared->default_static_members_count = 0;
-	
-	{
-                zend_string *key;
-                zval *value;
-
-                ZEND_HASH_FOREACH_STR_KEY_VAL(&candidate->constants_table, key, value) {
-                        zend_string *name;
-                        zval separated;
-
-                        if (zend_hash_exists(&prepared->constants_table, key)) {
-                                continue;
-                        }
-
-                        switch (Z_TYPE_P(value)) {
-                                case IS_PTR: {
-                                        zend_class_constant *zc = Z_PTR_P(value),	
-                                                            rc;
-
-                                        memcpy(&rc, zc, sizeof(zend_class_constant));
-
-                                        if (pthreads_store_separate(&zc->value, &rc.value, 1) == SUCCESS) {
-                                                if (zc->doc_comment != NULL) {
-                                                    rc.doc_comment = zend_string_new(zc->doc_comment);
-                                                }
-                                                rc.ce = pthreads_prepared_entry(thread, zc->ce);
-
-                                                name = zend_string_new(key);
-                                                zend_hash_add_mem(
-                                                        &prepared->constants_table, name, &rc, sizeof(zend_class_constant));
-                                                zend_string_release(name);
-                                        }
-                                        continue;
-                                }
-
-                                case IS_STRING:
-                                case IS_ARRAY:
-                                case IS_OBJECT: {
-                                        if (pthreads_store_separate(value, &separated, 1) != SUCCESS) {
-                                                continue;				
-                                        }
-                                } break;
-
-                                default: ZVAL_COPY(&separated, value);	
-                        }
-
-                        name = zend_string_new(key);
-                        zend_hash_update(
-                                &prepared->constants_table, name, &separated);
-                        zend_string_release(name);
-                } ZEND_HASH_FOREACH_END();
-	}
 } /* }}} */
 
 static void prepare_class_function_table(zend_class_entry *candidate, zend_class_entry *prepared) {
@@ -367,7 +316,24 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 	} else prepared->default_properties_count = 0;
 
 	if (prepare_static_members) {
-		pthreads_prepared_entry_static_members(thread, candidate, prepared);
+		pthreads_prepared_entry_static_members(candidate, prepared);
+	}
+
+	{
+		zend_string *key;
+		zend_constant *zc, rc;
+
+		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->constants_table, key, zc) {
+			if (zend_hash_exists(&prepared->constants_table, key)) {
+				continue;
+			}
+
+			rc = *zc;
+
+			if (pthreads_store_separate(&zc->value, &rc.value, 1) == SUCCESS) {
+				zend_hash_add_mem(&prepared->constants_table, key, &rc, sizeof(zend_constant));
+			}
+		} ZEND_HASH_FOREACH_END();
 	}
 
 	if (candidate->ce_flags & ZEND_ACC_ANON_CLASS && !(prepared->ce_flags & ZEND_ACC_ANON_BOUND)) {
@@ -448,7 +414,7 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 	zend_string_release(lookup);
 
 	if(PTHREADS_ZG(prepare_static_members)) {
-		pthreads_prepared_entry_static_members(thread, candidate, prepared);
+		pthreads_prepared_entry_static_members(candidate, prepared);
 	}
 	return prepared;
 } /* }}} */
@@ -623,7 +589,7 @@ static inline void pthreads_prepare_classes(pthreads_object_t* thread) {
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->local.ls, class_table), name, entry) {
 		if (entry->type != ZEND_INTERNAL_CLASS) {
-			pthreads_prepared_entry_static_members(thread, zend_hash_find_ptr(PTHREADS_CG(thread->creator.ls, class_table), name), entry);
+			pthreads_prepared_entry_static_members(zend_hash_find_ptr(PTHREADS_CG(thread->creator.ls, class_table), name), entry);
 		}
 	} ZEND_HASH_FOREACH_END();
         
