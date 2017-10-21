@@ -214,10 +214,10 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 	for (; opline < end; opline++) {
 #if ZEND_USE_ABS_CONST_ADDR
 			if (opline->op1_type == IS_CONST) {
-				opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)orig_literals));
+				opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
 			}
 			if (opline->op2_type == IS_CONST) {
-				opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)orig_literals));
+				opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
 			}
 #else
 			if (opline->op1_type == IS_CONST) {
