@@ -61,7 +61,7 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 					break;
 
 					case IS_CONSTANT_AST:
-#if PHP_VERSION_ID == 70200
+#if PHP_VERSION_ID < 70300
 						ZVAL_NEW_AST(&copy, zend_ast_copy(Z_AST_P(next)->ast));
 #else
 						ZVAL_AST(&copy, zend_ast_copy(GC_AST(Z_AST_P(next))));
@@ -131,7 +131,7 @@ static zval* pthreads_copy_literals(zval *old, int last) {
 			case IS_ARRAY:
 				pthreads_store_separate(literal, literal, 1);
 			break;
-#if PHP_VERSION_ID == 70200
+#if PHP_VERSION_ID < 70300
 			case IS_CONSTANT:
 #endif
 			case IS_STRING:
@@ -146,7 +146,7 @@ static zval* pthreads_copy_literals(zval *old, int last) {
 	return literals;
 } /* }}} */
 
-#if PHP_VERSION_ID == 70200
+#if PHP_VERSION_ID < 70300
 /* {{{ */
 static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 	zend_op *copy = safe_emalloc(
@@ -199,7 +199,7 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 	return copy;
 } /* }}} */
 
-#else /* PHP_VERSION_ID > 70200 */
+#else /* PHP_VERSION_ID >= 70300 */
 
 /* {{{ */
 static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
@@ -265,7 +265,7 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 
 	return copy;
 } /* }}} */
-#endif /* PHP_VERSION_ID == 70200 */
+#endif /* PHP_VERSION_ID < 70300 */
 
 /* {{{ */
 static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_info *old, uint32_t end) {
