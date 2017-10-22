@@ -96,7 +96,7 @@ PHP_METHOD(Pool, __construct)
 	then the last workers started will be shutdown until the pool is the requested size */
 PHP_METHOD(Pool, resize) {
 	zval tmp[2];
-	zend_long newsize = 0;
+	uint32_t newsize = 0;
 	zval *workers = NULL;
 	zval *size = NULL;
 	
