@@ -1,0 +1,7 @@
+{
+    "name": "krakjoe/pthreads",
+    "description": "This project provides multi-threading that is compatible with PHP based on Posix Threads",
+    "require": {
+        "php": "^5.3.3 || ^7.0"
+    }
+}
