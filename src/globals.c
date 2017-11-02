@@ -47,7 +47,7 @@ zend_bool pthreads_globals_init(){
 		    	&PTHREADS_G(objects), 64, NULL, (dtor_func_t) NULL, 1);
 		}
 
-#if PHP_VERSION_ID >= 70200
+#if PHP_VERSION_ID >= 70300
 #define INIT_STRING(n, v) do { \
 	PTHREADS_G(strings).n = zend_string_init(v, 1); \
 	GC_ADDREF(PTHREADS_G(strings).n); \
