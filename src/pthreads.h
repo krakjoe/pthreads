@@ -122,7 +122,6 @@ ZEND_BEGIN_MODULE_GLOBALS(pthreads)
 	zval  this;
 	HashTable resolve;
 	HashTable *resources;
-	zend_bool prepare_static_members;
 ZEND_END_MODULE_GLOBALS(pthreads)
 #	define PTHREADS_ZG(v) TSRMG(pthreads_globals_id, zend_pthreads_globals *, v)
 #   define PTHREADS_PID() PTHREADS_ZG(pid) ? PTHREADS_ZG(pid) : (PTHREADS_ZG(pid)=getpid())

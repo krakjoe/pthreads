@@ -25,6 +25,9 @@
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate); /* }}} */
 
+/* {{{ fetch prepared class entry */
+zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool prepare_static_members); /* }}} */
+
 /* {{{ */
 void pthreads_prepare_parent(pthreads_object_t *thread); /* }}} */
 
