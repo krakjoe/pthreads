@@ -134,7 +134,6 @@ static zval* pthreads_copy_literals(zval *old, int last) {
 #if PHP_VERSION_ID < 70300
 			case IS_CONSTANT:
 #endif
-			case IS_STRING:
 			case IS_CONSTANT_AST:
 				zval_copy_ctor(literal);
 			break;
