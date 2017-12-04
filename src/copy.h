@@ -324,7 +324,7 @@ static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_in
 static inline zend_function* pthreads_copy_user_function(zend_function *function) {
 	zend_function  *copy;
 	zend_op_array  *op_array;
-	zend_string   **variables;
+	zend_string   **variables, *filename_copy;
 	zval           *literals;
 	zend_arg_info  *arg_info;
 	
@@ -349,7 +349,13 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 		op_array->doc_comment = zend_string_new(op_array->doc_comment);
 	}
 	
-	op_array->filename = zend_string_new(op_array->filename);
+	if (!(filename_copy = zend_hash_find_ptr(&PTHREADS_ZG(filenames), op_array->filename))) {
+		filename_copy = zend_string_new(op_array->filename);
+		zend_hash_add_ptr(&PTHREADS_ZG(filenames), filename_copy, filename_copy);
+		zend_string_release(filename_copy);
+	}
+
+	op_array->filename = filename_copy;
 
 	if (op_array->literals) op_array->literals = pthreads_copy_literals (literals, op_array->last_literal);
 

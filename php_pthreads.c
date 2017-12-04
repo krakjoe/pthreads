@@ -869,6 +869,7 @@ PHP_RINIT_FUNCTION(pthreads) {
 	ZEND_TSRMLS_CACHE_UPDATE();
 
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
+	zend_hash_init(&PTHREADS_ZG(filenames), 15, NULL, NULL, 0);
 
 	if (pthreads_instance != TSRMLS_CACHE) {
 		if (memcmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
@@ -881,6 +882,7 @@ PHP_RINIT_FUNCTION(pthreads) {
 
 PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(&PTHREADS_ZG(resolve));
+	zend_hash_destroy(&PTHREADS_ZG(filenames));
 
 	return SUCCESS;
 }
