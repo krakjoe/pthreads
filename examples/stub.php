@@ -508,3 +508,182 @@ interface Collectable
 	 */
 	public function isGarbage() : bool;
 }
+
+class Socket extends Threaded
+{
+	const AF_UNIX = 1;
+	const AF_INET = 2;
+	const AF_INET6 = 10;
+	const SOCK_STREAM = 1;
+	const SOCK_DGRAM = 2;
+	const SOCK_RAW = 3;
+	const SOCK_SEQPACKET = 5;
+	const SOCK_RDM = 4;
+	const SO_DEBUG = 1;
+	const SO_REUSEADDR = 2;
+	const SO_REUSEPORT = 15;
+	const SO_KEEPALIVE = 9;
+	const SO_DONTROUTE = 5;
+	const SO_LINGER = 13;
+	const SO_BROADCAST = 6;
+	const SO_OOBINLINE = 10;
+	const SO_SNDBUF = 7;
+	const SO_RECBUF = 8;
+	const SO_SNDLOWAT = 19;
+	const SO_RCVLOWAT = 18;
+	const SO_SNDTIMEO = 21;
+	const SO_RCVTIMEO = 20;
+	const SO_TYPE = 3;
+	const SO_ERROR = 4;
+	const SO_BINDTODEVICE = 25;
+	const SOMAXCONN = 128;
+	const TCP_NODELAY = 1;
+	const SOL_SOCKET = 1;
+	const SOL_TCP = 6;
+	const SOL_UDP = 17;
+	const MSG_OOB = 1;
+	const MSG_WAITALL = 256;
+	const MSG_CTRUNC = 8;
+	const MSG_TRUNC = 32;
+	const MSG_PEEK = 2;
+	const MSG_DONTROUTE = 4;
+	const MSG_EOR = 128;
+	const MSG_CONFIRM = 2048;
+	const MSG_ERRQUEUE = 8192;
+	const MSG_NOSIGNAL = 16384;
+	const MSG_MORE = 32768;
+	const MSG_WAITFORONE = 65536;
+	const MSG_CMSG_CLOEXEC = 1073741824;
+	const EPERM = 1;
+	const ENOENT = 2;
+	const EINTR = 4;
+	const EIO = 5;
+	const ENXIO = 6;
+	const E2BIG = 7;
+	const EBADF = 9;
+	const EAGAIN = 11;
+	const ENOMEM = 12;
+	const EACCES = 13;
+	const EFAULT = 14;
+	const ENOTBLK = 15;
+	const EBUSY = 16;
+	const EEXIST = 17;
+	const EXDEV = 18;
+	const ENODEV = 19;
+	const ENOTDIR = 20;
+	const EISDIR = 21;
+	const EINVAL = 22;
+	const ENFILE = 23;
+	const EMFILE = 24;
+	const ENOTTY = 25;
+	const ENOSPC = 28;
+	const ESPIPE = 29;
+	const EROFS = 30;
+	const EMLINK = 31;
+	const EPIPE = 32;
+	const ENAMETOOLONG = 36;
+	const ENOLCK = 37;
+	const ENOSYS = 38;
+	const ENOTEMPTY = 39;
+	const ELOOP = 40;
+	const EWOULDBLOCK = 11;
+	const ENOMSG = 42;
+	const EIDRM = 43;
+	const ECHRNG = 44;
+	const EL2NSYNC = 45;
+	const EL3HLT = 46;
+	const EL3RST = 47;
+	const ELNRNG = 48;
+	const EUNATCH = 49;
+	const ENOCSI = 50;
+	const EL2HLT = 51;
+	const EBADE = 52;
+	const EBADR = 53;
+	const EXFULL = 54;
+	const ENOANO = 55;
+	const EBADRQC = 56;
+	const EBADSLT = 57;
+	const ENOSTR = 60;
+	const ENODATA = 61;
+	const ETIME = 62;
+	const ENOSR = 63;
+	const ENONET = 64;
+	const EREMOTE = 66;
+	const ENOLINK = 67;
+	const EADV = 68;
+	const ESRMNT = 69;
+	const ECOMM = 70;
+	const EPROTO = 71;
+	const EMULTIHOP = 72;
+	const EBADMSG = 74;
+	const ENOTUNIQ = 76;
+	const EBADFD = 77;
+	const EREMCHG = 78;
+	const ERESTART = 85;
+	const ESTRPIPE = 86;
+	const EUSERS = 87;
+	const ENOTSOCK = 88;
+	const EDESTADDRREQ = 89;
+	const EMSGSIZE = 90;
+	const EPROTOTYPE = 91;
+	const ENOPROTOOPT = 92;
+	const EPROTONOSUPPORT = 93;
+	const ESOCKTNOSUPPORT = 94;
+	const EOPNOTSUPP = 95;
+	const EPFNOSUPPORT = 96;
+	const EAFNOSUPPORT = 97;
+	const EADDRINUSE = 98;
+	const EADDRNOTAVAIL = 99;
+	const ENETDOWN = 100;
+	const ENETUNREACH = 101;
+	const ENETRESET = 102;
+	const ECONNABORTED = 103;
+	const ECONNRESET = 104;
+	const ENOBUFS = 105;
+	const EISCONN = 106;
+	const ENOTCONN = 107;
+	const ESHUTDOWN = 108;
+	const ETOOMANYREFS = 109;
+	const ETIMEDOUT = 110;
+	const ECONNREFUSED = 111;
+	const EHOSTDOWN = 112;
+	const EHOSTUNREACH = 113;
+	const EALREADY = 114;
+	const EINPROGRESS = 115;
+	const EISNAM = 120;
+	const EREMOTEIO = 121;
+	const EDQUOT = 122;
+	const ENOMEDIUM = 123;
+	const EMEDIUMTYPE = 124;
+	
+	
+	public function __construct(int $domain = AF_INET, int $type = SOCK_STREAM, int $protocol = 0) {}
+	
+	public function setOption(int $level, int $name, int $value):bool {}
+	
+	public function getOption(int $level, int $name):int {}
+	
+	public function bind(string $host, int $port):bool {}
+	
+	public function listen(int $backlog):bool {}
+	
+	public static function accept(string $class = self::class):Socket {}
+	
+	public function connect(string $host, int $port):bool {}
+	
+	public function select(array &$read, array &$write, array &$except, int $sec, int $usec = 0):int {}
+	
+	public function read(int $length = 0, int $flags = 0):string {}
+	
+	public function write(string $buffer = null, int $length = 0):string {}
+	
+	public function send(string $buffer = null, int $length = 0, int $flags = 0):string {}
+	
+	public function setBlocking(bool $blocking = false):bool {}
+	
+	public function getPeerName(bool $port = true):array {}
+	
+	public function getSockName(bool $port = true):array {}
+	
+	public function close():bool {}
+}
