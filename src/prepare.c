@@ -720,6 +720,8 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 
 		if (thread->options & PTHREADS_INHERIT_CLASSES)
 			pthreads_prepare_classes(thread);
+		else pthreads_prepared_entry_static_members(thread, thread->std.ce,
+					pthreads_prepared_entry_internal(thread, thread->std.ce, 0));
 
 		if (thread->options & PTHREADS_INHERIT_INCLUDES)
 			pthreads_prepare_includes(thread);
