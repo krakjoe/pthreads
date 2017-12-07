@@ -718,10 +718,20 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 			pthreads_prepare_functions(thread);
 		else pthreads_prepare_closures(thread);
 
-		if (thread->options & PTHREADS_INHERIT_CLASSES)
+		if (thread->options & PTHREADS_INHERIT_CLASSES) {
 			pthreads_prepare_classes(thread);
-		else pthreads_prepared_entry_static_members(thread, thread->std.ce,
-					pthreads_prepared_entry_internal(thread, thread->std.ce, 0));
+		} else {
+			pthreads_prepared_entry_internal(thread, thread->std.ce, 0);
+
+			zend_class_entry *entry;
+			zend_string *name;
+
+			ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_CG(thread->local.ls, class_table), name, entry) {
+				if (entry->type != ZEND_INTERNAL_CLASS) {
+					pthreads_prepared_entry_static_members(thread, zend_hash_find_ptr(PTHREADS_CG(thread->creator.ls, class_table), name), entry);
+				}
+			} ZEND_HASH_FOREACH_END();
+		}
 
 		if (thread->options & PTHREADS_INHERIT_INCLUDES)
 			pthreads_prepare_includes(thread);
