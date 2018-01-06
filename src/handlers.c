@@ -111,7 +111,9 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 		fci.retval = rv;
 		fci.object = &threaded->std;
 		zend_fcall_info_argn(&fci, 1, member);
+#if PHP_VERSION_ID < 70300
 		fcc.initialized = 1;
+#endif
 		fcc.function_handler = Z_OBJCE_P(object)->__get;
 		fcc.object = &threaded->std;
 		
@@ -175,7 +177,9 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 				fci.retval = &rv;
 				fci.object = &threaded->std;
 				zend_fcall_info_argn(&fci, 2, member, value);
+#if PHP_VERSION_ID < 70300
 				fcc.initialized = 1;
+#endif
 				fcc.function_handler = Z_OBJCE_P(object)->__set;
 				fcc.object = &threaded->std;
 
@@ -235,7 +239,9 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 		fci.retval = &rv;
 		fci.object = &threaded->std;
 		zend_fcall_info_argn(&fci, 1, member);
+#if PHP_VERSION_ID < 70300
 		fcc.initialized = 1;
+#endif
 		fcc.function_handler = Z_OBJCE_P(object)->__isset;
 		fcc.object = &threaded->std;
 
@@ -292,7 +298,9 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		fci.retval = &rv;
 		fci.object = &threaded->std;
 		zend_fcall_info_argn(&fci, 1, member);
+#if PHP_VERSION_ID < 70300
 		fcc.initialized = 1;
+#endif
 		fcc.function_handler = Z_OBJCE_P(object)->__unset;
 		fcc.object = &threaded->std;
 
