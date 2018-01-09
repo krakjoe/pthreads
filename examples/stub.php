@@ -52,11 +52,6 @@ define('PTHREADS_INHERIT_COMMENTS', 0x100000);
 define('PTHREADS_ALLOW_HEADERS', 0x1000000);
 
 /**
- * Allow global inheritance for new threads
- */
-define('PTHREADS_ALLOW_GLOBALS', 0x10000000);
-
-/**
  * Threaded class
  *
  * Threaded objects form the basis of pthreads ability to execute user code in parallel;
