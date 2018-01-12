@@ -406,6 +406,33 @@ static inline int pthreads_prepared_entry_function_prepare(zval *bucket, int arg
 } /* }}} */
 
 /* {{{ */
+static inline void pthreads_prepare_closures(pthreads_object_t *thread) {
+	Bucket *bucket;
+
+	ZEND_HASH_FOREACH_BUCKET(PTHREADS_CG(thread->creator.ls, function_table), bucket) {
+		zend_function *function = Z_PTR(bucket->val),
+					  *prepared;
+		zend_string   *named;
+
+
+		if (function->common.fn_flags & ZEND_ACC_CLOSURE) {
+			if (zend_hash_exists(CG(function_table), bucket->key)) {
+				continue;
+			}
+
+			named = zend_string_new(bucket->key);
+			prepared = pthreads_copy_function(function);
+
+			if (!zend_hash_add_ptr(CG(function_table), named, prepared)) {
+				destroy_op_array((zend_op_array*) prepared);
+			}
+
+			zend_string_release(named);
+		}
+	} ZEND_HASH_FOREACH_END();
+} /* }}} */
+
+/* {{{ */
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
 	return pthreads_prepared_entry_internal(thread, candidate, 1);
 } /* }}} */
@@ -438,6 +465,7 @@ zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, ze
 		zend_string_release(lookup);
 		return NULL;
 	}
+	pthreads_prepare_closures(thread);
 
 	zend_hash_apply_with_arguments(
 		&prepared->function_table, 
@@ -580,33 +608,6 @@ static inline void pthreads_prepare_functions(pthreads_object_t* thread) {
 		}
 
 		zend_string_release(name);
-	} ZEND_HASH_FOREACH_END();
-} /* }}} */
-
-/* {{{ */
-static inline void pthreads_prepare_closures(pthreads_object_t *thread) {
-	Bucket *bucket;
-
-	ZEND_HASH_FOREACH_BUCKET(PTHREADS_CG(thread->creator.ls, function_table), bucket) {
-		zend_function *function = Z_PTR(bucket->val),
-					  *prepared;
-		zend_string   *named;
-
-
-		if (function->common.fn_flags & ZEND_ACC_CLOSURE) {
-			if (zend_hash_exists(CG(function_table), bucket->key)) {
-				continue;
-			}
-
-			named = zend_string_new(bucket->key);
-			prepared = pthreads_copy_function(function);
-
-			if (!zend_hash_add_ptr(CG(function_table), named, prepared)) {
-				destroy_op_array((zend_op_array*) prepared);
-			}
-
-			zend_string_release(named);
-		}
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
 
