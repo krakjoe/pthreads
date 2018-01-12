@@ -523,41 +523,41 @@ static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
 	
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_EG(thread->creator.ls, zend_constants), name, zconstant) {
 		if (zconstant->name) {
-		    if (strncmp(name->val, "STDIN", name->len-1)==0||
-			    strncmp(name->val, "STDOUT", name->len-1)==0||
-			    strncmp(name->val, "STDERR", name->len-1)==0){
-			    continue;
-		    } else {
-			    zend_constant constant;
+			if (strncmp(name->val, "STDIN", name->len-1)==0||
+				strncmp(name->val, "STDOUT", name->len-1)==0||
+				strncmp(name->val, "STDERR", name->len-1)==0){
+				continue;
+			} else {
+				zend_constant constant;
 
-			    if (!pthreads_constant_exists(name)) {
+				if (!pthreads_constant_exists(name)) {
 
-				    constant.flags = zconstant->flags;
-				    constant.module_number = zconstant->module_number;
-				    constant.name = zend_string_new(name);
+					constant.flags = zconstant->flags;
+					constant.module_number = zconstant->module_number;
+					constant.name = zend_string_new(name);
 
-				    switch((Z_TYPE_INFO(constant.value)=Z_TYPE(zconstant->value))) {
-					    case IS_TRUE:
-					    case IS_FALSE:
-					    case IS_LONG: {
-						    Z_LVAL(constant.value)=Z_LVAL(zconstant->value);
-					    } break;
-					    case IS_DOUBLE: Z_DVAL(constant.value)=Z_DVAL(zconstant->value); break;
-					    case IS_STRING: {
+					switch((Z_TYPE_INFO(constant.value)=Z_TYPE(zconstant->value))) {
+						case IS_TRUE:
+						case IS_FALSE:
+						case IS_LONG: {
+							Z_LVAL(constant.value)=Z_LVAL(zconstant->value);
+						} break;
+						case IS_DOUBLE: Z_DVAL(constant.value)=Z_DVAL(zconstant->value); break;
+						case IS_STRING: {
 #if PHP_VERSION_ID >= 70300
-					    	Z_STR(constant.value)=Z_STR(zconstant->value);
+							Z_STR(constant.value)=Z_STR(zconstant->value);
 #else
 							ZVAL_NEW_STR(&constant.value, zend_string_new(Z_STR(zconstant->value)));
 #endif
-					    } break;
+						} break;
 						case IS_ARRAY: {
 							pthreads_store_separate(&zconstant->value, &constant.value, 1);
 						} break;
-				    }
+					}
 			
-				    zend_register_constant(&constant);
-			    }
-		    }
+					zend_register_constant(&constant);
+				}
+			}
 		}
 	} ZEND_HASH_FOREACH_END();
 } /* }}} */
