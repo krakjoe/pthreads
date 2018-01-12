@@ -291,7 +291,7 @@ while(0)
 static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool prepare_static_members) {
 	zend_class_entry *prepared;
 
-	prepared = (zend_class_entry*) emalloc(sizeof(zend_class_entry));
+	prepared = zend_arena_alloc(&CG(arena), sizeof(zend_class_entry));
 	prepared->name = zend_string_new(candidate->name);
 	prepared->type = candidate->type;
 
