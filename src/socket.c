@@ -28,8 +28,10 @@
 
 #ifndef PHP_WIN32
 #define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd < 0)
+#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) close((sock)->fd)
 #else
 #define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd == INVALID_SOCKET)
+#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) closesocket((sock)->fd)
 #endif
 
 #define PTHREADS_SOCKET_CHECK(sock) do { \
@@ -466,7 +468,7 @@ void pthreads_socket_close(zval *object, zval *return_value) {
 
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
-	if (close(threaded->store.sock->fd) != SUCCESS) {
+	if (PTHREADS_CLOSE_SOCKET_INTERNAL(threaded->store.sock) != SUCCESS) {
 		PTHREADS_SOCKET_ERROR();
 	}
 
@@ -697,7 +699,7 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, uint32_t sec,
 void pthreads_socket_free(pthreads_socket_t *socket, zend_bool closing) {
 	if (closing) {
 		if (socket->fd)
-			close(socket->fd);
+			PTHREADS_CLOSE_SOCKET_INTERNAL(socket);
 	}
 
 	efree(socket);
