@@ -309,16 +309,15 @@ PHP_METHOD(Socket, recvfrom) {
 
 /* {{{ proto bool Socket::sendto(string buf, int length, int flags, string addr [, int port ]) */
 PHP_METHOD(Socket, sendto) {
-	size_t      buf_len, addr_len;
+	zend_string *buffer, *address = NULL;
 	zend_long	len, flags, port = 0;
-	char		*buf, *addr;
 	int	argc = ZEND_NUM_ARGS();
 
-	if (zend_parse_parameters(argc, "slls|l", &buf, &buf_len, &len, &flags, &addr, &addr_len, &port) == FAILURE) {
+	if (zend_parse_parameters(argc, "SllS|l", &buffer, &len, &flags, &address, &port) == FAILURE) {
 		return;
 	}
 
-	pthreads_socket_sendto(getThis(), argc, buf, buf_len, len, flags, addr, addr_len, port, return_value);
+	pthreads_socket_sendto(getThis(), argc, buffer, len, flags, address, port, return_value);
 } /* }}} */
 
 /* {{{ proto bool Socket::setBlocking(bool blocking) */

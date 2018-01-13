@@ -701,15 +701,8 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
-	struct sockaddr_un	s_un;
-	struct sockaddr_in	sin;
-#if HAVE_IPV6
-	struct sockaddr_in6	sin6;
-	char				addr6[INET6_ADDRSTRLEN];
-#endif
 	socklen_t			slen;
 	int					retval;
-	char				*address;
 	zend_string *recv_buf;
 
 	recv_buf = zend_string_alloc(len + 1, 0);
@@ -717,14 +710,15 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 	switch (threaded->store.sock->type) {
 #ifndef _WIN32
 		case AF_UNIX: {
+			struct sockaddr_un	s_un;
+
 			slen = sizeof(s_un);
 			s_un.sun_family = AF_UNIX;
 			retval = recvfrom(threaded->store.sock->fd, ZSTR_VAL(recv_buf), len, flags, (struct sockaddr *)&s_un, (socklen_t *)&slen);
 
 			if (retval < 0) {
-				PHP_SOCKET_ERROR(threaded->store.sock, "unable to recvfrom", errno);
 				zend_string_free(recv_buf);
-				RETURN_FALSE;
+				PTHREADS_SOCKET_ERROR();
 			}
 			ZSTR_LEN(recv_buf) = retval;
 			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
@@ -737,6 +731,9 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 		} break;
 #endif
 		case AF_INET: {
+			struct sockaddr_in	sin;
+			char				*address;
+
 			slen = sizeof(sin);
 			memset(&sin, 0, slen);
 			sin.sin_family = AF_INET;
@@ -749,9 +746,8 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 			retval = recvfrom(threaded->store.sock->fd, ZSTR_VAL(recv_buf), len, flags, (struct sockaddr *)&sin, (socklen_t *)&slen);
 
 			if (retval < 0) {
-				PHP_SOCKET_ERROR(threaded->store.sock, "unable to recvfrom", errno);
 				zend_string_free(recv_buf);
-				RETURN_FALSE;
+				PTHREADS_SOCKET_ERROR();
 			}
 			ZSTR_LEN(recv_buf) = retval;
 			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
@@ -768,6 +764,9 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 		} break;
 #if HAVE_IPV6
 		case AF_INET6: {
+			struct sockaddr_in6	sin6;
+			char				addr6[INET6_ADDRSTRLEN];
+
 			slen = sizeof(sin6);
 			memset(&sin6, 0, slen);
 			sin6.sin6_family = AF_INET6;
@@ -780,9 +779,8 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 			retval = recvfrom(threaded->store.sock->fd, ZSTR_VAL(recv_buf), len, flags, (struct sockaddr *)&sin6, (socklen_t *)&slen);
 
 			if (retval < 0) {
-				PHP_SOCKET_ERROR(threaded->store.sock, "unable to recvfrom", errno);
 				zend_string_free(recv_buf);
-				RETURN_FALSE;
+				PTHREADS_SOCKET_ERROR();
 			}
 			ZSTR_LEN(recv_buf) = retval;
 			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
@@ -804,29 +802,27 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 	RETURN_LONG(retval);
 }
 
-void pthreads_socket_sendto(zval *object, int argc, char *buf, size_t buf_len, zend_long len, zend_long flags, char *addr, size_t addr_len, zend_long port, zval *return_value) {
+void pthreads_socket_sendto(zval *object, int argc, zend_string *buf, zend_long len, zend_long flags, zend_string *addr, zend_long port, zval *return_value) {
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
-	struct sockaddr_un	s_un;
-	struct sockaddr_in	sin;
-#if HAVE_IPV6
-	struct sockaddr_in6	sin6;
-	char				addr6[INET6_ADDRSTRLEN];
-#endif
 	int	retval;
 
 	switch (threaded->store.sock->type) {
 #ifndef _WIN32
 		case AF_UNIX: {
+			struct sockaddr_un	s_un;
+
 			memset(&s_un, 0, sizeof(s_un));
 			s_un.sun_family = AF_UNIX;
-			snprintf(s_un.sun_path, 108, "%s", addr);
+			snprintf(s_un.sun_path, 108, "%s", ZSTR_VAL(addr));
 
-			retval = sendto(threaded->store.sock->fd, buf, ((size_t)len > buf_len) ? buf_len : (size_t)len,	flags, (struct sockaddr *) &s_un, SUN_LEN(&s_un));
+			retval = sendto(threaded->store.sock->fd, ZSTR_VAL(buf), ((size_t)len > ZSTR_LEN(buf)) ? ZSTR_LEN(buf) : (size_t)len,	flags, (struct sockaddr *) &s_un, SUN_LEN(&s_un));
 		} break;
 #endif
 		case AF_INET: {
+			struct sockaddr_in	sin;
+
 			if (argc != 6) {
 				WRONG_PARAM_COUNT;
 			}
@@ -835,14 +831,16 @@ void pthreads_socket_sendto(zval *object, int argc, char *buf, size_t buf_len, z
 			sin.sin_family = AF_INET;
 			sin.sin_port = htons((unsigned short) port);
 
-			if (! php_set_inet_addr(&sin, addr, threaded->store.sock)) {
+			if (! pthreads_socket_set_inet_addr(threaded->store.sock, &sin, addr)) {
 				RETURN_FALSE;
 			}
 
-			retval = sendto(threaded->store.sock->fd, buf, ((size_t)len > buf_len) ? buf_len : (size_t)len, flags, (struct sockaddr *) &sin, sizeof(sin));
+			retval = sendto(threaded->store.sock->fd, ZSTR_VAL(buf), ((size_t)len > ZSTR_LEN(buf)) ? ZSTR_LEN(buf) : (size_t)len, flags, (struct sockaddr *) &sin, sizeof(sin));
 		} break;
 #if HAVE_IPV6
 		case AF_INET6: {
+			struct sockaddr_in6	sin6;
+
 			if (argc != 6) {
 				WRONG_PARAM_COUNT;
 			}
@@ -851,18 +849,17 @@ void pthreads_socket_sendto(zval *object, int argc, char *buf, size_t buf_len, z
 			sin6.sin6_family = AF_INET6;
 			sin6.sin6_port = htons((unsigned short) port);
 
-			if (! php_set_inet6_addr(&sin6, addr, threaded->store.sock)) {
+			if (! pthreads_socket_set_inet6_addr(threaded->store.sock, &sin6, addr)) {
 				RETURN_FALSE;
 			}
 
-			retval = sendto(threaded->store.sock->fd, buf, ((size_t)len > buf_len) ? buf_len : (size_t)len, flags, (struct sockaddr *) &sin6, sizeof(sin6));
+			retval = sendto(threaded->store.sock->fd, ZSTR_VAL(buf), ((size_t)len > ZSTR_LEN(buf)) ? ZSTR_LEN(buf) : (size_t)len, flags, (struct sockaddr *) &sin6, sizeof(sin6));
 		} break;
 #endif
 	}
 
 	if (retval == -1) {
-		PHP_SOCKET_ERROR(threaded->store.sock, "unable to write to socket", errno);
-		RETURN_FALSE;
+		PTHREADS_SOCKET_ERROR();
 	}
 
 	RETURN_LONG(retval);
