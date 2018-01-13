@@ -29,6 +29,9 @@ zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_
 zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool prepare_static_members); /* }}} */
 
 /* {{{ */
+void pthreads_prepared_entry_late_bindings(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared); /* }}} */
+
+/* {{{ */
 void pthreads_prepare_parent(pthreads_object_t *thread); /* }}} */
 
 /* {{{ */

@@ -460,7 +460,7 @@ zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, ze
 		}
 		return prepared;
 	}
-	
+
 	if (!(prepared = pthreads_copy_entry(thread, candidate, prepare_static_members))) {
 		zend_string_release(lookup);
 		return NULL;
@@ -477,6 +477,11 @@ zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, ze
 	zend_string_release(lookup);
 
 	return prepared;
+} /* }}} */
+
+/* {{{ */
+void pthreads_prepared_entry_late_bindings(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
+	pthreads_prepared_entry_static_members(thread, candidate, prepared);
 } /* }}} */
 
 /* {{{ */
