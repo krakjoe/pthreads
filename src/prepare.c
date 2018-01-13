@@ -92,7 +92,7 @@ static void pthreads_prepared_entry_static_members(pthreads_object_t* thread, ze
 						if (zc->doc_comment != NULL) {
 							rc.doc_comment = zend_string_new(zc->doc_comment);
 						}
-						rc.ce = pthreads_prepared_entry(thread, zc->ce);
+						rc.ce = pthreads_prepared_entry_internal(thread, zc->ce, 0);
 
 						name = zend_string_new(key);
 						zend_hash_add_mem(&prepared->constants_table, name, &rc, sizeof(zend_class_constant));
