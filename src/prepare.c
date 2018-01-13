@@ -146,7 +146,7 @@ static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend
 		uint interface;
 		prepared->interfaces = emalloc(sizeof(zend_class_entry*) * candidate->num_interfaces);
 		for(interface=0; interface<candidate->num_interfaces; interface++)
-			prepared->interfaces[interface] = pthreads_prepared_entry(thread, candidate->interfaces[interface]);
+			prepared->interfaces[interface] = pthreads_prepared_entry_internal(thread, candidate->interfaces[interface], prepare_static_members);
 		prepared->num_interfaces = candidate->num_interfaces;
 	} else prepared->num_interfaces = 0;
 
