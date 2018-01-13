@@ -823,7 +823,7 @@ void pthreads_socket_sendto(zval *object, int argc, zend_string *buf, zend_long 
 		case AF_INET: {
 			struct sockaddr_in	sin;
 
-			if (argc != 6) {
+			if (argc != 5) {
 				WRONG_PARAM_COUNT;
 			}
 
@@ -841,7 +841,7 @@ void pthreads_socket_sendto(zval *object, int argc, zend_string *buf, zend_long 
 		case AF_INET6: {
 			struct sockaddr_in6	sin6;
 
-			if (argc != 6) {
+			if (argc != 5) {
 				WRONG_PARAM_COUNT;
 			}
 
