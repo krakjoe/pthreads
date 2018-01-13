@@ -26,8 +26,14 @@
 #	include <src/socket.h>
 #endif
 
+#ifndef PHP_WIN32
+#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd < 0)
+#else
+#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd == INVALID_SOCKET)
+#endif
+
 #define PTHREADS_SOCKET_CHECK(sock) do { \
-	if ((sock)->fd < 0) { \
+	if (PTHREADS_IS_INVALID_SOCKET(sock)) { \
 		zend_throw_exception_ex(spl_ce_RuntimeException, 0, \
 			"socket found in invalid state"); \
 		return; \
@@ -35,7 +41,7 @@
 } while(0)
 
 #define PTHREADS_SOCKET_CHECK_EX(sock, retval) do { \
-	if ((sock)->fd < 0) { \
+	if (PTHREADS_IS_INVALID_SOCKET(sock)) { \
 		zend_throw_exception_ex(spl_ce_RuntimeException, 0, \
 			"socket found in invalid state"); \
 		return (retval); \
@@ -68,7 +74,7 @@ void pthreads_socket_construct(zval *object, zend_long domain, zend_long type, z
 
 	threaded->store.sock->fd = socket(domain, type, protocol);
 
-	if (threaded->store.sock->fd > -1) {
+	if (!PTHREADS_IS_INVALID_SOCKET(threaded->store.sock)) {
 		threaded->store.sock->domain = domain;
 		threaded->store.sock->type = type;
 		threaded->store.sock->protocol = protocol;
