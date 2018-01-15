@@ -25,11 +25,14 @@
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate); /* }}} */
 
-/* {{{ fetch prepared class entry */
-zend_class_entry* pthreads_prepared_entry_internal(pthreads_object_t* thread, zend_class_entry *candidate, zend_bool prepare_static_members); /* }}} */
+/* {{{ */
+zend_class_entry* pthreads_create_entry(pthreads_object_t* thread, zend_class_entry *candidate, int do_late_bindings); /* }}} */
 
 /* {{{ */
 void pthreads_prepared_entry_late_bindings(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared); /* }}} */
+
+/* {{{ */
+void pthreads_context_late_bindings(pthreads_object_t* thread); /* }}} */
 
 /* {{{ */
 void pthreads_prepare_parent(pthreads_object_t *thread); /* }}} */
