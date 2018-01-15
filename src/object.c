@@ -512,11 +512,7 @@ static void * pthreads_routine(pthreads_routine_arg_t *routine) {
 				while (pthreads_stack_next(thread->stack, &stacked, thread->running) != PTHREADS_MONITOR_JOINED) {
 					zval that;
 					pthreads_object_t* work = PTHREADS_FETCH_FROM(Z_OBJ(stacked));
-					zend_class_entry *ce = pthreads_prepared_entry_internal(thread, work->std.ce, 0);
-
-					pthreads_prepared_entry_late_bindings(thread, work->std.ce, ce);
-
-					object_init_ex(&that, ce);
+					object_init_ex(&that, pthreads_prepared_entry(thread, work->std.ce));
 					pthreads_routine_run_function(work, PTHREADS_FETCH_FROM(Z_OBJ(that)), &that);
 					zval_ptr_dtor(&that);
 				}
