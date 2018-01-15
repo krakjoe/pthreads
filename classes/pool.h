@@ -206,7 +206,9 @@ PHP_METHOD(Pool, submit) {
 				fci.retval = &retval;
 				fci.no_separation = 1;
 				
+#if PHP_VERSION_ID < 70300
 				fcc.initialized = 1;
+#endif
 				fcc.function_handler = constructor;
 				fcc.calling_scope = zend_get_executed_scope();
 				fcc.called_scope = Z_OBJCE(worker);
