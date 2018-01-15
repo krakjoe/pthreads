@@ -30,6 +30,9 @@ typedef struct _pthreads_socket_t {
 	zend_bool blocking;
 } pthreads_socket_t;
 
+#define PHP_NORMAL_READ 0x0001
+#define PHP_BINARY_READ 0x0002
+
 pthreads_socket_t* pthreads_socket_alloc(void);
 void pthreads_socket_construct(zval *object, zend_long domain, zend_long type, zend_long protocol);
 void pthreads_socket_set_option(zval *object, zend_long level, zend_long name, zend_long value, zval *return_value);
@@ -38,7 +41,7 @@ void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zv
 void pthreads_socket_listen(zval *object, zend_long backlog, zval *return_value);
 void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_value);
 void pthreads_socket_connect(zval *object, zend_string *address, zend_long port, zval *return_value);
-void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zval *return_value);
+void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zend_long type, zval *return_value);
 void pthreads_socket_write(zval *object, zend_string *buf, zend_long length, zval *return_value);
 void pthreads_socket_send(zval *object, zend_string *buf, zend_long length, zend_long flags, zval *return_value);
 void pthreads_socket_close(zval *object, zval *return_value);
