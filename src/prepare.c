@@ -189,31 +189,13 @@ static void prepare_class_property_table(pthreads_object_t* thread, zend_class_e
 
 /* {{{ */
 static void prepare_class_handlers(zend_class_entry *candidate, zend_class_entry *prepared) {
-	uint umethod = 0;
-	void *usources[6] = {
-		candidate->create_object,
-		candidate->serialize,
-		candidate->unserialize,
-		candidate->get_iterator,
-		candidate->interface_gets_implemented,
-		candidate->get_static_method
-	};
-
-	do {
-		if (usources[umethod]) {
-			switch(umethod){
-				case 0: prepared->create_object = candidate->create_object; break;
-				case 1: prepared->serialize = candidate->serialize; break;
-				case 2: prepared->unserialize = candidate->unserialize; break;
-				case 3: {
-					prepared->get_iterator = candidate->get_iterator;
-					prepared->iterator_funcs = candidate->iterator_funcs;
-				} break;
-				case 4: prepared->interface_gets_implemented = candidate->interface_gets_implemented; break;
-				case 5: prepared->get_static_method = candidate->get_static_method; break;
-			}
-		}
-	} while(++umethod < 6);
+	prepared->create_object = candidate->create_object;
+	prepared->serialize = candidate->serialize;
+	prepared->unserialize = candidate->unserialize;
+	prepared->get_iterator = candidate->get_iterator;
+	prepared->iterator_funcs = candidate->iterator_funcs;
+	prepared->interface_gets_implemented = candidate->interface_gets_implemented;
+	prepared->get_static_method = candidate->get_static_method;
 } /* }}} */
 
 static void prepare_class_interceptors(zend_class_entry *candidate, zend_class_entry *prepared) {
@@ -326,9 +308,7 @@ static void prepare_class_traits(pthreads_object_t* thread, zend_class_entry *ca
 static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
 
 	if (candidate->parent) {
-		if (zend_hash_index_exists(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent)) {
-			prepared->parent = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong) candidate->parent);
-		} else prepared->parent = pthreads_prepared_entry(thread, candidate->parent);
+		prepared->parent = pthreads_prepared_entry(thread, candidate->parent);
 	}
 
 	if (candidate->num_interfaces) {
@@ -381,7 +361,6 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 
 		// this first copy will copy all declared functions on the unbound anonymous class
 		prepare_class_function_table(candidate, prepared);
-		//prepare_class_handlers(candidate, prepared);
 		prepare_class_interceptors(candidate, prepared);
 
 		return prepared;
