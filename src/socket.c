@@ -27,12 +27,16 @@
 #endif
 
 #ifndef PHP_WIN32
+#define PTHREADS_INVALID_SOCKET -1
 #define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd < 0)
 #define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) close((sock)->fd)
 #else
+#define PTHREADS_INVALID_SOCKET INVALID_SOCKET
 #define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd == INVALID_SOCKET)
 #define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) closesocket((sock)->fd)
 #endif
+
+#define PTHREADS_IS_VALID_SOCKET(sock) !PTHREADS_IS_INVALID_SOCKET(sock)
 
 #define PTHREADS_SOCKET_CHECK(sock) do { \
 	if (PTHREADS_IS_INVALID_SOCKET(sock)) { \
@@ -76,7 +80,7 @@ void pthreads_socket_construct(zval *object, zend_long domain, zend_long type, z
 
 	threaded->store.sock->fd = socket(domain, type, protocol);
 
-	if (!PTHREADS_IS_INVALID_SOCKET(threaded->store.sock)) {
+	if (PTHREADS_IS_VALID_SOCKET(threaded->store.sock)) {
 		threaded->store.sock->domain = domain;
 		threaded->store.sock->type = type;
 		threaded->store.sock->protocol = protocol;
@@ -472,7 +476,7 @@ void pthreads_socket_close(zval *object, zval *return_value) {
 		PTHREADS_SOCKET_ERROR();
 	}
 
-	threaded->store.sock->fd = -1;
+	threaded->store.sock->fd = PTHREADS_INVALID_SOCKET;
 }
 
 void pthreads_socket_set_blocking(zval *object, zend_bool blocking, zval *return_value) {
@@ -697,9 +701,8 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, uint32_t sec,
 }
 
 void pthreads_socket_free(pthreads_socket_t *socket, zend_bool closing) {
-	if (closing) {
-		if (socket->fd)
-			PTHREADS_CLOSE_SOCKET_INTERNAL(socket);
+	if (closing && PTHREADS_IS_VALID_SOCKET(socket)) {
+		PTHREADS_CLOSE_SOCKET_INTERNAL(socket);
 	}
 
 	efree(socket);
