@@ -61,7 +61,11 @@ static HashTable* pthreads_copy_statics(HashTable *old) {
 					break;
 
 					case IS_CONSTANT_AST:
+#if PHP_VERSION_ID < 70300
 						ZVAL_NEW_AST(&copy, zend_ast_copy(Z_AST_P(next)->ast));
+#else
+						ZVAL_AST(&copy, zend_ast_copy(GC_AST(Z_AST_P(next))));
+#endif
 						zend_hash_add(statics, name, &copy);
 					break;
 
@@ -127,9 +131,9 @@ static zval* pthreads_copy_literals(zval *old, int last) {
 			case IS_ARRAY:
 				pthreads_store_separate(literal, literal, 1);
 			break;
-			
+#if PHP_VERSION_ID < 70300
 			case IS_CONSTANT:
-			case IS_STRING:
+#endif
 			case IS_CONSTANT_AST:
 				zval_copy_ctor(literal);
 			break;
@@ -141,6 +145,7 @@ static zval* pthreads_copy_literals(zval *old, int last) {
 	return literals;
 } /* }}} */
 
+#if PHP_VERSION_ID < 70300
 /* {{{ */
 static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 	zend_op *copy = safe_emalloc(
@@ -148,6 +153,7 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 
 	memcpy(copy, op_array->opcodes, sizeof(zend_op) * op_array->last);
 
+	/* The following code comes from ext/opcache/zend_persist.c */
 #if ZEND_USE_ABS_CONST_ADDR || ZEND_USE_ABS_JMP_ADDR
 	zend_op *opline = copy;
 	zend_op *end    = copy + op_array->last;
@@ -160,28 +166,35 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 			opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
 #endif
 #if ZEND_USE_ABS_JMP_ADDR
-		if ((op_array->fn_flags & ZEND_ACC_DONE_PASS_TWO) != 0) {
+		if (op_array->fn_flags & ZEND_ACC_DONE_PASS_TWO) {
+			/* fix jumps to point to new array */
 			switch (opline->opcode) {
 				case ZEND_JMP:
 				case ZEND_FAST_CALL:
-				case ZEND_DECLARE_ANON_CLASS:
-				case ZEND_DECLARE_ANON_INHERITED_CLASS:
-					 opline->op1.jmp_addr = &copy[opline->op1.jmp_addr - op_array->opcodes];
-				break;
-
+					opline->op1.jmp_addr = &copy[opline->op1.jmp_addr - op_array->opcodes];
+					break;
 				case ZEND_JMPZNZ:
+					/* relative extended_value don't have to be changed */
+					/* break omitted intentionally */
 				case ZEND_JMPZ:
 				case ZEND_JMPNZ:
 				case ZEND_JMPZ_EX:
 				case ZEND_JMPNZ_EX:
 				case ZEND_JMP_SET:
 				case ZEND_COALESCE:
-				case ZEND_NEW:
 				case ZEND_FE_RESET_R:
 				case ZEND_FE_RESET_RW:
 				case ZEND_ASSERT_CHECK:
 					opline->op2.jmp_addr = &copy[opline->op2.jmp_addr - op_array->opcodes];
-				break;
+					break;
+				case ZEND_DECLARE_ANON_CLASS:
+				case ZEND_DECLARE_ANON_INHERITED_CLASS:
+				case ZEND_FE_FETCH_R:
+				case ZEND_FE_FETCH_RW:
+				case ZEND_SWITCH_LONG:
+				case ZEND_SWITCH_STRING:
+					/* relative extended_value don't have to be changed */
+					break;
 			}
 		}
 #endif
@@ -192,6 +205,82 @@ static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
 
 	return copy;
 } /* }}} */
+
+#else /* PHP_VERSION_ID >= 70300 */
+
+/* {{{ */
+static zend_op* pthreads_copy_opcodes(zend_op_array *op_array, zval *literals) {
+	zend_op *copy = safe_emalloc(
+		op_array->last, sizeof(zend_op), 0);
+
+	memcpy(copy, op_array->opcodes, sizeof(zend_op) * op_array->last);
+
+	/* The following code comes from ext/opcache/zend_persist.c */
+	zend_op *opline = copy;
+	zend_op *end    = copy + op_array->last;
+
+	for (; opline < end; opline++) {
+#if ZEND_USE_ABS_CONST_ADDR
+			if (opline->op1_type == IS_CONST) {
+				opline->op1.zv = (zval*)((char*)opline->op1.zv + ((char*)op_array->literals - (char*)literals));
+			}
+			if (opline->op2_type == IS_CONST) {
+				opline->op2.zv = (zval*)((char*)opline->op2.zv + ((char*)op_array->literals - (char*)literals));
+			}
+#else
+			if (opline->op1_type == IS_CONST) {
+				opline->op1.constant =
+					(char*)(op_array->literals +
+						((zval*)((char*)(op_array->opcodes + (opline - copy)) +
+						(int32_t)opline->op1.constant) - literals)) -
+					(char*)opline;
+			}
+			if (opline->op2_type == IS_CONST) {
+				opline->op2.constant =
+					(char*)(op_array->literals +
+						((zval*)((char*)(op_array->opcodes + (opline - copy)) +
+						(int32_t)opline->op2.constant) - literals)) -
+					(char*)opline;
+			}
+#endif
+#if ZEND_USE_ABS_JMP_ADDR
+		if (op_array->fn_flags & ZEND_ACC_DONE_PASS_TWO) {
+			/* fix jumps to point to new array */
+			switch (opline->opcode) {
+				case ZEND_JMP:
+				case ZEND_FAST_CALL:
+					opline->op1.jmp_addr = &copy[opline->op1.jmp_addr - op_array->opcodes];
+					break;
+				case ZEND_JMPZNZ:
+					/* relative extended_value don't have to be changed */
+					/* break omitted intentionally */
+				case ZEND_JMPZ:
+				case ZEND_JMPNZ:
+				case ZEND_JMPZ_EX:
+				case ZEND_JMPNZ_EX:
+				case ZEND_JMP_SET:
+				case ZEND_COALESCE:
+				case ZEND_FE_RESET_R:
+				case ZEND_FE_RESET_RW:
+				case ZEND_ASSERT_CHECK:
+					opline->op2.jmp_addr = &copy[opline->op2.jmp_addr - op_array->opcodes];
+					break;
+				case ZEND_DECLARE_ANON_CLASS:
+				case ZEND_DECLARE_ANON_INHERITED_CLASS:
+				case ZEND_FE_FETCH_R:
+				case ZEND_FE_FETCH_RW:
+				case ZEND_SWITCH_LONG:
+				case ZEND_SWITCH_STRING:
+					/* relative extended_value don't have to be changed */
+					break;
+			}
+		}
+#endif
+	}
+
+	return copy;
+} /* }}} */
+#endif /* PHP_VERSION_ID < 70300 */
 
 /* {{{ */
 static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_info *old, uint32_t end) {
@@ -235,7 +324,7 @@ static zend_arg_info* pthreads_copy_arginfo(zend_op_array *op_array, zend_arg_in
 static inline zend_function* pthreads_copy_user_function(zend_function *function) {
 	zend_function  *copy;
 	zend_op_array  *op_array;
-	zend_string   **variables;
+	zend_string   **variables, *filename_copy;
 	zval           *literals;
 	zend_arg_info  *arg_info;
 	
@@ -260,7 +349,13 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 		op_array->doc_comment = zend_string_new(op_array->doc_comment);
 	}
 	
-	op_array->filename = zend_string_new(op_array->filename);
+	if (!(filename_copy = zend_hash_find_ptr(&PTHREADS_ZG(filenames), op_array->filename))) {
+		filename_copy = zend_string_new(op_array->filename);
+		zend_hash_add_ptr(&PTHREADS_ZG(filenames), filename_copy, filename_copy);
+		zend_string_release(filename_copy);
+	}
+
+	op_array->filename = filename_copy;
 
 	if (op_array->literals) op_array->literals = pthreads_copy_literals (literals, op_array->last_literal);
 

@@ -47,6 +47,7 @@ ZEND_END_ARG_INFO()
 
 extern zend_function_entry pthreads_worker_methods[];
 
+#if PHP_VERSION_ID < 70300
 #define PTHREADS_WORKER_COLLECTOR_INIT(call, w) do { \
 	memset(&call, 0, sizeof(pthreads_call_t)); \
 	call.fci.size = sizeof(zend_fcall_info); \
@@ -58,6 +59,18 @@ extern zend_function_entry pthreads_worker_methods[];
 	call.fcc.called_scope = (w)->ce; \
 	call.fcc.object = (w); \
 } while(0)
+#else
+#define PTHREADS_WORKER_COLLECTOR_INIT(call, w) do { \
+	memset(&call, 0, sizeof(pthreads_call_t)); \
+	call.fci.size = sizeof(zend_fcall_info); \
+	ZVAL_STR(&call.fci.function_name, zend_string_init(ZEND_STRL("collector"), 0)); \
+	call.fcc.function_handler = zend_hash_find_ptr(&(w)->ce->function_table, Z_STR(call.fci.function_name)); \
+	call.fci.object = (w); \
+	call.fcc.calling_scope = (w)->ce; \
+	call.fcc.called_scope = (w)->ce; \
+	call.fcc.object = (w); \
+} while(0)
+#endif
 
 #define PTHREADS_WORKER_COLLECTOR_DTOR(call) zval_ptr_dtor(&call.fci.function_name)
 #else

@@ -96,7 +96,7 @@ PHP_METHOD(Pool, __construct)
 	then the last workers started will be shutdown until the pool is the requested size */
 PHP_METHOD(Pool, resize) {
 	zval tmp[2];
-	zend_long newsize = 0;
+	uint32_t newsize = 0;
 	zval *workers = NULL;
 	zval *size = NULL;
 	
@@ -206,7 +206,9 @@ PHP_METHOD(Pool, submit) {
 				fci.retval = &retval;
 				fci.no_separation = 1;
 				
+#if PHP_VERSION_ID < 70300
 				fcc.initialized = 1;
+#endif
 				fcc.function_handler = constructor;
 				fcc.calling_scope = zend_get_executed_scope();
 				fcc.called_scope = Z_OBJCE(worker);

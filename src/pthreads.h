@@ -121,6 +121,7 @@ ZEND_BEGIN_MODULE_GLOBALS(pthreads)
 	int   signal;
 	zval  this;
 	HashTable resolve;
+	HashTable filenames;
 	HashTable *resources;
 ZEND_END_MODULE_GLOBALS(pthreads)
 #	define PTHREADS_ZG(v) TSRMG(pthreads_globals_id, zend_pthreads_globals *, v)

@@ -175,7 +175,7 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 		threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(var));
 
 		if (!PTHREADS_IN_CREATOR(threaded)) {
-			zend_class_entry *ce, *instance;
+			zend_class_entry *ce;
 			void **cache = CACHE_ADDR(EX(opline)->op2.num);
 
 			if (*cache) {
@@ -208,9 +208,8 @@ static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zv
 } /* }}} */
 
 /* {{{ */
-static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
+static inline int php_pthreads_recv(zend_execute_data *execute_data) {
 	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
-		zend_execute_data *execute_data = EG(current_execute_data);
 		uint32_t arg_num = EX(opline)->op1.num;	
 		zval *var = NULL;
 
@@ -239,9 +238,8 @@ static inline int php_pthreads_recv(ZEND_OPCODE_HANDLER_ARGS) {
 } /* }}} */
 
 /* {{{ */
-static inline int php_pthreads_verify_return_type(ZEND_OPCODE_HANDLER_ARGS) {
+static inline int php_pthreads_verify_return_type(zend_execute_data *execute_data) {
 	if (Z_TYPE(PTHREADS_ZG(this)) != IS_UNDEF) {
-		zend_execute_data *execute_data = EG(current_execute_data);
 		zval *var = NULL;
 		
 		if (EX(opline)->op1_type == IS_UNUSED) {	
@@ -871,6 +869,7 @@ PHP_RINIT_FUNCTION(pthreads) {
 	ZEND_TSRMLS_CACHE_UPDATE();
 
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
+	zend_hash_init(&PTHREADS_ZG(filenames), 15, NULL, NULL, 0);
 
 	if (pthreads_instance != TSRMLS_CACHE) {
 		if (memcmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
@@ -883,6 +882,7 @@ PHP_RINIT_FUNCTION(pthreads) {
 
 PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(&PTHREADS_ZG(resolve));
+	zend_hash_destroy(&PTHREADS_ZG(filenames));
 
 	return SUCCESS;
 }
