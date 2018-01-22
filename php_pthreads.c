@@ -856,6 +856,8 @@ PHP_RINIT_FUNCTION(pthreads) {
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
 	zend_hash_init(&PTHREADS_ZG(filenames), 15, NULL, NULL, 0);
 
+	PTHREADS_ZG(hard_copy_interned_strings) = 0;
+
 	if (pthreads_instance != TSRMLS_CACHE) {
 		if (memcmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
 			sapi_module.deactivate = NULL;
