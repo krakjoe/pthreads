@@ -106,10 +106,6 @@ void pthreads_monitor_wait_until(pthreads_monitor_t *m, pthreads_monitor_state_t
 	}
 }
 
-void pthreads_monitor_set(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
-	m->state |= state;
-}
-
 void pthreads_monitor_add(pthreads_monitor_t *m, pthreads_monitor_state_t state) {
 	if (pthreads_monitor_lock(m)) {
 		m->state |= state;
