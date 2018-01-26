@@ -718,7 +718,7 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 
 	recv_buf = zend_string_alloc(len + 1, 0);
 
-	switch (threaded->store.sock->type) {
+	switch (threaded->store.sock->domain) {
 #ifndef _WIN32
 		case AF_UNIX: {
 			struct sockaddr_un	s_un;
@@ -819,7 +819,7 @@ void pthreads_socket_sendto(zval *object, int argc, zend_string *buf, zend_long 
 
 	int	retval;
 
-	switch (threaded->store.sock->type) {
+	switch (threaded->store.sock->domain) {
 #ifndef _WIN32
 		case AF_UNIX: {
 			struct sockaddr_un	s_un;
