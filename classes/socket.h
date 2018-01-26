@@ -257,7 +257,7 @@ PHP_METHOD(Socket, write) {
 	pthreads_socket_write(getThis(), buffer, length, return_value);
 } /* }}} */
 
-/* {{{ proto string Socket::send(string buffer [, int length]) */
+/* {{{ proto string Socket::send(string buffer, int length, int flags) */
 PHP_METHOD(Socket, send) {
 	zend_string *buffer = NULL;
 	zend_long length = 0;
