@@ -93,7 +93,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_getHost, 0, 0, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, port, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_select, 0, 4, IS_LONG, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_select, 0, 3, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(1, read, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(1, write, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(1, except, IS_ARRAY, 0)
@@ -218,7 +218,7 @@ PHP_METHOD(Socket, connect) {
 	pthreads_socket_connect(getThis(), host, port, return_value);
 } /* }}} */
 
-/* {{{ proto int Socket::select(array read, array write, array except, int sec = 0, int usec = 0) */
+/* {{{ proto int Socket::select(array read, array write, array except [, int sec = 0 [, int usec = 0]]) */
 PHP_METHOD(Socket, select) {
 	zval *read = NULL;
 	zval *write = NULL;
