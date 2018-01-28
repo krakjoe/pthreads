@@ -783,7 +783,7 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 			sin6.sin6_family = AF_INET6;
 
 			if (port == NULL) {
-				efree(recv_buf);
+				zend_string_free(recv_buf);
 				WRONG_PARAM_COUNT;
 			}
 
