@@ -51,25 +51,10 @@
 #	include <src/copy.h>
 #endif
 
-ZEND_BEGIN_ARG_INFO_EX(pthreads_no_sleeping_arginfo, 0, 0, 1)
-	ZEND_ARG_INFO(0, timeout)
-ZEND_END_ARG_INFO()
-
-PHP_FUNCTION(pthreads_no_sleeping) {
-	zend_throw_exception_ex(spl_ce_RuntimeException, 0,
-		"%s is not suitable for use in multi threaded applications, use synchronized Threaded::wait",
-		ZSTR_VAL(EX(func)->common.function_name));
-}
-
-static zend_function_entry pthreads_functions[] = {
-	PHP_FE(pthreads_no_sleeping, pthreads_no_sleeping_arginfo)
-	PHP_FE_END
-};
-
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,
-  pthreads_functions,
+  NULL,
   PHP_MINIT(pthreads),
   PHP_MSHUTDOWN(pthreads),
   PHP_RINIT(pthreads),

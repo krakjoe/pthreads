@@ -240,9 +240,9 @@ void pthreads_current_thread(zval *return_value) {
 /* {{{ */
 int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) {
 	if (source && destination) {
-                pthreads_ident_t destCreator = destination->creator;
-		
-                if (PTHREADS_IS_NOT_CONNECTION(destination)) {
+		pthreads_ident_t destCreator = destination->creator;
+
+		if (PTHREADS_IS_NOT_CONNECTION(destination)) {
 			if (!PTHREADS_IS_SOCKET(destination)) {
 				pthreads_store_free(destination->store.props);
 				if (PTHREADS_IS_WORKER(destination)) {
@@ -250,7 +250,7 @@ int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destination) 
 				}
 				free(destination->running);
 			} else {
-				pthreads_socket_free(destination->store.sock, 1);
+				pthreads_socket_free(destination->store.sock, 0);
 			}
 
 			pthreads_monitor_free(destination->monitor);

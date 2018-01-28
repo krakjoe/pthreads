@@ -73,6 +73,17 @@ pthreads v3 requires PHP7 or above. PHP5 needs to use pthreads v2 which can be f
 
 Note that only PHP 7.2+ is now supported (requiring the current master branch of pthreads). This is due to safety issues with ZTS mode on PHP 7.0 and 7.1.
 
+##### Unix-based Building from Source
+
+Building pthreads from source is quite simple on Unix-based OSs. The instructions are as follows:
+ * Clone this repository and checkout the release to use (or master for the latest updates)
+ * `cd pthreads`
+ * `phpize`
+ * `./configure`
+ * `make`
+ * `make install` (may need sudo)
+ * Update your php.ini file to load the `pthreads.so` file using the `extension` directive
+
 ### Windows Support
 
 Yes !! Windows support is offered thanks to the pthread-w32 library.
