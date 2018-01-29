@@ -303,6 +303,7 @@ void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_val
 
 	php_sockaddr_storage sa;
 	socklen_t            sa_len = sizeof(sa);
+	zend_bool	     blocking = threaded->store.sock->blocking;
 
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
@@ -312,15 +313,21 @@ void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_val
 			ZSTR_VAL(ce->name));
 		return;
 	}
+	php_socket_t acceptedFd = accept(threaded->store.sock->fd, (struct sockaddr*) &sa, &sa_len);
 
+	if(acceptedFd < 0) {
+		if(blocking) {
+			zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+					"socket found in invalid state");
+		}
+		ZVAL_FALSE(return_value);
+		return;
+	}
 	object_init_ex(return_value, ce);
 
 	accepted = PTHREADS_FETCH_FROM(Z_OBJ_P(return_value));
-	accepted->store.sock->fd = 
-		accept(threaded->store.sock->fd, (struct sockaddr*) &sa, &sa_len);
-
-	PTHREADS_SOCKET_CHECK(accepted->store.sock);
-
+	accepted->store.sock->fd = acceptedFd;
+	accepted->store.sock->blocking = 1;
 	accepted->store.sock->domain = ((struct sockaddr*) &sa)->sa_family;
 }
 
