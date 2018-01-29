@@ -31,6 +31,8 @@ PHP_METHOD(Socket, select);
 PHP_METHOD(Socket, read);
 PHP_METHOD(Socket, write);
 PHP_METHOD(Socket, send);
+PHP_METHOD(Socket, recvfrom);
+PHP_METHOD(Socket, sendto);
 
 PHP_METHOD(Socket, setBlocking);
 PHP_METHOD(Socket, getPeerName);
@@ -85,6 +87,22 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_send, 0, 3, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(0, flags, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(Socket_recvfrom, 0, 0, 4)
+	ZEND_ARG_TYPE_INFO(1, buffer, IS_STRING, 1)
+	ZEND_ARG_TYPE_INFO(0, length, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(0, flags, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(1, name, IS_STRING, 1)
+	ZEND_ARG_TYPE_INFO(1, port, IS_LONG, 1)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Socket_sendto, 0, 0, 4)
+	ZEND_ARG_TYPE_INFO(0, buffer, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, length, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(0, flags, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(0, addr, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, port, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_setBlocking, 0, 1, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, blocking, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
@@ -124,6 +142,8 @@ zend_function_entry pthreads_socket_methods[] = {
 	PHP_ME(Socket, read, Socket_read, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, write, Socket_write, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, send, Socket_send, ZEND_ACC_PUBLIC)
+	PHP_ME(Socket, recvfrom, Socket_recvfrom, ZEND_ACC_PUBLIC)
+	PHP_ME(Socket, sendto, Socket_sendto, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, setBlocking, Socket_setBlocking, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, getPeerName, Socket_getHost, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, getSockName, Socket_getHost, ZEND_ACC_PUBLIC)
@@ -268,6 +288,36 @@ PHP_METHOD(Socket, send) {
 	}
 
 	pthreads_socket_send(getThis(), buffer, length, flags, return_value);
+} /* }}} */
+
+/* {{{ proto bool Socket::recvfrom(string &buf, int length, int flags, string &name [, int &port ]) */
+PHP_METHOD(Socket, recvfrom) {
+	zval		*buffer, *name, *port = NULL;
+	zend_long	len, flags;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z/llz/|z/", &buffer, &len, &flags, &name, &port) == FAILURE) {
+		return;
+	}
+
+	/* overflow check */
+	if ((len + 2) < 3) {
+		RETURN_FALSE;
+	}
+
+	pthreads_socket_recvfrom(getThis(), buffer, len, flags, name, port, return_value);
+} /* }}} */
+
+/* {{{ proto bool Socket::sendto(string buf, int length, int flags, string addr [, int port ]) */
+PHP_METHOD(Socket, sendto) {
+	zend_string *buffer, *address = NULL;
+	zend_long	len, flags, port = 0;
+	int	argc = ZEND_NUM_ARGS();
+
+	if (zend_parse_parameters(argc, "SllS|l", &buffer, &len, &flags, &address, &port) == FAILURE) {
+		return;
+	}
+
+	pthreads_socket_sendto(getThis(), argc, buffer, len, flags, address, port, return_value);
 } /* }}} */
 
 /* {{{ proto bool Socket::setBlocking(bool blocking) */
