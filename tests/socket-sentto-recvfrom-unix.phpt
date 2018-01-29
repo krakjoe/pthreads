@@ -1,5 +1,5 @@
 --TEST--
-Test if socket_recvfrom() receives data sent by socket_sendto() through a Unix domain socket
+Test if Socket::recvfrom() receives data sent by Socket::sendto() through a Unix domain socket
 --CREDITS--
 Copied from php/php-src and adjusted, originally created by 
 Falko Menge <mail at falko-menge dot de>

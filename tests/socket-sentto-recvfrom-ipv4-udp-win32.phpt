@@ -1,34 +1,35 @@
 --TEST--
-Test if Socket::recvfrom() receives data sent by Socket::sendto() via IPv6 UDP (Win32)
+Test if Socket::recvfrom() receives data sent by Socket::sendto() via IPv4 UDP
+--CREDITS--
+Copied from php/php-src and adjusted, originally created by 
+Falko Menge <mail at falko-menge dot de>
+PHP Testfest Berlin 2009-05-09
 --SKIPIF--
 <?php
 if (substr(PHP_OS, 0, 3) != 'WIN') {
     die('skip only for Windows');
 }
-require 'ipv6_skipif.inc';
---CREDITS--
-Copied from php/php-src and adjusted, originally created by
-Falko Menge <mail at falko-menge dot de>
-PHP Testfest Berlin 2009-05-09
 --FILE--
 <?php
-    $socket = new Socket(\Socket::AF_INET6, \Socket::SOCK_DGRAM, \Socket::SOL_UDP);
-
+    $socket = new Socket(\Socket::AF_INET, \Socket::SOCK_DGRAM, \Socket::SOL_UDP);
+    if (!$socket) {
+        die('Unable to create AF_INET socket');
+    }
     if (!$socket->setBlocking(false)) {
         die('Unable to set nonblocking mode for socket');
     }
-    try{
-        $socket->recvfrom($buf, 12, 0, $from, $port); // cause warning
-    }catch(\RuntimeException $e){
-        var_dump($e->getMessage());
-    }
-    $address = '::1';
 
+    $address = '127.0.0.1';
     $socket->sendto('', 1, 0, $address); // cause warning
     if (!$socket->bind($address, 1223)) {
         die("Unable to bind to $address:1223");
     }
 
+    try {
+        $socket->recvfrom($buf, 12, 0, $from, $port);
+    } catch(RuntimeException $exception) {
+        var_dump($exception->getMessage());
+    }
     $msg = "Ping!";
     $len = strlen($msg);
     $bytes_sent = $socket->sendto($msg, $len, 0, $address, 1223);
@@ -52,12 +53,11 @@ PHP Testfest Berlin 2009-05-09
 
     $socket->close();
 --EXPECTF--
-string(50) "Error (10022): %s
-"
 
 Warning: Wrong parameter count for Socket::sendto() in %s on line %d
+string(%d) "Error (%d): A non-blocking socket operation could not be completed immediately.
 
 Warning: Socket::recvfrom() expects at least 4 parameters, 3 given in %s on line %d
 
 Warning: Wrong parameter count for Socket::recvfrom() in %s on line %d
-Received Ping! from remote address ::1 and remote port 1223
+Received Ping! from remote address 127.0.0.1 and remote port 1223

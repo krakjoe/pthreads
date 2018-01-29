@@ -1,9 +1,14 @@
 --TEST--
-Test if socket_recvfrom() receives data sent by socket_sendto() via IPv4 UDP
+Test if Socket::recvfrom() receives data sent by Socket::sendto() via IPv4 UDP
 --CREDITS--
 Copied from php/php-src and adjusted, originally created by 
 Falko Menge <mail at falko-menge dot de>
 PHP Testfest Berlin 2009-05-09
+--SKIPIF--
+<?php
+if (substr(PHP_OS, 0, 3) == 'WIN') {
+	die('skip Not valid for Windows');
+}
 --FILE--
 <?php
     $socket = new Socket(\Socket::AF_INET, \Socket::SOCK_DGRAM, \Socket::SOL_UDP);
