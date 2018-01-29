@@ -75,7 +75,10 @@ build_script:
 
     php -m
 test_script:
-- cmd: php.exe /projects/php-src/run-tests.php /projects/php-src/ext/pthreads -q --show-diff
+- cmd: >-
+    set REPORT_EXIT_STATUS=1
+
+    php.exe /projects/php-src/run-tests.php /projects/php-src/ext/pthreads -q --show-diff
 artifacts:
   - path: bin
     name: master
