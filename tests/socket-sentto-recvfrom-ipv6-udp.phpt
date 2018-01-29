@@ -9,7 +9,7 @@ PHP Testfest Berlin 2009-05-09
 if (substr(PHP_OS, 0, 3) == 'WIN') {
 	die('skip Not valid for Windows');
 }
-require 'assets/ipv6_skipif.inc';
+require 'ipv6_skipif.inc';
 --FILE--
 <?php
     $socket = new Socket(\Socket::AF_INET6, \Socket::SOCK_DGRAM, \Socket::SOL_UDP);
