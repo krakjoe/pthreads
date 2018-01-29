@@ -172,12 +172,12 @@ PHP_METHOD(Socket, getOption) {
 	pthreads_socket_get_option(getThis(), level, name, return_value);
 } /* }}} */
 
-/* {{{ proto bool Socket::bind(string host, int port) */
+/* {{{ proto bool Socket::bind(string host, [int port]) */
 PHP_METHOD(Socket, bind) {
 	zend_string *host = NULL;
 	zend_long port = 0;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sl", &host, &port) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|l", &host, &port) != SUCCESS) {
 		return;
 	}
 
