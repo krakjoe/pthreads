@@ -56,6 +56,7 @@ if (substr(PHP_OS, 0, 3) != 'WIN') {
 
 Warning: Wrong parameter count for Socket::sendto() in %s on line %d
 string(%d) "Error (%d): A non-blocking socket operation could not be completed immediately.
+"
 
 Warning: Socket::recvfrom() expects at least 4 parameters, 3 given in %s on line %d
 
