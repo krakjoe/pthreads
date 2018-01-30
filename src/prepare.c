@@ -306,6 +306,7 @@ static void prepare_class_traits(pthreads_object_t* thread, zend_class_entry *ca
 
 /* {{{ */
 static zend_class_entry* pthreads_complete_entry(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
+	prepared->ce_flags = candidate->ce_flags;
 
 	if (candidate->parent) {
 		prepared->parent = pthreads_prepared_entry(thread, candidate->parent);

@@ -303,6 +303,7 @@ void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_val
 
 	php_sockaddr_storage sa;
 	socklen_t            sa_len = sizeof(sa);
+	zend_bool	     blocking = threaded->store.sock->blocking;
 
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
@@ -312,15 +313,21 @@ void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_val
 			ZSTR_VAL(ce->name));
 		return;
 	}
+	php_socket_t acceptedFd = accept(threaded->store.sock->fd, (struct sockaddr*) &sa, &sa_len);
 
+	if(acceptedFd < 0) {
+		if(blocking) {
+			zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+					"socket found in invalid state");
+		}
+		ZVAL_FALSE(return_value);
+		return;
+	}
 	object_init_ex(return_value, ce);
 
 	accepted = PTHREADS_FETCH_FROM(Z_OBJ_P(return_value));
-	accepted->store.sock->fd = 
-		accept(threaded->store.sock->fd, (struct sockaddr*) &sa, &sa_len);
-
-	PTHREADS_SOCKET_CHECK(accepted->store.sock);
-
+	accepted->store.sock->fd = acceptedFd;
+	accepted->store.sock->blocking = 1;
 	accepted->store.sock->domain = ((struct sockaddr*) &sa)->sa_family;
 }
 
@@ -706,5 +713,173 @@ void pthreads_socket_free(pthreads_socket_t *socket, zend_bool closing) {
 	}
 
 	efree(socket);
+}
+
+void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_long flags, zval *name, zval *port, zval *return_value) {
+	pthreads_object_t *threaded =
+		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	socklen_t			slen;
+	int					retval;
+	zend_string *recv_buf;
+
+	recv_buf = zend_string_alloc(len + 1, 0);
+
+	switch (threaded->store.sock->domain) {
+#ifndef _WIN32
+		case AF_UNIX: {
+			struct sockaddr_un	s_un;
+
+			slen = sizeof(s_un);
+			s_un.sun_family = AF_UNIX;
+			retval = recvfrom(threaded->store.sock->fd, ZSTR_VAL(recv_buf), len, flags, (struct sockaddr *)&s_un, (socklen_t *)&slen);
+
+			if (retval < 0) {
+				zend_string_free(recv_buf);
+				PTHREADS_SOCKET_ERROR();
+			}
+			ZSTR_LEN(recv_buf) = retval;
+			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
+
+			zval_dtor(buffer);
+			zval_dtor(name);
+
+			ZVAL_NEW_STR(buffer, recv_buf);
+			ZVAL_STRING(name, s_un.sun_path);
+		} break;
+#endif
+		case AF_INET: {
+			struct sockaddr_in	sin;
+			char				*address;
+
+			slen = sizeof(sin);
+			memset(&sin, 0, slen);
+			sin.sin_family = AF_INET;
+
+			if (port == NULL) {
+				zend_string_free(recv_buf);
+				WRONG_PARAM_COUNT;
+			}
+
+			retval = recvfrom(threaded->store.sock->fd, ZSTR_VAL(recv_buf), len, flags, (struct sockaddr *)&sin, (socklen_t *)&slen);
+
+			if (retval < 0) {
+				zend_string_free(recv_buf);
+				PTHREADS_SOCKET_ERROR();
+			}
+			ZSTR_LEN(recv_buf) = retval;
+			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
+
+			zval_dtor(buffer);
+			zval_dtor(name);
+			zval_dtor(port);
+
+			address = inet_ntoa(sin.sin_addr);
+
+			ZVAL_NEW_STR(buffer, recv_buf);
+			ZVAL_STRING(name, address ? address : "0.0.0.0");
+			ZVAL_LONG(port, ntohs(sin.sin_port));
+		} break;
+#if HAVE_IPV6
+		case AF_INET6: {
+			struct sockaddr_in6	sin6;
+			char				addr6[INET6_ADDRSTRLEN];
+
+			slen = sizeof(sin6);
+			memset(&sin6, 0, slen);
+			sin6.sin6_family = AF_INET6;
+
+			if (port == NULL) {
+				zend_string_free(recv_buf);
+				WRONG_PARAM_COUNT;
+			}
+
+			retval = recvfrom(threaded->store.sock->fd, ZSTR_VAL(recv_buf), len, flags, (struct sockaddr *)&sin6, (socklen_t *)&slen);
+
+			if (retval < 0) {
+				zend_string_free(recv_buf);
+				PTHREADS_SOCKET_ERROR();
+			}
+			ZSTR_LEN(recv_buf) = retval;
+			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
+
+			zval_dtor(buffer);
+			zval_dtor(name);
+			zval_dtor(port);
+
+			memset(addr6, 0, INET6_ADDRSTRLEN);
+			inet_ntop(AF_INET6, &sin6.sin6_addr, addr6, INET6_ADDRSTRLEN);
+
+			ZVAL_NEW_STR(buffer, recv_buf);
+			ZVAL_STRING(name, addr6[0] ? addr6 : "::");
+			ZVAL_LONG(port, ntohs(sin6.sin6_port));
+		} break;
+#endif
+	}
+
+	RETURN_LONG(retval);
+}
+
+void pthreads_socket_sendto(zval *object, int argc, zend_string *buf, zend_long len, zend_long flags, zend_string *addr, zend_long port, zval *return_value) {
+	pthreads_object_t *threaded =
+		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	int	retval;
+
+	switch (threaded->store.sock->domain) {
+#ifndef _WIN32
+		case AF_UNIX: {
+			struct sockaddr_un	s_un;
+
+			memset(&s_un, 0, sizeof(s_un));
+			s_un.sun_family = AF_UNIX;
+			snprintf(s_un.sun_path, 108, "%s", ZSTR_VAL(addr));
+
+			retval = sendto(threaded->store.sock->fd, ZSTR_VAL(buf), ((size_t)len > ZSTR_LEN(buf)) ? ZSTR_LEN(buf) : (size_t)len,	flags, (struct sockaddr *) &s_un, SUN_LEN(&s_un));
+		} break;
+#endif
+		case AF_INET: {
+			struct sockaddr_in	sin;
+
+			if (argc != 5) {
+				WRONG_PARAM_COUNT;
+			}
+
+			memset(&sin, 0, sizeof(sin));
+			sin.sin_family = AF_INET;
+			sin.sin_port = htons((unsigned short) port);
+
+			if (! pthreads_socket_set_inet_addr(threaded->store.sock, &sin, addr)) {
+				RETURN_FALSE;
+			}
+
+			retval = sendto(threaded->store.sock->fd, ZSTR_VAL(buf), ((size_t)len > ZSTR_LEN(buf)) ? ZSTR_LEN(buf) : (size_t)len, flags, (struct sockaddr *) &sin, sizeof(sin));
+		} break;
+#if HAVE_IPV6
+		case AF_INET6: {
+			struct sockaddr_in6	sin6;
+
+			if (argc != 5) {
+				WRONG_PARAM_COUNT;
+			}
+
+			memset(&sin6, 0, sizeof(sin6));
+			sin6.sin6_family = AF_INET6;
+			sin6.sin6_port = htons((unsigned short) port);
+
+			if (! pthreads_socket_set_inet6_addr(threaded->store.sock, &sin6, addr)) {
+				RETURN_FALSE;
+			}
+
+			retval = sendto(threaded->store.sock->fd, ZSTR_VAL(buf), ((size_t)len > ZSTR_LEN(buf)) ? ZSTR_LEN(buf) : (size_t)len, flags, (struct sockaddr *) &sin6, sizeof(sin6));
+		} break;
+#endif
+	}
+
+	if (retval == -1) {
+		PTHREADS_SOCKET_ERROR();
+	}
+
+	RETURN_LONG(retval);
 }
 #endif
