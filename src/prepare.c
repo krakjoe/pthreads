@@ -354,7 +354,13 @@ static zend_class_entry* pthreads_copy_entry(pthreads_object_t* thread, zend_cla
 		} else prepared->info.user.doc_comment = NULL;
 
 	if (prepared->info.user.filename) {
-		prepared->info.user.filename = zend_string_new(candidate->info.user.filename);
+		zend_string *filename_copy;
+
+		if (!(filename_copy = zend_hash_find_ptr(&PTHREADS_ZG(filenames), candidate->info.user.filename))) {
+			filename_copy = zend_string_new(candidate->info.user.filename);
+			zend_hash_add_ptr(&PTHREADS_ZG(filenames), filename_copy, filename_copy);
+			zend_string_release(filename_copy);
+		}
 	}
 	prepare_class_property_table(thread, candidate, prepared);
 
