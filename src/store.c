@@ -824,6 +824,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 					memcpy(
 						(char*) *pstring, (const void*) smart.s->val, smart.s->len
 					);
+					(*pstring)[*slength] = 0;
 					result = SUCCESS;
 				}
 			} else *pstring = NULL;
