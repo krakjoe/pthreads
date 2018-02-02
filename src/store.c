@@ -603,6 +603,7 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 			storage->data = 
 				(char*) malloc(storage->length+1);
 			memcpy(storage->data, Z_STRVAL_P(unstore), storage->length);
+			((char *)storage->data)[storage->length] = 0;
 		} break;
 
 		case IS_RESOURCE: {
@@ -917,6 +918,7 @@ int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite) {
 											break;
 										}
 										memcpy(copy->data, (const void*) storage->data, copy->length);
+										((char *)copy->data)[copy->length] = 0;
                                 	} break;
                                 }
 
