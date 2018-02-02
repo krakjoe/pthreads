@@ -343,11 +343,6 @@ void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_val
 	php_socket_t acceptedFd = accept(threaded->store.sock->fd, (struct sockaddr*) &sa, &sa_len);
 
 	if(acceptedFd < 0) {
-		/*
-		if(blocking) {
-			zend_throw_exception_ex(spl_ce_RuntimeException, 0,
-					"socket found in invalid state");
-		}*/
 		PTHREADS_SOCKET_ERROR(threaded->store.sock);
 
 		RETURN_FALSE;
