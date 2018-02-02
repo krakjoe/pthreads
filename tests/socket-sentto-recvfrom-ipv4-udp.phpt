@@ -4,11 +4,6 @@ Test if Socket::recvfrom() receives data sent by Socket::sendto() via IPv4 UDP
 Copied from php/php-src and adjusted, originally created by 
 Falko Menge <mail at falko-menge dot de>
 PHP Testfest Berlin 2009-05-09
---SKIPIF--
-<?php
-if (substr(PHP_OS, 0, 3) == 'WIN') {
-	die('skip Not valid for Windows');
-}
 --FILE--
 <?php
     $socket = new Socket(\Socket::AF_INET, \Socket::SOCK_DGRAM, \Socket::SOL_UDP);
@@ -24,12 +19,8 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
     if (!$socket->bind($address, 1223)) {
         die("Unable to bind to $address:1223");
     }
-
-    try {
-        $socket->recvfrom($buf, 12, 0, $from, $port);
-    } catch(RuntimeException $exception) {
-        var_dump($exception->getMessage());
-    }
+    var_dump($socket->recvfrom($buf, 12, 0, $from, $port)); // false
+    
     $msg = "Ping!";
     $len = strlen($msg);
     $bytes_sent = $socket->sendto($msg, $len, 0, $address, 1223);
@@ -55,7 +46,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
 --EXPECTF--
 
 Warning: Wrong parameter count for Socket::sendto() in %s on line %d
-string(%d) "Error (%d): Resource temporarily unavailable"
+bool(false)
 
 Warning: Socket::recvfrom() expects at least 4 parameters, 3 given in %s on line %d
 

@@ -6,9 +6,6 @@ Falko Menge <mail at falko-menge dot de>
 PHP Testfest Berlin 2009-05-09
 --SKIPIF--
 <?php
-if (substr(PHP_OS, 0, 3) == 'WIN') {
-	die('skip Not valid for Windows');
-}
 require 'ipv6_skipif.inc';
 --FILE--
 <?php
@@ -19,12 +16,7 @@ require 'ipv6_skipif.inc';
     if (!$socket->setBlocking(false)) {
         die('Unable to set nonblocking mode for socket');
     }
-
-    try {
-        $socket->recvfrom($buf, 12, 0, $from, $port);
-    } catch(RuntimeException $exception) {
-        var_dump($exception->getMessage());
-    }
+    var_dump($socket->recvfrom($buf, 12, 0, $from, $port));
     $address = '::1';
     $socket->sendto('', 1, 0, $address); // cause warning
     if (!$socket->bind($address, 1223)) {
@@ -54,7 +46,7 @@ require 'ipv6_skipif.inc';
 
     $socket->close();
 --EXPECTF--
-string(%d) "Error (%d): Resource temporarily unavailable"
+bool(false)
 
 Warning: Wrong parameter count for Socket::sendto() in %s on line %d
 

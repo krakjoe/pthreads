@@ -23,12 +23,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
     if (!$socket->setBlocking(false)) {
         die('Unable to set nonblocking mode for socket');
     }
-
-    try {
-        $socket->recvfrom($buf, 12, 0, $from, $port);
-    } catch(RuntimeException $exception) {
-        var_dump($exception->getMessage());
-    }
+    var_dump($socket->recvfrom($buf, 12, 0, $from, $port)); //false (EAGAIN, no warning)
     $address = sprintf("/tmp/%s.sock", uniqid());
     if (!$socket->bind($address)) {
         die("Unable to bind to $address");
@@ -63,7 +58,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
 ?>
 --EXPECTF--
 string(%d) "Error (%d): Protocol not supported"
-string(%d) "Error (%d): Resource temporarily unavailable"
+bool(false)
 
 Warning: Socket::sendto() expects at least 4 parameters, 3 given in %s on line %d
 bool(false)
