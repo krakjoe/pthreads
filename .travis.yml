@@ -7,7 +7,7 @@ script:
   - phpize
   - ./configure
   - make
-  - REPORT_EXIT_STATUS=1 TEST_PHP_ARGS="-q --show-diff" make test
+  - REPORT_EXIT_STATUS=1 TEST_PHP_ARGS="-q --offline --show-diff" make test
 
 notifications:
   webhooks:
