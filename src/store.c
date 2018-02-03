@@ -852,12 +852,6 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength) {
 				result = FAILURE;
 			}
 			PHP_VAR_UNSERIALIZE_DESTROY(vars);
-			
-			if (result != FAILURE) {
-				if (Z_REFCOUNTED_P(pzval) && !IS_PTHREADS_OBJECT(pzval)) {
-					Z_SET_REFCOUNT_P(pzval, 1);
-				}
-			} else ZVAL_NULL(pzval);
 		} else result = FAILURE;
 	} else result = FAILURE;
 	
