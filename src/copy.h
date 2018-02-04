@@ -392,6 +392,7 @@ static zend_function* pthreads_copy_function(zend_function *function) {
 		copy = pthreads_copy_internal_function(function);
 	}
 
+	function_add_ref(copy);
 	return zend_hash_index_update_ptr(&PTHREADS_ZG(resolve), (zend_ulong) function, copy);
 } /* }}} */
 #endif
