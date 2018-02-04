@@ -330,7 +330,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_BROADCAST"), SO_BROADCAST);
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_OOBINLINE"), SO_OOBINLINE);
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDBUF"), SO_SNDBUF);
-	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RECBUF"), SO_RCVBUF);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RCVBUF"), SO_RCVBUF);
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDLOWAT"), SO_SNDLOWAT);
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RCVLOWAT"), SO_RCVLOWAT);
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDTIMEO"), SO_SNDTIMEO);
