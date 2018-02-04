@@ -693,8 +693,10 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, uint32_t sec,
 	int result = SUCCESS, sets = 0;
 	struct timeval  tv;
 
-	zval_dtor(errorno);
-	ZVAL_LONG(errorno, SUCCESS);
+	if(errorno != NULL) {
+		zval_ptr_dtor(errorno);
+		ZVAL_LONG(errorno, SUCCESS);
+	}
 
 	FD_ZERO(&rfds);
 	FD_ZERO(&wfds);
@@ -732,8 +734,10 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, uint32_t sec,
 
 	if (result == -1) {
 		int eno = php_socket_errno();
-		ZVAL_LONG(errorno, eno);
 
+		if(errorno != NULL) {
+			ZVAL_LONG(errorno, eno);
+		}
 		PTHREADS_HANDLE_SOCKET_ERROR(eno);
 
 		RETURN_FALSE;
@@ -790,8 +794,8 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 			ZSTR_LEN(recv_buf) = retval;
 			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
 
-			zval_dtor(buffer);
-			zval_dtor(name);
+			zval_ptr_dtor(buffer);
+			zval_ptr_dtor(name);
 
 			ZVAL_NEW_STR(buffer, recv_buf);
 			ZVAL_STRING(name, s_un.sun_path);
@@ -821,9 +825,9 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 			ZSTR_LEN(recv_buf) = retval;
 			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
 
-			zval_dtor(buffer);
-			zval_dtor(name);
-			zval_dtor(port);
+			zval_ptr_dtor(buffer);
+			zval_ptr_dtor(name);
+			zval_ptr_dtor(port);
 
 			address = inet_ntoa(sin.sin_addr);
 
@@ -856,9 +860,9 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 			ZSTR_LEN(recv_buf) = retval;
 			ZSTR_VAL(recv_buf)[ZSTR_LEN(recv_buf)] = '\0';
 
-			zval_dtor(buffer);
-			zval_dtor(name);
-			zval_dtor(port);
+			zval_ptr_dtor(buffer);
+			zval_ptr_dtor(name);
+			zval_ptr_dtor(port);
 
 			memset(addr6, 0, INET6_ADDRSTRLEN);
 			inet_ntop(AF_INET6, &sin6.sin6_addr, addr6, INET6_ADDRSTRLEN);
@@ -947,7 +951,7 @@ void pthreads_socket_get_last_error(zval *object, zend_bool clear, zval *return_
 	if(threaded->store.sock->error == SUCCESS) {
 		RETURN_FALSE;
 	}
-	RETURN_LONG(threaded->store.sock->error);
+	RETVAL_LONG(threaded->store.sock->error);
 
 	if(clear) {
 		PTHREADS_CLEAR_SOCKET_ERROR(threaded->store.sock);
