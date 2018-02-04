@@ -143,7 +143,7 @@ static inline zend_bool pthreads_store_is_immutable(zval *object, zval *key) {
 /* {{{ */
 int pthreads_store_delete(zval *object, zval *key) {
 	int result = FAILURE;
-	zval member;
+	zval member, *property = NULL;
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_bool coerced = pthreads_store_coerce(threaded->store.props, key, &member);	
 
@@ -246,10 +246,30 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 
 	rebuild_object_properties(&threaded->std);
 
-	if (!IS_PTHREADS_VOLATILE(object)) {
-		if (Z_TYPE(member) == IS_LONG) {
-			property = zend_hash_index_find(threaded->std.properties, Z_LVAL(member));
-		} else property = zend_hash_find(threaded->std.properties, Z_STR(member));
+	if (Z_TYPE(member) == IS_LONG) {
+		property = zend_hash_index_find(threaded->std.properties, Z_LVAL(member));
+	} else property = zend_hash_find(threaded->std.properties, Z_STR(member));
+
+	if (property && IS_PTHREADS_VOLATILE(object)) {
+		if (pthreads_monitor_lock(threaded->monitor)) {
+			pthreads_storage *storage;
+
+			if (Z_TYPE(member) == IS_LONG) {
+				storage = zend_hash_index_find_ptr(threaded->store.props, Z_LVAL(member));
+			} else storage = zend_hash_find_ptr(threaded->store.props, Z_STR(member));
+
+			if (storage && storage->type == IS_PTHREADS) {
+				pthreads_object_t* threadedStorage = PTHREADS_FETCH_FROM(storage->data);
+				pthreads_object_t *threadedProperty = PTHREADS_FETCH_FROM(Z_OBJ_P(property));
+
+				if (threadedStorage->monitor != threadedProperty->monitor) {
+					property = NULL;
+				}
+			} else {
+				property = NULL;
+			}
+			pthreads_monitor_unlock(threaded->monitor);
+		}
 	}
 
 	if (property && IS_PTHREADS_OBJECT(property)) {
@@ -279,7 +299,7 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 	if (result != SUCCESS) {
 		ZVAL_NULL(read);
 	} else {
-		if (!IS_PTHREADS_VOLATILE(object) && IS_PTHREADS_OBJECT(read)) {
+		if (IS_PTHREADS_OBJECT(read)) {
 			rebuild_object_properties(&threaded->std);
 			if (Z_TYPE(member) == IS_LONG) {
 				zend_hash_index_update(threaded->std.properties, Z_LVAL(member), read);
@@ -298,7 +318,7 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 int pthreads_store_write(zval *object, zval *key, zval *write) {
 	int result = FAILURE;
 	pthreads_storage *storage;
-	zval vol, member;
+	zval vol, member, *property = NULL, *read = NULL;
 	pthreads_object_t *threaded = 
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	zend_bool coerced = 0;
@@ -349,9 +369,13 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 		if (IS_PTHREADS_OBJECT(write) || IS_PTHREADS_CLOSURE(write)) {
 			/*
 				This could be a volatile object, but, we don't want to break
-				normal refcounting, we'll just never read the reference
+				normal refcounting, we'll read the reference only at volatile objects
 			*/
 			rebuild_object_properties(&threaded->std);
+			
+			if(IS_PTHREADS_VOLATILE(object)) {
+				pthreads_store_sync(object);
+			}
 
 			if (Z_TYPE(member) == IS_LONG) {
 				zend_hash_index_update(threaded->std.properties, Z_LVAL(member), write);
