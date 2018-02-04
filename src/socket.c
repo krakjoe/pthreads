@@ -62,13 +62,13 @@
 } while(0)
 
 #define PTHREADS_HANDLE_SOCKET_ERROR(eno) do { \
-	if (eno != EAGAIN && eno != EWOULDBLOCK && eno != EINPROGRESS && eno != SOCK_EINVAL) { \
-		char *estr = eno != SUCCESS ? \
-			php_socket_strerror(eno, NULL, 0) : \
+	if ((eno) != EAGAIN && (eno) != EWOULDBLOCK && (eno) != EINPROGRESS && (eno) != SOCK_EINVAL) { \
+		char *estr = (eno) != SUCCESS ? \
+			php_socket_strerror((eno), NULL, 0) : \
 			NULL; \
-		zend_throw_exception_ex(spl_ce_RuntimeException, eno, \
-			"Error (%d): %s", eno, estr ? estr : "unknown"); \
-		if (eno != SUCCESS) { \
+		zend_throw_exception_ex(spl_ce_RuntimeException, (eno), \
+			"Error (%d): %s", (eno), estr ? estr : "unknown"); \
+		if ((eno) != SUCCESS) { \
 			if (estr) { \
 				efree(estr); \
 			} \
@@ -78,11 +78,11 @@
 	\
 } while(0)
 
-#define PTHREADS_SOCKET_ERROR(socket) ({ \
+#define PTHREADS_SOCKET_ERROR(socket) do { \
 	int eno = php_socket_errno(); \
 	(socket)->error = eno; \
 	PTHREADS_HANDLE_SOCKET_ERROR(eno); \
-})
+} while(0)
 
 pthreads_socket_t* pthreads_socket_alloc(void) {
 	return (pthreads_socket_t*) ecalloc(1, sizeof(pthreads_socket_t));
@@ -947,7 +947,7 @@ void pthreads_socket_get_last_error(zval *object, zend_bool clear, zval *return_
 	if(threaded->store.sock->error == SUCCESS) {
 		RETURN_FALSE;
 	}
-	ZVAL_LONG(return_value, threaded->store.sock->error);
+	RETURN_LONG(threaded->store.sock->error);
 
 	if(clear) {
 		PTHREADS_CLEAR_SOCKET_ERROR(threaded->store.sock);
