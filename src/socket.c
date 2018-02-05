@@ -30,6 +30,9 @@
 # define SOCK_EINVAL EINVAL
 #else
 # define SOCK_EINVAL WSAEINVAL
+#ifndef EWOULDBLOCK
+# define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
 #endif
 
 #ifndef PHP_WIN32
