@@ -661,31 +661,31 @@ class Socket extends \Threaded
 
 	public function listen(int $backlog) : bool{}
 
-	public function accept($class = null){}
+	public function accept($class = self::class){}
 
 	public function connect(string $host, int $port) : bool{}
 
-	public static function select(array &$read, array &$write, array &$except, int $sec = null, int $usec = null, int &$error = null){}
+	public static function select(array &$read, array &$write, array &$except, int $sec = 0, int $usec = 0, int &$error = null){}
 
-	public function read(int $length, int $flags = null){}
+	public function read(int $length, int $flags = 0){}
 
-	public function write(string $buffer, int $length = null){}
+	public function write(string $buffer, int $length = 0){}
 
 	public function send(string $buffer, int $length, int $flags){}
 
 	public function recvfrom(string &$buffer, int $length, int $flags, string &$name, int &$port = null){}
 
-	public function sendto(string $buffer, int $length, int $flags, string $addr, int $port = null){}
+	public function sendto(string $buffer, int $length, int $flags, string $addr, int $port = 0){}
 
 	public function setBlocking(bool $blocking) : bool{}
 
-	public function getPeerName(bool $port = null) : array{}
+	public function getPeerName(bool $port = true) : array{}
 
-	public function getSockName(bool $port = null) : array{}
+	public function getSockName(bool $port = true) : array{}
 
 	public function close(){}
 
-	public function getLastError(bool $clear = null){}
+	public function getLastError(bool $clear = false){}
 
 	public function clearError(){}
 }
