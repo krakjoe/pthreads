@@ -12,11 +12,11 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
 --FILE--
 <?php
     try {
-        $socket = new Socket(AF_UNIX, SOCK_DGRAM, SOL_UDP);
+        $socket = new \Socket(\Socket::AF_UNIX, \Socket::SOCK_DGRAM, \Socket::SOL_UDP);
     }catch(RuntimeException $exception) {
         var_dump($exception->getMessage());
     }
-    $socket = new Socket(AF_UNIX, SOCK_DGRAM, 0);
+    $socket = new \Socket(\Socket::AF_UNIX, \Socket::SOCK_DGRAM, 0);
     if (!$socket) {
         die('Unable to create AF_UNIX socket');
     }
