@@ -503,3 +503,189 @@ interface Collectable
 	 */
 	public function isGarbage() : bool;
 }
+
+class Socket extends \Threaded
+{
+	public const AF_UNIX = 1;
+	public const AF_INET = 2;
+	public const AF_INET6 = 10;
+	public const SOCK_STREAM = 1;
+	public const SOCK_DGRAM = 2;
+	public const SOCK_RAW = 3;
+	public const SOCK_SEQPACKET = 5;
+	public const SOCK_RDM = 4;
+	public const SO_DEBUG = 1;
+	public const SO_REUSEADDR = 2;
+	public const SO_REUSEPORT = 15;
+	public const SO_KEEPALIVE = 9;
+	public const SO_DONTROUTE = 5;
+	public const SO_LINGER = 13;
+	public const SO_BROADCAST = 6;
+	public const SO_OOBINLINE = 10;
+	public const SO_SNDBUF = 7;
+	public const SO_RCVBUF = 8;
+	public const SO_SNDLOWAT = 19;
+	public const SO_RCVLOWAT = 18;
+	public const SO_SNDTIMEO = 21;
+	public const SO_RCVTIMEO = 20;
+	public const SO_TYPE = 3;
+	public const SO_ERROR = 4;
+	public const SO_BINDTODEVICE = 25;
+	public const SOMAXCONN = 128;
+	public const TCP_NODELAY = 1;
+	public const SOL_SOCKET = 1;
+	public const SOL_TCP = 6;
+	public const SOL_UDP = 17;
+	public const MSG_OOB = 1;
+	public const MSG_WAITALL = 256;
+	public const MSG_CTRUNC = 8;
+	public const MSG_TRUNC = 32;
+	public const MSG_PEEK = 2;
+	public const MSG_DONTROUTE = 4;
+	public const MSG_EOR = 128;
+	public const MSG_CONFIRM = 2048;
+	public const MSG_ERRQUEUE = 8192;
+	public const MSG_NOSIGNAL = 16384;
+	public const MSG_MORE = 32768;
+	public const MSG_WAITFORONE = 65536;
+	public const MSG_CMSG_CLOEXEC = 1073741824;
+	public const EPERM = 1;
+	public const ENOENT = 2;
+	public const EINTR = 4;
+	public const EIO = 5;
+	public const ENXIO = 6;
+	public const E2BIG = 7;
+	public const EBADF = 9;
+	public const EAGAIN = 11;
+	public const ENOMEM = 12;
+	public const EACCES = 13;
+	public const EFAULT = 14;
+	public const ENOTBLK = 15;
+	public const EBUSY = 16;
+	public const EEXIST = 17;
+	public const EXDEV = 18;
+	public const ENODEV = 19;
+	public const ENOTDIR = 20;
+	public const EISDIR = 21;
+	public const EINVAL = 22;
+	public const ENFILE = 23;
+	public const EMFILE = 24;
+	public const ENOTTY = 25;
+	public const ENOSPC = 28;
+	public const ESPIPE = 29;
+	public const EROFS = 30;
+	public const EMLINK = 31;
+	public const EPIPE = 32;
+	public const ENAMETOOLONG = 36;
+	public const ENOLCK = 37;
+	public const ENOSYS = 38;
+	public const ENOTEMPTY = 39;
+	public const ELOOP = 40;
+	public const EWOULDBLOCK = 11;
+	public const ENOMSG = 42;
+	public const EIDRM = 43;
+	public const ECHRNG = 44;
+	public const EL2NSYNC = 45;
+	public const EL3HLT = 46;
+	public const EL3RST = 47;
+	public const ELNRNG = 48;
+	public const EUNATCH = 49;
+	public const ENOCSI = 50;
+	public const EL2HLT = 51;
+	public const EBADE = 52;
+	public const EBADR = 53;
+	public const EXFULL = 54;
+	public const ENOANO = 55;
+	public const EBADRQC = 56;
+	public const EBADSLT = 57;
+	public const ENOSTR = 60;
+	public const ENODATA = 61;
+	public const ETIME = 62;
+	public const ENOSR = 63;
+	public const ENONET = 64;
+	public const EREMOTE = 66;
+	public const ENOLINK = 67;
+	public const EADV = 68;
+	public const ESRMNT = 69;
+	public const ECOMM = 70;
+	public const EPROTO = 71;
+	public const EMULTIHOP = 72;
+	public const EBADMSG = 74;
+	public const ENOTUNIQ = 76;
+	public const EBADFD = 77;
+	public const EREMCHG = 78;
+	public const ERESTART = 85;
+	public const ESTRPIPE = 86;
+	public const EUSERS = 87;
+	public const ENOTSOCK = 88;
+	public const EDESTADDRREQ = 89;
+	public const EMSGSIZE = 90;
+	public const EPROTOTYPE = 91;
+	public const ENOPROTOOPT = 92;
+	public const EPROTONOSUPPORT = 93;
+	public const ESOCKTNOSUPPORT = 94;
+	public const EOPNOTSUPP = 95;
+	public const EPFNOSUPPORT = 96;
+	public const EAFNOSUPPORT = 97;
+	public const EADDRINUSE = 98;
+	public const EADDRNOTAVAIL = 99;
+	public const ENETDOWN = 100;
+	public const ENETUNREACH = 101;
+	public const ENETRESET = 102;
+	public const ECONNABORTED = 103;
+	public const ECONNRESET = 104;
+	public const ENOBUFS = 105;
+	public const EISCONN = 106;
+	public const ENOTCONN = 107;
+	public const ESHUTDOWN = 108;
+	public const ETOOMANYREFS = 109;
+	public const ETIMEDOUT = 110;
+	public const ECONNREFUSED = 111;
+	public const EHOSTDOWN = 112;
+	public const EHOSTUNREACH = 113;
+	public const EALREADY = 114;
+	public const EINPROGRESS = 115;
+	public const EISNAM = 120;
+	public const EREMOTEIO = 121;
+	public const EDQUOT = 122;
+	public const ENOMEDIUM = 123;
+	public const EMEDIUMTYPE = 124;
+
+	public function __construct(int $domain, int $type, int $protocol){}
+
+	public function setOption(int $level, int $name, int $value) : bool{}
+
+	public function getOption(int $level, int $name) : int{}
+
+	public function bind(string $host, int $port) : bool{}
+
+	public function listen(int $backlog) : bool{}
+
+	public function accept($class = null){}
+
+	public function connect(string $host, int $port) : bool{}
+
+	public static function select(array &$read, array &$write, array &$except, int $sec = null, int $usec = null, int &$error = null){}
+
+	public function read(int $length, int $flags = null){}
+
+	public function write(string $buffer, int $length = null){}
+
+	public function send(string $buffer, int $length, int $flags){}
+
+	public function recvfrom(string &$buffer, int $length, int $flags, string &$name, int &$port = null){}
+
+	public function sendto(string $buffer, int $length, int $flags, string $addr, int $port = null){}
+
+	public function setBlocking(bool $blocking) : bool{}
+
+	public function getPeerName(bool $port = null) : array{}
+
+	public function getSockName(bool $port = null) : array{}
+
+	public function close(){}
+
+	public function getLastError(bool $clear = null){}
+
+	public function clearError(){}
+}
