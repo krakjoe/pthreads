@@ -728,6 +728,7 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 		PG(auto_globals_jit) = 0;
 
 		php_request_startup();
+		PG(during_request_startup) = 0;
 
 		pthreads_prepare_sapi(thread);
 	
