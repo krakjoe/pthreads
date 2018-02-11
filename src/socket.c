@@ -105,13 +105,107 @@ void pthreads_socket_construct(zval *object, zend_long domain, zend_long type, z
 	PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to create socket", errno);
 }
 
-void pthreads_socket_set_option(zval *object, zend_long level, zend_long name, zend_long value, zval *return_value) {
+void pthreads_socket_set_option(zval *object, zend_long level, zend_long name, zval *value, zval *return_value) {
+
+	struct linger			lv;
+	int						ov, optlen;
+#ifdef PHP_WIN32
+	int						timeout;
+#else
+	struct					timeval tv;
+#endif
+	void 					*opt_ptr;
+	HashTable		 		*opt_ht;
+	zval 					*l_onoff, *l_linger;
+	zval		 			*sec, *usec;
+
 	pthreads_object_t *threaded = 
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	
+
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
-	if (setsockopt(threaded->store.sock->fd, level, name, (char*) &value, sizeof(value)) != SUCCESS) {
+	switch (name) {
+		case SO_LINGER: {
+			const char l_onoff_key[] = "l_onoff";
+			const char l_linger_key[] = "l_linger";
+
+			convert_to_array_ex(value);
+			opt_ht = Z_ARRVAL_P(value);
+
+			if ((l_onoff = zend_hash_str_find(opt_ht, l_onoff_key, sizeof(l_onoff_key) - 1)) == NULL) {
+				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "no key \"%s\" passed in optval", l_onoff_key);
+				RETURN_FALSE;
+			}
+			if ((l_linger = zend_hash_str_find(opt_ht, l_linger_key, sizeof(l_linger_key) - 1)) == NULL) {
+				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "no key \"%s\" passed in optval", l_linger_key);
+				RETURN_FALSE;
+			}
+
+			convert_to_long_ex(l_onoff);
+			convert_to_long_ex(l_linger);
+
+			lv.l_onoff = (unsigned short)Z_LVAL_P(l_onoff);
+			lv.l_linger = (unsigned short)Z_LVAL_P(l_linger);
+
+			optlen = sizeof(lv);
+			opt_ptr = &lv;
+			break;
+		}
+
+		case SO_RCVTIMEO:
+		case SO_SNDTIMEO: {
+			const char sec_key[] = "sec";
+			const char usec_key[] = "usec";
+
+			convert_to_array_ex(value);
+			opt_ht = Z_ARRVAL_P(value);
+
+			if ((sec = zend_hash_str_find(opt_ht, sec_key, sizeof(sec_key) - 1)) == NULL) {
+				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "no key \"%s\" passed in optval", sec_key);
+				RETURN_FALSE;
+			}
+			if ((usec = zend_hash_str_find(opt_ht, usec_key, sizeof(usec_key) - 1)) == NULL) {
+				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "no key \"%s\" passed in optval", usec_key);
+				RETURN_FALSE;
+			}
+
+			convert_to_long_ex(sec);
+			convert_to_long_ex(usec);
+#ifndef PHP_WIN32
+			tv.tv_sec = Z_LVAL_P(sec);
+			tv.tv_usec = Z_LVAL_P(usec);
+			optlen = sizeof(tv);
+			opt_ptr = &tv;
+#else
+			timeout = Z_LVAL_P(sec) * 1000 + Z_LVAL_P(usec) / 1000;
+			optlen = sizeof(int);
+			opt_ptr = &timeout;
+#endif
+			break;
+		}
+#ifdef SO_BINDTODEVICE
+		case SO_BINDTODEVICE: {
+			if (Z_TYPE_P(value) == IS_STRING) {
+				opt_ptr = Z_STRVAL_P(value);
+				optlen = Z_STRLEN_P(value);
+			} else {
+				opt_ptr = "";
+				optlen = 0;
+			}
+			break;
+		}
+#endif
+		default:
+default_case:
+			convert_to_long_ex(value);
+			ov = Z_LVAL_P(value);
+
+			optlen = sizeof(ov);
+			opt_ptr = &ov;
+			break;
+	}
+
+	if (setsockopt(threaded->store.sock->fd, level, name, opt_ptr, optlen) != SUCCESS) {
 		PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to set socket option", errno);
 
 		RETURN_FALSE;
@@ -121,18 +215,75 @@ void pthreads_socket_set_option(zval *object, zend_long level, zend_long name, z
 }
 
 void pthreads_socket_get_option(zval *object, zend_long level, zend_long name, zval *return_value) {
+
+	struct linger	linger_val;
+	struct timeval	tv;
+#ifdef PHP_WIN32
+	int				timeout = 0;
+#endif
+	socklen_t		optlen;
+	int				other_val;
+
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	socklen_t unused = sizeof(zend_long);
 
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
-	if (getsockopt(threaded->store.sock->fd, level, name, (void*) &Z_LVAL_P(return_value), &unused) != SUCCESS) {
-		PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to retrieve socket option", errno);
+	/* sol_socket options and general case */
+	switch(name) {
+		case SO_LINGER:
+			optlen = sizeof(linger_val);
 
-		RETURN_FALSE;
-	} else {
-		Z_TYPE_INFO_P(return_value) = IS_LONG;
+			if (getsockopt(threaded->store.sock->fd, level, name, (char*)&linger_val, &optlen) != SUCCESS) {
+				PHP_SOCKET_ERROR(php_sock, "unable to retrieve socket option", errno);
+				RETURN_FALSE;
+			}
+
+			array_init(return_value);
+			add_assoc_long(return_value, "l_onoff", linger_val.l_onoff);
+			add_assoc_long(return_value, "l_linger", linger_val.l_linger);
+			break;
+
+		case SO_RCVTIMEO:
+		case SO_SNDTIMEO:
+#ifndef PHP_WIN32
+			optlen = sizeof(tv);
+
+			if (getsockopt(threaded->store.sock->fd, level, name, (char*)&tv, &optlen) != SUCCESS) {
+				PHP_SOCKET_ERROR(php_sock, "unable to retrieve socket option", errno);
+				RETURN_FALSE;
+			}
+#else
+			optlen = sizeof(int);
+
+			if (getsockopt(threaded->store.sock->fd, level, name, (char*)&timeout, &optlen) != SUCCESS) {
+				PHP_SOCKET_ERROR(php_sock, "unable to retrieve socket option", errno);
+				RETURN_FALSE;
+			}
+
+			tv.tv_sec = timeout ? timeout / 1000 : 0;
+			tv.tv_usec = timeout ? (timeout * 1000) % 1000000 : 0;
+#endif
+
+			array_init(return_value);
+
+			add_assoc_long(return_value, "sec", tv.tv_sec);
+			add_assoc_long(return_value, "usec", tv.tv_usec);
+			break;
+
+		default:
+			optlen = sizeof(other_val);
+
+			if (getsockopt(threaded->store.sock->fd, level, name, (char*)&other_val, &optlen) != SUCCESS) {
+				PHP_SOCKET_ERROR(php_sock, "unable to retrieve socket option", errno);
+				RETURN_FALSE;
+			}
+			if (optlen == 1)
+				other_val = *((unsigned char *)&other_val);
+
+			RETURN_LONG(other_val);
+			break;
 	}
 }
 

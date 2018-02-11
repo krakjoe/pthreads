@@ -33,7 +33,7 @@ typedef struct _pthreads_socket_t {
 
 pthreads_socket_t* pthreads_socket_alloc(void);
 void pthreads_socket_construct(zval *object, zend_long domain, zend_long type, zend_long protocol);
-void pthreads_socket_set_option(zval *object, zend_long level, zend_long name, zend_long value, zval *return_value);
+void pthreads_socket_set_option(zval *object, zend_long level, zend_long name, zval *value, zval *return_value);
 void pthreads_socket_get_option(zval *object, zend_long level, zend_long name, zval *return_value);
 void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zval *return_value);
 void pthreads_socket_listen(zval *object, zend_long backlog, zval *return_value);

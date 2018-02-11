@@ -55,7 +55,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_setOption, 0, 3, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, value, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_getOption, 0, 2, IS_LONG, 0)
+ZEND_BEGIN_ARG_INFO_EX(Socket_getOption, 0, 0, 2)
 	ZEND_ARG_TYPE_INFO(0, level, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(0, name,  IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -175,28 +175,27 @@ PHP_METHOD(Socket, __construct) {
 	pthreads_socket_construct(getThis(), domain, type, protocol);
 } /* }}} */
 
-/* {{{ proto bool Socket::setOption(int level, int name, int value) 
+/* {{{ proto bool Socket::setOption(int level, int name, int|array value)
 	Sets long socket option */
 PHP_METHOD(Socket, setOption) {
 	zend_long level = 0;
 	zend_long name = 0;
-	zend_long value = 0;
+	zval *value;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lll", &level, &name, &value) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "llz", &level, &name, &value) != SUCCESS) {
 		RETURN_FALSE;
 	}
 
 	pthreads_socket_set_option(getThis(), level, name, value, return_value);
 } /* }}} */
 
-/* {{{ proto int Socket::getOption(int level, int name)
+/* {{{ proto int|array Socket::getOption(int level, int name)
 	Get long socket option */
 PHP_METHOD(Socket, getOption) {
 	zend_long level = 0;
 	zend_long name = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &level, &name) != SUCCESS) {
-		RETURN_LONG(0);
 	}
 
 	pthreads_socket_get_option(getThis(), level, name, return_value);
