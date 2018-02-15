@@ -26,13 +26,12 @@
 #	include <src/socket.h>
 #endif
 
-#ifndef PHP_WIN32
-# define SOCK_EINVAL EINVAL
-#else
+#ifdef PHP_WIN32
+# include "sockets/windows_common.h"
 # define SOCK_EINVAL WSAEINVAL
-#ifndef EWOULDBLOCK
-# define EWOULDBLOCK WSAEWOULDBLOCK
-#endif
+#else
+# define set_errno(a) (errno = a)
+# define SOCK_EINVAL EINVAL
 #endif
 
 #ifndef PHP_WIN32
