@@ -670,7 +670,7 @@ class Socket extends \Threaded
 
 	public function getOption(int $level, int $name) : int{}
 
-	public function bind(string $host, int $port) : bool{}
+	public function bind(string $host, int $port = 0) : bool{}
 
 	public function listen(int $backlog) : bool{}
 
