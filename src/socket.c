@@ -357,7 +357,7 @@ void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_val
 	accepted->store.sock->domain = ((struct sockaddr*) &sa)->sa_family;
 }
 
-void pthreads_socket_connect(zval *object, zend_string *address, zend_long port, zval *return_value) {
+void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_long port, zval *return_value) {
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
@@ -367,6 +367,11 @@ void pthreads_socket_connect(zval *object, zend_string *address, zend_long port,
 #if HAVE_IPV6
 		case AF_INET6: {
 			struct sockaddr_in6 sin6 = {0};
+
+			if (argc != 2) {
+				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Socket of type AF_INET6 requires 2 arguments");
+				return;
+			}
 
 			memset(&sin6, 0, sizeof(struct sockaddr_in6));
 
@@ -392,6 +397,11 @@ void pthreads_socket_connect(zval *object, zend_string *address, zend_long port,
 		case AF_INET: {
 			struct sockaddr_in sin = {0};
 
+			if (argc != 2) {
+				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Socket of type AF_INET requires 2 arguments");
+				return;
+			}
+
 			sin.sin_family = AF_INET;
 			sin.sin_port   = htons((unsigned short int)port);
 			
@@ -415,7 +425,7 @@ void pthreads_socket_connect(zval *object, zend_string *address, zend_long port,
 			struct sockaddr_un s_un = {0};
 
 			if (ZSTR_LEN(address) >= sizeof(s_un.sun_path)) {
-				/* throw */
+				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Path too long");
 				return;
 			}
 

@@ -38,7 +38,7 @@ void pthreads_socket_get_option(zval *object, zend_long level, zend_long name, z
 void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zval *return_value);
 void pthreads_socket_listen(zval *object, zend_long backlog, zval *return_value);
 void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_value);
-void pthreads_socket_connect(zval *object, zend_string *address, zend_long port, zval *return_value);
+void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_long port, zval *return_value);
 void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zval *return_value);
 void pthreads_socket_write(zval *object, zend_string *buf, zend_long length, zval *return_value);
 void pthreads_socket_send(zval *object, zend_string *buf, zend_long length, zend_long flags, zval *return_value);

@@ -69,7 +69,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_listen, 0, 1, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, backlog, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_connect, 0, 2, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_connect, 0, 1, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, host, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, port, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -236,16 +236,17 @@ PHP_METHOD(Socket, accept) {
 	pthreads_socket_accept(getThis(), ce, return_value);
 } /* }}} */
 
-/* {{{ proto bool Socket::connect(string host, int port) */
+/* {{{ proto bool Socket::connect(string host[, int port]) */
 PHP_METHOD(Socket, connect) {
 	zend_string *host = NULL;
 	zend_long port = 0;
+	int argc = ZEND_NUM_ARGS();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sl", &host, &port) != SUCCESS) {
-		return;
+	if (zend_parse_parameters(argc, "S|l", &host, &port) != SUCCESS) {
+		RETURN_FALSE;
 	}
 
-	pthreads_socket_connect(getThis(), host, port, return_value);
+	pthreads_socket_connect(getThis(), argc, host, port, return_value);
 } /* }}} */
 
 /* {{{ proto int|bool Socket::select(array &read, array &write, array &except [, int sec = 0 [, int usec = 0 [, int &error]]]) */
