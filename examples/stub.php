@@ -676,7 +676,7 @@ class Socket extends \Threaded
 
 	public function accept($class = self::class){}
 
-	public function connect(string $host, int $port) : bool{}
+	public function connect(string $host, int $port = 0) : bool{}
 
 	public static function select(array &$read, array &$write, array &$except, int $sec = 0, int $usec = 0, int &$error = null){}
 
