@@ -3,7 +3,7 @@
  * pthreads extension stub file for code completion purposes
  *
  * @author Lisachenko Alexander <lisachenko.it@gmail.com>
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 /**
@@ -74,11 +74,12 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
      * Fetches a chunk of the objects properties table of the given size
      *
      * @param int $size The number of items to fetch
+     * @param bool $preserve Preserve the keys of members
      *
      * @link http://www.php.net/manual/en/threaded.chunk.php
      * @return array An array of items from the objects member table
      */
-    public function chunk($size) {}
+    public function chunk($size, $preserve = false) {}
 
     /**
      * {@inheritdoc}
@@ -110,7 +111,7 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
      *
      * @return bool(true) The referenced object can be destroyed
      */
-    public function isGarbage() {}
+    public function isGarbage() : bool{}
 
     /**
      * Tell if the referenced object is executing
@@ -132,7 +133,7 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
      * Merges data into the current object
      *
      * @param mixed $from The data to merge
-     * @param bool $overwrite Overwrite existing keys flag, by default true
+     * @param bool $overwrite Overwrite existing keys flag
      *
      * @link http://www.php.net/manual/en/threaded.merge.php
      * @return bool A boolean indication of success
@@ -207,7 +208,7 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
      * @link http://www.php.net/manual/en/threaded.synchronized.php
      * @return mixed The return value from the block
      */
-    public function synchronized(\Closure $function, $args = null) {}
+    public function synchronized(\Closure $function, ...$args) {}
 
     /**
      * Waits for notification from the Stackable
@@ -217,7 +218,7 @@ class Threaded implements Traversable, Countable, ArrayAccess, Collectable
      * @link http://www.php.net/manual/en/threaded.wait.php
      * @return bool A boolean indication of success
      */
-    public function wait($timeout = 0) {}
+    public function wait(int $timeout = 0) {}
 }
 
 /**
@@ -243,7 +244,6 @@ class Volatile extends Threaded{
  */
 class Thread extends Threaded
 {
-
     /**
      * Will return the identity of the Thread that created the referenced Thread
      *
@@ -307,7 +307,7 @@ class Thread extends Threaded
      * @link http://www.php.net/manual/en/thread.start.php
      * @return bool A boolean indication of success
      */
-    public function start($options = PTHREADS_INHERIT_ALL) {}
+    public function start(int $options = PTHREADS_INHERIT_ALL) {}
 }
 
 /**
@@ -327,22 +327,21 @@ class Thread extends Threaded
  */
 class Worker extends Thread
 {
-
     /**
      * Executes the optional collector on each of the tasks, removing the task if true is returned
      *
-     * @param callable $collector The collector to be executed upon each task
+     * @param callable $function The collector to be executed upon each task
      * @return int The number of tasks left to be collected
      */
-    public function collect($collector = null) {}
+    public function collect(callable $function = null) {}
 
     /**
      * Executes the collector on the collectable object passed
      *
-     * @param callable $collectable The collectable object to run the collector on
+     * @param Collectable $collectable The collectable object to run the collector on
      * @return bool The referenced object can be destroyed
      */
-    public function collector($collectable) {}
+    public function collector(Collectable $collectable) {}
 
     /**
      * Returns the number of threaded tasks waiting to be executed by the referenced Worker
@@ -376,17 +375,15 @@ class Worker extends Thread
      * @link http://www.php.net/manual/en/worker.stack.php
      * @return int The new length of the stack
      */
-    public function stack(Threaded &$work) {}
+    public function stack(Threaded $work) {}
 
     /**
-     * Removes the referenced object ( or all objects if parameter is null ) from stack of the referenced Worker
-     *
-     * @param Threaded $work Threaded object previously stacked onto Worker
+     * Removes the first task (the oldest one) in the stack.
      *
      * @link http://www.php.net/manual/en/worker.unstack.php
-     * @return int The new length of the stack
+     * @return Collectable|null The item removed from the stack
      */
-    public function unstack(Threaded &$work = null) {}
+    public function unstack() {}
 }
 
 /**
@@ -444,14 +441,7 @@ class Pool
      *
      * @link http://www.php.net/manual/en/pool.__construct.php
      */
-    public function __construct($size, $class, array $ctor = array()) {}
-
-    /**
-     * Shuts down all Workers, and collect all Stackables, finally destroys the Pool
-     *
-     * @link http://www.php.net/manual/en/pool.__destruct.php
-     */
-    public function __destruct() {}
+    public function __construct(int $size, string $class = Worker::class, array $ctor = array()) {}
 
     /**
      * Collect references to completed tasks
@@ -471,7 +461,7 @@ class Pool
      *
      * @link http://www.php.net/manual/en/pool.resize.php
      */
-    public function resize($size) {}
+    public function resize(int $size) {}
 
     /**
      * Shutdown all Workers in this Pool
@@ -497,7 +487,7 @@ class Pool
      *
      * @return int the identifier of the Worker that accepted the object
      */
-    public function submitTo($worker, Threaded $task) {}
+    public function submitTo(int $worker, Threaded $task) {}
 }
 
 /**
