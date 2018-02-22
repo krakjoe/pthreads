@@ -51,6 +51,7 @@ void pthreads_socket_free(pthreads_socket_t *socket, zend_bool closing);
 void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_long flags, zval *name, zval *port, zval *return_value);
 void pthreads_socket_sendto(zval *object, int argc, zend_string *buf, zend_long len, zend_long flags, zend_string *addr, zend_long port, zval *return_value);
 void pthreads_socket_get_last_error(zval *object, zend_bool clear, zval *return_value);
+void pthreads_socket_strerror(zend_long error, zval *return_value);
 void pthreads_socket_clear_error(zval *object);
 
 #endif
