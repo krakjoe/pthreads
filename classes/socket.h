@@ -114,11 +114,11 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_getHost, 0, 0, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, port, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Socket_select, 0, 0, 3)
+ZEND_BEGIN_ARG_INFO_EX(Socket_select, 0, 0, 4)
 	ZEND_ARG_TYPE_INFO(1, read, IS_ARRAY, 1)
 	ZEND_ARG_TYPE_INFO(1, write, IS_ARRAY, 1)
 	ZEND_ARG_TYPE_INFO(1, except, IS_ARRAY, 1)
-	ZEND_ARG_TYPE_INFO(0, sec, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(0, sec, IS_LONG, 1)
 	ZEND_ARG_TYPE_INFO(0, usec, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(1, error, IS_LONG, 1)
 ZEND_END_ARG_INFO()
@@ -183,7 +183,7 @@ PHP_METHOD(Socket, setOption) {
 	zend_long value = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lll", &level, &name, &value) != SUCCESS) {
-		return;
+		RETURN_FALSE;
 	}
 
 	pthreads_socket_set_option(getThis(), level, name, value, return_value);
@@ -196,7 +196,7 @@ PHP_METHOD(Socket, getOption) {
 	zend_long name = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &level, &name) != SUCCESS) {
-		return;
+		RETURN_LONG(0);
 	}
 
 	pthreads_socket_get_option(getThis(), level, name, return_value);
@@ -208,17 +208,17 @@ PHP_METHOD(Socket, bind) {
 	zend_long port = 0;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|l", &host, &port) != SUCCESS) {
-		return;
+		RETURN_FALSE;
 	}
 
 	pthreads_socket_bind(getThis(), host, port, return_value);
 } /* }}} */
 
-/* {{{ proto bool Socket::listen(int backlog) */
+/* {{{ proto bool Socket::listen([int backlog = 0]) */
 PHP_METHOD(Socket, listen) {
 	zend_long backlog = 0;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &backlog) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &backlog) != SUCCESS) {
 		return;
 	}
 
@@ -249,13 +249,12 @@ PHP_METHOD(Socket, connect) {
 	pthreads_socket_connect(getThis(), argc, host, port, return_value);
 } /* }}} */
 
-/* {{{ proto int|bool Socket::select(array &read, array &write, array &except [, int sec = 0 [, int usec = 0 [, int &error]]]) */
+/* {{{ proto int|bool Socket::select(array &read, array &write, array &except, int sec [, int usec = 0 [, int &error]]) */
 PHP_METHOD(Socket, select) {
-	zval *read, *write, *except, *errorno = NULL;
-	zend_long sec = 0;
+	zval *read, *write, *except, *sec, *errorno = NULL;
 	zend_long usec = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "a/!a/!a/!|llz/", &read, &write, &except, &sec, &usec, &errorno) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "a/!a/!a/!z!|lz/", &read, &write, &except, &sec, &usec, &errorno) != SUCCESS) {
 		return;
 	}
 	pthreads_socket_select(read, write, except, sec, usec, errorno, return_value);
@@ -333,7 +332,7 @@ PHP_METHOD(Socket, setBlocking) {
 	zend_bool blocking = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "b", &blocking) != SUCCESS) {
-		return;
+		RETURN_FALSE;
 	}
 
 	pthreads_socket_set_blocking(getThis(), blocking, return_value);
