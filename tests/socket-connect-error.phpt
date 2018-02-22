@@ -15,17 +15,24 @@ display_errors=1
   // Test with less arguments than required
   $server = new Socket(\Socket::SOCK_STREAM, getprotobyname('tcp'));
   
-  // Test with non integer parameters
-  $server = new Socket(array(), 1, 1);
+  try {
+    // Test with non integer parameters
+    $server = new Socket(array(), 1, 1);
+  } catch(Throwable $throwable) {
+    var_dump($throwable->getMessage());
+  }
+
+  try {
+    // Test with unknown domain
+    $server = new Socket(Socket::AF_INET + 1000, Socket::SOCK_STREAM, 0);
+  } catch(Throwable $throwable) {
+    var_dump($throwable->getMessage());
+  }
   
 ?>
 --EXPECTF--
 Warning: Socket::__construct() expects exactly 3 parameters, 0 given in %s on line %d
 
 Warning: Socket::__construct() expects exactly 3 parameters, 2 given in %s on line %d
-
-Fatal error: Uncaught TypeError: Argument 1 passed to Socket::__construct() must be of the type integer, array given in %ssocket-connect-error.php:%d
-Stack trace:
-#0 %ssocket-connect-error.php(%d): Socket->__construct(Array, 1, 1)
-#1 {main}
-  thrown in %ssocket-connect-error.php on line %d
+string(%d) "Argument 1 passed to Socket::__construct() must be of the type integer, array given"
+string(%d) "Unable to create socket (%d): Address family not supported by protocol"
