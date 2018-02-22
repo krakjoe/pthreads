@@ -27,7 +27,7 @@ PHP_METHOD(Thread, getCurrentThread);
 PHP_METHOD(Thread, getCreatorId);
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start, 0, 0, 0)
-    ZEND_ARG_TYPE_INFO(0, options, IS_LONG, 1)
+    ZEND_ARG_TYPE_INFO(0, options, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_run, 0, 0, 0)
