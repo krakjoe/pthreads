@@ -43,7 +43,7 @@ ZEND_BEGIN_ARG_INFO_EX(Pool_submitTo, 0, 0, 2)
 	ZEND_ARG_OBJ_INFO(0, task, Threaded, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Pool_collect, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(Pool_collect, 0, 0, 0)
 	ZEND_ARG_CALLABLE_INFO(0, collector, 0)
 ZEND_END_ARG_INFO()
 
