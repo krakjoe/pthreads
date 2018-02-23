@@ -77,6 +77,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Socket_read, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, length, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(0, flags, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(0, type, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Socket_write, 0, 0, 1)
@@ -260,16 +261,17 @@ PHP_METHOD(Socket, select) {
 	pthreads_socket_select(read, write, except, sec, usec, errorno, return_value);
 } /* }}} */
 
-/* {{{ proto string|bool Socket::read(int length [, int flags = 0]) */
+/* {{{ proto string|bool Socket::read(int length [, int flags = 0 [, int type = PHP_BINARY_READ]]) */
 PHP_METHOD(Socket, read) {
 	zend_long length = 0;
 	zend_long flags = 0;
+	zend_long type = PHP_BINARY_READ;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|l", &length, &flags) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|ll", &length, &flags, &type) != SUCCESS) {
 		return;
 	}
 
-	pthreads_socket_read(getThis(), length, flags, return_value);
+	pthreads_socket_read(getThis(), length, flags, type, return_value);
 } /* }}} */
 
 /* {{{ proto int|bool Socket::write(string buffer [, int length]) */
