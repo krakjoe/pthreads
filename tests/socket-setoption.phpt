@@ -10,8 +10,8 @@ Test of Socket::setOption() with and without parameters
     } catch(Throwable $throwable) {
         var_dump($throwable->getMessage());
     }
-    var_dump($socket->setOption(SOL_SOCKET, SO_REUSEADDR, 1));
-    var_dump($socket->getOption(SOL_SOCKET, SO_REUSEADDR));
+    var_dump($socket->setOption(\Socket::SOL_SOCKET, \Socket::SO_REUSEADDR, 1));
+    var_dump($socket->getOption(\Socket::SOL_SOCKET, \Socket::SO_REUSEADDR));
 ?>
 --EXPECTF--
 Warning: Socket::setOption() expects exactly 3 parameters, 0 given in %s on line %i

@@ -10,7 +10,7 @@ Test of Socket::getOption() with and without parameters
     } catch(Throwable $throwable) {
         var_dump($throwable->getMessage());
     }
-    var_dump($socket->getOption(SOL_SOCKET, SO_REUSEADDR));
+    var_dump($socket->getOption(\Socket::SOL_SOCKET, \Socket::SO_REUSEADDR));
 ?>
 --EXPECTF--
 Warning: Socket::getOption() expects exactly 2 parameters, 0 given in %s on line %i

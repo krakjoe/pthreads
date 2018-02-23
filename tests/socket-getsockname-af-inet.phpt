@@ -1,5 +1,5 @@
 --TEST--
-Basic test of Socket::getSockName() with AF_INET and AF_UNIX sockets
+Basic test of Socket::getSockName() with AF_INET sockets
 --FILE--
 <?php
     $address = '127.0.0.1';
@@ -13,20 +13,6 @@ Basic test of Socket::getSockName() with AF_INET and AF_UNIX sockets
     var_dump($inetSocket->getSockName(), $inetSocket->getSockName(false));
 
     $inetSocket->close();
-
-    $address = sprintf("/tmp/%s.sock", uniqid());
-
-    if (file_exists($address))
-        die('Temporary file socket already exists.');
-
-    $unixSocket = new \Socket(\Socket::AF_UNIX,\Socket::SOCK_STREAM, 0);
-
-    if (!$unixSocket->bind($address)) {
-        die("Unable to bind to $address");
-    }
-    var_dump($unixSocket->getSockName());
-
-    $unixSocket->close();
 ?>
 --EXPECTF--
 array(2) {
@@ -38,8 +24,4 @@ array(2) {
 array(1) {
   ["host"]=>
   string(9) "127.0.0.1"
-}
-array(1) {
-  ["host"]=>
-  string(23) "/tmp/%s.sock"
 }
