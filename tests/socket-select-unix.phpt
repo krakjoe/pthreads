@@ -1,12 +1,17 @@
 --TEST--
-Test parameter handling in Socket::select().
+Test parameter handling in Socket::select() on non-win32.
+--SKIPIF--
+<?php
+if (substr(PHP_OS, 0, 3) == 'WIN') {
+	die('skip.. Not valid for Windows');
+}
 --FILE--
 <?php
-    $socket = new Socket(\Socket::AF_INET, \Socket::SOCK_STREAM, \Socket::SOL_TCP);
+    $socket = new \Socket(\Socket::AF_INET, \Socket::SOCK_STREAM, \Socket::SOL_TCP);
     $socket->listen();
 
     try {
-        Socket::select();
+        \Socket::select();
     } catch(Throwable $throwable) {
         var_dump($throwable->getMessage());
     }
@@ -15,18 +20,18 @@ Test parameter handling in Socket::select().
     $except = null;
 
     // Valid arguments, return immediately
-    var_dump(Socket::select($read, $write, $except, 0));
+    var_dump(\Socket::select($read, $write, $except, 0));
 
     $read = [$socket];
 
     // Valid sec argument, wait 1 second
-    var_dump(Socket::select($read, $write, $except, 1, 0, $errno));
+    var_dump(\Socket::select($read, $write, $except, 1, 0, $errno));
     var_dump($errno);
 
     $read = [$socket];
 
     // Invalid sec argument, return immediately
-    var_dump(Socket::select($read, $write, $except, -1, 0, $errno));
+    var_dump(\Socket::select($read, $write, $except, -1, 0, $errno));
     var_dump($errno);
 
     $socket->close();
