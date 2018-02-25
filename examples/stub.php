@@ -452,7 +452,7 @@ class Pool
      *
      * @link http://www.php.net/manual/en/pool.collect.php
      */
-    public function collect(callable $collector) {}
+    public function collect(callable $collector = null) {}
 
     /**
      * Resize the Pool
