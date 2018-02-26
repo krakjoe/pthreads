@@ -347,8 +347,8 @@ PHP_MINIT_FUNCTION(pthreads)
 #ifdef TCP_NODELAY
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("TCP_NODELAY"), TCP_NODELAY);
 #endif
-	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("PHP_NORMAL_READ"), PHP_NORMAL_READ);
-	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("PHP_BINARY_READ"), PHP_BINARY_READ);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("PTHREADS_NORMAL_READ"), PTHREADS_NORMAL_READ);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("PTHREADS_BINARY_READ"), PTHREADS_BINARY_READ);
 
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOL_SOCKET"), SOL_SOCKET);
 	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOL_TCP"), IPPROTO_TCP);

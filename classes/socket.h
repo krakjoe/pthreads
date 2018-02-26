@@ -261,11 +261,11 @@ PHP_METHOD(Socket, select) {
 	pthreads_socket_select(read, write, except, sec, usec, errorno, return_value);
 } /* }}} */
 
-/* {{{ proto string|bool Socket::read(int length [, int flags = 0 [, int type = PHP_BINARY_READ]]) */
+/* {{{ proto string|bool Socket::read(int length [, int flags = 0 [, int type = PTHREADS_BINARY_READ]]) */
 PHP_METHOD(Socket, read) {
 	zend_long length = 0;
 	zend_long flags = 0;
-	zend_long type = PHP_BINARY_READ;
+	zend_long type = PTHREADS_BINARY_READ;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|ll", &length, &flags, &type) != SUCCESS) {
 		return;

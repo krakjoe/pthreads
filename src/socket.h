@@ -31,8 +31,8 @@ typedef struct _pthreads_socket_t {
 	zend_bool blocking;
 } pthreads_socket_t;
 
-#define PHP_NORMAL_READ 0x0001
-#define PHP_BINARY_READ 0x0002
+#define PTHREADS_NORMAL_READ 0x0001
+#define PTHREADS_BINARY_READ 0x0002
 
 pthreads_socket_t* pthreads_socket_alloc(void);
 void pthreads_socket_construct(zval *object, zend_long domain, zend_long type, zend_long protocol);

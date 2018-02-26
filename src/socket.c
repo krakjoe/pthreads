@@ -507,7 +507,7 @@ void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zend_
 
 	buf = zend_string_alloc(length, 0);
 
-	if (type == PHP_NORMAL_READ) {
+	if (type == PTHREADS_NORMAL_READ) {
 		bytes = pthreads_normal_read(threaded, ZSTR_VAL(buf), length, flags);
 	} else {
 		bytes = recv(threaded->store.sock->fd, ZSTR_VAL(buf), length, flags);
