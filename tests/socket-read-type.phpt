@@ -8,12 +8,16 @@ Test of Socket::read() - testing type \Socket::PHP_NORMAL_READ and \Socket::PHP_
         die('Unable to create AF_INET socket [server]');
     }
     $bound = false;
+
     for($port = 31337; $port < 31357; ++$port) {
-        if ($server->bind('127.0.0.1', $port)) {
-            $bound = true;
-            break;
-        }
+        try {
+            if ($server->bind('127.0.0.1', $port)) {
+                $bound = true;
+                break;
+            }
+        } catch (RuntimeException $re) {}
     }
+    
     if (!$bound) {
         die("Unable to bind to 127.0.0.1");
     }

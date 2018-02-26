@@ -12,12 +12,16 @@ IPv6 Loopback test
         die('Unable to create AF_INET6 socket [server]');
     }
     $bound = false;
+
     for($port = 31337; $port < 31357; ++$port) {
-        if ($server->bind('::1', $port)) {
-            $bound = true;
-            break;
-        }
+        try {
+            if ($server->bind('127.0.0.1', $port)) {
+                $bound = true;
+                break;
+            }
+        } catch (RuntimeException $re) {}
     }
+    
     if (!$bound) {
         die("Unable to bind to ['::1']:$port");
     }
