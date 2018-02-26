@@ -26,63 +26,10 @@
 #	include <src/socket.h>
 #endif
 
-#ifdef PHP_WIN32
-# include "sockets/windows_common.h"
-# define SOCK_EINVAL WSAEINVAL
-#else
-# define set_errno(a) (errno = a)
-# define SOCK_EINVAL EINVAL
-#endif
+#include "sockets/sockaddr_conv.h"
+#include "sockets/multicast.h"
+#include "sockets/conversions.h"
 
-#ifndef PHP_WIN32
-#define PTHREADS_INVALID_SOCKET -1
-#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd < 0)
-#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) close((sock)->fd)
-#else
-#define PTHREADS_INVALID_SOCKET INVALID_SOCKET
-#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd == INVALID_SOCKET)
-#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) closesocket((sock)->fd)
-#endif
-
-#define PTHREADS_IS_VALID_SOCKET(sock) !PTHREADS_IS_INVALID_SOCKET(sock)
-#define PTHREADS_CLEAR_SOCKET_ERROR(sock) (sock)->error = SUCCESS
-
-#define PTHREADS_SOCKET_CHECK(sock) do { \
-	if (PTHREADS_IS_INVALID_SOCKET(sock)) { \
-		zend_throw_exception_ex(spl_ce_RuntimeException, 0, \
-			"socket found in invalid state"); \
-		return; \
-	} \
-} while(0)
-
-#define PTHREADS_SOCKET_CHECK_EX(sock, retval) do { \
-	if (PTHREADS_IS_INVALID_SOCKET(sock)) { \
-		zend_throw_exception_ex(spl_ce_RuntimeException, 0, \
-			"socket found in invalid state"); \
-		return (retval); \
-	} \
-} while(0)
-
-#define PTHREADS_HANDLE_SOCKET_ERROR(eno, msg) do { \
-	if ((eno) != EAGAIN && (eno) != EWOULDBLOCK && (eno) != EINPROGRESS && (eno) != SOCK_EINVAL) { \
-		char *estr = (eno) != SUCCESS ? \
-			php_socket_strerror((eno), NULL, 0) : \
-			NULL; \
-		zend_throw_exception_ex(spl_ce_RuntimeException, (eno), \
-			"%s (%d): %s", (msg), (eno), estr ? estr : "unknown"); \
-		if ((eno) != SUCCESS) { \
-			if (estr) { \
-				efree(estr); \
-			} \
-		} \
-	} \
-	\
-} while(0)
-
-#define PTHREADS_SOCKET_ERROR(socket, msg, eno) do { \
-	(socket)->error = (eno); \
-	PTHREADS_HANDLE_SOCKET_ERROR(eno, msg); \
-} while(0)
 
 pthreads_socket_t* pthreads_socket_alloc(void) {
 	return (pthreads_socket_t*) ecalloc(1, sizeof(pthreads_socket_t));
@@ -123,6 +70,31 @@ void pthreads_socket_set_option(zval *object, zend_long level, zend_long name, z
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
+
+	set_errno(0);
+
+#define HANDLE_SUBCALL(res) \
+	do { \
+		if (res == 1) { goto default_case; } \
+		else if (res == SUCCESS) { RETURN_TRUE; } \
+		else { RETURN_FALSE; } \
+	} while (0)
+
+
+	if (level == IPPROTO_IP) {
+		int res = pthreads_do_setsockopt_ip_mcast(threaded->store.sock, level, name, value);
+		HANDLE_SUBCALL(res);
+	}
+
+#if HAVE_IPV6
+	else if (level == IPPROTO_IPV6) {
+		int res = pthreads_do_setsockopt_ipv6_mcast(threaded->store.sock, level, name, value);
+		if (res == 1) {
+			res = pthreads_do_setsockopt_ipv6_rfc3542(threaded->store.sock, level, name, value);
+		}
+		HANDLE_SUBCALL(res);
+	}
+#endif
 
 	switch (name) {
 		case SO_LINGER: {
@@ -222,13 +194,42 @@ void pthreads_socket_get_option(zval *object, zend_long level, zend_long name, z
 	int				timeout = 0;
 #endif
 	socklen_t		optlen;
-	int				other_val;
+	zend_long		other_val;
 
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
-	socklen_t unused = sizeof(zend_long);
 
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
+
+	if (level == IPPROTO_IP) {
+		switch (name) {
+			case IP_MULTICAST_IF: {
+				struct in_addr if_addr;
+				unsigned int if_index;
+				optlen = sizeof(if_addr);
+				if (getsockopt(threaded->store.sock->fd, level, name, (char*)&if_addr, &optlen) != 0) {
+					PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to retrieve socket option", errno);
+					RETURN_FALSE;
+				}
+
+				if (pthreads_add4_to_if_index(&if_addr, threaded->store.sock, &if_index) == SUCCESS) {
+					RETURN_LONG((zend_long) if_index);
+				} else {
+					RETURN_FALSE;
+				}
+			}
+		}
+	}
+#if HAVE_IPV6
+	else if (level == IPPROTO_IPV6) {
+		int ret = pthreads_do_getsockopt_ipv6_rfc3542(threaded->store.sock, level, name, return_value);
+		if (ret == SUCCESS) {
+			return;
+		} else if (ret == FAILURE) {
+			RETURN_FALSE;
+		} /* else continue */
+	}
+#endif
 
 	/* sol_socket options and general case */
 	switch(name) {
@@ -236,7 +237,7 @@ void pthreads_socket_get_option(zval *object, zend_long level, zend_long name, z
 			optlen = sizeof(linger_val);
 
 			if (getsockopt(threaded->store.sock->fd, level, name, (char*)&linger_val, &optlen) != SUCCESS) {
-				PHP_SOCKET_ERROR(php_sock, "unable to retrieve socket option", errno);
+				PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to retrieve socket option", errno);
 				RETURN_FALSE;
 			}
 
@@ -251,14 +252,14 @@ void pthreads_socket_get_option(zval *object, zend_long level, zend_long name, z
 			optlen = sizeof(tv);
 
 			if (getsockopt(threaded->store.sock->fd, level, name, (char*)&tv, &optlen) != SUCCESS) {
-				PHP_SOCKET_ERROR(php_sock, "unable to retrieve socket option", errno);
+				PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to retrieve socket option", errno);
 				RETURN_FALSE;
 			}
 #else
 			optlen = sizeof(int);
 
 			if (getsockopt(threaded->store.sock->fd, level, name, (char*)&timeout, &optlen) != SUCCESS) {
-				PHP_SOCKET_ERROR(php_sock, "unable to retrieve socket option", errno);
+				PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to retrieve socket option", errno);
 				RETURN_FALSE;
 			}
 
@@ -276,7 +277,7 @@ void pthreads_socket_get_option(zval *object, zend_long level, zend_long name, z
 			optlen = sizeof(other_val);
 
 			if (getsockopt(threaded->store.sock->fd, level, name, (char*)&other_val, &optlen) != SUCCESS) {
-				PHP_SOCKET_ERROR(php_sock, "unable to retrieve socket option", errno);
+				PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to retrieve socket option", errno);
 				RETURN_FALSE;
 			}
 			if (optlen == 1)
@@ -285,109 +286,6 @@ void pthreads_socket_get_option(zval *object, zend_long level, zend_long name, z
 			RETURN_LONG(other_val);
 			break;
 	}
-}
-
-static inline zend_bool pthreads_socket_set_inet_addr(pthreads_socket_t *sock, struct sockaddr_in *sin, zend_string *address) {
-	struct in_addr tmp;
-	struct hostent *hentry;
-
-	if (inet_aton(ZSTR_VAL(address), &tmp)) {
-		sin->sin_addr.s_addr = tmp.s_addr;
-	} else {
-		if (ZSTR_LEN(address) > MAXFQDNLEN || !(hentry = php_network_gethostbyname(ZSTR_VAL(address)))) {
-			PTHREADS_SOCKET_ERROR(sock, "Host lookup failed", errno);
-
-			return 0;
-		}
-
-		if (hentry->h_addrtype != AF_INET) {
-			zend_throw_exception_ex(spl_ce_RuntimeException, 0,
-					"Host lookup failed: Non AF_INET domain returned on AF_INET socket");
-			return 0;
-		}
-		
-		memcpy(&(sin->sin_addr.s_addr), hentry->h_addr_list[0], hentry->h_length);	
-	}
-
-	return 1;
-}
-
-static inline int pthreads_socket_string_to_if_index(const char *val, unsigned *out) {
-#if HAVE_IF_NAMETOINDEX
-	unsigned int ind = if_nametoindex(val);
-
-	if (ind != 0) {
-		*out = ind;
-		return SUCCESS;
-	}
-	
-	return FAILURE;
-#else
-	/* throw */
-	return FAILURE;
-#endif
-}
-
-static inline zend_bool pthreads_socket_set_inet6_addr(pthreads_socket_t *sock, struct sockaddr_in6 *sin, zend_string *address) {
-	struct in6_addr tmp;
-#if HAVE_GETADDRINFO
-	struct addrinfo hints;
-	struct addrinfo *addrinfo = NULL;	
-#endif
-	char *scope = strchr(ZSTR_VAL(address), '%');
-	
-	if (inet_pton(AF_INET6, ZSTR_VAL(address), &tmp)) {
-		memcpy(&(sin->sin6_addr.s6_addr), &(tmp.s6_addr), sizeof(struct in6_addr));
-	} else {
-#if HAVE_GETADDRINFO
-		memset(&hints, 0, sizeof(struct addrinfo));
-		
-		hints.ai_family = AF_INET6;
-#if HAVE_AI_V4MAPPED
-		hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
-#else
-		hints.ai_flags = AI_ADDRCONFIG;
-#endif
-		getaddrinfo(ZSTR_VAL(address), NULL, &hints, &addrinfo);
-		if (!addrinfo) {
-			PTHREADS_SOCKET_ERROR(sock, "Host lookup failed", errno);
-			return 0;
-		}
-
-		if (addrinfo->ai_family != PF_INET6 || addrinfo->ai_addrlen != sizeof(struct sockaddr_in6)) {
-			zend_throw_exception_ex(spl_ce_RuntimeException, 0,
-					"Host lookup failed: Non AF_INET6 domain returned on AF_INET6 socket");
-
-			freeaddrinfo(addrinfo);
-			return 0;
-		}
-
-		memcpy(&(sin->sin6_addr.s6_addr), ((struct sockaddr_in6*)(addrinfo->ai_addr))->sin6_addr.s6_addr, sizeof(struct in6_addr));
-		freeaddrinfo(addrinfo);
-#else
-		/* No IPv6 specific hostname resolution is available on this system? */
-		zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Host lookup failed: getaddrinfo() not available on this system");
-
-		return 0;
-#endif
-
-		if (scope++) {
-			zend_long lval = 0;
-			double dval = 0;
-			unsigned scope_id = 0;
-
-			if (IS_LONG == is_numeric_string(scope, strlen(scope), &lval, &dval, 0)) {
-				if (lval > 0 && lval <= UINT_MAX) {
-					scope_id = lval;
-				} else {
-					pthreads_socket_string_to_if_index(scope, &scope_id);
-				}
-				sin->sin6_scope_id = scope_id;
-			}
-		}
-	}
-
-	return 1;
 }
 
 void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zval *return_value) {
@@ -1087,7 +985,7 @@ void pthreads_socket_sendto(zval *object, int argc, zend_string *buf, zend_long 
 			sin6.sin6_family = AF_INET6;
 			sin6.sin6_port = htons((unsigned short) port);
 
-			if (! pthreads_socket_set_inet6_addr(threaded->store.sock, &sin6, addr)) {
+			if (!pthreads_socket_set_inet6_addr(threaded->store.sock, &sin6, addr)) {
 				RETURN_FALSE;
 			}
 

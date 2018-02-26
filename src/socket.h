@@ -22,6 +22,14 @@
 #	include <config.h>
 #endif
 
+#ifdef PHP_WIN32
+# include "sockets/windows_common.h"
+# define SOCK_EINVAL WSAEINVAL
+#else
+# define set_errno(a) (errno = a)
+# define SOCK_EINVAL EINVAL
+#endif
+
 typedef struct _pthreads_socket_t {
 	php_socket_t fd;
 	zend_long domain;
@@ -30,6 +38,57 @@ typedef struct _pthreads_socket_t {
 	zend_long protocol;
 	zend_bool blocking;
 } pthreads_socket_t;
+
+
+#ifndef PHP_WIN32
+#define PTHREADS_INVALID_SOCKET -1
+#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd < 0)
+#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) close((sock)->fd)
+#else
+#define PTHREADS_INVALID_SOCKET INVALID_SOCKET
+#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd == INVALID_SOCKET)
+#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) closesocket((sock)->fd)
+#endif
+
+#define PTHREADS_IS_VALID_SOCKET(sock) !PTHREADS_IS_INVALID_SOCKET(sock)
+#define PTHREADS_CLEAR_SOCKET_ERROR(sock) (sock)->error = SUCCESS
+
+#define PTHREADS_SOCKET_CHECK(sock) do { \
+	if (PTHREADS_IS_INVALID_SOCKET(sock)) { \
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0, \
+			"socket found in invalid state"); \
+		return; \
+	} \
+} while(0)
+
+#define PTHREADS_SOCKET_CHECK_EX(sock, retval) do { \
+	if (PTHREADS_IS_INVALID_SOCKET(sock)) { \
+		zend_throw_exception_ex(spl_ce_RuntimeException, 0, \
+			"socket found in invalid state"); \
+		return (retval); \
+	} \
+} while(0)
+
+#define PTHREADS_HANDLE_SOCKET_ERROR(eno, msg) do { \
+	if ((eno) != EAGAIN && (eno) != EWOULDBLOCK && (eno) != EINPROGRESS && (eno) != SOCK_EINVAL) { \
+		char *estr = (eno) != SUCCESS ? \
+			php_socket_strerror((eno), NULL, 0) : \
+			NULL; \
+		zend_throw_exception_ex(spl_ce_RuntimeException, (eno), \
+			"%s (%d): %s", (msg), (eno), estr ? estr : "unknown"); \
+		if ((eno) != SUCCESS) { \
+			if (estr) { \
+				efree(estr); \
+			} \
+		} \
+	} \
+	\
+} while(0)
+
+#define PTHREADS_SOCKET_ERROR(socket, msg, eno) do { \
+	(socket)->error = (eno); \
+	PTHREADS_HANDLE_SOCKET_ERROR(eno, msg); \
+} while(0)
 
 pthreads_socket_t* pthreads_socket_alloc(void);
 void pthreads_socket_construct(zval *object, zend_long domain, zend_long type, zend_long protocol);

@@ -15,6 +15,9 @@ if test "$PHP_PTHREADS" != "no"; then
 		AC_MSG_ERROR([pthreads requires ZTS, please re-compile PHP with ZTS enabled])
 	fi
 
+	AC_CHECK_FUNCS([hstrerror socketpair if_nametoindex if_indextoname])
+	AC_CHECK_HEADERS([netdb.h netinet/tcp.h sys/un.h sys/sockio.h errno.h])
+
 	AC_DEFINE(HAVE_PTHREADS, 1, [Whether you have pthreads support])
 
 	if test "$PHP_PTHREADS_SANITIZE" != "no"; then
@@ -27,7 +30,7 @@ if test "$PHP_PTHREADS" != "no"; then
 		EXTRA_CFLAGS="$EXTRA_CFLAGS -DDMALLOC"
 	fi
 
-	PHP_NEW_EXTENSION(pthreads, php_pthreads.c src/monitor.c src/stack.c src/globals.c src/prepare.c src/store.c src/resources.c src/handlers.c src/object.c src/socket.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+	PHP_NEW_EXTENSION(pthreads, php_pthreads.c src/monitor.c src/stack.c src/globals.c src/prepare.c src/store.c src/resources.c src/handlers.c src/object.c src/socket.c src/sockets/multicast.c src/sockets/conversions.c src/sockets/sockaddr_conv.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 	PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 	PHP_ADD_INCLUDE($ext_builddir)
 	PHP_SUBST(PTHREADS_SHARED_LIBADD)
