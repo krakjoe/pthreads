@@ -671,6 +671,8 @@ class Socket extends \Threaded
     public function connect(string $host, int $port = 0) : bool{}
 
     public static function select(array &$read, array &$write, array &$except, ?int $sec, int $usec = 0, int &$error = null){}
+    
+    public static function createListen(int $port, int $backlog = 128) : self{}
 
     public function read(int $length, int $flags = 0, int $type = self::BINARY_READ){}
 

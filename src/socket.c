@@ -1041,6 +1041,56 @@ void pthreads_socket_get_last_error(zval *object, zend_bool clear, zval *return_
 	}
 }
 
+void pthreads_socket_create_listen(zend_long port, zend_long backlog, zval *return_value) {
+	struct sockaddr_in  la;
+	struct hostent		*hp;
+	pthreads_object_t	*created;
+	pthreads_socket_t	*sock;
+
+	object_init_ex(return_value, pthreads_socket_entry);
+
+	created = PTHREADS_FETCH_FROM(Z_OBJ_P(return_value));
+	sock = created->store.sock;
+
+#ifndef PHP_WIN32
+	if ((hp = php_network_gethostbyname("0.0.0.0")) == NULL) {
+#else
+	if ((hp = php_network_gethostbyname("localhost")) == NULL) {
+#endif
+		zval_ptr_dtor(return_value);
+		RETURN_FALSE;
+	}
+
+	memcpy((char *) &la.sin_addr, hp->h_addr, hp->h_length);
+	la.sin_family = hp->h_addrtype;
+	la.sin_port = htons((unsigned short) port);
+
+	sock->fd = socket(AF_INET, SOCK_STREAM, 0);
+	sock->blocking = 1;
+
+	if (PTHREADS_IS_INVALID_SOCKET(sock)) {
+		PTHREADS_SOCKET_ERROR(sock, "Unable to create listening socket", errno);
+		zval_ptr_dtor(return_value);
+		RETURN_FALSE;
+	}
+
+	sock->domain = AF_INET;
+
+	if (bind(sock->fd, (struct sockaddr *)&la, sizeof(la)) != 0) {
+		PTHREADS_SOCKET_ERROR(sock, "Unable to bind to given address", errno);
+		zval_ptr_dtor(return_value);
+		RETURN_FALSE;
+	}
+
+	if (listen(sock->fd, backlog) != 0) {
+		PTHREADS_SOCKET_ERROR(sock, "Unable to listen on socket", errno);
+		zval_ptr_dtor(return_value);
+		RETURN_FALSE;
+	}
+
+	sock->error = 0;
+}
+
 void pthreads_socket_strerror(zend_long error, zval *return_value) {
 	char *errstr;
 	errstr = php_socket_strerror(error, NULL, 0);
