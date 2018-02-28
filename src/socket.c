@@ -969,6 +969,15 @@ void pthreads_socket_get_last_error(zval *object, zend_bool clear, zval *return_
 	}
 }
 
+void pthreads_socket_strerror(zend_long error, zval *return_value) {
+	char *errstr;
+	errstr = php_socket_strerror(error, NULL, 0);
+
+	RETVAL_STRING(errstr);
+
+	efree(errstr);
+}
+
 void pthreads_socket_clear_error(zval *object) {
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));

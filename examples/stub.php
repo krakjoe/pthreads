@@ -691,4 +691,6 @@ class Socket extends \Threaded
     public function getLastError(bool $clear = false){}
 
     public function clearError(){}
+
+    public static function strerror(int $error) : ?string{}
 }
