@@ -653,6 +653,8 @@ class Socket extends \Threaded
     public const EDQUOT = 122;
     public const ENOMEDIUM = 123;
     public const EMEDIUMTYPE = 124;
+    public const NORMAL_READ = 1;
+    public const BINARY_READ = 2;
 
     public function __construct(int $domain, int $type, int $protocol){}
 
@@ -670,7 +672,7 @@ class Socket extends \Threaded
 
     public static function select(array &$read, array &$write, array &$except, ?int $sec, int $usec = 0, int &$error = null){}
 
-    public function read(int $length, int $flags = 0){}
+    public function read(int $length, int $flags = 0, int $type = self::BINARY_READ){}
 
     public function write(string $buffer, int $length = 0){}
 
