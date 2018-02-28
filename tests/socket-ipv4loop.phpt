@@ -43,7 +43,7 @@ IPv4 Loopback test
 
     $client->write("ABCdef123\n");
 
-    $data = $socket->read(10, 0, \Socket::PHP_BINARY_READ);
+    $data = $socket->read(10, 0, \Socket::BINARY_READ);
     var_dump($data);
 
     $client->close();

@@ -1,5 +1,5 @@
 --TEST--
-Test of Socket::read() - testing type \Socket::PHP_NORMAL_READ and \Socket::PHP_BINARY_READ
+Test of Socket::read() - testing type \Socket::NORMAL_READ and \Socket::BINARY_READ
 --FILE--
 <?php
 	/* Setup socket server */
@@ -43,15 +43,15 @@ Test of Socket::read() - testing type \Socket::PHP_NORMAL_READ and \Socket::PHP_
 
     $client->write("ABCdef123\n456789");
 
-    $data = $socket->read(20, 0, \Socket::PHP_BINARY_READ);
+    $data = $socket->read(20, 0, \Socket::BINARY_READ);
     var_dump($data);
 
     $client->write("ABCdef123\n456789\n");
 
-    $data = $socket->read(20, 0, \Socket::PHP_NORMAL_READ);
+    $data = $socket->read(20, 0, \Socket::NORMAL_READ);
     var_dump($data);
 
-    $data = $socket->read(20, 0, \Socket::PHP_NORMAL_READ);
+    $data = $socket->read(20, 0, \Socket::NORMAL_READ);
     var_dump($data);
 
     $client->close();

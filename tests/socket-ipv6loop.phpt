@@ -15,7 +15,7 @@ IPv6 Loopback test
 
     for($port = 31337; $port < 31357; ++$port) {
         try {
-            if ($server->bind('127.0.0.1', $port)) {
+            if ($server->bind('::1', $port)) {
                 $bound = true;
                 break;
             }
@@ -47,7 +47,7 @@ IPv6 Loopback test
 
     $client->write("ABCdef123\n");
 
-    $data = $socket->read(10, 0, \Socket::PHP_BINARY_READ);
+    $data = $socket->read(10, 0, \Socket::BINARY_READ);
     var_dump($data);
 
     $client->close();
