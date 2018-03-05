@@ -6,7 +6,7 @@ branches:
 image: Visual Studio 2017
 
 environment:
-  PHP_SDK_BINARY_TOOLS_VER: php-sdk-2.0.9
+  PHP_SDK_BINARY_TOOLS_VER: php-sdk-2.1.1
 
   matrix:
     - ARCH: x86
