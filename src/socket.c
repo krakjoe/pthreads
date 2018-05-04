@@ -258,7 +258,7 @@ void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zv
 			sa->sun_family = AF_UNIX;
 
 			if (ZSTR_LEN(address) >= sizeof(sa->sun_path)) {
-				zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+				zend_throw_exception_ex(spl_ce_InvalidArgumentException , 0,
 						"Invalid path: too long (maximum size is %d)",
 						(int)sizeof(sa->sun_path) - 1);
 				return;
@@ -334,7 +334,7 @@ void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_val
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
 	if (!instanceof_function(ce, pthreads_socket_entry)) {
-		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+		zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0,
 			"%s is not an instance of Socket",
 			ZSTR_VAL(ce->name));
 		return;
@@ -367,7 +367,7 @@ void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_
 			struct sockaddr_in6 sin6 = {0};
 
 			if (argc != 2) {
-				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Socket of type AF_INET6 requires 2 arguments");
+				zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "Socket of type AF_INET6 requires 2 arguments");
 				return;
 			}
 
@@ -388,7 +388,7 @@ void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_
 			struct sockaddr_in sin = {0};
 
 			if (argc != 2) {
-				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Socket of type AF_INET requires 2 arguments");
+				zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "Socket of type AF_INET requires 2 arguments");
 				return;
 			}
 
@@ -407,7 +407,7 @@ void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_
 			struct sockaddr_un s_un = {0};
 
 			if (ZSTR_LEN(address) >= sizeof(s_un.sun_path)) {
-				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Path too long");
+				zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "Path too long");
 				return;
 			}
 
