@@ -743,6 +743,11 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("NO_DATA"), WSANO_DATA);
 	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("NO_ADDRESS"), WSANO_ADDRESS);
 #endif
+#ifdef HAVE_SHUTDOWN
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SHUTDOWN_READ"), SHUT_RD);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SHUTDOWN_WRITE"), SHUT_WR);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SHUTDOWN_BOTH"), SHUT_RDWR);
+#endif
 
 	/*
 	* Setup object handlers
