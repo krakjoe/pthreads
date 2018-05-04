@@ -3,11 +3,12 @@ Test parameter handling in Socket::select() on non-win32.
 --SKIPIF--
 <?php
 if (substr(PHP_OS, 0, 3) == 'WIN') {
-	die('skip.. Not valid for Windows');
+    die('skip.. Not valid for Windows');
 }
 --FILE--
 <?php
     $socket = new \Socket(\Socket::AF_INET, \Socket::SOCK_STREAM, \Socket::SOL_TCP);
+    $socket->bind("127.0.0.1", 19132);
     $socket->listen();
 
     try {
@@ -30,9 +31,12 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
 
     $read = [$socket];
 
-    // Invalid sec argument, return immediately
-    var_dump(\Socket::select($read, $write, $except, -1, 0, $errno));
-    var_dump($errno);
+    // Invalid sec argument, throws exception
+    try{
+        \Socket::select($read, $write, $except, -1, 0);
+    }catch(\RuntimeException $e){
+        var_dump($e->getCode());
+    }
 
     $socket->close();
 --EXPECTF--
@@ -41,5 +45,4 @@ Warning: Socket::select() expects at least 4 parameters, 0 given in %s on line %
 int(0)
 int(0)
 int(0)
-bool(false)
 int(22)

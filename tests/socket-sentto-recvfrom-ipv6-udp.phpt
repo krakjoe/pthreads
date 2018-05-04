@@ -16,7 +16,12 @@ require 'ipv6_skipif.inc';
     if (!$socket->setBlocking(false)) {
         die('Unable to set nonblocking mode for socket');
     }
-    var_dump($socket->recvfrom($buf, 12, 0, $from, $port));
+
+    try{
+        $socket->recvfrom($buf, 12, 0, $from, $port);
+    }catch(\RuntimeException $e){
+        var_dump("not bound");
+    }
     $address = '::1';
     $socket->sendto('', 1, 0, $address); // cause warning
     if (!$socket->bind($address, 1223)) {
@@ -46,7 +51,7 @@ require 'ipv6_skipif.inc';
 
     $socket->close();
 --EXPECTF--
-bool(false)
+string(9) "not bound"
 
 Warning: Wrong parameter count for Socket::sendto() in %s on line %d
 
