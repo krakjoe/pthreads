@@ -10,7 +10,6 @@ Test that creating and closing sockets works as expected on all platforms (gh is
 --FILE--
 <?php
     $socket = new \Socket(\Socket::AF_INET, \Socket::SOCK_STREAM, 0);
-    $socket->shutdown();
 
     var_dump($socket->shutdown(4)); // invalid - false
 
@@ -26,7 +25,6 @@ Test that creating and closing sockets works as expected on all platforms (gh is
     $socket->close();
 ?>
 --EXPECTF--
-Warning: Socket::shutdown() expects exactly 1 parameter, 0 given in %s on line %d
 bool(false)
 bool(true)
 string(13) "not connected"

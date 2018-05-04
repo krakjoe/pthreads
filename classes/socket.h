@@ -414,9 +414,9 @@ PHP_METHOD(Socket, strerror) {
 #ifdef HAVE_SHUTDOWN
 /* {{{ proto bool Socket::shutdown(int how) */
 PHP_METHOD(Socket, shutdown) {
-	zend_long how_shutdown = 0;
+	zend_long how_shutdown = SHUT_RDWR;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &how_shutdown) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &how_shutdown) != SUCCESS) {
 		RETURN_FALSE;
 	}
 
