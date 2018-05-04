@@ -11,7 +11,11 @@ Test that creating and closing sockets works as expected on all platforms (gh is
 <?php
     $socket = new \Socket(\Socket::AF_INET, \Socket::SOCK_STREAM, 0);
 
-    var_dump($socket->shutdown(4)); // invalid - false
+    try{
+        $socket->shutdown(4); // invalid
+    }catch(\InvalidArgumentException $e){
+        var_dump($e->getMessage());
+    }
 
     $socket->bind('0.0.0.0');
     $socket->listen(1);
@@ -25,6 +29,6 @@ Test that creating and closing sockets works as expected on all platforms (gh is
     $socket->close();
 ?>
 --EXPECTF--
-bool(false)
+string(21) "Invalid shutdown type"
 bool(true)
 string(13) "not connected"

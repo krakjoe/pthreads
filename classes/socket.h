@@ -420,6 +420,11 @@ PHP_METHOD(Socket, shutdown) {
 		RETURN_FALSE;
 	}
 
+	if (how_shutdown != SHUT_RD && how_shutdown != SHUT_WR && how_shutdown != SHUT_RDWR) {
+		zend_throw_exception(spl_ce_InvalidArgumentException, "Invalid shutdown type", 0);
+		RETURN_FALSE;
+	}
+
 	pthreads_socket_shutdown(getThis(), how_shutdown, return_value);
 } /* }}} */
 #endif
