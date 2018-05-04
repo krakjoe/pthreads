@@ -502,7 +502,8 @@ void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zend_
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
 	if (length < 1) {
-		RETURN_FALSE;
+		zend_throw_exception(spl_ce_InvalidArgumentException, "Length must be at least 1", 0);
+		return;
 	}
 
 	buf = zend_string_alloc(length, 0);
@@ -786,7 +787,8 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, zval *sec, ui
 	}
 
 	if (!sets) {
-		RETURN_FALSE;
+		zend_throw_exception(spl_ce_InvalidArgumentException, "No valid sockets given", 0);
+		return;
 	}
 
 	PHP_SAFE_MAX_FD(mfd, 0);
