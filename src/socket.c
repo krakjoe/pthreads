@@ -758,7 +758,7 @@ static int pthreads_sockets_from_fd_set(zval *sockets, fd_set *fds) /* {{{ */
 }
 /* }}} */
 
-void pthreads_socket_select(zval *read, zval *write, zval *except, zval *sec, uint32_t usec, zval *errorno, zval *return_value) {
+void pthreads_socket_select(zval *read, zval *write, zval *except, zval *sec, zend_long usec, zval *errorno, zval *return_value) {
 	fd_set rfds, wfds, efds;
 	php_socket_t mfd = 0;
 	int result = SUCCESS, sets = 0;
@@ -802,6 +802,15 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, zval *sec, ui
 			zval_copy_ctor(&tmp);
 			convert_to_long(&tmp);
 			sec = &tmp;
+		}
+
+		if (Z_LVAL_P(sec) < 0) {
+			zend_throw_exception(spl_ce_InvalidArgumentException, "sec cannot be negative", 0);
+			return;
+		}
+		if (usec < 0) {
+			zend_throw_exception(spl_ce_InvalidArgumentException, "usec cannot be negative", 0);
+			return;
 		}
 
 		/* Solaris + BSD do not like microsecond values which are >= 1 sec */
