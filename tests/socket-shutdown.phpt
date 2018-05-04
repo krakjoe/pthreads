@@ -17,10 +17,10 @@ Test that creating and closing sockets works as expected on all platforms (gh is
     $socket->bind('0.0.0.0');
     $socket->listen(1);
 
-    var_dump($socket->shutdown(0)); // close reading
+    var_dump($socket->shutdown(\Socket::SHUTDOWN_READ));
 
     try {
-        var_dump($socket->shutdown(1)); // close writing
+        var_dump($socket->shutdown(\Socket::SHUTDOWN_WRITE)); // close writing
     } catch(Exception $exception) { var_dump('not connected'); }
 
     $socket->close();
