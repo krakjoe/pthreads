@@ -141,7 +141,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_strerror, 0, 1, IS_STRING, 1)
 ZEND_END_ARG_INFO()
 
 #ifdef HAVE_SHUTDOWN
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_shutdown, 0, 1, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_shutdown, 0, 0, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, how, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 #endif
@@ -412,7 +412,7 @@ PHP_METHOD(Socket, strerror) {
 } /* }}} */
 
 #ifdef HAVE_SHUTDOWN
-/* {{{ proto bool Socket::shutdown(int how) */
+/* {{{ proto bool Socket::shutdown(int how = Socket::SHUTDOWN_BOTH) */
 PHP_METHOD(Socket, shutdown) {
 	zend_long how_shutdown = SHUT_RDWR;
 
