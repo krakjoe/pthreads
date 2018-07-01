@@ -1021,6 +1021,9 @@ void pthreads_store_reset(zval *object, HashPosition *position) {
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_hash_internal_pointer_reset_ex(threaded->store.props, position);
+		if (zend_hash_has_more_elements_ex(threaded->store.props, position) == FAILURE) { //empty
+			*position = HT_INVALID_IDX;
+		}
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 }
@@ -1055,6 +1058,9 @@ void pthreads_store_forward(zval *object, HashPosition *position) {
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_hash_move_forward_ex(
 			threaded->store.props, position);
+		if (zend_hash_has_more_elements_ex(threaded->store.props, position) == FAILURE) {
+			*position = HT_INVALID_IDX;
+		}
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 } /* }}} */
