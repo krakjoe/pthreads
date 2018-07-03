@@ -49,7 +49,7 @@ The API for v3 has changed, the following things have been removed:
  * Special behaviour of ```protected``` and ```private``` methods on ```Threaded``` objects
 
 The following things have significant changes:
- 
+
  * The method by which ```Threaded``` objects are stored as member properties of other ```Threaded``` objects.
  * The structure used by a ```Worker``` for stack (```Collectable``` objects to execute inserted by ```Worker::stack```).
  * The ```Pool::collect``` mechanism was moved from ```Pool``` to ```Worker``` for a more robust ```Worker``` and simpler ```Pool``` inheritance.
@@ -106,9 +106,10 @@ As is customary in our line of work:
 ```php
 <?php
 $thread = new class extends Thread {
-	public function run() {
-		echo "Hello World\n";
-	}
+    public function run()
+    {
+        echo "Hello World\n";
+    }
 };
 
 $thread->start() && $thread->join();
@@ -127,7 +128,7 @@ So I'm promoting the advice to hard and fast fact: *you can't use pthreads safel
 
 Thanks for listening ;)
 
-### Documentation 
+### Documentation
 
 Documentation can be found in the PHP manual: http://docs.php.net/manual/en/book.pthreads.php, and some examples can be found in the "examples" folder in the master repository.
 
@@ -153,18 +154,23 @@ Having required the appropriate package in your composer.json, the following cod
 require_once("vendor/autoload.php");
 
 if (extension_loaded("pthreads")) {
-	    echo "Using pthreads\n";
-} else  echo "Using polyfill\n";
+    echo "Using pthreads\n";
+} else {
+    echo "Using polyfill\n";
+}
 
 $pool = new Pool(4);
 
 $pool->submit(new class extends Threaded {
-        public function run() {
-                echo "Hello World\n";
-        }
+    public function run()
+    {
+        echo "Hello World\n";
+    }
 });
 
-while ($pool->collect()) continue;
+while ($pool->collect()) {
+    continue;
+}
 
 $pool->shutdown();
 ?>
