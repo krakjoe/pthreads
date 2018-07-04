@@ -501,7 +501,7 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 				}
 			} else break;
 
-			zend_hash_move_forward_ex(threaded->store.props, &position);
+			zend_hash_internal_pointer_reset_ex(threaded->store.props, &position);
 		}
 		pthreads_monitor_unlock(threaded->monitor);
 
