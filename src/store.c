@@ -371,7 +371,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 			if (Z_TYPE(member) == IS_LONG) {
 				zend_hash_index_update(threaded->std.properties, Z_LVAL(member), write);
 			} else {
-				zend_string *keyed = zend_string_dup(Z_STR(member), 1);
+				zend_string *keyed = zend_string_dup(Z_STR(member), 0);
 				if (zend_hash_update(
 					threaded->std.properties, keyed, write)) {
 					result = SUCCESS;
@@ -718,17 +718,20 @@ int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 		case IS_CLOSURE: {
 			char *name;
 			size_t name_len;
+			zend_string *zname;
 			zend_function *closure = pthreads_copy_function((zend_function*) storage->data);
 
 			zend_create_closure(pzval, closure, zend_get_executed_scope(), closure->common.scope, NULL);
 
 			name_len = spprintf(&name, 0, "Closure@%p", zend_get_closure_method_def(pzval));
+			zname = zend_string_init(name, name_len, 0);
 
-			if (!zend_hash_str_update_ptr(EG(function_table), name, name_len, closure)) {
+			if (!zend_hash_update_ptr(EG(function_table), zname, closure)) {
 				result = FAILURE;
 				zval_dtor(pzval);
 			} else result = SUCCESS;
 			efree(name);
+			zend_string_release(zname);
 		} break;
 
 		case IS_PTHREADS: {
