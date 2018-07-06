@@ -14,5 +14,5 @@ Test of Socket::getOption() with and without parameters
 ?>
 --EXPECTF--
 Warning: Socket::getOption() expects exactly 2 parameters, 0 given in %s on line %i
-string(%i) "Argument 1 passed to Socket::getOption() must be of the type integer, string given"
+string(%i) "Argument 1 passed to Socket::getOption() must be of the type %s, string given"
 int(%i)
