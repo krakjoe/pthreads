@@ -1033,9 +1033,21 @@ void pthreads_store_reset(zval *object, HashPosition *position) {
 
 void pthreads_store_key(zval *object, zval *key, HashPosition *position) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	zend_string *str_key;
+	zend_ulong num_key;
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
-		zend_hash_get_current_key_zval_ex(threaded->store.props, key, position);
+		switch (zend_hash_get_current_key_ex(threaded->store.props, &str_key, &num_key, position)) {
+			case HASH_KEY_NON_EXISTENT:
+				ZVAL_NULL(key);
+			break;
+			case HASH_KEY_IS_LONG:
+				ZVAL_LONG(key, num_key);
+			break;
+			case HASH_KEY_IS_STRING:
+				ZVAL_STR(key, zend_string_dup(str_key, 0));
+			break;
+		}
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 }
