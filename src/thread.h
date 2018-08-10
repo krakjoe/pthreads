@@ -30,6 +30,10 @@
 #	include <src/socket.h>
 #endif
 
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
+#endif
+
 typedef struct _pthreads_ident_t {
 	zend_ulong id;
 	void*** ls;
@@ -45,6 +49,7 @@ typedef struct _pthreads_object_t {
 		pthreads_store_t	*props;
 		pthreads_socket_t	*sock;
 	} store;
+	pthreads_storage    *user_exception_handler;
 	pthreads_stack_t    *stack;
 	pthreads_ident_t 	creator;
 	pthreads_ident_t	local;
