@@ -374,6 +374,7 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 static inline zend_function* pthreads_copy_internal_function(zend_function *function) {
 	zend_function *copy = zend_arena_alloc(&CG(arena), sizeof(zend_internal_function));
 	memcpy(copy, function, sizeof(zend_internal_function));
+	copy->common.fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
 	return copy;
 } /* }}} */
 
