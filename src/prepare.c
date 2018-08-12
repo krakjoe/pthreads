@@ -44,7 +44,11 @@
 /* {{{ */
 static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_t* thread, zend_trait_alias *alias); 
 static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(pthreads_object_t* thread, zend_trait_precedence *precedence);
-static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference);
+#if PHP_VERSION_ID >= 70300
+static void pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference, zend_trait_method_reference *copy);
+#else
+static zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference);
+#endif
 static void pthreads_prepared_resource_dtor(zval *zv); /* }}} */
 
 /* {{{ */
@@ -193,7 +197,9 @@ static void prepare_class_handlers(zend_class_entry *candidate, zend_class_entry
 	prepared->serialize = candidate->serialize;
 	prepared->unserialize = candidate->unserialize;
 	prepared->get_iterator = candidate->get_iterator;
+#if PHP_VERSION_ID < 70300
 	prepared->iterator_funcs = candidate->iterator_funcs;
+#endif
 	prepared->interface_gets_implemented = candidate->interface_gets_implemented;
 	prepared->get_static_method = candidate->get_static_method;
 } /* }}} */
@@ -233,21 +239,38 @@ while(0)
 	FIND_AND_SET(destructor, "__destruct");
 #undef FIND_AND_SET
 
+#if PHP_VERSION_ID >= 70300
+#define SET_ITERATOR_FUNC(f) do { \
+	if (candidate->iterator_funcs_ptr->f) { \
+		prepared->iterator_funcs_ptr->f = zend_hash_index_find_ptr( \
+			&PTHREADS_ZG(resolve), (zend_ulong) candidate->iterator_funcs_ptr->f); \
+	} \
+} while (0)
+#else
 #define SET_ITERATOR_FUNC(f) do { \
 	if (candidate->iterator_funcs.f) { \
 		prepared->iterator_funcs.f = zend_hash_index_find_ptr( \
 			&PTHREADS_ZG(resolve), (zend_ulong) candidate->iterator_funcs.f); \
 	} \
 } while (0)
+#endif
 
-	memcpy(&prepared->iterator_funcs, &candidate->iterator_funcs, sizeof(zend_class_iterator_funcs));
-
-	SET_ITERATOR_FUNC(zf_new_iterator);
-	SET_ITERATOR_FUNC(zf_valid);
-	SET_ITERATOR_FUNC(zf_current);
-	SET_ITERATOR_FUNC(zf_key);
-	SET_ITERATOR_FUNC(zf_next);
-	SET_ITERATOR_FUNC(zf_rewind);
+#if PHP_VERSION_ID >= 70300
+	if (candidate->iterator_funcs_ptr) {
+		prepared->iterator_funcs_ptr = zend_arena_alloc(&CG(arena), sizeof(zend_class_iterator_funcs));
+		memset(prepared->iterator_funcs_ptr, 0, sizeof(zend_class_iterator_funcs));
+#else
+		memcpy(&prepared->iterator_funcs, &candidate->iterator_funcs, sizeof(zend_class_iterator_funcs));
+#endif
+		SET_ITERATOR_FUNC(zf_new_iterator);
+		SET_ITERATOR_FUNC(zf_valid);
+		SET_ITERATOR_FUNC(zf_current);
+		SET_ITERATOR_FUNC(zf_key);
+		SET_ITERATOR_FUNC(zf_next);
+		SET_ITERATOR_FUNC(zf_rewind);
+#if PHP_VERSION_ID >= 70300
+	} else prepared->iterator_funcs_ptr = NULL;
+#endif
 
 #undef SET_ITERATOR_FUNC
 } /* }}} */
@@ -581,9 +604,6 @@ static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
 				zend_constant constant;
 
 				if (!pthreads_constant_exists(name)) {
-
-					constant.flags = zconstant->flags;
-					constant.module_number = zconstant->module_number;
 					constant.name = zend_string_new(name);
 
 					switch((Z_TYPE_INFO(constant.value)=Z_TYPE(zconstant->value))) {
@@ -604,7 +624,13 @@ static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
 							pthreads_store_separate(&zconstant->value, &constant.value, 1);
 						} break;
 					}
-			
+
+#if PHP_VERSION_ID < 70300
+					constant.flags = zconstant->flags;
+					constant.module_number = zconstant->module_number;
+#else
+					ZEND_CONSTANT_SET_FLAGS(&constant, ZEND_CONSTANT_FLAGS(zconstant), ZEND_CONSTANT_MODULE_NUMBER(zconstant));
+#endif
 					zend_register_constant(&constant);
 				}
 			}
@@ -790,10 +816,14 @@ int pthreads_prepared_shutdown(void) {
 static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_t* thread, zend_trait_alias *alias) {
 	zend_trait_alias *copy = ecalloc(1, sizeof(zend_trait_alias));
 
+#if PHP_VERSION_ID >= 70300
+	pthreads_preparation_copy_trait_method_reference(thread, &alias->trait_method, &copy->trait_method);
+#else
 	if (alias->trait_method) {
 		copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, alias->trait_method);
 	}
-	
+#endif
+
 	if (alias->alias) {
 		copy->alias = zend_string_new(alias->alias);
 	}
@@ -805,7 +835,18 @@ static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_
 
 /* {{{ */
 static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(pthreads_object_t* thread, zend_trait_precedence *precedence) {
-	zend_trait_precedence *copy = ecalloc(1, sizeof(zend_trait_precedence));
+	zend_trait_precedence *copy;
+#if PHP_VERSION_ID >= 70300
+	copy = ecalloc(1, sizeof(zend_trait_precedence) + (precedence->num_excludes - 1) * sizeof(zend_string *));
+
+	pthreads_preparation_copy_trait_method_reference(thread, &precedence->trait_method, &copy->trait_method);
+	copy->num_excludes = precedence->num_excludes;
+	int i;
+	for (i = 0; i < precedence->num_excludes; ++i) {
+		copy->exclude_class_names[i] = zend_string_new(precedence->exclude_class_names[i]);
+	}
+#else
+	copy = ecalloc(1, sizeof(zend_trait_precedence));
 
 	copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, precedence->trait_method);
 	if (precedence->exclude_from_classes) {
@@ -815,22 +856,35 @@ static zend_trait_precedence * pthreads_preparation_copy_trait_precedence(pthrea
 		);
 		copy->exclude_from_classes->class_name = zend_string_new(precedence->exclude_from_classes->class_name);
 	}
+#endif
 
 	return copy;
 } /* }}} */
 
-/* {{{  */
-static  zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference) {
+#if PHP_VERSION_ID >= 70300
+/* {{{ */
+static void pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference, zend_trait_method_reference *copy) {
+	if (reference->method_name) {
+		copy->method_name = zend_string_new(reference->method_name);
+	}
+	if (reference->class_name) {
+		copy->class_name = zend_string_new(reference->class_name);
+	}
+} /* }}} */
+#else
+/* {{{ */
+static zend_trait_method_reference * pthreads_preparation_copy_trait_method_reference(pthreads_object_t* thread, zend_trait_method_reference *reference) {
 	zend_trait_method_reference *copy = ecalloc(1, sizeof(zend_trait_method_reference));
 
 	copy->method_name = zend_string_new(reference->method_name);
 	if (reference->class_name) {
 		copy->class_name = zend_string_new(reference->class_name);
 	}
-	copy->ce = pthreads_prepared_entry(thread, (zend_class_entry*) reference->ce);
+	copy->ce = pthreads_prepared_entry(thread, (zend_class_entry*)reference->ce);
 
 	return copy;
 } /* }}} */
+#endif
 
 /* {{{ */
 static void pthreads_prepared_resource_dtor(zval *zv) {
