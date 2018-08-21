@@ -3,14 +3,19 @@ var PTHREADS_EXT_SRC="monitor.c stack.c globals.c prepare.c store.c resources.c 
 var PTHREADS_EXT_DIR=configure_module_dirname + "/src";
 var PTHREADS_EXT_API="php_pthreads.c";
 var PTHREADS_EXT_FLAGS="/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_module_dirname;
-var PTHREADS_EXT_DEP="pthreadVC2.lib";
 /* --------------------------------------------------------------------- */
 ARG_WITH("pthreads", "for pthreads support", "no");
 
 if (PHP_PTHREADS != "no") {
 	if(CHECK_HEADER_ADD_INCLUDE("pthread.h", "CFLAGS_PTHREADS", PHP_PTHREADS + ";" + configure_module_dirname) &&    
 		CHECK_HEADER_ADD_INCLUDE("sched.h", "CFLAGS_PTHREADS", PHP_PTHREADS + ";" + configure_module_dirname) &&
-		CHECK_LIB(PTHREADS_EXT_DEP, PTHREADS_EXT_NAME, PHP_PTHREADS) &&
+		(
+			CHECK_LIB("pthreadVC2.lib", PTHREADS_EXT_NAME, PHP_PTHREADS) ||
+			(
+				CHECK_LIB("pthreadVC3.lib", PTHREADS_EXT_NAME, PHP_PTHREADS) &&
+				CHECK_HEADER_ADD_INCLUDE("_ptw32.h", "CFLAGS_PTHREADS", PHP_PTHREADS + ";" + configure_module_dirname) //extra header needed for v3
+			)
+		) &&
 		CHECK_LIB("ws2_32.lib", PTHREADS_EXT_NAME, PHP_PTHREADS) &&
 		CHECK_LIB("Iphlpapi.lib", PTHREADS_EXT_NAME, PHP_PTHREADS)) {
 		EXTENSION(PTHREADS_EXT_NAME, PTHREADS_EXT_API, PHP_PTHREADS_SHARED, PTHREADS_EXT_FLAGS);
