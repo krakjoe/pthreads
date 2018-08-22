@@ -39,7 +39,9 @@ pthreads_monitor_t* pthreads_monitor_alloc() {
 #else
 	pthread_mutexattr_settype(&at, PTHREAD_MUTEX_RECURSIVE_NP);
 #endif
-	if (pthread_mutex_init(&m->mutex, &at) != 0) {
+	int ret = pthread_mutex_init(&m->mutex, &at);
+	pthread_mutexattr_destroy(&at);
+	if (ret != 0) {
 		free(m);
 		return NULL;
 	}
