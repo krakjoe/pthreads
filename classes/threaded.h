@@ -320,7 +320,7 @@ PHP_METHOD(Threaded, extend) {
     if (is_final)
         ce->ce_flags = ce->ce_flags &~ ZEND_ACC_FINAL;
 
-	parent = zend_get_executed_scope();
+	parent = zend_get_called_scope(EG(current_execute_data));
 
 	zend_do_inheritance(ce, parent);
 
