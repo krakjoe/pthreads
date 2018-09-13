@@ -786,11 +786,11 @@ int pthreads_prepared_shutdown(void) {
 static zend_trait_alias * pthreads_preparation_copy_trait_alias(pthreads_object_t* thread, zend_trait_alias *alias) {
 	zend_trait_alias *copy = ecalloc(1, sizeof(zend_trait_alias));
 
-	if (copy->trait_method) {
+	if (alias->trait_method) {
 		copy->trait_method = pthreads_preparation_copy_trait_method_reference(thread, alias->trait_method);
 	}
 	
-	if (copy->alias) {
+	if (alias->alias) {
 		copy->alias = zend_string_new(alias->alias);
 	}
 
