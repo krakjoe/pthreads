@@ -8,7 +8,7 @@ pthreads v3 will coerce arrays to Volatile objects when they are set as members 
 Threaded objects have been made consistent with PHP arrays, so there should be no noticable difference between an array
 and a volatile object.
 --SKIPIF--
-<?php if(version_compare(PHP_VERSION, '7.3.0-dev', '<')) print "skip"; ?>
+<?php if(version_compare(PHP_VERSION, '7.3.0-dev', '>=')) print "skip"; ?>
 --FILE--
 <?php
 $threaded = new Threaded();
@@ -56,7 +56,7 @@ object(Threaded)#%d (%d) {
       }
     }
   }
-  ["0"]=>
+  [0]=>
   object(Volatile)#%d (%d) {
   }
   [1]=>
@@ -79,7 +79,7 @@ object(Threaded)#%d (%d) {
       }
     }
   }
-  ["0"]=>
+  [0]=>
   object(Volatile)#%d (%d) {
   }
   [1]=>
