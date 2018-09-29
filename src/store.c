@@ -87,6 +87,8 @@ void pthreads_store_sync(zval *object) { /* {{{ */
 } /* }}} */
 
 static inline zend_bool pthreads_store_coerce(HashTable *table, zval *key, zval *member) {
+	zend_ulong hval;
+
 	if (!key || Z_TYPE_P(key) == IS_NULL) {
 		ZVAL_LONG(member, zend_hash_next_free_element(table));
 		return 0;
@@ -94,6 +96,10 @@ static inline zend_bool pthreads_store_coerce(HashTable *table, zval *key, zval 
 
 	switch (Z_TYPE_P(key)) {
 		case IS_STRING:
+			if (ZEND_HANDLE_NUMERIC(Z_STR_P(key), hval)) {
+				ZVAL_LONG(member, hval);
+				return 0;
+			}
 		case IS_LONG:
 			ZVAL_ZVAL(member, key, 0, 0);
 			return 0;
@@ -142,13 +148,13 @@ int pthreads_store_delete(zval *object, zval *key) {
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		if (!pthreads_store_is_immutable(object, &member)) {
-			if (Z_TYPE_P(key) == IS_LONG) {
+			if (Z_TYPE(member) == IS_LONG) {
 				result = zend_hash_index_del(threaded->store.props, Z_LVAL(member));
 			} else result = zend_hash_del(threaded->store.props, Z_STR(member));
 		}
 		pthreads_monitor_unlock(threaded->monitor);
 	} else result = FAILURE;
-	
+
 	if (result == SUCCESS) {
 		if (Z_TYPE(member) == IS_LONG) {
 			zend_hash_index_del(threaded->std.properties, Z_LVAL(member));
