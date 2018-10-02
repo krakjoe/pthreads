@@ -138,6 +138,8 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 #define PTHREADS_PG(ls, v) PTHREADS_FETCH_CTX(ls, core_globals_id, php_core_globals*, v)
 #define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
 
+#define PTHREADS_ACC_THREADLOCAL 0x10
+
 static zend_string *zend_string_new(zend_string *s)
 {
 	if (ZSTR_IS_INTERNED(s)) {

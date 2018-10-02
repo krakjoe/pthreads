@@ -27,6 +27,7 @@
 #endif
 
 /* {{{ */
+zend_bool pthreads_is_property_threadlocal(zval *object, zval *member);
 zend_object* pthreads_threaded_ctor(zend_class_entry *entry);
 zend_object* pthreads_worker_ctor(zend_class_entry *entry);
 zend_object* pthreads_thread_ctor(zend_class_entry *entry);

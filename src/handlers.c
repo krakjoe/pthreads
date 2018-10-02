@@ -123,7 +123,9 @@ zval * pthreads_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
 
 		zend_fcall_info_args_clear(&fci, 1);
 	} else {
-		pthreads_store_read(object, member, type, rv);
+		if(pthreads_is_property_threadlocal(object, member)) {
+			zend_std_read_property(object, member, type, cache, rv);
+		} else pthreads_store_read(object, member, type, rv);
 	}
 	
 	return rv;
@@ -191,7 +193,9 @@ void pthreads_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
 					zval_dtor(&rv);
 				zend_fcall_info_args_clear(&fci, 1);
 			} else {
-				pthreads_store_write(object, member, value);
+				if(pthreads_is_property_threadlocal(object, member)) {
+					zend_std_write_property(object, member, value, cache);
+				} else pthreads_store_write(object, member, value);
 			}
 		} break;
 	
@@ -256,7 +260,9 @@ int pthreads_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
 		}
 		zend_fcall_info_args_clear(&fci, 1);
 	} else {
-		isset = pthreads_store_isset(object, member, has_set_exists);
+		if(pthreads_is_property_threadlocal(object, member)) {
+			isset = zend_std_has_property(object, member, has_set_exists, cache);
+		} else isset = pthreads_store_isset(object, member, has_set_exists);
 	}
 
 	return isset;
@@ -313,9 +319,9 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		}
 		zend_fcall_info_args_clear(&fci, 1);
 	} else {
-		if (pthreads_store_delete(object, member) == SUCCESS){
-			
-		}
+		if(pthreads_is_property_threadlocal(object, member)) {
+			zend_std_unset_property(object, member, cache);
+		} else pthreads_store_delete(object, member);
 	}
 }
 void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); }

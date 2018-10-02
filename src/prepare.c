@@ -433,6 +433,20 @@ static inline void pthreads_prepare_closures(pthreads_object_t *thread) {
 } /* }}} */
 
 /* {{{ */
+void prepare_class_postcompile(zend_class_entry *candidate) {
+	zend_property_info *info;
+	zend_string *name;
+
+	ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->properties_info, name, info) {
+		if (info->doc_comment &&
+				(strstr(ZSTR_VAL(info->doc_comment), "@thread_local") || strstr(ZSTR_VAL(info->doc_comment), "@threadLocal"))) {
+			info->flags |= PTHREADS_ACC_THREADLOCAL;
+		}
+	} ZEND_HASH_FOREACH_END();
+}
+/* }}} */
+
+/* {{{ */
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate) {
 	return pthreads_create_entry(thread, candidate, 1);
 } /* }}} */

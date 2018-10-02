@@ -43,8 +43,8 @@ zend_bool pthreads_globals_init(){
 		if (PTHREADS_G(failed)) {
 		    PTHREADS_G(init)=0;
 		} else {
-		    zend_hash_init(
-		    	&PTHREADS_G(objects), 64, NULL, (dtor_func_t) NULL, 1);
+			zend_hash_init(&PTHREADS_G(objects), 64, NULL, (dtor_func_t) NULL, 1);
+			zend_hash_init(&PTHREADS_G(postcompile), 15, NULL, (dtor_func_t) NULL, 1);
 		}
 
 #if PHP_VERSION_ID >= 70300

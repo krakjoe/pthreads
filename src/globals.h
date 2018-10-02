@@ -48,6 +48,11 @@ struct _pthreads_globals {
 	* Objects Cache
 	*/
 	HashTable objects;
+
+	/**
+	* Global class table
+	 */
+	HashTable postcompile;
 	
 	/*
 	* High Frequency Strings
