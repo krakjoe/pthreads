@@ -4,7 +4,7 @@ Testing closure members reallocation
 This test verifies that closures can be set as members repeatedly
 --FILE--
 <?php
-class TestClosure extends \Threaded implements \Collectable {
+class TestClosure extends \Threaded {
     protected $closure;
     function __construct( $closure) {
         $this->closure = $closure;
