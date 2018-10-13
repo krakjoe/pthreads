@@ -102,6 +102,11 @@ extern zend_class_entry *pthreads_socket_entry;
         (Z_TYPE_P(o) == IS_OBJECT && instanceof_function(Z_OBJCE_P(o), pthreads_volatile_entry))
 #endif
 
+#ifndef IS_PTHREADS_CONCURRENT
+#define IS_PTHREADS_CONCURRENT(o)   \
+        (Z_TYPE_P(o) == IS_OBJECT && instanceof_function(Z_OBJCE_P(o), pthreads_concurrent_entry))
+#endif
+
 #ifndef IS_PTHREADS_CLOSURE
 #define IS_PTHREADS_CLOSURE(z) \
 	(Z_TYPE_P(z) == IS_OBJECT && instanceof_function(Z_OBJCE_P(z), zend_ce_closure))
@@ -109,6 +114,7 @@ extern zend_class_entry *pthreads_socket_entry;
 
 extern zend_object_handlers pthreads_handlers;
 extern zend_object_handlers pthreads_socket_handlers;
+extern zend_object_handlers pthreads_concurrent_handlers;
 extern zend_object_handlers *zend_handlers;
 
 extern struct _pthreads_globals pthreads_globals;

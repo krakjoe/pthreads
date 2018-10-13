@@ -69,6 +69,7 @@ zend_module_entry pthreads_module_entry = {
 zend_class_entry *pthreads_threaded_entry;
 zend_class_entry *pthreads_volatile_entry;
 zend_class_entry *pthreads_thread_entry;
+zend_class_entry *pthreads_concurrent_entry;
 zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_collectable_entry;
 zend_class_entry *pthreads_pool_entry;
@@ -76,6 +77,7 @@ zend_class_entry *pthreads_socket_entry;
 
 zend_object_handlers pthreads_handlers;
 zend_object_handlers pthreads_socket_handlers;
+zend_object_handlers pthreads_concurrent_handlers;
 zend_object_handlers *zend_handlers;
 void ***pthreads_instance = NULL;
 
@@ -343,6 +345,10 @@ PHP_MINIT_FUNCTION(pthreads)
 	INIT_CLASS_ENTRY(ce, "Volatile", NULL);
 	pthreads_volatile_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	
+	INIT_CLASS_ENTRY(ce, "Concurrent", NULL);
+	pthreads_concurrent_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
+	pthreads_concurrent_entry->create_object = pthreads_concurrent_ctor;
+
 	INIT_CLASS_ENTRY(ce, "Thread", pthreads_thread_methods);
 	pthreads_thread_entry=zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	pthreads_thread_entry->create_object = pthreads_thread_ctor;
@@ -847,6 +853,17 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_socket_handlers.write_dimension = pthreads_write_dimension_disallow;
 	pthreads_socket_handlers.has_dimension = pthreads_has_dimension_disallow;
 	pthreads_socket_handlers.unset_dimension = pthreads_unset_dimension_disallow;
+
+	memcpy(&pthreads_concurrent_handlers, &pthreads_handlers, sizeof(zend_object_handlers));
+
+	pthreads_concurrent_handlers.read_property = pthreads_concurrent_read_property;
+	pthreads_concurrent_handlers.write_property = pthreads_concurrent_write_property;
+	pthreads_concurrent_handlers.has_property = pthreads_concurrent_has_property;
+	pthreads_concurrent_handlers.unset_property = pthreads_concurrent_unset_property;
+	pthreads_concurrent_handlers.read_dimension = zend_handlers->read_dimension;
+	pthreads_concurrent_handlers.write_dimension = zend_handlers->write_dimension;
+	pthreads_concurrent_handlers.has_dimension = zend_handlers->has_dimension;
+	pthreads_concurrent_handlers.unset_dimension = zend_handlers->unset_dimension;
 
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 

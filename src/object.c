@@ -134,23 +134,7 @@ static void pthreads_routine_free(pthreads_routine_arg_t *r) {
 } /* }}} */
 
 /* {{{ */
-zend_bool pthreads_is_property_threadlocal(zval *object, zval *member) {
-	zend_object *zobj;
-	zval tmp_member;
-	zend_property_info *property_info;
-
-	zobj = Z_OBJ_P(object);
-
-	ZVAL_UNDEF(&tmp_member);
-	if (UNEXPECTED(Z_TYPE_P(member) != IS_STRING)) {
-		ZVAL_STR(&tmp_member, zval_get_string(member));
-		member = &tmp_member;
-	}
-	property_info = zend_get_property_info(zobj->ce, Z_STR_P(member), (zobj->ce->__set != NULL));
-
-	if (UNEXPECTED(Z_REFCOUNTED(tmp_member))) {
-		zval_ptr_dtor(&tmp_member);
-	}
+zend_bool pthreads_is_property_threadlocal(zend_property_info *property_info) {
 	return property_info != NULL && (property_info->flags & PTHREADS_ACC_THREADLOCAL) != 0;
 } /* }}} */
 
@@ -198,6 +182,18 @@ zend_object* pthreads_socket_ctor(zend_class_entry *entry) {
 	threaded->scope = PTHREADS_SCOPE_SOCKET;
 	pthreads_base_ctor(threaded, entry);
 	threaded->std.handlers = &pthreads_socket_handlers;
+
+	return &threaded->std;
+} /* }}} */
+
+/* {{{ */
+zend_object* pthreads_concurrent_ctor(zend_class_entry *entry) {
+	pthreads_object_t* threaded = pthreads_globals_object_alloc(
+			sizeof(pthreads_object_t) + zend_object_properties_size(entry));
+
+	threaded->scope = PTHREADS_SCOPE_THREADED;
+	pthreads_base_ctor(threaded, entry);
+	threaded->std.handlers = &pthreads_concurrent_handlers;
 
 	return &threaded->std;
 } /* }}} */
