@@ -84,6 +84,7 @@ extern zend_class_entry *spl_ce_Countable;
 extern zend_class_entry *pthreads_threaded_entry;
 extern zend_class_entry *pthreads_volatile_entry;
 extern zend_class_entry *pthreads_thread_entry;
+extern zend_class_entry *pthreads_concurrent_entry;
 extern zend_class_entry *pthreads_worker_entry;
 extern zend_class_entry *pthreads_socket_entry;
 

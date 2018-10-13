@@ -118,7 +118,7 @@ static inline zend_bool pthreads_store_is_immutable(zval *object, zval *key) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	pthreads_storage *storage;
 
-	if (IS_PTHREADS_VOLATILE(object)) {
+	if (IS_PTHREADS_VOLATILE(object) || IS_PTHREADS_CONCURRENT(object)) {
 		return 0;
 	}
 
@@ -250,7 +250,7 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 		property = zend_hash_index_find(threaded->std.properties, Z_LVAL(member));
 	} else property = zend_hash_find(threaded->std.properties, Z_STR(member));
 
-	if (property && IS_PTHREADS_VOLATILE(object)) {
+	if (property && (IS_PTHREADS_VOLATILE(object) || IS_PTHREADS_CONCURRENT(object))) {
 		if (pthreads_monitor_lock(threaded->monitor)) {
 			pthreads_storage *storage;
 
@@ -373,7 +373,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 			*/
 			rebuild_object_properties(&threaded->std);
 			
-			if(IS_PTHREADS_VOLATILE(object)) {
+			if(IS_PTHREADS_VOLATILE(object) || IS_PTHREADS_CONCURRENT(object)) {
 				pthreads_store_sync(object);
 			}
 
@@ -569,7 +569,7 @@ void pthreads_store_tohash(zval *object, HashTable *hash) {
 			zend_string *rename;
 
 			/* don't overwrite pthreads objects for non volatile objects */
-			if (!IS_PTHREADS_VOLATILE(object) && storage->type == IS_PTHREADS) {
+			if (!IS_PTHREADS_VOLATILE(object) && !IS_PTHREADS_CONCURRENT(object) && storage->type == IS_PTHREADS) {
 				if (!name) {
 					if (zend_hash_index_exists(hash, idx))
 						continue;
