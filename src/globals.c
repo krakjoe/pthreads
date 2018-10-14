@@ -38,7 +38,8 @@ extern int pthreads_connect(pthreads_object_t* source, pthreads_object_t* destin
 zend_bool pthreads_globals_init(){
 	if (!PTHREADS_G(init)&&!PTHREADS_G(failed)) {
 		PTHREADS_G(init)=1;
-		if (!(PTHREADS_G(monitor)=pthreads_monitor_alloc()))
+		if (!(PTHREADS_G(monitor)=pthreads_monitor_alloc())
+			|| !(PTHREADS_G(compile_hook_monitor)=pthreads_monitor_alloc()))
 			PTHREADS_G(failed)=1;
 		if (PTHREADS_G(failed)) {
 		    PTHREADS_G(init)=0;
@@ -81,6 +82,16 @@ zend_bool pthreads_globals_lock(){
 /* {{{ */
 void pthreads_globals_unlock() {
 	pthreads_monitor_unlock(PTHREADS_G(monitor));
+} /* }}} */
+
+/* {{{ */
+zend_bool pthreads_compile_hook_lock(){
+	return pthreads_monitor_lock(PTHREADS_G(compile_hook_monitor));
+} /* }}} */
+
+/* {{{ */
+void pthreads_compile_hook_unlock() {
+	pthreads_monitor_unlock(PTHREADS_G(compile_hook_monitor));
 } /* }}} */
 
 /* {{{ */
@@ -174,6 +185,7 @@ void pthreads_globals_shutdown() {
 		PTHREADS_G(failed)=0;
 		/* we allow proc shutdown to destroy tables, and global strings */
 		pthreads_monitor_free(PTHREADS_G(monitor));
+		pthreads_monitor_free(PTHREADS_G(compile_hook_monitor));
 	}
 } /* }}} */
 #endif

@@ -154,7 +154,7 @@ static inline zend_op_array *pthreads_loop_postcompile_classtable() {
 	zend_class_entry *entry;
 	zend_string *name, *dup;
 
-	if (pthreads_globals_lock()) {
+	if (pthreads_compile_hook_lock()) {
 		ZEND_HASH_FOREACH_STR_KEY_PTR(CG(class_table), name, entry) {
 			if (entry->type == ZEND_USER_CLASS && !zend_hash_exists(&PTHREADS_G(postcompile), name) && ZSTR_VAL(name)[0] != '\0') {
 				dup = zend_new_interned_string(zend_string_init(ZSTR_VAL(name), ZSTR_LEN(name), GC_FLAGS(name) & IS_STR_PERSISTENT));
@@ -163,7 +163,7 @@ static inline zend_op_array *pthreads_loop_postcompile_classtable() {
 			}
 		} ZEND_HASH_FOREACH_END();
 
-		pthreads_globals_unlock();
+		pthreads_compile_hook_unlock();
 	}
 } /* }}} */
 
