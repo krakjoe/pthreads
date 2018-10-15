@@ -38,22 +38,13 @@
 #	include <src/copy.h>
 #endif
 
-typedef struct _pthreads_storage {
-	zend_uchar 	type;
-	size_t 	length;
-	zend_bool 	exists;
-	union {
-	    zend_long   lval;
-	    double     dval;
-	} simple;
-	void    	*data;
-} pthreads_storage;
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
+#endif
 
 #define PTHREADS_STORAGE_EMPTY {0, 0, 0, 0, NULL}
 
 /* {{{ */
-static pthreads_storage* pthreads_store_create(zval *pzval, zend_bool complex);
-static int pthreads_store_convert(pthreads_storage *storage, zval *pzval);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
@@ -606,7 +597,7 @@ void pthreads_store_free(pthreads_store_t *store){
 } /* }}} */
 
 /* {{{ */
-static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex){					
+pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex){
 	pthreads_storage *storage = NULL;
 
 	if (Z_TYPE_P(unstore) == IS_INDIRECT)
@@ -677,7 +668,7 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 /* }}} */
 
 /* {{{ */
-static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
+int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 	int result = SUCCESS;
 
 	switch(storage->type) {

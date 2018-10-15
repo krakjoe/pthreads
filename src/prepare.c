@@ -98,6 +98,11 @@ static void prepare_class_constants(pthreads_object_t* thread, zend_class_entry 
 
 /* {{{ */
 static void prepare_class_statics(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
+	pthreads_def_statics_t *def_statics;
+	zend_property_info *info;
+	zend_string *name;
+	pthreads_storage *storage;
+
 	if (candidate->default_static_members_count) {
 		int i;
 
@@ -111,11 +116,19 @@ static void prepare_class_statics(pthreads_object_t* thread, zend_class_entry *c
 		       candidate->default_static_members_table,
 			sizeof(zval) * candidate->default_static_members_count);
 
-		for (i=0; i<prepared->default_static_members_count; i++) {
-			pthreads_store_separate(
-				&candidate->default_static_members_table[i],
-				&prepared->default_static_members_table[i], 0);
-		}	
+		def_statics = zend_hash_find_ptr(&PTHREADS_G(default_static_props), candidate->name);
+
+		ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->properties_info, name, info) {
+			if((info->flags & ZEND_ACC_STATIC) != 0) {
+				if(def_statics && (storage = zend_hash_find_ptr(def_statics, name)) != NULL) {
+					pthreads_store_convert(storage, &prepared->default_static_members_table[info->offset]);
+				} else {
+					pthreads_store_separate(
+						&candidate->default_static_members_table[info->offset],
+						&prepared->default_static_members_table[info->offset], 0);
+				}
+			}
+		} ZEND_HASH_FOREACH_END();
 		prepared->static_members_table = prepared->default_static_members_table;
 	} else prepared->default_static_members_count = 0;
 } /* }}} */
@@ -436,13 +449,37 @@ static inline void pthreads_prepare_closures(pthreads_object_t *thread) {
 void prepare_class_postcompile(zend_class_entry *candidate) {
 	zend_property_info *info;
 	zend_string *name;
+	zval *property, tmp;
+	pthreads_def_statics_t *def_statics = NULL;
+
+	if(candidate->default_static_members_count > 0) {
+		def_statics = (pthreads_def_statics_t*) calloc(1, sizeof(pthreads_def_statics_t));
+		zend_hash_init(def_statics, 4, NULL, NULL, 1);
+	}
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->properties_info, name, info) {
 		if (info->doc_comment &&
 				(strstr(ZSTR_VAL(info->doc_comment), "@thread_local") || strstr(ZSTR_VAL(info->doc_comment), "@threadLocal"))) {
 			info->flags |= PTHREADS_ACC_THREADLOCAL;
 		}
+
+		if((info->flags & ZEND_ACC_STATIC) != 0
+				&& def_statics != NULL
+				&& !zend_hash_exists(def_statics, name)) {
+			property = &candidate->default_static_members_table[info->offset];
+
+			ZVAL_PTR(&tmp, pthreads_store_create(property, 1));
+
+			zend_hash_add(def_statics, name, &tmp);
+		}
 	} ZEND_HASH_FOREACH_END();
+
+	if(def_statics != NULL) {
+		ZVAL_PTR(&tmp, def_statics);
+		zend_hash_add(
+				&PTHREADS_G(default_static_props),
+				candidate->name, &tmp);
+	}
 }
 /* }}} */
 
