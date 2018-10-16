@@ -441,6 +441,7 @@ void prepare_class_postcompile(zend_class_entry *candidate) {
 		if (info->doc_comment &&
 				(strstr(ZSTR_VAL(info->doc_comment), "@thread_local") || strstr(ZSTR_VAL(info->doc_comment), "@threadLocal"))) {
 			info->flags |= PTHREADS_ACC_THREADLOCAL;
+			candidate->ce_flags |= PTHREADS_ACC_HAS_THREADLOCAL_PROP;
 		}
 	} ZEND_HASH_FOREACH_END();
 }

@@ -856,10 +856,13 @@ PHP_MINIT_FUNCTION(pthreads)
 
 	memcpy(&pthreads_concurrent_handlers, &pthreads_handlers, sizeof(zend_object_handlers));
 
+	pthreads_concurrent_handlers.get_debug_info = pthreads_concurrent_get_debug_info;
+
 	pthreads_concurrent_handlers.read_property = pthreads_concurrent_read_property;
 	pthreads_concurrent_handlers.write_property = pthreads_concurrent_write_property;
 	pthreads_concurrent_handlers.has_property = pthreads_concurrent_has_property;
 	pthreads_concurrent_handlers.unset_property = pthreads_concurrent_unset_property;
+
 	pthreads_concurrent_handlers.read_dimension = zend_handlers->read_dimension;
 	pthreads_concurrent_handlers.write_dimension = zend_handlers->write_dimension;
 	pthreads_concurrent_handlers.has_dimension = zend_handlers->has_dimension;

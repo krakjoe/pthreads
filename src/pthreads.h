@@ -147,6 +147,8 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 
 #define PTHREADS_ACC_THREADLOCAL 0x10
 
+#define PTHREADS_ACC_HAS_THREADLOCAL_PROP 0x20000000
+
 static zend_string *zend_string_new(zend_string *s)
 {
 	if (ZSTR_IS_INTERNED(s)) {

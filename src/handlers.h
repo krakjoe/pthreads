@@ -131,4 +131,7 @@ int pthreads_concurrent_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D); /* }}} *
 /* {{{ */
 void pthreads_concurrent_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D); /* }}} */
 
+/* {{{ */
+HashTable *pthreads_concurrent_get_debug_info(zval *object, int *is_temp); /* {{{ */
+
 #endif

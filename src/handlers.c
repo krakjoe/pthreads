@@ -935,4 +935,48 @@ exit:
 }
 /* }}} */
 
+HashTable *pthreads_concurrent_get_debug_info(zval *object, int *is_temp) /* {{{ */
+{
+	zend_class_entry *ce = Z_OBJCE_P(object);
+	zval retval;
+	HashTable *ht;
+
+	if (!ce->__debugInfo) {
+		*is_temp = 0;
+
+		if((ce->ce_flags & PTHREADS_ACC_HAS_THREADLOCAL_PROP) != 0) {
+			printf("pthreads_concurrent_get_debug_info PTHREADS_ACC_HAS_THREADLOCAL_PROP \n");
+		}
+		return Z_OBJ_HANDLER_P(object, get_properties)
+			? Z_OBJ_HANDLER_P(object, get_properties)(object)
+			: NULL;
+	}
+
+	zend_call_method_with_0_params(object, ce, &ce->__debugInfo, ZEND_DEBUGINFO_FUNC_NAME, &retval);
+	if (Z_TYPE(retval) == IS_ARRAY) {
+		if (!Z_REFCOUNTED(retval)) {
+			*is_temp = 1;
+			return zend_array_dup(Z_ARRVAL(retval));
+		} else if (Z_REFCOUNT(retval) <= 1) {
+			*is_temp = 1;
+			ht = Z_ARR(retval);
+			return ht;
+		} else {
+			*is_temp = 0;
+			zval_ptr_dtor(&retval);
+			return Z_ARRVAL(retval);
+		}
+	} else if (Z_TYPE(retval) == IS_NULL) {
+		*is_temp = 1;
+		ALLOC_HASHTABLE(ht);
+		zend_hash_init(ht, 0, NULL, ZVAL_PTR_DTOR, 0);
+		return ht;
+	}
+
+	zend_error_noreturn(E_ERROR, ZEND_DEBUGINFO_FUNC_NAME "() must return an array");
+
+	return NULL; /* Compilers are dumb and don't understand that noreturn means that the function does NOT need a return value... */
+}
+/* }}} */
+
 #endif
