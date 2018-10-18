@@ -22,6 +22,8 @@
 #	include <src/pthreads.h>
 #endif
 
+typedef HashTable pthreads_def_statics_t;
+
 /* {{{ */
 void prepare_class_postcompile(zend_class_entry *candidate); /* }}} */
 

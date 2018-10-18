@@ -60,6 +60,11 @@ struct _pthreads_globals {
 	pthreads_monitor_t *compile_hook_monitor;
 
 	/*
+	* Default static props cache
+	*/
+	HashTable default_static_props;
+
+	/*
 	* High Frequency Strings
 	*/
 	struct _strings {
