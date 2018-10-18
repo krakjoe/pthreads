@@ -84,6 +84,7 @@ extern zend_class_entry *spl_ce_Countable;
 extern zend_class_entry *pthreads_threaded_entry;
 extern zend_class_entry *pthreads_volatile_entry;
 extern zend_class_entry *pthreads_thread_entry;
+extern zend_class_entry *pthreads_concurrent_entry;
 extern zend_class_entry *pthreads_worker_entry;
 extern zend_class_entry *pthreads_socket_entry;
 
@@ -102,6 +103,11 @@ extern zend_class_entry *pthreads_socket_entry;
         (Z_TYPE_P(o) == IS_OBJECT && instanceof_function(Z_OBJCE_P(o), pthreads_volatile_entry))
 #endif
 
+#ifndef IS_PTHREADS_CONCURRENT
+#define IS_PTHREADS_CONCURRENT(o)   \
+        (Z_TYPE_P(o) == IS_OBJECT && instanceof_function(Z_OBJCE_P(o), pthreads_concurrent_entry))
+#endif
+
 #ifndef IS_PTHREADS_CLOSURE
 #define IS_PTHREADS_CLOSURE(z) \
 	(Z_TYPE_P(z) == IS_OBJECT && instanceof_function(Z_OBJCE_P(z), zend_ce_closure))
@@ -109,6 +115,7 @@ extern zend_class_entry *pthreads_socket_entry;
 
 extern zend_object_handlers pthreads_handlers;
 extern zend_object_handlers pthreads_socket_handlers;
+extern zend_object_handlers pthreads_concurrent_handlers;
 extern zend_object_handlers *zend_handlers;
 
 extern struct _pthreads_globals pthreads_globals;
@@ -137,6 +144,10 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 #define PTHREADS_SG(ls, v) PTHREADS_FETCH_CTX(ls, sapi_globals_id, sapi_globals_struct*, v)
 #define PTHREADS_PG(ls, v) PTHREADS_FETCH_CTX(ls, core_globals_id, php_core_globals*, v)
 #define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
+
+#define PTHREADS_ACC_THREADLOCAL 0x10
+
+#define PTHREADS_ACC_HAS_THREADLOCAL_PROP 0x20000000
 
 static zend_string *zend_string_new(zend_string *s)
 {

@@ -22,6 +22,11 @@
 #	include <src/pthreads.h>
 #endif
 
+typedef HashTable pthreads_def_statics_t;
+
+/* {{{ */
+void prepare_class_postcompile(zend_class_entry *candidate); /* }}} */
+
 /* {{{ fetch prepared class entry */
 zend_class_entry* pthreads_prepared_entry(pthreads_object_t* thread, zend_class_entry *candidate); /* }}} */
 

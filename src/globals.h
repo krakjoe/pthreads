@@ -48,7 +48,22 @@ struct _pthreads_globals {
 	* Objects Cache
 	*/
 	HashTable objects;
+
+	/**
+	* Global class table
+	 */
+	HashTable postcompile;
 	
+	/*
+	* Global compile hook Monitor
+	*/
+	pthreads_monitor_t *compile_hook_monitor;
+
+	/*
+	* Default static props cache
+	*/
+	HashTable default_static_props;
+
 	/*
 	* High Frequency Strings
 	*/
@@ -87,6 +102,12 @@ zend_bool pthreads_globals_lock(); /* }}} */
 
 /* {{{ release global lock */
 void pthreads_globals_unlock(); /* }}} */
+
+/* {{{ acquire compile hook lock */
+zend_bool pthreads_compile_hook_lock(); /* }}} */
+
+/* {{{ release compile hook lock */
+void pthreads_compile_hook_unlock(); /* }}} */
 
 /* {{{ copy string to globals */
 char *pthreads_global_string(char *strkey, int32_t keylen, zend_bool lower); /* }}} */

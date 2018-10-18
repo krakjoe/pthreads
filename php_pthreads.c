@@ -69,6 +69,7 @@ zend_module_entry pthreads_module_entry = {
 zend_class_entry *pthreads_threaded_entry;
 zend_class_entry *pthreads_volatile_entry;
 zend_class_entry *pthreads_thread_entry;
+zend_class_entry *pthreads_concurrent_entry;
 zend_class_entry *pthreads_worker_entry;
 zend_class_entry *pthreads_collectable_entry;
 zend_class_entry *pthreads_pool_entry;
@@ -76,6 +77,7 @@ zend_class_entry *pthreads_socket_entry;
 
 zend_object_handlers pthreads_handlers;
 zend_object_handlers pthreads_socket_handlers;
+zend_object_handlers pthreads_concurrent_handlers;
 zend_object_handlers *zend_handlers;
 void ***pthreads_instance = NULL;
 
@@ -119,8 +121,12 @@ static inline zend_bool pthreads_is_supported_sapi(char *name) {
 }
 
 typedef void (*zend_execute_ex_function)(zend_execute_data *);
+typedef zend_op_array *(*zend_compile_file_function)(zend_file_handle *file_handle, int type);
+typedef zend_op_array *(*zend_compile_string_function)(zval *source_string, char *filename);
 
 zend_execute_ex_function zend_execute_ex_hook = NULL;
+zend_compile_file_function zend_compile_file_hook = NULL;
+zend_compile_string_function zend_compile_string_hook = NULL;
 
 static inline void pthreads_globals_ctor(zend_pthreads_globals *pg) {
 	ZVAL_UNDEF(&pg->this);
@@ -131,6 +137,7 @@ static inline void pthreads_globals_ctor(zend_pthreads_globals *pg) {
 
 /* {{{ */
 static inline void pthreads_execute_ex(zend_execute_data *data) {
+
 	if (zend_execute_ex_hook) {
 		zend_execute_ex_hook(data);
 	} else execute_ex(data);
@@ -141,6 +148,50 @@ static inline void pthreads_execute_ex(zend_execute_data *data) {
 			zend_try_exception_handler();
 	}
 } /* }}} */ 
+
+/* {{{ */
+static inline zend_op_array *pthreads_loop_postcompile_classtable() {
+	zend_class_entry *entry;
+	zend_string *name, *dup;
+
+	if (pthreads_compile_hook_lock()) {
+		ZEND_HASH_FOREACH_STR_KEY_PTR(CG(class_table), name, entry) {
+			if (entry->type == ZEND_USER_CLASS && !zend_hash_exists(&PTHREADS_G(postcompile), name) && ZSTR_VAL(name)[0] != '\0') {
+				dup = zend_new_interned_string(zend_string_init(ZSTR_VAL(name), ZSTR_LEN(name), GC_FLAGS(name) & IS_STR_PERSISTENT));
+				zend_hash_update_ptr(&PTHREADS_G(postcompile), dup, dup);
+				prepare_class_postcompile(entry);
+			}
+		} ZEND_HASH_FOREACH_END();
+
+		pthreads_compile_hook_unlock();
+	}
+} /* }}} */
+
+/* {{{ */
+static inline zend_op_array *pthreads_compile_file(zend_file_handle *file_handle, int type) {
+	zend_op_array *op_array;
+
+	if (zend_compile_file_hook) {
+		op_array = zend_compile_file_hook(file_handle, type);
+	} else op_array = compile_file(file_handle, type);
+
+	pthreads_loop_postcompile_classtable();
+
+	return op_array;
+} /* }}} */
+
+/* {{{ */
+static inline zend_op_array *pthreads_compile_string(zval *source_string, char *filename) {
+	zend_op_array *op_array;
+
+	if (zend_compile_string_hook) {
+		op_array = zend_compile_string_hook(source_string, filename);
+	} else op_array = compile_string(source_string, filename);
+
+	pthreads_loop_postcompile_classtable();
+
+	return op_array;
+} /* }}} */
 
 /* {{{ */
 static inline zend_bool pthreads_verify_type(zend_execute_data *execute_data, zval *var, zend_arg_info *info) {
@@ -263,6 +314,12 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_execute_ex_hook = zend_execute_ex;
 	zend_execute_ex = pthreads_execute_ex;	
 
+	zend_compile_file_hook = zend_compile_file;
+	zend_compile_file = pthreads_compile_file;
+
+	zend_compile_string_hook = zend_compile_string;
+	zend_compile_string = pthreads_compile_string;
+
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_ALL", PTHREADS_INHERIT_ALL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_NONE", PTHREADS_INHERIT_NONE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PTHREADS_INHERIT_INI", PTHREADS_INHERIT_INI, CONST_CS | CONST_PERSISTENT);
@@ -288,6 +345,10 @@ PHP_MINIT_FUNCTION(pthreads)
 	INIT_CLASS_ENTRY(ce, "Volatile", NULL);
 	pthreads_volatile_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	
+	INIT_CLASS_ENTRY(ce, "Concurrent", NULL);
+	pthreads_concurrent_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
+	pthreads_concurrent_entry->create_object = pthreads_concurrent_ctor;
+
 	INIT_CLASS_ENTRY(ce, "Thread", pthreads_thread_methods);
 	pthreads_thread_entry=zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
 	pthreads_thread_entry->create_object = pthreads_thread_ctor;
@@ -792,6 +853,20 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_socket_handlers.write_dimension = pthreads_write_dimension_disallow;
 	pthreads_socket_handlers.has_dimension = pthreads_has_dimension_disallow;
 	pthreads_socket_handlers.unset_dimension = pthreads_unset_dimension_disallow;
+
+	memcpy(&pthreads_concurrent_handlers, &pthreads_handlers, sizeof(zend_object_handlers));
+
+	pthreads_concurrent_handlers.get_debug_info = pthreads_concurrent_get_debug_info;
+
+	pthreads_concurrent_handlers.read_property = pthreads_concurrent_read_property;
+	pthreads_concurrent_handlers.write_property = pthreads_concurrent_write_property;
+	pthreads_concurrent_handlers.has_property = pthreads_concurrent_has_property;
+	pthreads_concurrent_handlers.unset_property = pthreads_concurrent_unset_property;
+
+	pthreads_concurrent_handlers.read_dimension = zend_handlers->read_dimension;
+	pthreads_concurrent_handlers.write_dimension = zend_handlers->write_dimension;
+	pthreads_concurrent_handlers.has_dimension = zend_handlers->has_dimension;
+	pthreads_concurrent_handlers.unset_dimension = zend_handlers->unset_dimension;
 
 	ZEND_INIT_MODULE_GLOBALS(pthreads, pthreads_globals_ctor, NULL);	
 

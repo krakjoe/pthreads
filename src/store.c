@@ -38,22 +38,13 @@
 #	include <src/copy.h>
 #endif
 
-typedef struct _pthreads_storage {
-	zend_uchar 	type;
-	size_t 	length;
-	zend_bool 	exists;
-	union {
-	    zend_long   lval;
-	    double     dval;
-	} simple;
-	void    	*data;
-} pthreads_storage;
+#ifndef HAVE_PTHREADS_STORE_H
+#	include <src/store.h>
+#endif
 
 #define PTHREADS_STORAGE_EMPTY {0, 0, 0, 0, NULL}
 
 /* {{{ */
-static pthreads_storage* pthreads_store_create(zval *pzval, zend_bool complex);
-static int pthreads_store_convert(pthreads_storage *storage, zval *pzval);
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex);
 static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength);
 static void pthreads_store_storage_dtor (pthreads_storage *element);
@@ -118,7 +109,7 @@ static inline zend_bool pthreads_store_is_immutable(zval *object, zval *key) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 	pthreads_storage *storage;
 
-	if (IS_PTHREADS_VOLATILE(object)) {
+	if (IS_PTHREADS_VOLATILE(object) || IS_PTHREADS_CONCURRENT(object)) {
 		return 0;
 	}
 
@@ -250,7 +241,7 @@ int pthreads_store_read(zval *object, zval *key, int type, zval *read) {
 		property = zend_hash_index_find(threaded->std.properties, Z_LVAL(member));
 	} else property = zend_hash_find(threaded->std.properties, Z_STR(member));
 
-	if (property && IS_PTHREADS_VOLATILE(object)) {
+	if (property && (IS_PTHREADS_VOLATILE(object) || IS_PTHREADS_CONCURRENT(object))) {
 		if (pthreads_monitor_lock(threaded->monitor)) {
 			pthreads_storage *storage;
 
@@ -373,7 +364,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 			*/
 			rebuild_object_properties(&threaded->std);
 			
-			if(IS_PTHREADS_VOLATILE(object)) {
+			if(IS_PTHREADS_VOLATILE(object) || IS_PTHREADS_CONCURRENT(object)) {
 				pthreads_store_sync(object);
 			}
 
@@ -569,7 +560,7 @@ void pthreads_store_tohash(zval *object, HashTable *hash) {
 			zend_string *rename;
 
 			/* don't overwrite pthreads objects for non volatile objects */
-			if (!IS_PTHREADS_VOLATILE(object) && storage->type == IS_PTHREADS) {
+			if (!IS_PTHREADS_VOLATILE(object) && !IS_PTHREADS_CONCURRENT(object) && storage->type == IS_PTHREADS) {
 				if (!name) {
 					if (zend_hash_index_exists(hash, idx))
 						continue;
@@ -606,7 +597,7 @@ void pthreads_store_free(pthreads_store_t *store){
 } /* }}} */
 
 /* {{{ */
-static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex){					
+pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex){
 	pthreads_storage *storage = NULL;
 
 	if (Z_TYPE_P(unstore) == IS_INDIRECT)
@@ -677,7 +668,7 @@ static pthreads_storage* pthreads_store_create(zval *unstore, zend_bool complex)
 /* }}} */
 
 /* {{{ */
-static int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
+int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 	int result = SUCCESS;
 
 	switch(storage->type) {

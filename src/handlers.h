@@ -118,4 +118,20 @@ zend_object* pthreads_clone_object(PTHREADS_CLONE_PASSTHRU_D); /* }}} */
 
 /* {{{ */
 int pthreads_compare_objects(PTHREADS_COMPARE_PASSTHRU_D); /* }}} */
+
+/* {{{ */
+zval * pthreads_concurrent_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D); /* }}} */
+
+/* {{{ */
+void pthreads_concurrent_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D); /* }}} */
+
+/* {{{ */
+int pthreads_concurrent_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D); /* }}} */
+
+/* {{{ */
+void pthreads_concurrent_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D); /* }}} */
+
+/* {{{ */
+HashTable *pthreads_concurrent_get_debug_info(zval *object, int *is_temp); /* {{{ */
+
 #endif

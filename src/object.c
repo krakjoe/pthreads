@@ -134,6 +134,11 @@ static void pthreads_routine_free(pthreads_routine_arg_t *r) {
 } /* }}} */
 
 /* {{{ */
+zend_bool pthreads_is_property_threadlocal(zend_property_info *property_info) {
+	return property_info != NULL && (property_info->flags & PTHREADS_ACC_THREADLOCAL) != 0;
+} /* }}} */
+
+/* {{{ */
 zend_object* pthreads_thread_ctor(zend_class_entry *entry) {
 	pthreads_object_t* thread = pthreads_globals_object_alloc(
 		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
@@ -177,6 +182,18 @@ zend_object* pthreads_socket_ctor(zend_class_entry *entry) {
 	threaded->scope = PTHREADS_SCOPE_SOCKET;
 	pthreads_base_ctor(threaded, entry);
 	threaded->std.handlers = &pthreads_socket_handlers;
+
+	return &threaded->std;
+} /* }}} */
+
+/* {{{ */
+zend_object* pthreads_concurrent_ctor(zend_class_entry *entry) {
+	pthreads_object_t* threaded = pthreads_globals_object_alloc(
+			sizeof(pthreads_object_t) + zend_object_properties_size(entry));
+
+	threaded->scope = PTHREADS_SCOPE_THREADED;
+	pthreads_base_ctor(threaded, entry);
+	threaded->std.handlers = &pthreads_concurrent_handlers;
 
 	return &threaded->std;
 } /* }}} */

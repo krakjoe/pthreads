@@ -313,9 +313,7 @@ void pthreads_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
 		}
 		zend_fcall_info_args_clear(&fci, 1);
 	} else {
-		if (pthreads_store_delete(object, member) == SUCCESS){
-			
-		}
+		pthreads_store_delete(object, member);
 	}
 }
 void pthreads_unset_dimension(PTHREADS_UNSET_DIMENSION_PASSTHRU_D) { pthreads_unset_property(PTHREADS_UNSET_DIMENSION_PASSTHRU_C); }
@@ -377,4 +375,608 @@ int pthreads_compare_objects(PTHREADS_COMPARE_PASSTHRU_D) {
 
 	return 1;
 } /* }}} */
+
+static void pthreads_call_getter(zval *object, zval *member, zval *retval) /* {{{ */
+{
+	zend_class_entry *ce = Z_OBJCE_P(object);
+	zend_class_entry *orig_fake_scope = EG(fake_scope);
+
+	EG(fake_scope) = NULL;
+
+	/* __get handler is called with one argument:
+	      property name
+
+	   it should return whether the call was successful or not
+	*/
+	zend_call_method_with_1_params(object, ce, &ce->__get, ZEND_GET_FUNC_NAME, retval, member);
+
+	EG(fake_scope) = orig_fake_scope;
+}
+/* }}} */
+
+static void pthreads_call_issetter(zval *object, zval *member, zval *retval) /* {{{ */
+{
+	zend_class_entry *ce = Z_OBJCE_P(object);
+	zend_class_entry *orig_fake_scope = EG(fake_scope);
+
+	EG(fake_scope) = NULL;
+
+	/* __isset handler is called with one argument:
+	      property name
+
+	   it should return whether the property is set or not
+	*/
+
+	if (Z_REFCOUNTED_P(member)) Z_ADDREF_P(member);
+
+	zend_call_method_with_1_params(object, ce, &ce->__isset, ZEND_ISSET_FUNC_NAME, retval, member);
+
+	zval_ptr_dtor(member);
+
+	EG(fake_scope) = orig_fake_scope;
+}
+/* }}} */
+
+static void pthreads_call_setter(zval *object, zval *member, zval *value) /* {{{ */
+{
+	zend_class_entry *ce = Z_OBJCE_P(object);
+	zend_class_entry *orig_fake_scope = EG(fake_scope);
+
+	EG(fake_scope) = NULL;
+
+	/* __set handler is called with two arguments:
+	     property name
+	     value to be set
+	*/
+	zend_call_method_with_2_params(object, ce, &ce->__set, ZEND_SET_FUNC_NAME, NULL, member, value);
+
+	EG(fake_scope) = orig_fake_scope;
+}
+/* }}} */
+
+static void pthreads_call_unsetter(zval *object, zval *member) /* {{{ */
+{
+	zend_class_entry *ce = Z_OBJCE_P(object);
+	zend_class_entry *orig_fake_scope = EG(fake_scope);
+
+	EG(fake_scope) = NULL;
+
+	/* __unset handler is called with one argument:
+	      property name
+	*/
+
+	if (Z_REFCOUNTED_P(member)) Z_ADDREF_P(member);
+
+	zend_call_method_with_1_params(object, ce, &ce->__unset, ZEND_UNSET_FUNC_NAME, NULL, member);
+
+	zval_ptr_dtor(member);
+
+	EG(fake_scope) = orig_fake_scope;
+}
+/* }}} */
+
+/* {{{ */
+zval * pthreads_concurrent_read_property (PTHREADS_READ_PROPERTY_PASSTHRU_D) {
+	zend_guard *guard = NULL;
+	zend_object *zobj;
+	zval tmp_member, tmp_object;
+	zval *retval = NULL;
+	uint32_t property_offset = ZEND_WRONG_PROPERTY_OFFSET;
+	zend_property_info *property_info;
+	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	rebuild_object_properties(&threaded->std);
+
+	zobj = Z_OBJ_P(object);
+
+	ZVAL_UNDEF(&tmp_member);
+	if (UNEXPECTED(Z_TYPE_P(member) != IS_STRING)) {
+		ZVAL_STR(&tmp_member, zval_get_string(member));
+		member = &tmp_member;
+	}
+
+	/* make zend_get_property_info silent if we have getter - we may want to use it */
+	property_info = zend_get_property_info(zobj->ce, Z_STR_P(member), (type == BP_VAR_IS) || (zobj->ce->__get != NULL));
+
+	if(property_info == NULL) {
+		property_offset = ZEND_DYNAMIC_PROPERTY_OFFSET;
+	} else {
+		property_offset = property_info->offset;
+	}
+
+	if (EXPECTED(property_info != ZEND_WRONG_PROPERTY_INFO)) {
+		if(pthreads_is_property_threadlocal(property_info)) {
+			if (EXPECTED(property_offset != ZEND_DYNAMIC_PROPERTY_OFFSET)) {
+				retval = OBJ_PROP(zobj, property_offset);
+				if (EXPECTED(Z_TYPE_P(retval) != IS_UNDEF)) {
+					goto exit;
+				}
+			} else if (EXPECTED(zobj->properties != NULL)) {
+				retval = zend_hash_find(zobj->properties, Z_STR_P(member));
+				if (EXPECTED(retval)) goto exit;
+			}
+		} else {
+			if (EXPECTED(property_offset != ZEND_DYNAMIC_PROPERTY_OFFSET)) {
+				pthreads_store_read(object, member, type, rv);
+				retval = rv;
+				if (EXPECTED(retval)) {
+					goto exit;
+				}
+			} else if (EXPECTED(zobj->properties != NULL)) {
+				retval = zend_hash_find(zobj->properties, Z_STR_P(member));
+				if (EXPECTED(retval)) {
+					pthreads_store_read(object, member, type, rv);
+					retval = rv;
+					goto exit;
+				}
+			}
+		}
+
+	} else if (UNEXPECTED(EG(exception))) {
+		retval = &EG(uninitialized_zval);
+		goto exit;
+	}
+
+	ZVAL_UNDEF(&tmp_object);
+
+	/* magic isset */
+	if ((type == BP_VAR_IS) && zobj->ce->__isset) {
+		zval tmp_result;
+		guard = pthreads_get_guard(&threaded->std, member);
+
+		if (!((*guard) & IN_ISSET)) {
+			if (Z_TYPE(tmp_member) == IS_UNDEF) {
+				ZVAL_COPY(&tmp_member, member);
+				member = &tmp_member;
+			}
+			ZVAL_COPY(&tmp_object, object);
+			ZVAL_UNDEF(&tmp_result);
+
+			*guard |= IN_ISSET;
+			pthreads_call_issetter(&tmp_object, member, &tmp_result);
+			*guard &= ~IN_ISSET;
+
+			if (!zend_is_true(&tmp_result)) {
+				retval = &EG(uninitialized_zval);
+				zval_ptr_dtor(&tmp_object);
+				zval_ptr_dtor(&tmp_result);
+				goto exit;
+			}
+
+			zval_ptr_dtor(&tmp_result);
+		}
+	}
+
+	/* magic get */
+	if (zobj->ce->__get) {
+		if(guard == NULL) {
+			guard = pthreads_get_guard(&threaded->std, member);
+		}
+
+		if (!((*guard) & IN_GET)) {
+			/* have getter - try with it! */
+			if (Z_TYPE(tmp_object) == IS_UNDEF) {
+				ZVAL_COPY(&tmp_object, object);
+			}
+			*guard |= IN_GET; /* prevent circular getting */
+			pthreads_call_getter(&tmp_object, member, rv);
+			*guard &= ~IN_GET;
+
+			if (Z_TYPE_P(rv) != IS_UNDEF) {
+				retval = rv;
+				if (!Z_ISREF_P(rv) &&
+					(type == BP_VAR_W || type == BP_VAR_RW  || type == BP_VAR_UNSET)) {
+					SEPARATE_ZVAL(rv);
+					if (UNEXPECTED(Z_TYPE_P(rv) != IS_OBJECT)) {
+						zend_error(E_NOTICE, "Indirect modification of overloaded property %s::$%s has no effect", ZSTR_VAL(zobj->ce->name), Z_STRVAL_P(member));
+					}
+				}
+			} else {
+				retval = &EG(uninitialized_zval);
+			}
+			zval_ptr_dtor(&tmp_object);
+			goto exit;
+		} else if (Z_STRVAL_P(member)[0] == '\0' && Z_STRLEN_P(member) != 0) {
+			//zval_ptr_dtor(&tmp_object);
+			zend_throw_error(NULL, "Cannot access property started with '\\0'");
+			retval = &EG(uninitialized_zval);
+			goto exit;
+		}
+	}
+
+	zval_ptr_dtor(&tmp_object);
+
+	if ((type != BP_VAR_IS)) {
+		zend_error(E_NOTICE,"Undefined property: %s::$%s", ZSTR_VAL(zobj->ce->name), Z_STRVAL_P(member));
+	}
+	retval = &EG(uninitialized_zval);
+
+exit:
+	if (UNEXPECTED(Z_REFCOUNTED(tmp_member))) {
+		zval_ptr_dtor(&tmp_member);
+	}
+
+	return retval;
+}
+/* }}} */
+
+/* {{{ */
+void pthreads_concurrent_write_property(PTHREADS_WRITE_PROPERTY_PASSTHRU_D) {
+	zend_object *zobj;
+	zval tmp_member;
+	zval *variable_ptr;
+	uint32_t property_offset = ZEND_WRONG_PROPERTY_OFFSET;
+	zend_property_info *property_info;
+	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	rebuild_object_properties(&threaded->std);
+
+	zobj = Z_OBJ_P(object);
+
+	ZVAL_UNDEF(&tmp_member);
+	if (UNEXPECTED(Z_TYPE_P(member) != IS_STRING)) {
+		ZVAL_STR(&tmp_member, zval_get_string(member));
+		member = &tmp_member;
+	}
+	property_info = zend_get_property_info(zobj->ce, Z_STR_P(member), (zobj->ce->__set != NULL));
+
+	if(property_info == NULL) {
+		property_offset = ZEND_DYNAMIC_PROPERTY_OFFSET;
+	} else {
+		property_offset = property_info->offset;
+	}
+
+	if (EXPECTED(property_info != ZEND_WRONG_PROPERTY_INFO)) {
+		if(pthreads_is_property_threadlocal(property_info)) {
+			if (EXPECTED(property_offset != ZEND_DYNAMIC_PROPERTY_OFFSET)) {
+				variable_ptr = OBJ_PROP(zobj, property_offset);
+				if (Z_TYPE_P(variable_ptr) != IS_UNDEF) {
+					goto found;
+				}
+			} else if (EXPECTED(zobj->properties != NULL)) {
+				if (UNEXPECTED(GC_REFCOUNT(zobj->properties) > 1)) {
+					if (EXPECTED(!(GC_FLAGS(zobj->properties) & IS_ARRAY_IMMUTABLE))) {
+						GC_REFCOUNT(zobj->properties)--;
+					}
+					zobj->properties = zend_array_dup(zobj->properties);
+				}
+				if ((variable_ptr = zend_hash_find(zobj->properties, Z_STR_P(member))) != NULL) {
+found:
+					zend_assign_to_variable(variable_ptr, value, IS_CV);
+					goto exit;
+				}
+			}
+		} else {
+			switch(Z_TYPE_P(value)){
+				case IS_UNDEF:
+				case IS_STRING:
+				case IS_LONG:
+				case IS_ARRAY:
+				case IS_OBJECT:
+				case IS_NULL:
+				case IS_DOUBLE:
+				case IS_RESOURCE:
+				case IS_TRUE:
+				case IS_FALSE: {
+					if (EXPECTED(property_offset != ZEND_DYNAMIC_PROPERTY_OFFSET)) {
+						variable_ptr = OBJ_PROP(zobj, property_offset);
+						if (Z_TYPE_P(variable_ptr) != IS_UNDEF) {
+							goto found_threaded;
+						}
+					} else if (EXPECTED(zobj->properties != NULL)) {
+						if ((variable_ptr = zend_hash_find(zobj->properties, Z_STR_P(member))) != NULL) {
+found_threaded:
+							pthreads_store_write(object, member, value);
+							goto exit;
+						}
+					}
+				} break;
+
+				default: {
+					zend_throw_exception_ex(
+						spl_ce_RuntimeException, 0,
+						"pthreads detected an attempt to use unsupported data (%s) for %s::$%s",
+						zend_get_type_by_const(Z_TYPE_P(value)),
+						ZSTR_VAL(Z_OBJCE_P(object)->name), Z_STRVAL_P(member));
+				}
+			}
+			goto exit;
+		}
+
+	} else if (UNEXPECTED(EG(exception))) {
+		goto exit;
+	}
+
+	/* magic set */
+	if (zobj->ce->__set) {
+		zend_guard *guard = pthreads_get_guard(&threaded->std, member);
+
+		if (!((*guard) & IN_SET)) {
+			zval tmp_object;
+
+			ZVAL_COPY(&tmp_object, object);
+			(*guard) |= IN_SET; /* prevent circular setting */
+			pthreads_call_setter(&tmp_object, member, value);
+			(*guard) &= ~IN_SET;
+			zval_ptr_dtor(&tmp_object);
+		} else if (EXPECTED(property_offset != ZEND_WRONG_PROPERTY_OFFSET)) {
+			goto write_std_property;
+		} else {
+			if (Z_STRVAL_P(member)[0] == '\0' && Z_STRLEN_P(member) != 0) {
+				zend_throw_error(NULL, "Cannot access property started with '\\0'");
+				goto exit;
+			}
+		}
+	} else if (EXPECTED(property_offset != ZEND_WRONG_PROPERTY_OFFSET)) {
+		zval tmp;
+
+write_std_property:
+		if(pthreads_is_property_threadlocal(property_info)) {
+			if (Z_REFCOUNTED_P(value)) {
+				if (Z_ISREF_P(value)) {
+					/* if we assign referenced variable, we should separate it */
+					ZVAL_COPY(&tmp, Z_REFVAL_P(value));
+					value = &tmp;
+				} else {
+					Z_ADDREF_P(value);
+				}
+			}
+			if (EXPECTED(property_offset != ZEND_DYNAMIC_PROPERTY_OFFSET)) {
+				ZVAL_COPY_VALUE(OBJ_PROP(zobj, property_offset), value);
+			} else {
+				if (!zobj->properties) {
+					rebuild_object_properties(zobj);
+				}
+				zend_hash_add_new(zobj->properties, Z_STR_P(member), value);
+			}
+		} else {
+			pthreads_store_write(object, member, value);
+		}
+	}
+
+exit:
+	if (UNEXPECTED(Z_REFCOUNTED(tmp_member))) {
+		zval_ptr_dtor(&tmp_member);
+	}
+}
+/* }}} */
+
+/* {{{ */
+int pthreads_concurrent_has_property(PTHREADS_HAS_PROPERTY_PASSTHRU_D) {
+	zend_object *zobj;
+	int result;
+	zval *value = NULL;
+	zval tmp_member;
+	uint32_t property_offset;
+	zend_property_info *property_info;
+	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	zobj = Z_OBJ_P(object);
+
+	ZVAL_UNDEF(&tmp_member);
+	if (UNEXPECTED(Z_TYPE_P(member) != IS_STRING)) {
+		ZVAL_STR(&tmp_member, zval_get_string(member));
+		member = &tmp_member;
+	}
+
+	property_info = zend_get_property_info(zobj->ce, Z_STR_P(member), 1);
+
+	if(property_info == NULL) {
+		property_offset = ZEND_DYNAMIC_PROPERTY_OFFSET;
+	} else {
+		property_offset = property_info->offset;
+	}
+
+	if (EXPECTED(property_info != ZEND_WRONG_PROPERTY_INFO)) {
+		if(pthreads_is_property_threadlocal(property_info)) {
+			if (EXPECTED(property_offset != ZEND_DYNAMIC_PROPERTY_OFFSET)) {
+				value = OBJ_PROP(zobj, property_offset);
+				if (Z_TYPE_P(value) != IS_UNDEF) {
+					goto found;
+				}
+			} else if (EXPECTED(zobj->properties != NULL) &&
+					   (value = zend_hash_find(zobj->properties, Z_STR_P(member))) != NULL) {
+found:
+				switch (has_set_exists) {
+					case 0:
+						ZVAL_DEREF(value);
+						result = (Z_TYPE_P(value) != IS_NULL);
+						break;
+					default:
+						result = zend_is_true(value);
+						break;
+					case 2:
+						result = 1;
+						break;
+				}
+				goto exit;
+			}
+		} else {
+			result = pthreads_store_isset(object, member, has_set_exists);
+			goto exit;
+		}
+	} else if (UNEXPECTED(EG(exception))) {
+		result = 0;
+		goto exit;
+	}
+
+	result = 0;
+	if ((has_set_exists != 2) && zobj->ce->__isset) {
+		zend_guard *guard = pthreads_get_guard(&threaded->std, member);
+
+		if (!((*guard) & IN_ISSET)) {
+			zval rv;
+			zval tmp_object;
+
+			/* have issetter - try with it! */
+			if (Z_TYPE(tmp_member) == IS_UNDEF) {
+				ZVAL_COPY(&tmp_member, member);
+				member = &tmp_member;
+			}
+			ZVAL_COPY(&tmp_object, object);
+			(*guard) |= IN_ISSET; /* prevent circular getting */
+			pthreads_call_issetter(&tmp_object, member, &rv);
+			if (Z_TYPE(rv) != IS_UNDEF) {
+				result = zend_is_true(&rv);
+				zval_ptr_dtor(&rv);
+				if (has_set_exists && result) {
+					if (EXPECTED(!EG(exception)) && zobj->ce->__get && !((*guard) & IN_GET)) {
+						(*guard) |= IN_GET;
+						pthreads_call_getter(&tmp_object, member, &rv);
+						(*guard) &= ~IN_GET;
+						if (Z_TYPE(rv) != IS_UNDEF) {
+							result = i_zend_is_true(&rv);
+							zval_ptr_dtor(&rv);
+						} else {
+							result = 0;
+						}
+					} else {
+						result = 0;
+					}
+				}
+			}
+			(*guard) &= ~IN_ISSET;
+			zval_ptr_dtor(&tmp_object);
+		}
+	}
+
+exit:
+	if (UNEXPECTED(Z_REFCOUNTED(tmp_member))) {
+		zval_ptr_dtor(&tmp_member);
+	}
+	return result;
+}
+/* }}} */
+
+/* {{{ */
+void pthreads_concurrent_unset_property(PTHREADS_UNSET_PROPERTY_PASSTHRU_D) {
+	zend_object *zobj;
+	zval tmp_member;
+	uint32_t property_offset;
+	zend_property_info *property_info;
+	pthreads_object_t* threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	rebuild_object_properties(&threaded->std);
+
+	zobj = Z_OBJ_P(object);
+
+	ZVAL_UNDEF(&tmp_member);
+	if (UNEXPECTED(Z_TYPE_P(member) != IS_STRING)) {
+		ZVAL_STR(&tmp_member, zval_get_string(member));
+		member = &tmp_member;
+	}
+
+	property_info = zend_get_property_info(zobj->ce, Z_STR_P(member), (zobj->ce->__unset != NULL));
+
+	if(property_info == NULL) {
+		property_offset = ZEND_DYNAMIC_PROPERTY_OFFSET;
+	} else {
+		property_offset = property_info->offset;
+	}
+
+	if (EXPECTED(property_info != ZEND_WRONG_PROPERTY_INFO)) {
+		if(pthreads_is_property_threadlocal(property_info)) {
+			if (EXPECTED(property_offset != ZEND_DYNAMIC_PROPERTY_OFFSET)) {
+				zval *slot = OBJ_PROP(zobj, property_offset);
+
+				if (Z_TYPE_P(slot) != IS_UNDEF) {
+					zval_ptr_dtor(slot);
+					ZVAL_UNDEF(slot);
+					if (zobj->properties) {
+						zobj->properties->u.v.flags |= HASH_FLAG_HAS_EMPTY_IND;
+					}
+					goto exit;
+				}
+			} else if (EXPECTED(zobj->properties != NULL)) {
+				if (UNEXPECTED(GC_REFCOUNT(zobj->properties) > 1)) {
+					if (EXPECTED(!(GC_FLAGS(zobj->properties) & IS_ARRAY_IMMUTABLE))) {
+						GC_REFCOUNT(zobj->properties)--;
+					}
+					zobj->properties = zend_array_dup(zobj->properties);
+				}
+				if (EXPECTED(zend_hash_del(zobj->properties, Z_STR_P(member)) != FAILURE)) {
+					goto exit;
+				}
+			}
+		} else {
+			pthreads_store_delete(object, member);
+			goto exit;
+		}
+
+	} else if (UNEXPECTED(EG(exception))) {
+		goto exit;
+	}
+
+	/* magic unset */
+	if (zobj->ce->__unset) {
+		zend_guard *guard = pthreads_get_guard(&threaded->std, member);
+
+		if (!((*guard) & IN_UNSET)) {
+			zval tmp_object;
+
+			/* have unseter - try with it! */
+			ZVAL_COPY(&tmp_object, object);
+			(*guard) |= IN_UNSET; /* prevent circular unsetting */
+			pthreads_call_unsetter(&tmp_object, member);
+			(*guard) &= ~IN_UNSET;
+			zval_ptr_dtor(&tmp_object);
+		} else {
+			if (Z_STRVAL_P(member)[0] == '\0' && Z_STRLEN_P(member) != 0) {
+				zend_throw_error(NULL, "Cannot access property started with '\\0'");
+				goto exit;
+			}
+		}
+	}
+
+exit:
+	if (UNEXPECTED(Z_REFCOUNTED(tmp_member))) {
+		zval_ptr_dtor(&tmp_member);
+	}
+}
+/* }}} */
+
+HashTable *pthreads_concurrent_get_debug_info(zval *object, int *is_temp) /* {{{ */
+{
+	zend_class_entry *ce = Z_OBJCE_P(object);
+	zval retval;
+	HashTable *ht;
+
+	if (!ce->__debugInfo) {
+		*is_temp = 0;
+
+		if((ce->ce_flags & PTHREADS_ACC_HAS_THREADLOCAL_PROP) != 0) {
+			printf("pthreads_concurrent_get_debug_info PTHREADS_ACC_HAS_THREADLOCAL_PROP \n");
+		}
+		return Z_OBJ_HANDLER_P(object, get_properties)
+			? Z_OBJ_HANDLER_P(object, get_properties)(object)
+			: NULL;
+	}
+
+	zend_call_method_with_0_params(object, ce, &ce->__debugInfo, ZEND_DEBUGINFO_FUNC_NAME, &retval);
+	if (Z_TYPE(retval) == IS_ARRAY) {
+		if (!Z_REFCOUNTED(retval)) {
+			*is_temp = 1;
+			return zend_array_dup(Z_ARRVAL(retval));
+		} else if (Z_REFCOUNT(retval) <= 1) {
+			*is_temp = 1;
+			ht = Z_ARR(retval);
+			return ht;
+		} else {
+			*is_temp = 0;
+			zval_ptr_dtor(&retval);
+			return Z_ARRVAL(retval);
+		}
+	} else if (Z_TYPE(retval) == IS_NULL) {
+		*is_temp = 1;
+		ALLOC_HASHTABLE(ht);
+		zend_hash_init(ht, 0, NULL, ZVAL_PTR_DTOR, 0);
+		return ht;
+	}
+
+	zend_error_noreturn(E_ERROR, ZEND_DEBUGINFO_FUNC_NAME "() must return an array");
+
+	return NULL; /* Compilers are dumb and don't understand that noreturn means that the function does NOT need a return value... */
+}
+/* }}} */
+
 #endif
