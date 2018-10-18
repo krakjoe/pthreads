@@ -117,7 +117,6 @@ static void prepare_class_function_table(zend_class_entry *candidate, zend_class
 static void prepare_class_property_table(pthreads_object_t* thread, zend_class_entry *candidate, zend_class_entry *prepared) {
 	zend_property_info *info, *dup;
 	zend_string *name;
-	pthreads_storage *storage;
 	pthreads_def_statics_t *def_statics = zend_hash_find_ptr(&PTHREADS_G(default_static_props), candidate->name);
 
 	if (candidate->default_properties_count) {
@@ -148,8 +147,13 @@ static void prepare_class_property_table(pthreads_object_t* thread, zend_class_e
 	} else prepared->default_static_members_count = 0;
 
 	ZEND_HASH_FOREACH_STR_KEY_PTR(&candidate->properties_info, name, info) {
-		dup = zend_arena_alloc(&CG(arena), sizeof(zend_property_info));
+		zend_ulong offset;
+		pthreads_storage *storage;
+		zend_property_info *dup = zend_arena_alloc(&CG(arena), sizeof(zend_property_info));
+
 		memcpy(dup, info, sizeof(zend_property_info));
+
+		dup->name = zend_string_new(info->name);
 
 		if (info->doc_comment) {
 			if (thread->options & PTHREADS_INHERIT_COMMENTS) {
@@ -173,19 +177,25 @@ static void prepare_class_property_table(pthreads_object_t* thread, zend_class_e
 					pthreads_store_convert(storage, &prepared->default_static_members_table[info->offset]);
 				} else {
 					// fallback
-					pthreads_store_separate(
-						&candidate->default_static_members_table[info->offset],
-						&prepared->default_static_members_table[info->offset], 0);
+					if (Z_REFCOUNTED(prepared->default_static_members_table[info->offset])) {
+						pthreads_store_separate(
+							&candidate->default_static_members_table[info->offset],
+							&prepared->default_static_members_table[info->offset], 0);
+					}
 				}
-			} else if (Z_REFCOUNTED(prepared->default_properties_table[OBJ_PROP_TO_NUM(info->offset)])) {
+			} else {
+				offset = OBJ_PROP_TO_NUM(info->offset);
+
 				if(!(info->flags & PTHREADS_ACC_THREADLOCAL)) {
 					// duplicate non-static property as usual
-					pthreads_store_separate(
-										&candidate->default_properties_table[OBJ_PROP_TO_NUM(info->offset)],
-										&prepared->default_properties_table[OBJ_PROP_TO_NUM(info->offset)], 1);
+					if (Z_REFCOUNTED(prepared->default_properties_table[offset])) {
+						pthreads_store_separate(
+											&candidate->default_properties_table[offset],
+											&prepared->default_properties_table[offset], 1);
+					}
 				} else if(def_statics && (storage = zend_hash_find_ptr(def_statics, name)) != NULL) {
 					// property is thread local - restore serialized default value
-					pthreads_store_convert(storage, &prepared->default_properties_table[OBJ_PROP_TO_NUM(info->offset)]);
+					pthreads_store_convert(storage, &prepared->default_properties_table[offset]);
 				}
 			}
 		}
