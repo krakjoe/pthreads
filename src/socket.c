@@ -539,6 +539,12 @@ void pthreads_socket_write(zval *object, zend_string *buf, zend_long length, zva
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 	int bytes;
 
+	if (length < 0) {
+		PTHREADS_SOCKET_ERROR(threaded->store.sock, "Length cannot be negative", 0);
+
+		RETURN_FALSE;
+	}
+
 	if (!length) {
 		length = ZSTR_LEN(buf);
 	}
