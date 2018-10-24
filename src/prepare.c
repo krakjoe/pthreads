@@ -567,18 +567,68 @@ static inline void pthreads_prepare_ini(pthreads_object_t* thread) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_constants(pthreads_object_t* thread, int copy_stdio_only) {
+static inline void pthreads_prepare_stdio_constants(pthreads_object_t* thread) {
 	zend_constant *zconstant;
 	zend_string *name;
+	int stdio_in, stdio_out, stdio_err;
 	
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_EG(thread->creator.ls, zend_constants), name, zconstant) {
+		int fd = -1;
+		php_stream * stream = NULL;
+		const char *mode = NULL;
+
 		if (zconstant->name) {
+			stdio_in = strncmp(name->val, "STDIN", name->len-1)==0;
+			stdio_out = strncmp(name->val, "STDOUT", name->len-1)==0;
+			stdio_err = strncmp(name->val, "STDERR", name->len-1)==0;
 
-			int stdio_const = 	strncmp(name->val, "STDIN", name->len-1)==0||
-								strncmp(name->val, "STDOUT", name->len-1)==0||
-								strncmp(name->val, "STDERR", name->len-1)==0;
+			if((stdio_in || stdio_out || stdio_err) && !pthreads_constant_exists(name)) {
+				zend_constant constant;
 
-			if((!stdio_const && !copy_stdio_only) || (stdio_const && copy_stdio_only)) {
+				if(stdio_in) {
+					fd = dup(STDIN_FILENO);
+					mode = "rb";
+				} else if(stdio_out) {
+					fd = dup(STDOUT_FILENO);
+					mode = "wb";
+				} else if(stdio_err) {
+					fd = dup(STDERR_FILENO);
+					mode = "wb";
+				}
+
+				if (fd == -1)	{
+					continue;
+				}
+				stream = php_stream_fopen_from_fd(fd, mode, NULL);
+
+				if (stream == NULL) {
+					close(fd);
+					continue;
+				}
+				php_stream_to_zval(stream,  &constant.value);
+
+				constant.flags = zconstant->flags;
+				constant.module_number = zconstant->module_number;
+				constant.name = zend_string_new(name);
+
+				zend_register_constant(&constant);
+			}
+		}
+	} ZEND_HASH_FOREACH_END();
+} /* }}} */
+
+/* {{{ */
+static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
+	zend_constant *zconstant;
+	zend_string *name;
+
+	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_EG(thread->creator.ls, zend_constants), name, zconstant) {
+		if (zconstant->name) {
+			if (strncmp(name->val, "STDIN", name->len-1)==0||
+				strncmp(name->val, "STDOUT", name->len-1)==0||
+				strncmp(name->val, "STDERR", name->len-1)==0){
+				continue;
+			} else {
 				zend_constant constant;
 
 				if (!pthreads_constant_exists(name)) {
@@ -601,7 +651,6 @@ static inline void pthreads_prepare_constants(pthreads_object_t* thread, int cop
 							ZVAL_NEW_STR(&constant.value, zend_string_new(Z_STR(zconstant->value)));
 #endif
 						} break;
-						case IS_RESOURCE:
 						case IS_ARRAY: {
 							pthreads_store_separate(&zconstant->value, &constant.value, 1);
 						} break;
@@ -737,10 +786,10 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 		if (thread->options & PTHREADS_INHERIT_INI)
 			pthreads_prepare_ini(thread);
 
-		pthreads_prepare_constants(thread, 1);
+		pthreads_prepare_stdio_constants(thread);
 
 		if (thread->options & PTHREADS_INHERIT_CONSTANTS)
-			pthreads_prepare_constants(thread, 0);
+			pthreads_prepare_constants(thread);
 
 		if (thread->options & PTHREADS_INHERIT_FUNCTIONS)
 			pthreads_prepare_functions(thread);

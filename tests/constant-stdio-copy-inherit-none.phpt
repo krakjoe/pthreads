@@ -1,5 +1,5 @@
 --TEST--
-Test constant stdio copy bug #806 and #583 
+Testing stdio constants STDIN / STDOUT / STDERR #806 and #583 
 --DESCRIPTION--
 Copy stdin, stdout and stderr at thread creation with PTHREADS_INHERIT_NONE.
 --FILE--
