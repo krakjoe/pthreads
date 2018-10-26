@@ -659,22 +659,10 @@ static inline void pthreads_prepare_includes(pthreads_object_t* thread) {
 
 /* {{{ */
 static inline void pthreads_prepare_exception_handler(pthreads_object_t* thread) {
-	zval *handler = &PTHREADS_EG(thread->creator.ls, user_exception_handler);
-
-	if (thread->options & (PTHREADS_INHERIT_CLASSES|PTHREADS_INHERIT_FUNCTIONS)) {
-		if (Z_TYPE_P(handler) != IS_UNDEF) {
-			if (Z_TYPE_P(handler) == IS_ARRAY) {
-				if (zend_hash_num_elements(Z_ARRVAL_P(handler)) > 1) {
-					if (!(thread->options & PTHREADS_INHERIT_CLASSES)) {
-						return;
-					}
-				} else if(!(thread->options & PTHREADS_INHERIT_FUNCTIONS)) {
-					return;
-				}
-			}
-
-			pthreads_store_separate(handler, &EG(user_exception_handler), 1);
-		}
+	if (thread->user_exception_handler != NULL) {
+		pthreads_store_convert(thread->user_exception_handler, &EG(user_exception_handler));
+		pthreads_store_storage_dtor(thread->user_exception_handler);
+		thread->user_exception_handler = NULL;
 	}
 } /* }}} */
 
@@ -709,8 +697,24 @@ static inline void pthreads_rebuild_object(zval *zv) {
 
 /* {{{ */
 void pthreads_prepare_parent(pthreads_object_t *thread) {
-	if (Z_TYPE(EG(user_exception_handler)) != IS_UNDEF)
-		pthreads_rebuild_object(&EG(user_exception_handler));
+	zval *handler = &EG(user_exception_handler);
+
+	if (thread->options & (PTHREADS_INHERIT_CLASSES | PTHREADS_INHERIT_FUNCTIONS)) {
+		if (Z_TYPE_P(handler) != IS_UNDEF) {
+			pthreads_rebuild_object(handler);
+			if (Z_TYPE_P(handler) == IS_ARRAY) {
+				if (zend_hash_num_elements(Z_ARRVAL_P(handler)) > 1) {
+					if (!(thread->options & PTHREADS_INHERIT_CLASSES)) {
+						return;
+					}
+				} else if (!(thread->options & PTHREADS_INHERIT_FUNCTIONS)) {
+					return;
+				}
+			}
+
+			thread->user_exception_handler = pthreads_store_create(handler, 1);
+		}
+	}
 } /* }}} */
 
 /* {{{ */
