@@ -39,10 +39,10 @@ $test->start() && $test->join();
 
 var_dump($thing);
 ?>
---EXPECT--
-object(Threaded)#1 (1) {
+--EXPECTF--
+object(Threaded)#%d (1) {
   ["member"]=>
-  object(Threaded)#2 (0) {
+  object(Threaded)#%d (0) {
   }
 }
 

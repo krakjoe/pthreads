@@ -1,5 +1,9 @@
 var PTHREADS_EXT_NAME="pthreads";
-var PTHREADS_EXT_SRC="monitor.c stack.c globals.c prepare.c store.c resources.c handlers.c object.c socket.c";
+var PTHREADS_EXT_SRC="monitor.c stack.c globals.c prepare.c store.c resources.c handlers.c object.c socket.c src/network.c src/hash.c src/utils.c src/info.c \
+                      src/url.c src/streams.c src/streams/wrappers.c src/streams/streamglobals.c src/streams/cast.c src/streams/buckets.c src/streams/memory.c \
+                      src/streams/filters.c src/streams/wrappers/plain_wrapper.c src/streams/wrappers/user_wrapper.c src/streams/transports.c \
+                      src/streams/xp_socket.c src/streams/mmap.c src/streams/wrappers/glob_wrapper.c src/streams/wrappers/fopen_wrapper.c src/file/file.c \
+                      src/streams/wrappers/http_fopen_wrapper.c src/streams/wrappers/ftp_fopen_wrapper.c src/streams/standard_filters.c"
 var PTHREADS_EXT_DIR=configure_module_dirname + "/src";
 var PTHREADS_EXT_API="php_pthreads.c";
 var PTHREADS_EXT_FLAGS="/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_module_dirname;

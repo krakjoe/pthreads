@@ -20,8 +20,8 @@ for($i = 0; $i < 10; $i ++) {
     printf("\n");
 }
 ?>
---EXPECT--
-object(Storage)#1 (10) {
+--EXPECTF--
+object(Storage)#%d (10) {
   [0]=>
   int(1)
   [1]=>

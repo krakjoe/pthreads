@@ -23,22 +23,22 @@ while (($next = $s->pop())) {
     var_dump($next);
 }
 ?>
---EXPECT--
-object(S)#1 (1) {
+--EXPECTF--
+object(S)#%d (1) {
   [0]=>
   string(4) "help"
 }
 string(4) "help"
-object(S)#1 (0) {
+object(S)#%d (0) {
 }
-object(S)#1 (1) {
+object(S)#%d (1) {
   [1]=>
   string(4) "next"
 }
 string(4) "next"
-object(S)#1 (0) {
+object(S)#%d (0) {
 }
-object(S)#1 (100) {
+object(S)#%d (100) {
   [1]=>
   int(1)
   [2]=>

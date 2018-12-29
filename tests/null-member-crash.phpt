@@ -12,7 +12,7 @@ $test = new Test();
 var_dump($test);
 ?>
 --EXPECTF--
-object(Test)#1 (1) {
+object(Test)#%d (1) {
   [0]=>
   string(4) "what"
 }

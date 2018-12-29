@@ -64,7 +64,7 @@ HashTable* pthreads_read_debug(PTHREADS_READ_DEBUG_PASSTHRU_D) {
 	zend_hash_init(table, 8, NULL, ZVAL_PTR_DTOR, 0);
 	*is_temp = 1;
 
-	if (!PTHREADS_IS_SOCKET(threaded)) {
+	if (!PTHREADS_IS_SOCKET(threaded) && !PTHREADS_IS_STREAM(threaded) && !PTHREADS_IS_STREAM_CONTEXT(threaded)) {
 		pthreads_store_tohash(object, table);
 	}
 
@@ -369,12 +369,6 @@ int pthreads_compare_objects(PTHREADS_COMPARE_PASSTHRU_D) {
 	pthreads_object_t *left = PTHREADS_FETCH_FROM(Z_OBJ_P(op1));
 	pthreads_object_t *right = PTHREADS_FETCH_FROM(Z_OBJ_P(op2));
 
-	/* comparing property tables is not useful or efficient for threaded objects */
-	/* in addition, it might be useful to know if two variables are infact the same physical threaded object */
-	if (left->monitor == right->monitor) {
-		return 0;
-	}
-
-	return 1;
+	return pthreads_object_compare(left, right);
 } /* }}} */
 #endif

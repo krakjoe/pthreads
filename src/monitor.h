@@ -29,9 +29,14 @@ typedef struct _pthreads_monitor_t pthreads_monitor_t;
 #define PTHREADS_MONITOR_ERROR		(1<<3)
 #define PTHREADS_MONITOR_READY		(1<<4)
 
+#define MONITOR_LOCK(object) pthreads_monitor_lock((object)->monitor)
+#define MONITOR_UNLOCK(object) pthreads_monitor_unlock((object)->monitor)
+
 pthreads_monitor_t* pthreads_monitor_alloc();
-zend_bool pthreads_monitor_lock(pthreads_monitor_t *m);
-zend_bool pthreads_monitor_unlock(pthreads_monitor_t *m);
+int pthreads_monitor_get_lock(pthreads_monitor_t *m);
+int pthreads_monitor_lock(pthreads_monitor_t *m);
+int pthreads_monitor_trylock(pthreads_monitor_t *m) ;
+int pthreads_monitor_unlock(pthreads_monitor_t *m);
 pthreads_monitor_state_t pthreads_monitor_check(pthreads_monitor_t *m, pthreads_monitor_state_t state);
 int pthreads_monitor_wait(pthreads_monitor_t *m, long timeout);
 int pthreads_monitor_notify(pthreads_monitor_t *m);

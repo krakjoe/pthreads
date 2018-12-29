@@ -30,9 +30,7 @@
 #	include <src/socket.h>
 #endif
 
-#ifndef HAVE_PTHREADS_STORE_H
-#	include <src/store.h>
-#endif
+typedef union _pthreads_streams_t pthreads_streams_t;
 
 typedef struct _pthreads_ident_t {
 	zend_ulong id;
@@ -45,9 +43,10 @@ typedef struct _pthreads_object_t {
 	uint scope;
 	zend_ulong options;
 	pthreads_monitor_t	*monitor;
-	union {
+	struct {
 		pthreads_store_t	*props;
 		pthreads_socket_t	*sock;
+		pthreads_streams_t	*streams;
 	} store;
 	pthreads_storage    *user_exception_handler;
 	pthreads_stack_t    *stack;
@@ -92,25 +91,74 @@ static inline pthreads_object_t* _pthreads_fetch_object(zend_object *object) {
 #define PTHREADS_ALLOW_HEADERS	   0x10000000 /* }}} */
 
 /* {{{ scope constants */
-#define PTHREADS_SCOPE_UNKNOWN     (0)
-#define PTHREADS_SCOPE_THREADED    (1<<1)
-#define PTHREADS_SCOPE_THREAD      (1<<2)
-#define PTHREADS_SCOPE_WORKER      (1<<3)
-#define PTHREADS_SCOPE_SOCKET	   (1<<4)
-#define PTHREADS_SCOPE_CONNECTION  (1<<5) /* }}} */
+#define PTHREADS_SCOPE_UNKNOWN              (0)
+#define PTHREADS_SCOPE_THREADED             (1<<1)
+#define PTHREADS_SCOPE_THREAD               (1<<2)
+#define PTHREADS_SCOPE_WORKER               (1<<3)
+#define PTHREADS_SCOPE_SOCKET	            (1<<4)
+#define PTHREADS_SCOPE_STREAM               (1<<5)
+#define PTHREADS_SCOPE_STREAM_CONTEXT       (1<<6)
+#define PTHREADS_SCOPE_STREAM_FILTER	    (1<<7)
+#define PTHREADS_SCOPE_STREAM_WRAPPER       (1<<8)
+#define PTHREADS_SCOPE_STREAM_BUCKET   	    (1<<9)
+#define PTHREADS_SCOPE_STREAM_BRIGADE       (1<<10)
+#define PTHREADS_SCOPE_CONNECTION           (1<<11) /* }}} */
 
 /* {{{ scope macros */
-#define PTHREADS_IS_KNOWN_ENTRY(t)      ((t)->scope)
-#define PTHREADS_IS_CONNECTION(t)       ((t)->scope & PTHREADS_SCOPE_CONNECTION)
-#define PTHREADS_IS_NOT_CONNECTION(t)   (!PTHREADS_IS_CONNECTION(t))
-#define PTHREADS_IS_SOCKET(t)       	((t)->scope & PTHREADS_SCOPE_SOCKET)
-#define PTHREADS_IS_NOT_SOCKET(t)   	(!PTHREADS_IS_SOCKET(t))
-#define PTHREADS_IS_THREAD(t)           ((t)->scope & PTHREADS_SCOPE_THREAD)
-#define PTHREADS_IS_NOT_THREAD(t)       (!PTHREADS_IS_THREAD(t))
-#define PTHREADS_IS_WORKER(t)           ((t)->scope & PTHREADS_SCOPE_WORKER)
-#define PTHREADS_IS_NOT_WORKER(t)       (!PTHREADS_IS_WORKER(t))
-#define PTHREADS_IS_THREADED(t)         ((t)->scope & PTHREADS_SCOPE_THREADED)
-#define PTHREADS_IS_NOT_THREADED(t)     (!PTHREADS_IS_THREADED(t)) /* }}} */
+#define PTHREADS_IS_KNOWN_ENTRY(t)              ((t)->scope)
+#define PTHREADS_IS_CONNECTION(t)               ((t)->scope & PTHREADS_SCOPE_CONNECTION)
+#define PTHREADS_IS_NOT_CONNECTION(t)           (!PTHREADS_IS_CONNECTION(t))
+#define PTHREADS_IS_SOCKET(t)       	        ((t)->scope & PTHREADS_SCOPE_SOCKET)
+#define PTHREADS_IS_NOT_SOCKET(t)   	        (!PTHREADS_IS_SOCKET(t))
+#define PTHREADS_IS_THREAD(t)                   ((t)->scope & PTHREADS_SCOPE_THREAD)
+#define PTHREADS_IS_NOT_THREAD(t)               (!PTHREADS_IS_THREAD(t))
+#define PTHREADS_IS_WORKER(t)                   ((t)->scope & PTHREADS_SCOPE_WORKER)
+#define PTHREADS_IS_NOT_WORKER(t)               (!PTHREADS_IS_WORKER(t))
+#define PTHREADS_IS_THREADED(t)                 ((t)->scope & PTHREADS_SCOPE_THREADED)
+#define PTHREADS_IS_NOT_THREADED(t)             (!PTHREADS_IS_THREADED(t))
+#define PTHREADS_IS_STREAM(t)                   ((t)->scope & PTHREADS_SCOPE_STREAM)
+#define PTHREADS_IS_NOT_STREAM(t)   	        (!PTHREADS_IS_STREAM(t))
+#define PTHREADS_IS_STREAM_CONTEXT(t)           ((t)->scope & PTHREADS_SCOPE_STREAM_CONTEXT)
+#define PTHREADS_IS_NOT_STREAM_CONTEXT(t)       (!PTHREADS_IS_STREAM_CONTEXT(t))
+#define PTHREADS_IS_STREAM_FILTER(t)       	    ((t)->scope & PTHREADS_SCOPE_STREAM_FILTER)
+#define PTHREADS_IS_NOT_STREAM_FILTER(t)   	    (!PTHREADS_IS_STREAM_FILTER(t))
+#define PTHREADS_IS_STREAM_WRAPPER(t)           ((t)->scope & PTHREADS_SCOPE_STREAM_WRAPPER)
+#define PTHREADS_IS_NOT_STREAM_WRAPPER(t)       (!PTHREADS_IS_STREAM_WRAPPER(t))
+#define PTHREADS_IS_STREAM_BUCKET(t)       	    ((t)->scope & PTHREADS_SCOPE_STREAM_BUCKET)
+#define PTHREADS_IS_NOT_STREAM_BUCKET(t)   	    (!PTHREADS_IS_STREAM_BUCKET(t))
+#define PTHREADS_IS_STREAM_BRIGADE(t)           ((t)->scope & PTHREADS_SCOPE_STREAM_BRIGADE)
+#define PTHREADS_IS_NOT_STREAM_BRIGADE(t)       (!PTHREADS_IS_STREAM_BRIGADE(t))
+
+#define PTHREADS_IS_STREAMS(t)       		(PTHREADS_IS_STREAM(t)  \
+												|| PTHREADS_IS_STREAM_CONTEXT(t) 		\
+												|| PTHREADS_IS_STREAM_FILTER(t) 		\
+												|| PTHREADS_IS_STREAM_WRAPPER(t) 		\
+												|| PTHREADS_IS_STREAM_BUCKET(t) 		\
+												|| PTHREADS_IS_STREAM_BRIGADE(t))
+#define PTHREADS_IS_NOT_STREAMS(t)   		(!PTHREADS_IS_STREAMS(t)) /* }}} */
+
+static char *pthreads_get_object_name(pthreads_object_t* object) {
+	if(PTHREADS_IS_SOCKET(object))
+		return "socket";
+	else if(PTHREADS_IS_THREAD(object))
+		return "thread";
+	else if(PTHREADS_IS_WORKER(object))
+		return "worker";
+	else if(PTHREADS_IS_THREADED(object))
+		return "threaded";
+	else if(PTHREADS_IS_STREAM(object))
+		return "stream";
+	else if(PTHREADS_IS_STREAM_CONTEXT(object))
+		return "streamcontext";
+	else if(PTHREADS_IS_STREAM_FILTER(object))
+		return "streamfilter";
+	else if(PTHREADS_IS_STREAM_WRAPPER(object))
+		return "streamwrapper";
+	else if(PTHREADS_IS_STREAM_BUCKET(object))
+		return "streambucket";
+	else if(PTHREADS_IS_STREAM_BRIGADE(object))
+		return "streambrigade";
+}
 
 /* {{{ pthread_self wrapper */
 static inline ulong pthreads_self() {

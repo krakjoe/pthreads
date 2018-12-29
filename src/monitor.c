@@ -21,7 +21,11 @@
 #ifndef HAVE_PTHREADS_H
 #	include <src/pthreads.h>
 #endif
-
+/*
+#ifndef HAVE_PTHREADS_MONITOR_H
+#	include <src/monitor.h>
+#endif
+*/
 struct _pthreads_monitor_t {
 	pthreads_monitor_state_t state;	
 	pthread_mutex_t			 mutex;	
@@ -55,11 +59,19 @@ pthreads_monitor_t* pthreads_monitor_alloc() {
 	return m;
 }
 
-zend_bool pthreads_monitor_lock(pthreads_monitor_t *m) {
+int pthreads_monitor_get_lock(pthreads_monitor_t *m) {
+	return pthread_mutex_lock(&m->mutex);
+}
+
+int pthreads_monitor_lock(pthreads_monitor_t *m) {
 	return (pthread_mutex_lock(&m->mutex) == 0);
 }
 
-zend_bool pthreads_monitor_unlock(pthreads_monitor_t *m) {
+int pthreads_monitor_trylock(pthreads_monitor_t *m) {
+	return (pthread_mutex_trylock(&m->mutex) == 0);
+}
+
+int pthreads_monitor_unlock(pthreads_monitor_t *m) {
 	return (pthread_mutex_unlock(&m->mutex) == 0);
 }
 
