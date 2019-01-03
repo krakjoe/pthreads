@@ -133,8 +133,8 @@
 	<file name="tests/graceful-fatalities.phpt" role="test" />
 	<file name="tests/hacking-serials.phpt" role="test" />
 	<file name="tests/immutable-threaded-members.phpt" role="test" />
-	<file name="tests/included_interface_constant.phpt" role="test" />
 	<file name="tests/included-files.phpt" role="test" />
+	<file name="tests/include_interface_constant.phpt" role="test" />
 	<file name="tests/includeme.inc" role="test" />
 	<file name="tests/inherit-non-closures.phpt" role="test" />
 	<file name="tests/inherited-anon-class-outside-context.phpt" role="test" />
@@ -157,6 +157,7 @@
 	<file name="tests/nested-non-threaded-object-references.phpt" role="test" />
 	<file name="tests/new-class-after-thread-creation.phpt" role="test" />
 	<file name="tests/no-cloning.phpt" role="test" />
+	<file name="tests/no-inheritance-anon-class.phpt" role="test" />
 	<file name="tests/norefs.phpt" role="test" />
 	<file name="tests/normal-reads.phpt" role="test" />
 	<file name="tests/normalize-members.phpt" role="test" />
@@ -167,8 +168,8 @@
 	<file name="tests/pools-default.phpt" role="test" />
 	<file name="tests/pools.phpt" role="test" />
 	<file name="tests/private-class-constant-fetching.phpt" role="test" />
-	<file name="tests/pthreads-inherited-none-class-constant-inherited.phpt" role="test" />
-	<file name="tests/pthreads-inherited-none-class-constant.phpt" role="test" />
+	<file name="tests/pthreads-inherit-none-class-constant.phpt" role="test" />
+	<file name="tests/pthreads-inherit-none-class-constant-inherited.phpt" role="test" />
 	<file name="tests/recv-overload.phpt" role="test" />
 	<file name="tests/resource-keeping.phpt" role="test" />
 	<file name="tests/return-types.phpt" role="test" />
@@ -216,8 +217,9 @@
 	<file name="tests/trait-aliases.phpt" role="test" />
 	<file name="tests/traits-scope.inc" role="test" />
 	<file name="tests/traits-scope.phpt" role="test" />
-	<file name="tests/unprepared-entry-static-segfaults.phpt" role="test" />
+	<file name="tests/unprepared-entry-static-segfault.phpt" role="test" />
 	<file name="tests/unset-defaults.phpt" role="test" />
+	<file name="tests/unstack-running.phpt" role="test" />
 	<file name="tests/verify-overload.phpt" role="test" />
 	<file name="tests/volatile-arrays.phpt" role="test" />
 	<file name="tests/volatile-nested.phpt" role="test" />
@@ -267,8 +269,6 @@
 	<file name="php_pthreads.c" role="src" />
 	<file name="php_pthreads.h" role="src" />
 	<file name="README.md" role="doc" />
-	<file name=".travis.yml" role="doc" />
-	<file name="appveyor.xml" role="doc" />
   </dir>
  </contents>
  <dependencies>
