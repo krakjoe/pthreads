@@ -49,6 +49,8 @@ zend_object* pthreads_stream_filter_ctor(zend_class_entry *entry);
 zend_object* pthreads_stream_wrapper_ctor(zend_class_entry *entry);
 zend_object* pthreads_stream_bucket_ctor(zend_class_entry *entry);
 zend_object* pthreads_stream_brigade_ctor(zend_class_entry *entry);
+zend_object* pthreads_openssl_x509_ctor(zend_class_entry *entry);
+zend_object* pthreads_openssl_pkey_ctor(zend_class_entry *entry);
 void         pthreads_base_free(zend_object *object);
 zend_object* pthreads_base_clone(zval *object);
 HashTable*   pthreads_base_gc(zval *object, zval **table, int *n); /* }}} */

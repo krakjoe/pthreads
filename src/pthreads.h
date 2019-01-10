@@ -99,6 +99,11 @@ extern zend_class_entry *pthreads_volatile_map_entry;
 extern zend_class_entry *pthreads_file_stream_entry;
 extern zend_class_entry *pthreads_file_entry;
 
+#ifdef HAVE_PTHREADS_OPENSSL_EXT
+extern zend_class_entry *pthreads_openssl_x509_entry;
+extern zend_class_entry *pthreads_openssl_pkey_entry;
+#endif
+
 #ifndef IS_PTHREADS_CLASS
 #define IS_PTHREADS_CLASS(c) \
 	(instanceof_function(c, pthreads_threaded_entry))
@@ -236,6 +241,10 @@ typedef HashTable pthreads_store_t;
 
 #ifndef HAVE_PTHREADS_STREAMS_H
 #	include <src/streams.h>
+#endif
+
+#ifndef HAVE_PTHREADS_OPENSSL_H
+#	include <src/openssl/openssl.h>
 #endif
 
 #endif

@@ -7,6 +7,15 @@ PHP_ARG_WITH(pthreads-sanitize, whether to enable AddressSanitizer for pthreads,
 PHP_ARG_WITH(pthreads-dmalloc, whether to enable dmalloc for pthreads,
 [  --with-pthreads-dmalloc   Enable dmalloc for pthreads], no, no)
 
+PHP_ARG_WITH(openssl, whether to enable OpenSSL support for pthreads,
+[  --with-openssl[=DIR]      Include OpenSSL support (requires OpenSSL >= 1.0.1) for pthreads])
+
+PHP_ARG_WITH(kerberos, whether to enable Kerberos support for pthreads,
+[  --with-kerberos[=DIR]     OPENSSL: Include Kerberos support for pthreads], no, no)
+
+PHP_ARG_WITH(system-ciphers, whether to use system default cipher list instead of hardcoded value for pthreads,
+[  --with-system-ciphers   OPENSSL: Use system default cipher list instead of hardcoded value for pthreads], no, no)
+
 if test "$PHP_PTHREADS" != "no"; then
 	AC_MSG_CHECKING([for ZTS])   
 	if test "$PHP_THREAD_SAFETY" != "no"; then
@@ -59,8 +68,30 @@ if test "$PHP_PTHREADS" != "no"; then
 		src/streams/wrappers/fopen_wrapper.c \
 		src/streams/wrappers/http_fopen_wrapper.c \
 		src/streams/wrappers/ftp_fopen_wrapper.c \
-		src/streams/standard_filters.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+		src/streams/standard_filters.c \
+		src/openssl/openssl.c \
+		src/openssl/xp_ssl.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
 		
+	if test "$PHP_OPENSSL" != "no"; then
+		PHP_SUBST(OPENSSL_SHARED_LIBADD)
+
+		if test "$PHP_KERBEROS" != "no"; then
+			PHP_SETUP_KERBEROS(OPENSSL_SHARED_LIBADD)
+		fi
+
+		AC_CHECK_FUNCS([RAND_egd])
+
+		PHP_SETUP_OPENSSL(OPENSSL_SHARED_LIBADD,
+		[
+			AC_DEFINE(HAVE_PTHREADS_OPENSSL_EXT, 1,[Whether you have openssl support for pthreads])
+		], [
+			AC_MSG_ERROR([OpenSSL check failed. Please check config.log for more information.])
+		])
+		if test "$PHP_SYSTEM_CIPHERS" != "no"; then
+			AC_DEFINE(PTHREADS_USE_OPENSSL_SYSTEM_CIPHERS,1,[ Use system default cipher list instead of hardcoded value for pthreads])
+		fi
+	fi
+
 	PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 	PHP_ADD_INCLUDE($ext_builddir)
 	PHP_SUBST(PTHREADS_SHARED_LIBADD)

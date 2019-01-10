@@ -251,7 +251,7 @@ struct _pthreads_stream  {
 #define PTHREADS_STREAM_STORAGE_KEY_FILTER_CHAIN		12
 
 
-#define PTHREADS_GET_CTX_OPT(threaded_stream, wrapper, name, val) (pthreads_stream_get_context(threaded_stream) && NULL != (val = pthreads_stream_context_get_option(pthreads_stream_get_context(threaded_stream), wrapper, name)))
+#define PTHREADS_GET_CTX_OPT(threaded_stream, wrapper, name, val) (pthreads_stream_has_context(threaded_stream) && NULL != (val = pthreads_stream_context_get_option(pthreads_stream_get_context(threaded_stream), wrapper, name)))
 
 /**
  * Stream
@@ -281,6 +281,9 @@ struct _pthreads_stream  {
 /**
  * Context
  */
+#define pthreads_stream_has_context(threaded_stream) \
+	(pthreads_stream_has_threaded_property((threaded_stream), PTHREADS_STREAM_STORAGE_KEY_STREAM_CONTEXT))
+
 #define pthreads_stream_get_context(threaded_stream) \
 	((pthreads_stream_context_t*) pthreads_stream_read_threaded_property((threaded_stream), PTHREADS_STREAM_STORAGE_KEY_STREAM_CONTEXT))
 

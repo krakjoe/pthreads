@@ -303,6 +303,30 @@ zend_object* pthreads_stream_brigade_ctor(zend_class_entry *entry) {
 } /* }}} */
 
 /* {{{ */
+zend_object* pthreads_openssl_x509_ctor(zend_class_entry *entry) {
+	pthreads_object_t* threaded = pthreads_globals_object_alloc(
+		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
+
+	threaded->scope = PTHREADS_SCOPE_OPENSSL_X509;
+	pthreads_base_ctor(threaded, entry);
+	threaded->std.handlers = &pthreads_handlers;
+
+	return &threaded->std;
+} /* }}} */
+
+/* {{{ */
+zend_object* pthreads_openssl_pkey_ctor(zend_class_entry *entry) {
+	pthreads_object_t* threaded = pthreads_globals_object_alloc(
+		sizeof(pthreads_object_t) + zend_object_properties_size(entry));
+
+	threaded->scope = PTHREADS_SCOPE_OPENSSL_PKEY;
+	pthreads_base_ctor(threaded, entry);
+	threaded->std.handlers = &pthreads_handlers;
+
+	return &threaded->std;
+} /* }}} */
+
+/* {{{ */
 int pthreads_threaded_serialize(zval *object, unsigned char **buffer, size_t *buflen, zend_serialize_data *data) {
 	pthreads_object_t *address = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 #ifdef _WIN64
@@ -448,11 +472,11 @@ static void pthreads_base_ctor(pthreads_object_t* base, zend_class_entry *entry)
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
 		base->monitor = pthreads_monitor_alloc();
-
-		if (PTHREADS_IS_STREAMS(base)) {
 #if PTHREADS_STREAM_DEBUG
 	printf("creating stream object std(%p) threaded(%p) type: %s \n", PTHREADS_STD_P(base), base, pthreads_get_object_name(base));
 #endif
+		if (PTHREADS_IS_STREAMS(base)) {
+
 			base->store.streams = pthreads_streams_alloc();
 
 			if (PTHREADS_IS_STREAM_CONTEXT(base)) {
@@ -485,10 +509,11 @@ void pthreads_base_free(zend_object *object) {
 	pthreads_object_t* base = PTHREADS_FETCH_FROM(object);
 
 	if (PTHREADS_IS_NOT_CONNECTION(base)) {
-		if(PTHREADS_IS_STREAMS(base)) {
 #if PTHREADS_STREAM_DEBUG
 	printf("freeing stream object std(%p) threaded(%p) type(%s) thread(%i) refcount(%i) \n", object, base, pthreads_get_object_name(base), pthreads_self(), pthreads_refcount(base));
 #endif
+		if(PTHREADS_IS_STREAMS(base)) {
+
 			if(PTHREADS_IS_STREAM(base)) {
 				pthreads_stream * stream = PTHREADS_FETCH_STREAMS_STREAM(base);
 

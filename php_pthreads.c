@@ -94,6 +94,11 @@ zend_class_entry *pthreads_volatile_map_entry;
 zend_class_entry *pthreads_file_stream_entry;
 zend_class_entry *pthreads_file_entry;
 
+#ifdef HAVE_PTHREADS_OPENSSL_EXT
+zend_class_entry *pthreads_openssl_x509_entry;
+zend_class_entry *pthreads_openssl_pkey_entry;
+#endif
+
 zend_object_handlers pthreads_handlers;
 zend_object_handlers pthreads_stream_handlers;
 zend_object_handlers pthreads_socket_handlers;
@@ -397,6 +402,18 @@ PHP_MINIT_FUNCTION(pthreads)
 	zend_declare_class_constant_long(pthreads_file_entry, ZEND_STRL("LOCK_UN"), PHP_LOCK_UN);
 	zend_declare_class_constant_long(pthreads_file_entry, ZEND_STRL("LOCK_NB"), PHP_LOCK_NB);
 
+#ifdef HAVE_PTHREADS_OPENSSL_EXT
+
+	INIT_CLASS_ENTRY(ce, "x509", NULL);
+	pthreads_openssl_x509_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
+	pthreads_openssl_x509_entry->create_object = pthreads_openssl_x509_ctor;
+
+	INIT_CLASS_ENTRY(ce, "pKey", NULL);
+	pthreads_openssl_pkey_entry = zend_register_internal_class_ex(&ce, pthreads_threaded_entry);
+	pthreads_openssl_pkey_entry->create_object = pthreads_openssl_pkey_ctor;
+
+#endif
+
 	pthreads_init_sockets();
 
 	/*
@@ -549,6 +566,10 @@ PHP_RINIT_FUNCTION(pthreads) {
 
 	if(pthreads_stream_globals_object_init() == SUCCESS) {
 		pthreads_init_streams();
+
+#ifdef HAVE_PTHREADS_OPENSSL_EXT
+		pthreads_init_openssl();
+#endif
 	}
 
 	return SUCCESS;
@@ -559,6 +580,9 @@ PHP_RSHUTDOWN_FUNCTION(pthreads) {
 	zend_hash_destroy(&PTHREADS_ZG(filenames));
 
 	if(pthreads_stream_globals_is_main_context()) {
+#ifdef HAVE_PTHREADS_OPENSSL_EXT
+		pthreads_shutdown_openssl();
+#endif
 		pthreads_shutdown_streams();
 		pthreads_stream_globals_object_shutdown();
 	}
@@ -574,6 +598,17 @@ PHP_MINFO_FUNCTION(pthreads)
 	pthreads_info_print_stream_hash("Streams",  PTHREADS_HT_P(pthreads_stream_get_url_stream_wrappers_hash()));
 	pthreads_info_print_stream_hash("Stream Socket Transports", PTHREADS_HT_P(pthreads_stream_xport_get_hash()));
 	pthreads_info_print_stream_hash("Stream Filters", PTHREADS_HT_P(pthreads_get_stream_filters_hash()));
+
+	pthreads_info_print_table_end();
+
+#ifdef HAVE_PTHREADS_OPENSSL_EXT
+	php_info_print_table_start();
+	php_info_print_table_row(2, "OpenSSL support", "enabled");
+	php_info_print_table_row(2, "OpenSSL Library Version", SSLeay_version(SSLEAY_VERSION));
+	php_info_print_table_row(2, "OpenSSL Header Version", OPENSSL_VERSION_TEXT);
+	php_info_print_table_row(2, "Openssl default config", pthreads_default_ssl_conf_filename);
+	pthreads_info_print_table_end();
+#endif
 
 	pthreads_info_print_table_end();
 }

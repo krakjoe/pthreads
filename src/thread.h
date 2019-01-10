@@ -31,6 +31,7 @@
 #endif
 
 typedef union _pthreads_streams_t pthreads_streams_t;
+typedef union _pthreads_openssl_t pthreads_openssl_t;
 
 typedef struct _pthreads_ident_t {
 	zend_ulong id;
@@ -47,6 +48,7 @@ typedef struct _pthreads_object_t {
 		pthreads_store_t	*props;
 		pthreads_socket_t	*sock;
 		pthreads_streams_t	*streams;
+		pthreads_openssl_t	*openssl;
 	} store;
 	pthreads_storage    *user_exception_handler;
 	pthreads_stack_t    *stack;
@@ -102,7 +104,9 @@ static inline pthreads_object_t* _pthreads_fetch_object(zend_object *object) {
 #define PTHREADS_SCOPE_STREAM_WRAPPER       (1<<8)
 #define PTHREADS_SCOPE_STREAM_BUCKET   	    (1<<9)
 #define PTHREADS_SCOPE_STREAM_BRIGADE       (1<<10)
-#define PTHREADS_SCOPE_CONNECTION           (1<<11) /* }}} */
+#define PTHREADS_SCOPE_OPENSSL_X509         (1<<11)
+#define PTHREADS_SCOPE_OPENSSL_PKEY         (1<<12)
+#define PTHREADS_SCOPE_CONNECTION           (1<<13) /* }}} */
 
 /* {{{ scope macros */
 #define PTHREADS_IS_KNOWN_ENTRY(t)              ((t)->scope)
@@ -128,6 +132,10 @@ static inline pthreads_object_t* _pthreads_fetch_object(zend_object *object) {
 #define PTHREADS_IS_NOT_STREAM_BUCKET(t)   	    (!PTHREADS_IS_STREAM_BUCKET(t))
 #define PTHREADS_IS_STREAM_BRIGADE(t)           ((t)->scope & PTHREADS_SCOPE_STREAM_BRIGADE)
 #define PTHREADS_IS_NOT_STREAM_BRIGADE(t)       (!PTHREADS_IS_STREAM_BRIGADE(t))
+#define PTHREADS_IS_OPENSSL_X509(t)             ((t)->scope & PTHREADS_SCOPE_OPENSSL_X509)
+#define PTHREADS_IS_NOT_OPENSSL_X509(t)         (!PTHREADS_IS_OPENSSL_X509(t))
+#define PTHREADS_IS_OPENSSL_PKEY(t)             ((t)->scope & PTHREADS_SCOPE_OPENSSL_PKEY)
+#define PTHREADS_IS_NOT_OPENSSL_PKEY(t)         (!PTHREADS_IS_OPENSSL_PKEY(t))
 
 #define PTHREADS_IS_STREAMS(t)       		(PTHREADS_IS_STREAM(t)  \
 												|| PTHREADS_IS_STREAM_CONTEXT(t) 		\
@@ -158,6 +166,10 @@ static char *pthreads_get_object_name(pthreads_object_t* object) {
 		return "streambucket";
 	else if(PTHREADS_IS_STREAM_BRIGADE(object))
 		return "streambrigade";
+	else if(PTHREADS_IS_OPENSSL_X509(object))
+		return "openssl_x509";
+	else if(PTHREADS_IS_OPENSSL_PKEY(object))
+		return "openssl_pkey";
 }
 
 /* {{{ pthread_self wrapper */
