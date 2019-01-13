@@ -630,8 +630,12 @@ static inline void pthreads_prepare_stdio_constants(pthreads_object_t* thread) {
 				}
 				php_stream_to_zval(stream,  &constant.value);
 
+#if PHP_VERSION_ID < 70300
 				constant.flags = zconstant->flags;
 				constant.module_number = zconstant->module_number;
+#else
+				ZEND_CONSTANT_SET_FLAGS(&constant, ZEND_CONSTANT_FLAGS(zconstant), ZEND_CONSTANT_MODULE_NUMBER(zconstant));
+#endif
 				constant.name = zend_string_new(name);
 
 				zend_register_constant(&constant);
