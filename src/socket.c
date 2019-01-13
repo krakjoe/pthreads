@@ -590,7 +590,7 @@ void pthreads_socket_close(zval *object, zval *return_value) {
 }
 
 #ifdef HAVE_SHUTDOWN
-void pthreads_socket_shutdown(zval *object, zend_bool how_shutdown, zval *return_value) {
+void pthreads_socket_shutdown(zval *object, zend_long how_shutdown, zval *return_value) {
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
 

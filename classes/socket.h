@@ -141,7 +141,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_strerror, 0, 1, IS_STRING, 1)
 ZEND_END_ARG_INFO()
 
 #ifdef HAVE_SHUTDOWN
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_shutdown, 0, 1, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_shutdown, 0, 0, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, how, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 #endif
@@ -412,12 +412,17 @@ PHP_METHOD(Socket, strerror) {
 } /* }}} */
 
 #ifdef HAVE_SHUTDOWN
-/* {{{ proto bool Socket::shutdown(int how) */
+/* {{{ proto bool Socket::shutdown(int how = Socket::SHUTDOWN_BOTH) */
 PHP_METHOD(Socket, shutdown) {
-	zend_long how_shutdown = 0;
+	zend_long how_shutdown = SHUT_RDWR;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &how_shutdown) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &how_shutdown) != SUCCESS) {
 		RETURN_FALSE;
+	}
+
+	if (how_shutdown != SHUT_RD && how_shutdown != SHUT_WR && how_shutdown != SHUT_RDWR) {
+		zend_throw_exception(spl_ce_InvalidArgumentException, "Invalid shutdown type", 0);
+		return;
 	}
 
 	pthreads_socket_shutdown(getThis(), how_shutdown, return_value);
