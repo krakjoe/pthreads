@@ -344,6 +344,9 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	(*op_array->refcount) = 1;
 	/* we never want to share the same runtime cache */
 	op_array->run_time_cache = NULL;
+#if PHP_VERSION_ID >= 70300
+	op_array->fn_flags &= ~ZEND_ACC_DONE_PASS_TWO;
+#endif
 
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_new(op_array->doc_comment);
@@ -360,7 +363,7 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	if (op_array->literals) op_array->literals = pthreads_copy_literals (literals, op_array->last_literal);
 
 	op_array->opcodes = pthreads_copy_opcodes(op_array, literals);
-	
+
 	if (op_array->arg_info) 	op_array->arg_info = pthreads_copy_arginfo(op_array, arg_info, op_array->num_args);
 	if (op_array->live_range)		op_array->live_range = pthreads_copy_live(op_array->live_range, op_array->last_live_range);
 	if (op_array->try_catch_array)  op_array->try_catch_array = pthreads_copy_try(op_array->try_catch_array, op_array->last_try_catch);
@@ -372,24 +375,33 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 
 /* {{{ */
 static inline zend_function* pthreads_copy_internal_function(zend_function *function) {
-	zend_function *copy = calloc(1, sizeof(zend_internal_function));
+	zend_function *copy = zend_arena_alloc(&CG(arena), sizeof(zend_internal_function));
 	memcpy(copy, function, sizeof(zend_internal_function));
+	copy->common.fn_flags |= ZEND_ACC_ARENA_ALLOCATED;
 	return copy;
 } /* }}} */
 
 /* {{{ */
 static zend_function* pthreads_copy_function(zend_function *function) {
-	zend_function *copy = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong)function);
-	
-	if (copy) {
-		function_add_ref(copy);
-		return copy;
+	zend_function *copy;
+
+	if (!(function->op_array.fn_flags & ZEND_ACC_CLOSURE)) {
+		copy = zend_hash_index_find_ptr(&PTHREADS_ZG(resolve), (zend_ulong)function);
+
+		if (copy) {
+			function_add_ref(copy);
+			return copy;
+		}
 	}
 	
 	if (function->type == ZEND_USER_FUNCTION) {
 		copy = pthreads_copy_user_function(function);
 	} else {
 		copy = pthreads_copy_internal_function(function);
+	}
+
+	if (function->op_array.fn_flags & ZEND_ACC_CLOSURE) { //don't cache closures
+		return copy;
 	}
 
 	return zend_hash_index_update_ptr(&PTHREADS_ZG(resolve), (zend_ulong) function, copy);

@@ -102,6 +102,7 @@ static inline void pthreads_stack_add_item(pthreads_stack_t *stack, pthreads_sta
 		item->prev = stack->tail;
 		stack->tail = item;
 	}
+	item->next = NULL;
 	stack->size++;
 }
 

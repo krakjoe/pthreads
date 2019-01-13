@@ -418,6 +418,8 @@ void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_
 					(socklen_t)(XtOffsetOf(struct sockaddr_un, sun_path) + ZSTR_LEN(address)));
 		} break;
 #endif
+		default:
+			RETURN_FALSE;
 	}
 
 	if (retval != SUCCESS) {
@@ -973,6 +975,8 @@ void pthreads_socket_recvfrom(zval *object, zval *buffer, zend_long len, zend_lo
 			ZVAL_LONG(port, ntohs(sin6.sin6_port));
 		} break;
 #endif
+		default:
+			RETURN_FALSE;
 	}
 
 	RETURN_LONG(retval);
@@ -1032,6 +1036,8 @@ void pthreads_socket_sendto(zval *object, int argc, zend_string *buf, zend_long 
 			retval = sendto(threaded->store.sock->fd, ZSTR_VAL(buf), ((size_t)len > ZSTR_LEN(buf)) ? ZSTR_LEN(buf) : (size_t)len, flags, (struct sockaddr *) &sin6, sizeof(sin6));
 		} break;
 #endif
+		default:
+			RETURN_FALSE;
 	}
 
 	if (retval == -1) {

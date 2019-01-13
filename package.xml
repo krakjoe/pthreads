@@ -8,13 +8,19 @@
   <name>Joe Watkins</name>
   <user>krakjoe</user>
   <email>krakjoe@php.net</email>
-  <active>yes</active>
+  <active>no</active>
  </lead>
- <date>2016-02-13</date>
- <time>07:02:36</time>
+ <developer>
+ 	<name>Bastian Schneider</name>
+ 	<user>sirsnyder</user>
+ 	<email>bastian.schneider@badnoob.com</email>
+ 	<active>yes</active>
+ </developer>
+ <date>2018-12-09</date>
+ <time>01:12:36</time>
  <version>
-  <release>3.1.6</release>
-  <api>3.1.6</api>
+  <release>3.2.0</release>
+  <api>3.2.0</api>
  </version>
  <stability>
   <release>stable</release>
@@ -22,12 +28,43 @@
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
  <notes>
- fix explicit array cast for ASSIGN_DIM
- add Threaded::notifyOne
- fix bug in Threaded properties causing incorrect objects to be fetched by read
- fix bug in trait aliases
- fix INHERIT_NONE breaking lambdas
- fix bug in constant copy routine for 7.1
+ php 7.2 support
+ anonymous class support
+ sockets are still experimental
+ fix #596
+ fix #585
+ fix #570, improve static property behaviour  
+ fix most warnings reported by #600 
+ fix #622
+ fix #616 
+ fix #657
+ fix #665
+ fix #564
+ fix #580
+ fix #681 
+ fix #666
+ fix #505
+ fix #658
+ fix #659
+ fix #729
+ fix #725
+ fix #733
+ fix #782
+ fix #797
+ fix #788
+ fix #780
+ fix #801
+ fix #816
+ fix #819
+ fix #836
+ fix #706
+ fix #874
+ fix #860
+ fix #890
+ fix #888
+ and many more improvements
+ 
+ Thanks to @dktapps and @tpunt for your support!
  </notes>
  <contents>
   <dir name="/">
@@ -35,33 +72,53 @@
 	<file name="examples/CallAnyFunction.php" role="doc" />
 	<file name="examples/ChannelsAndMagic.php" role="doc" />
 	<file name="examples/ClosureFuture.php" role="doc" />
+	<file name="examples/fetching-data-from-a-thread.php" role="doc" />
 	<file name="examples/KeepAliveSession.php" role="doc" />
 	<file name="examples/MySQLi.php" role="doc" />
+	<file name="examples/NonBlockingSocketServer.php" role="doc" />
 	<file name="examples/ObjectsAsParameters.php" role="doc" />
 	<file name="examples/Pooling.php" role="doc" />
 	<file name="examples/SelectiveInheritance.php" role="doc" />
 	<file name="examples/SharingResources.php" role="doc" />
 	<file name="examples/SimpleWebRequest.php" role="doc" />
 	<file name="examples/Singleton.php" role="doc" />
-	<file name="examples/SocketServer.php" role="doc" />
 	<file name="examples/Sockets.php" role="doc" />
+	<file name="examples/SocketServer.php" role="doc" />
 	<file name="examples/StackableArray.php" role="doc" />
-	<file name="examples/Synchronization.php" role="doc" />
 	<file name="examples/stub.php" role="doc" />
+	<file name="examples/Synchronization.php" role="doc" />
+   	<file name="tests/assets/ExternalClosureDefinition.php" role="test" />
+   	<file name="tests/assets/ExternalConstantsInterface.php" role="test" />
    	<file name="tests/anon-bound-inherited.phpt" role="test" />
+   	<file name="tests/anon-interceptors.phpt" role="test" />
+   	<file name="tests/anon-unbound-double-inherited.phpt" role="test" />
 	<file name="tests/anon-unbound-inherited.phpt" role="test" />
+   	<file name="tests/anon-unbound-use-guards.phpt" role="test" />
 	<file name="tests/binding.phpt" role="test" />
 	<file name="tests/callstatic-etc.phpt" role="test" />
+   	<file name="tests/child-to-parent-class-copying-helper.php" role="test" />
+   	<file name="tests/child-to-parent-class-copying.phpt" role="test" />
 	<file name="tests/chunk.phpt" role="test" />
 	<file name="tests/class-defaults.phpt" role="test" />
+	<file name="tests/class-static-properties-2.phpt" role="test" />
+	<file name="tests/class-static-properties-double-inheritance.phpt" role="test" />
+	<file name="tests/class-static-properties-order-dependencies-inheritance.phpt" role="test" />
+	<file name="tests/class-static-properties-order-dependencies.phpt" role="test" />
+	<file name="tests/class-static-properties.phpt" role="test" />
+	<file name="tests/closure-delayed-include.phpt" role="test" />
+	<file name="tests/closure-secondary-thread-copy.phpt" role="test" />
+	<file name="tests/closures-as-members-repeated-reallocation.phpt" role="test" />
 	<file name="tests/closures-as-members.phpt" role="test" />
 	<file name="tests/complex-statics-set-null.phpt" role="test" />
 	<file name="tests/complex-statics.phpt" role="test" />
+	<file name="tests/constant-array.phpt" role="test" />
+	<file name="tests/constant-ast-copy-missing-type.phpt" role="test" />
 	<file name="tests/constant-ast-copy.phpt" role="test" />
 	<file name="tests/constants.phpt" role="test" />
 	<file name="tests/corrupted-resources.phpt" role="test" />
 	<file name="tests/counting-members.phpt" role="test" />
 	<file name="tests/crazy-refcounting-stuff.phpt" role="test" />
+	<file name="tests/display-startup-errors-output.phpt" role="test" />
 	<file name="tests/doc-comments.phpt" role="test" />
 	<file name="tests/exception-handler-caught-nested.phpt" role="test" />
 	<file name="tests/exception-handler-caught-uncaught.phpt" role="test" />
@@ -77,11 +134,15 @@
 	<file name="tests/hacking-serials.phpt" role="test" />
 	<file name="tests/immutable-threaded-members.phpt" role="test" />
 	<file name="tests/included-files.phpt" role="test" />
+	<file name="tests/include_interface_constant.phpt" role="test" />
 	<file name="tests/includeme.inc" role="test" />
 	<file name="tests/inherit-non-closures.phpt" role="test" />
+	<file name="tests/inherited-anon-class-outside-context.phpt" role="test" />
+	<file name="tests/inherited-anon-class.phpt" role="test" />
 	<file name="tests/ini.phpt" role="test" />
 	<file name="tests/interface.phpt" role="test" />
 	<file name="tests/interfaces.phpt" role="test" />
+	<file name="tests/ipv6_skipif.inc" role="test" />
 	<file name="tests/isset-empty-compat.phpt" role="test" />
 	<file name="tests/isset-unset.phpt" role="test" />
 	<file name="tests/iterator-funcs.phpt" role="test" />
@@ -93,7 +154,10 @@
 	<file name="tests/merge-non-threaded.phpt" role="test" />
 	<file name="tests/merging-members.phpt" role="test" />
 	<file name="tests/merging-range.phpt" role="test" />
+	<file name="tests/nested-non-threaded-object-references.phpt" role="test" />
+	<file name="tests/new-class-after-thread-creation.phpt" role="test" />
 	<file name="tests/no-cloning.phpt" role="test" />
+	<file name="tests/no-inheritance-anon-class.phpt" role="test" />
 	<file name="tests/norefs.phpt" role="test" />
 	<file name="tests/normal-reads.phpt" role="test" />
 	<file name="tests/normalize-members.phpt" role="test" />
@@ -103,15 +167,41 @@
 	<file name="tests/oomethods.phpt" role="test" />
 	<file name="tests/pools-default.phpt" role="test" />
 	<file name="tests/pools.phpt" role="test" />
+	<file name="tests/private-class-constant-fetching.phpt" role="test" />
+	<file name="tests/pthreads-inherit-none-class-constant.phpt" role="test" />
+	<file name="tests/pthreads-inherit-none-class-constant-inherited.phpt" role="test" />
 	<file name="tests/recv-overload.phpt" role="test" />
 	<file name="tests/resource-keeping.phpt" role="test" />
 	<file name="tests/return-types.phpt" role="test" />
 	<file name="tests/run-time-cache-corruption.phpt" role="test" />
+	<file name="tests/runtime-inheritance-volatile.phpt" role="test" />
 	<file name="tests/runtime-inheritance.phpt" role="test" />
 	<file name="tests/selective-inheritance.phpt" role="test" />
 	<file name="tests/shift-pop.phpt" role="test" />
 	<file name="tests/shutdown-handler.phpt" role="test" />
+	<file name="tests/socket-bind.phpt" role="test" />
+	<file name="tests/socket-connect-error-unix.phpt" role="test" />
+	<file name="tests/socket-connect-error-win32.phpt" role="test" />
+	<file name="tests/socket-connect-params-af-inet.phpt" role="test" />
+	<file name="tests/socket-connect-params-af-unix.phpt" role="test" />
+	<file name="tests/socket-construct.phpt" role="test" />
+	<file name="tests/socket-getoption.phpt" role="test" />
+	<file name="tests/socket-getpeername-af-inet.phpt" role="test" />
+	<file name="tests/socket-getpeername-af-unix.phpt" role="test" />
+	<file name="tests/socket-getsockname-af-inet.phpt" role="test" />
+	<file name="tests/socket-getsockname-af-unix.phpt" role="test" />
+	<file name="tests/socket-ipv4loop.phpt" role="test" />
+	<file name="tests/socket-ipv6loop.phpt" role="test" />
+	<file name="tests/socket-read-type.phpt" role="test" />
+	<file name="tests/socket-select-unix.phpt" role="test" />
+	<file name="tests/socket-select-win32.phpt" role="test" />
+	<file name="tests/socket-sentto-recvfrom-ipv4-udp.phpt" role="test" />
+	<file name="tests/socket-sentto-recvfrom-ipv6-udp.phpt" role="test" />
+	<file name="tests/socket-sentto-recvfrom-unix.phpt" role="test" />
+	<file name="tests/socket-setoption.phpt" role="test" />
+	<file name="tests/socket-unixloop.phpt" role="test" />
 	<file name="tests/stateful-fatalities.phpt" role="test" />
+	<file name="tests/static-inheritance-unexpected-null.phpt" role="test" />
 	<file name="tests/static-resolution.phpt" role="test" />
 	<file name="tests/static-scope-vars.phpt" role="test" />
 	<file name="tests/staticmethods.phpt" role="test" />
@@ -120,17 +210,23 @@
 	<file name="tests/synchronization.phpt" role="test" />
 	<file name="tests/thorn-in-side.phpt" role="test" />
 	<file name="tests/thread.phpt" role="test" />
+	<file name="tests/threaded_valid_tsrmls.phpt" role="test" />
 	<file name="tests/threaded-extend-abstract.phpt" role="test" />
 	<file name="tests/trait-alias-bug.phpt" role="test" />
+	<file name="tests/trait-aliases-reflection.phpt" role="test" />
 	<file name="tests/trait-aliases.phpt" role="test" />
 	<file name="tests/traits-scope.inc" role="test" />
 	<file name="tests/traits-scope.phpt" role="test" />
+	<file name="tests/unprepared-entry-static-segfault.phpt" role="test" />
 	<file name="tests/unset-defaults.phpt" role="test" />
+	<file name="tests/unstack-running.phpt" role="test" />
 	<file name="tests/verify-overload.phpt" role="test" />
 	<file name="tests/volatile-arrays.phpt" role="test" />
+	<file name="tests/volatile-nested.phpt" role="test" />
 	<file name="tests/volatile-objects.phpt" role="test" />
 	<file name="tests/wait.phpt" role="test" />
 	<file name="tests/waiting-timeouts.phpt" role="test" />
+	<file name="tests/workers-constant-copy.phpt" role="test" />
 	<file name="tests/workers-default-collector.phpt" role="test" />
 	<file name="tests/workers-no-collect.phpt" role="test" />
 	<file name="tests/workers-no-join.phpt" role="test" />
@@ -139,6 +235,7 @@
 	<file name="tests/workers-no-start.phpt" role="test" />
 	<file name="tests/workers-no-unstack.phpt" role="test" />
 	<file name="tests/workers-ok-unstack.phpt" role="test" />
+   	<file name="src/sockets/windows_common.h" role="src" />
    	<file name="src/copy.h" role="src" />
 	<file name="src/globals.c" role="src" />
 	<file name="src/globals.h" role="src" />
@@ -153,6 +250,8 @@
 	<file name="src/pthreads.h" role="src" />
 	<file name="src/resources.c" role="src" />
 	<file name="src/resources.h" role="src" />
+	<file name="src/socket.c" role="src" />
+	<file name="src/socket.h" role="src" />
 	<file name="src/stack.c" role="src" />
 	<file name="src/stack.h" role="src" />
 	<file name="src/store.c" role="src" />
@@ -160,6 +259,7 @@
 	<file name="src/thread.h" role="src" />
    	<file name="classes/collectable.h" role="src" />
 	<file name="classes/pool.h" role="src" />
+	<file name="classes/socket.h" role="src" />
 	<file name="classes/thread.h" role="src" />
 	<file name="classes/threaded.h" role="src" />
 	<file name="classes/worker.h" role="src" />
@@ -174,7 +274,7 @@
  <dependencies>
   <required>
    <php>
-    <min>7.0.0RC5</min>
+    <min>7.2.0</min>
    </php>
    <pearinstaller>
     <min>1.4.0b1</min>
