@@ -344,6 +344,9 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	(*op_array->refcount) = 1;
 	/* we never want to share the same runtime cache */
 	op_array->run_time_cache = NULL;
+#if PHP_VERSION_ID >= 70300
+	op_array->fn_flags &= ~ZEND_ACC_DONE_PASS_TWO;
+#endif
 
 	if (op_array->doc_comment) {
 		op_array->doc_comment = zend_string_new(op_array->doc_comment);
@@ -360,7 +363,7 @@ static inline zend_function* pthreads_copy_user_function(zend_function *function
 	if (op_array->literals) op_array->literals = pthreads_copy_literals (literals, op_array->last_literal);
 
 	op_array->opcodes = pthreads_copy_opcodes(op_array, literals);
-	
+
 	if (op_array->arg_info) 	op_array->arg_info = pthreads_copy_arginfo(op_array, arg_info, op_array->num_args);
 	if (op_array->live_range)		op_array->live_range = pthreads_copy_live(op_array->live_range, op_array->last_live_range);
 	if (op_array->try_catch_array)  op_array->try_catch_array = pthreads_copy_try(op_array->try_catch_array, op_array->last_try_catch);
