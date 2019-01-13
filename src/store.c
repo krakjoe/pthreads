@@ -87,6 +87,8 @@ void pthreads_store_sync(zval *object) { /* {{{ */
 } /* }}} */
 
 static inline zend_bool pthreads_store_coerce(HashTable *table, zval *key, zval *member) {
+	zend_ulong hval;
+
 	if (!key || Z_TYPE_P(key) == IS_NULL) {
 		ZVAL_LONG(member, zend_hash_next_free_element(table));
 		return 0;
@@ -94,6 +96,10 @@ static inline zend_bool pthreads_store_coerce(HashTable *table, zval *key, zval 
 
 	switch (Z_TYPE_P(key)) {
 		case IS_STRING:
+			if (ZEND_HANDLE_NUMERIC(Z_STR_P(key), hval)) {
+				ZVAL_LONG(member, hval);
+				return 0;
+			}
 		case IS_LONG:
 			ZVAL_ZVAL(member, key, 0, 0);
 			return 0;
@@ -142,13 +148,13 @@ int pthreads_store_delete(zval *object, zval *key) {
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		if (!pthreads_store_is_immutable(object, &member)) {
-			if (Z_TYPE_P(key) == IS_LONG) {
+			if (Z_TYPE(member) == IS_LONG) {
 				result = zend_hash_index_del(threaded->store.props, Z_LVAL(member));
 			} else result = zend_hash_del(threaded->store.props, Z_STR(member));
 		}
 		pthreads_monitor_unlock(threaded->monitor);
 	} else result = FAILURE;
-	
+
 	if (result == SUCCESS) {
 		if (Z_TYPE(member) == IS_LONG) {
 			zend_hash_index_del(threaded->std.properties, Z_LVAL(member));
@@ -371,7 +377,7 @@ int pthreads_store_write(zval *object, zval *key, zval *write) {
 			if (Z_TYPE(member) == IS_LONG) {
 				zend_hash_index_update(threaded->std.properties, Z_LVAL(member), write);
 			} else {
-				zend_string *keyed = zend_string_dup(Z_STR(member), 1);
+				zend_string *keyed = zend_string_dup(Z_STR(member), 0);
 				if (zend_hash_update(
 					threaded->std.properties, keyed, write)) {
 					result = SUCCESS;
@@ -492,7 +498,7 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 				}
 			} else break;
 
-			zend_hash_move_forward_ex(threaded->store.props, &position);
+			zend_hash_internal_pointer_reset_ex(threaded->store.props, &position);
 		}
 		pthreads_monitor_unlock(threaded->monitor);
 
@@ -718,17 +724,20 @@ int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 		case IS_CLOSURE: {
 			char *name;
 			size_t name_len;
+			zend_string *zname;
 			zend_function *closure = pthreads_copy_function((zend_function*) storage->data);
 
 			zend_create_closure(pzval, closure, zend_get_executed_scope(), closure->common.scope, NULL);
 
 			name_len = spprintf(&name, 0, "Closure@%p", zend_get_closure_method_def(pzval));
+			zname = zend_string_init(name, name_len, 0);
 
-			if (!zend_hash_str_update_ptr(EG(function_table), name, name_len, closure)) {
+			if (!zend_hash_update_ptr(EG(function_table), zname, closure)) {
 				result = FAILURE;
 				zval_dtor(pzval);
 			} else result = SUCCESS;
 			efree(name);
+			zend_string_release(zname);
 		} break;
 
 		case IS_PTHREADS: {
@@ -1021,15 +1030,30 @@ void pthreads_store_reset(zval *object, HashPosition *position) {
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_hash_internal_pointer_reset_ex(threaded->store.props, position);
+		if (zend_hash_has_more_elements_ex(threaded->store.props, position) == FAILURE) { //empty
+			*position = HT_INVALID_IDX;
+		}
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 }
 
 void pthreads_store_key(zval *object, zval *key, HashPosition *position) {
 	pthreads_object_t *threaded = PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+	zend_string *str_key;
+	zend_ulong num_key;
 
 	if (pthreads_monitor_lock(threaded->monitor)) {
-		zend_hash_get_current_key_zval_ex(threaded->store.props, key, position);
+		switch (zend_hash_get_current_key_ex(threaded->store.props, &str_key, &num_key, position)) {
+			case HASH_KEY_NON_EXISTENT:
+				ZVAL_NULL(key);
+			break;
+			case HASH_KEY_IS_LONG:
+				ZVAL_LONG(key, num_key);
+			break;
+			case HASH_KEY_IS_STRING:
+				ZVAL_STR(key, zend_string_dup(str_key, 0));
+			break;
+		}
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 }
@@ -1055,6 +1079,9 @@ void pthreads_store_forward(zval *object, HashPosition *position) {
 	if (pthreads_monitor_lock(threaded->monitor)) {
 		zend_hash_move_forward_ex(
 			threaded->store.props, position);
+		if (zend_hash_has_more_elements_ex(threaded->store.props, position) == FAILURE) {
+			*position = HT_INVALID_IDX;
+		}
 		pthreads_monitor_unlock(threaded->monitor);
 	}
 } /* }}} */

@@ -39,5 +39,5 @@ display_errors=1
 Warning: Socket::__construct() expects exactly 3 parameters, 0 given in %s on line %d
 
 Warning: Socket::__construct() expects exactly 3 parameters, 2 given in %s on line %d
-string(%d) "Argument 1 passed to Socket::__construct() must be of the type integer, array given"
+string(%d) "Argument 1 passed to Socket::__construct() must be of the type %s, array given"
 string(%d) "Unable to create socket (%d): Address family not supported by protocol"
