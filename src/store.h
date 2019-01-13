@@ -27,6 +27,17 @@
 
 typedef HashTable pthreads_store_t;
 
+typedef struct _pthreads_storage {
+	zend_uchar 	type;
+	size_t 	length;
+	zend_bool 	exists;
+	union {
+		zend_long   lval;
+		double     dval;
+	} simple;
+	void    	*data;
+} pthreads_storage;
+
 pthreads_store_t* pthreads_store_alloc();
 void pthreads_store_sync(zval *object);
 int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite);
@@ -48,5 +59,9 @@ void pthreads_store_reset(zval *object, HashPosition *position);
 void pthreads_store_key(zval *object, zval *key, HashPosition *position);
 void pthreads_store_data(zval *object, zval *value, HashPosition *position);
 void pthreads_store_forward(zval *object, HashPosition *position); /* }}} */
+
+pthreads_storage* pthreads_store_create(zval *pzval, zend_bool complex);
+int pthreads_store_convert(pthreads_storage *storage, zval *pzval);
+void pthreads_store_storage_dtor(pthreads_storage *element);
 
 #endif

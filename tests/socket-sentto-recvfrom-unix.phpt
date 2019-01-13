@@ -57,7 +57,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
     @unlink($address);
 ?>
 --EXPECTF--
-string(%d) "Error (%d): Protocol not supported"
+string(%d) "Unable to create socket (%d): Protocol not supported"
 bool(false)
 
 Warning: Socket::sendto() expects at least 4 parameters, 3 given in %s on line %d

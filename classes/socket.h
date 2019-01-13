@@ -40,6 +40,7 @@ PHP_METHOD(Socket, getSockName);
 
 PHP_METHOD(Socket, getLastError);
 PHP_METHOD(Socket, clearError);
+PHP_METHOD(Socket, strerror);
 
 PHP_METHOD(Socket, close);
 
@@ -60,7 +61,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_getOption, 0, 2, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(0, name,  IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_bind, 0, 2, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_bind, 0, 1, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, host, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, port, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -69,7 +70,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_listen, 0, 1, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, backlog, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_connect, 0, 2, _IS_BOOL, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_connect, 0, 1, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO(0, host, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, port, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -77,6 +78,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Socket_read, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, length, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(0, flags, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(0, type, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Socket_write, 0, 0, 1)
@@ -114,11 +116,11 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_getHost, 0, 0, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, port, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Socket_select, 0, 0, 3)
+ZEND_BEGIN_ARG_INFO_EX(Socket_select, 0, 0, 4)
 	ZEND_ARG_TYPE_INFO(1, read, IS_ARRAY, 1)
 	ZEND_ARG_TYPE_INFO(1, write, IS_ARRAY, 1)
 	ZEND_ARG_TYPE_INFO(1, except, IS_ARRAY, 1)
-	ZEND_ARG_TYPE_INFO(0, sec, IS_LONG, 0)
+	ZEND_ARG_TYPE_INFO(0, sec, IS_LONG, 1)
 	ZEND_ARG_TYPE_INFO(0, usec, IS_LONG, 0)
 	ZEND_ARG_TYPE_INFO(1, error, IS_LONG, 1)
 ZEND_END_ARG_INFO()
@@ -129,6 +131,10 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Socket_getLastError, 0, 0, 0)
 	ZEND_ARG_TYPE_INFO(0, clear, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(Socket_strerror, 0, 1, IS_STRING, 1)
+	ZEND_ARG_TYPE_INFO(0, error, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Socket_void, 0, 0, 0)
@@ -158,6 +164,7 @@ zend_function_entry pthreads_socket_methods[] = {
 	PHP_ME(Socket, close, Socket_void, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, getLastError, Socket_getLastError, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, clearError, Socket_void, ZEND_ACC_PUBLIC)
+	PHP_ME(Socket, strerror, Socket_strerror, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
 
@@ -183,7 +190,7 @@ PHP_METHOD(Socket, setOption) {
 	zend_long value = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "lll", &level, &name, &value) != SUCCESS) {
-		return;
+		RETURN_FALSE;
 	}
 
 	pthreads_socket_set_option(getThis(), level, name, value, return_value);
@@ -196,7 +203,7 @@ PHP_METHOD(Socket, getOption) {
 	zend_long name = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &level, &name) != SUCCESS) {
-		return;
+		RETURN_LONG(0);
 	}
 
 	pthreads_socket_get_option(getThis(), level, name, return_value);
@@ -208,17 +215,17 @@ PHP_METHOD(Socket, bind) {
 	zend_long port = 0;
 	
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "S|l", &host, &port) != SUCCESS) {
-		return;
+		RETURN_FALSE;
 	}
 
 	pthreads_socket_bind(getThis(), host, port, return_value);
 } /* }}} */
 
-/* {{{ proto bool Socket::listen(int backlog) */
+/* {{{ proto bool Socket::listen([int backlog = 0]) */
 PHP_METHOD(Socket, listen) {
 	zend_long backlog = 0;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &backlog) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &backlog) != SUCCESS) {
 		return;
 	}
 
@@ -236,40 +243,41 @@ PHP_METHOD(Socket, accept) {
 	pthreads_socket_accept(getThis(), ce, return_value);
 } /* }}} */
 
-/* {{{ proto bool Socket::connect(string host, int port) */
+/* {{{ proto bool Socket::connect(string host[, int port]) */
 PHP_METHOD(Socket, connect) {
 	zend_string *host = NULL;
 	zend_long port = 0;
+	int argc = ZEND_NUM_ARGS();
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "Sl", &host, &port) != SUCCESS) {
-		return;
+	if (zend_parse_parameters(argc, "S|l", &host, &port) != SUCCESS) {
+		RETURN_FALSE;
 	}
 
-	pthreads_socket_connect(getThis(), host, port, return_value);
+	pthreads_socket_connect(getThis(), argc, host, port, return_value);
 } /* }}} */
 
-/* {{{ proto int|bool Socket::select(array &read, array &write, array &except [, int sec = 0 [, int usec = 0 [, int &error]]]) */
+/* {{{ proto int|bool Socket::select(array &read, array &write, array &except, int sec [, int usec = 0 [, int &error]]) */
 PHP_METHOD(Socket, select) {
-	zval *read, *write, *except, *errorno = NULL;
-	zend_long sec = 0;
+	zval *read, *write, *except, *sec, *errorno = NULL;
 	zend_long usec = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "a/!a/!a/!|llz/", &read, &write, &except, &sec, &usec, &errorno) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "a/!a/!a/!z!|lz/", &read, &write, &except, &sec, &usec, &errorno) != SUCCESS) {
 		return;
 	}
 	pthreads_socket_select(read, write, except, sec, usec, errorno, return_value);
 } /* }}} */
 
-/* {{{ proto string|bool Socket::read(int length [, int flags = 0]) */
+/* {{{ proto string|bool Socket::read(int length [, int flags = 0 [, int type = Socket::BINARY_READ]]) */
 PHP_METHOD(Socket, read) {
 	zend_long length = 0;
 	zend_long flags = 0;
+	zend_long type = PTHREADS_BINARY_READ;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|l", &length, &flags) != SUCCESS) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|ll", &length, &flags, &type) != SUCCESS) {
 		return;
 	}
 
-	pthreads_socket_read(getThis(), length, flags, return_value);
+	pthreads_socket_read(getThis(), length, flags, type, return_value);
 } /* }}} */
 
 /* {{{ proto int|bool Socket::write(string buffer [, int length]) */
@@ -332,7 +340,7 @@ PHP_METHOD(Socket, setBlocking) {
 	zend_bool blocking = 0;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "b", &blocking) != SUCCESS) {
-		return;
+		RETURN_FALSE;
 	}
 
 	pthreads_socket_set_blocking(getThis(), blocking, return_value);
@@ -378,6 +386,17 @@ PHP_METHOD(Socket, clearError) {
 	}
 
 	pthreads_socket_clear_error(getThis());
+} /* }}} */
+
+/* {{{ proto string|null Socket::strerror(int error) */
+PHP_METHOD(Socket, strerror) {
+	zend_long error = 0;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &error) != SUCCESS) {
+		RETURN_NULL();
+	}
+
+	pthreads_socket_strerror(error, return_value);
 } /* }}} */
 
 /* {{{ proto bool Socket::close(void) */

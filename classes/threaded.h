@@ -40,7 +40,7 @@ PHP_METHOD(Threaded, getRefCount);
 ZEND_BEGIN_ARG_INFO_EX(Threaded_run, 0, 0, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_wait, 0, 0, 0)
-	ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 1)
+	ZEND_ARG_TYPE_INFO(0, timeout, IS_LONG, 0)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(Threaded_notify, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -320,7 +320,7 @@ PHP_METHOD(Threaded, extend) {
     if (is_final)
         ce->ce_flags = ce->ce_flags &~ ZEND_ACC_FINAL;
 
-	parent = zend_get_executed_scope();
+	parent = zend_get_called_scope(EG(current_execute_data));
 
 	zend_do_inheritance(ce, parent);
 

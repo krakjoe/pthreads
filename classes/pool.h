@@ -26,8 +26,8 @@ PHP_METHOD(Pool, shutdown);
 
 ZEND_BEGIN_ARG_INFO_EX(Pool___construct, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, size, IS_LONG, 0)
-	ZEND_ARG_TYPE_INFO(0, class, IS_STRING, 1)
-	ZEND_ARG_TYPE_INFO(0, ctor, IS_ARRAY, 1)
+	ZEND_ARG_TYPE_INFO(0, class, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, ctor, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_resize, 0, 0, 1)
@@ -43,8 +43,8 @@ ZEND_BEGIN_ARG_INFO_EX(Pool_submitTo, 0, 0, 2)
 	ZEND_ARG_OBJ_INFO(0, task, Threaded, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(Pool_collect, 0, 0, 1)
-	ZEND_ARG_OBJ_INFO(0, collector, Closure, 0)
+ZEND_BEGIN_ARG_INFO_EX(Pool_collect, 0, 0, 0)
+	ZEND_ARG_CALLABLE_INFO(0, collector, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(Pool_noargs, 0, 0, 0)

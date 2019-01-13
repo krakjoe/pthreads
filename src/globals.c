@@ -47,27 +47,18 @@ zend_bool pthreads_globals_init(){
 		    	&PTHREADS_G(objects), 64, NULL, (dtor_func_t) NULL, 1);
 		}
 
-#if PHP_VERSION_ID >= 70300
 #define INIT_STRING(n, v) do { \
-	PTHREADS_G(strings).n = zend_string_init(v, 1); \
-	GC_ADDREF(PTHREADS_G(strings).n); \
+	PTHREADS_G(strings).n = zend_new_interned_string(zend_string_init(v, 1)); \
 } while(0)
-#else
-#define INIT_STRING(n, v) do { \
-	PTHREADS_G(strings).n = zend_string_init(v, 1); \
-	GC_REFCOUNT(PTHREADS_G(strings).n)++; \
-} while(0)
-#endif
 
 		INIT_STRING(run, ZEND_STRL("run"));
 		INIT_STRING(session.cache_limiter, ZEND_STRL("cache_limiter"));
 		INIT_STRING(session.use_cookies, ZEND_STRL("use_cookies"));
 #undef INIT_STRING
 
-		ZVAL_NEW_STR(
+		ZVAL_INTERNED_STR(
 			&PTHREADS_G(strings).worker, 
-			zend_string_init(ZEND_STRL("worker"), 1));
-		Z_ADDREF(PTHREADS_G(strings).worker);
+			zend_new_interned_string(zend_string_init(ZEND_STRL("worker"), 1)));
 
 		return PTHREADS_G(init);
 	} else return 0;
