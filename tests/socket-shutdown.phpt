@@ -2,7 +2,7 @@
 Test of Socket::shutdown() - testing params and separate shutdown of read and write channel
 --SKIPIF--
 <?php
-    //if(getenv("SKIP_ONLINE_TESTS")) die("skip online test");
+    if(getenv("SKIP_ONLINE_TESTS")) die("skip online test");
     if(!method_exists(\Socket::class, 'shutdown')) {
         die('skip.. Socket::shutdown() doesn\'t exist');
     }
