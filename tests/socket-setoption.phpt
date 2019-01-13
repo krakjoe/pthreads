@@ -15,6 +15,6 @@ Test of Socket::setOption() with and without parameters
 ?>
 --EXPECTF--
 Warning: Socket::setOption() expects exactly 3 parameters, 0 given in %s on line %i
-string(%i) "Argument 1 passed to Socket::setOption() must be of the type integer, string given"
+string(%i) "Argument 1 passed to Socket::setOption() must be of the type %s, string given"
 bool(true)
 int(1)

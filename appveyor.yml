@@ -78,7 +78,7 @@ test_script:
 - cmd: >-
     set REPORT_EXIT_STATUS=1
 
-    php.exe /projects/php-src/run-tests.php /projects/php-src/ext/pthreads -q --show-diff
+    php.exe /projects/php-src/run-tests.php /projects/php-src/ext/pthreads -q --show-diff --offline
 artifacts:
   - path: bin
     name: master
