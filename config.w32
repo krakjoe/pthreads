@@ -6,6 +6,7 @@ var PTHREADS_EXT_FLAGS="/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 /I" + configure_modu
 var PTHREADS_EXT_DEP="pthreadVC2.lib";
 /* --------------------------------------------------------------------- */
 ARG_WITH("pthreads", "for pthreads support", "no");
+ARG_WITH("pthreads-igbinary", "for igbinary support in pthreads", "no");
 
 if (PHP_PTHREADS != "no") {
 	if(CHECK_HEADER_ADD_INCLUDE("pthread.h", "CFLAGS_PTHREADS", PHP_PTHREADS + ";" + configure_module_dirname) &&    
@@ -19,6 +20,10 @@ if (PHP_PTHREADS != "no") {
 			PTHREADS_EXT_SRC, 
 			PTHREADS_EXT_NAME
 		);
+		if(PHP_PTHREADS_IGBINARY != "no"){
+			ADD_EXTENSION_DEP(PTHREADS_EXT_NAME, 'igbinary');
+			AC_DEFINE('HAVE_PTHREADS_IGBINARY', 1, 'Whether pthreads has igbinary support', false);
+		}
 	} else {
 		WARNING("pthreads not enabled; libraries and headers not found");
 	}

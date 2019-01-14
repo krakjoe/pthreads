@@ -7,6 +7,9 @@ PHP_ARG_WITH(pthreads-sanitize, whether to enable AddressSanitizer for pthreads,
 PHP_ARG_WITH(pthreads-dmalloc, whether to enable dmalloc for pthreads,
 [  --with-pthreads-dmalloc   Enable dmalloc for pthreads], no, no)
 
+PHP_ARG_WITH(pthreads-igbinary, whether to enable igbinary support for pthreads,
+[  --with-pthreads-igbinary   Enable igbinary serializer for pthreads], no, no)
+
 if test "$PHP_PTHREADS" != "no"; then
 	AC_MSG_CHECKING([for ZTS])   
 	if test "$PHP_THREAD_SAFETY" != "no"; then
@@ -28,6 +31,12 @@ if test "$PHP_PTHREADS" != "no"; then
 	fi
 
 	PHP_NEW_EXTENSION(pthreads, php_pthreads.c src/monitor.c src/stack.c src/globals.c src/prepare.c src/store.c src/resources.c src/handlers.c src/object.c src/socket.c, $ext_shared,, -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1)
+	
+	if test "$PHP_PTHREADS_IGBINARY" != "no"; then
+		PHP_ADD_EXTENSION_DEP(pthreads, igbinary)
+		AC_DEFINE(HAVE_PTHREADS_IGBINARY, 1, [Whether pthreads has igbinary support])
+	fi
+	
 	PHP_ADD_BUILD_DIR($ext_builddir/src, 1)
 	PHP_ADD_INCLUDE($ext_builddir)
 	PHP_SUBST(PTHREADS_SHARED_LIBADD)

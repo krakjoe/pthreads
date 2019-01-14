@@ -42,6 +42,9 @@
 #	include <src/store.h>
 #endif
 
+#if defined(HAVE_PTHREADS_IGBINARY) && !defined(PHPEXT_IGBINARY_BASE_IGBINARY_H)
+#	include <ext/igbinary/igbinary.h>
+#endif
 
 #define PTHREADS_STORAGE_EMPTY {0, 0, 0, 0, NULL}
 
@@ -797,15 +800,43 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
 
+#ifdef HAVE_PTHREADS_IGBINARY
+/* {{{ igbinary memory manager wrappers */
+static inline void* pthreads_igbinary_malloc(size_t size, void *context) {
+	(void)context;
+	return malloc(size);
+}
+
+static inline void* pthreads_igbinary_realloc(void *ptr, size_t new_size, void *context) {
+	(void)context;
+	return realloc(ptr, new_size);
+}
+
+static inline void pthreads_igbinary_free(void *ptr, void *context) {
+	(void)context;
+	free(ptr);
+}
+
+struct igbinary_memory_manager igbinary_mem_manager = {
+	pthreads_igbinary_malloc,
+	pthreads_igbinary_realloc,
+	pthreads_igbinary_free,
+	NULL
+};
+
+/* }}} */
+#endif
+
 /* {{{ */
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex) {
 	int result = FAILURE;
 	if (pzval && (Z_TYPE_P(pzval) != IS_NULL)) {
-		smart_str smart;
 		HashTable *tmp = NULL;
 		zval ztmp;
-
+#ifndef HAVE_PTHREADS_IGBINARY
+		smart_str smart;
 		memset(&smart, 0, sizeof(smart_str));
+#endif
 
 		if (Z_TYPE_P(pzval) == IS_ARRAY && !complex) {
 			tmp = zend_array_dup(Z_ARRVAL_P(pzval));
@@ -818,15 +849,22 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 
 		if ((Z_TYPE_P(pzval) != IS_OBJECT) ||
 			(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
+			int ret = 0;
+
+#ifndef HAVE_PTHREADS_IGBINARY
 			php_serialize_data_t vars;
 
 			PHP_VAR_SERIALIZE_INIT(vars);
 			php_var_serialize(&smart, pzval, &vars);
 			PHP_VAR_SERIALIZE_DESTROY(vars);
+#else
+			ret = igbinary_serialize_ex((uint8_t **) pstring, slength, pzval, &igbinary_mem_manager);
+#endif
 
-			if (EG(exception)) {
+			if (EG(exception) || ret != 0) {
+#ifndef HAVE_PTHREADS_IGBINARY
 				smart_str_free(&smart);
-
+#endif
 				if (tmp) {
 					zval_dtor(&ztmp);
 				}
@@ -841,6 +879,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 			zval_dtor(&ztmp);
 		}
 
+#ifndef HAVE_PTHREADS_IGBINARY
 		if (smart.s) {
 			*slength = smart.s->len;
 			if (*slength) {
@@ -854,8 +893,10 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 				}
 			} else *pstring = NULL;
 		}
-		
-		smart_str_free(&smart);	
+		smart_str_free(&smart);
+#else
+		result = SUCCESS;
+#endif
 	} else {
 	    *slength = 0;
 	    *pstring = NULL;
@@ -868,6 +909,7 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength) {
 	int result = SUCCESS;
 	
 	if (pstring) {
+#ifndef HAVE_PTHREADS_IGBINARY
 		const unsigned char* pointer = (const unsigned char*) pstring;
 
 		if (pointer) {
@@ -879,6 +921,13 @@ static int pthreads_store_tozval(zval *pzval, char *pstring, size_t slength) {
 			}
 			PHP_VAR_UNSERIALIZE_DESTROY(vars);
 		} else result = FAILURE;
+#else
+		const uint8_t * pointer = (const uint8_t *)pstring;
+
+		if (!pointer || igbinary_unserialize(pointer, slength, pzval) != 0) {
+			result = FAILURE;
+		}
+#endif
 	} else result = FAILURE;
 	
 	return result;

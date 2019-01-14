@@ -51,8 +51,17 @@
 #	include <src/copy.h>
 #endif
 
+const static zend_module_dep pthreads_module_deps[] = {
+#ifdef HAVE_PTHREADS_IGBINARY
+	ZEND_MOD_REQUIRED("igbinary")
+#endif
+	ZEND_MOD_END
+};
+
 zend_module_entry pthreads_module_entry = {
-  STANDARD_MODULE_HEADER,
+  STANDARD_MODULE_HEADER_EX,
+  NULL,
+  pthreads_module_deps,
   PHP_PTHREADS_EXTNAME,
   NULL,
   PHP_MINIT(pthreads),
@@ -880,6 +889,11 @@ PHP_MINFO_FUNCTION(pthreads)
 {
 	php_info_print_table_start();
 	php_info_print_table_row(2, "Version", PHP_PTHREADS_VERSION);
+#ifdef HAVE_PTHREADS_IGBINARY
+	php_info_print_table_row(2, "Serializer", "igbinary");
+#else
+	php_info_print_table_row(2, "Serializer", "standard");
+#endif
 	php_info_print_table_end();
 }
 
