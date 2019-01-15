@@ -776,19 +776,9 @@ int pthreads_store_convert(pthreads_storage *storage, zval *pzval){
 /* {{{ */
 static inline int pthreads_store_remove_complex(zval *pzval) {
 	switch (Z_TYPE_P(pzval)) {
-		case IS_ARRAY: {
-			HashTable *tmp = zend_array_dup(Z_ARRVAL_P(pzval));
-
-			zend_hash_apply(tmp, pthreads_store_remove_complex);
-
-			zval_ptr_dtor(pzval);
-
-			ZVAL_ARR(pzval, tmp);
-		} break;
-
-		case IS_OBJECT:
-			if (instanceof_function(Z_OBJCE_P(pzval), pthreads_threaded_entry))
-				break;
+		case IS_ARRAY:
+			zend_hash_apply(Z_ARRVAL_P(pzval), pthreads_store_remove_complex);
+		break;
 
 		case IS_RESOURCE:
 			return ZEND_HASH_APPLY_REMOVE; 
@@ -796,6 +786,127 @@ static inline int pthreads_store_remove_complex(zval *pzval) {
 
 	return ZEND_HASH_APPLY_KEEP;
 } /* }}} */
+
+static const uint32_t uninitialized_bucket[-HT_MIN_MASK] = {HT_INVALID_IDX, HT_INVALID_IDX};
+
+static zend_always_inline void* pthreads_store_copy_mem(void *source, size_t size, zend_bool persistent) {
+	void *destination = (void*) pemalloc(size, persistent);
+
+	memcpy(destination, source, size);
+
+	return destination;
+}
+
+HashTable *pthreads_store_copy_hash(HashTable *source, zend_bool persistent);
+
+static zend_always_inline void pthreads_store_zval_dtor(zval *zv) {
+	if (Z_TYPE_P(zv) == IS_ARRAY) {
+		zend_hash_destroy(Z_ARRVAL_P(zv));
+#if PHP_VERSION_ID < 70300
+		pefree(Z_ARRVAL_P(zv), Z_ARRVAL_P(zv)->u.flags & HASH_FLAG_PERSISTENT);
+#else
+		pefree(Z_ARRVAL_P(zv), GC_FLAGS(Z_ARRVAL_P(zv)) & IS_ARRAY_PERSISTENT);
+#endif
+	} else if (Z_TYPE_P(zv) == IS_STRING) {
+		zend_string_release(Z_STR_P(zv));
+	} else {
+		if (Z_REFCOUNTED_P(zv)) {
+			zval_ptr_dtor(zv);
+		}
+	}
+}
+
+void pthreads_store_copy_zval(zval *dest, zval *source, zend_bool persistent) {
+	switch (Z_TYPE_P(source)) {
+		case IS_NULL:
+		case IS_TRUE:
+		case IS_FALSE:
+		case IS_LONG:
+		case IS_DOUBLE:
+			ZVAL_DUP(dest, source);
+		break;
+
+		case IS_STRING:
+			ZVAL_STR(dest, zend_string_init(Z_STRVAL_P(source), Z_STRLEN_P(source), persistent));
+		break;
+
+		case IS_ARRAY:
+			ZVAL_ARR(dest, pthreads_store_copy_hash(Z_ARRVAL_P(source), persistent));
+		break;
+
+		case IS_OBJECT:
+			if (instanceof_function(Z_OBJCE_P(source), pthreads_threaded_entry)) {
+				ZVAL_COPY(dest, source);
+			} else  ZVAL_NULL(dest);
+		break;
+
+		case IS_RESOURCE:
+			ZVAL_COPY_VALUE(dest, source);
+		break;
+
+		default:
+			ZVAL_NULL(dest);
+	}
+}
+
+#ifndef GC_SET_REFCOUNT
+# define GC_SET_REFCOUNT(ref, rc) (GC_REFCOUNT(ref) = (rc))
+#endif
+
+/*
+* This may be used for copying hashes into store without serialization, you want them persistently allocated in store
+* and copied out without persistence
+*/
+HashTable *pthreads_store_copy_hash(HashTable *source, zend_bool persistent) {
+	uint32_t idx;
+	HashTable *ht = (HashTable*) pthreads_store_copy_mem(
+					source, sizeof(HashTable), persistent);
+
+	GC_SET_REFCOUNT(ht, 1);
+
+#if PHP_VERSION_ID < 70300
+	GC_TYPE_INFO(ht) = IS_ARRAY;
+	ht->u.flags = persistent ? 
+		HASH_FLAG_APPLY_PROTECTION | HASH_FLAG_PERSISTENT :
+		HASH_FLAG_APPLY_PROTECTION;
+#else
+	GC_TYPE_INFO(ht) = persistent ? IS_ARRAY|IS_ARRAY_PERSISTENT : IS_ARRAY;
+#endif
+
+	ht->pDestructor = pthreads_store_zval_dtor;
+
+	ht->u.flags |= HASH_FLAG_STATIC_KEYS;
+	if (ht->nNumUsed == 0) {
+		ht->u.flags &= ~(HASH_FLAG_INITIALIZED|HASH_FLAG_PACKED);
+		ht->nNextFreeElement = 0;
+		ht->nTableMask = HT_MIN_MASK;
+		HT_SET_DATA_ADDR(ht, &uninitialized_bucket);
+		return ht;
+	}
+
+	ht->nNextFreeElement = 0;
+	ht->nInternalPointer = HT_INVALID_IDX;
+	HT_SET_DATA_ADDR(ht, pthreads_store_copy_mem(HT_GET_DATA_ADDR(ht), HT_USED_SIZE(ht), persistent));
+	for (idx = 0; idx < ht->nNumUsed; idx++) {
+		Bucket *p = ht->arData + idx;
+		if (Z_TYPE(p->val) == IS_UNDEF) continue;
+
+		if (ht->nInternalPointer == HT_INVALID_IDX) {
+			ht->nInternalPointer = idx;
+		}
+
+		if (p->key) {
+			p->key = zend_string_init(ZSTR_VAL(p->key), ZSTR_LEN(p->key), persistent);
+			ht->u.flags &= ~HASH_FLAG_STATIC_KEYS;
+		} else if ((zend_long) p->h >= (zend_long) ht->nNextFreeElement) {
+			ht->nNextFreeElement = p->h + 1;
+		}
+
+		pthreads_store_copy_zval(&p->val, &p->val, persistent);
+	}
+
+	return ht;
+}
 
 /* {{{ */
 static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength, zend_bool complex) {
@@ -808,7 +919,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 		memset(&smart, 0, sizeof(smart_str));
 
 		if (Z_TYPE_P(pzval) == IS_ARRAY && !complex) {
-			tmp = zend_array_dup(Z_ARRVAL_P(pzval));
+			tmp = pthreads_store_copy_hash(Z_ARRVAL_P(pzval), 0);
 
 			ZVAL_ARR(&ztmp, tmp);
 			pzval = &ztmp;

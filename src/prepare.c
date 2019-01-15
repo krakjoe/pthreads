@@ -105,9 +105,6 @@ static void prepare_class_statics(pthreads_object_t* thread, zend_class_entry *c
 	if (candidate->default_static_members_count) {
 		int i;
 
-		if(prepared->default_static_members_table != NULL) {
-			efree(prepared->default_static_members_table);
-		}
 		prepared->default_static_members_table = (zval*) ecalloc(
 			sizeof(zval), candidate->default_static_members_count);
 		prepared->default_static_members_count = candidate->default_static_members_count;
@@ -120,6 +117,7 @@ static void prepare_class_statics(pthreads_object_t* thread, zend_class_entry *c
 				&candidate->default_static_members_table[i],
 				&prepared->default_static_members_table[i], 0);
 		}	
+
 		prepared->static_members_table = prepared->default_static_members_table;
 	} else prepared->default_static_members_count = 0;
 } /* }}} */
