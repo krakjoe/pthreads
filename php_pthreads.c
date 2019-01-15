@@ -51,10 +51,65 @@
 #	include <src/copy.h>
 #endif
 
+static zend_internal_function zend_putenv_function;
+static zend_internal_function zend_getenv_function;
+
+PHP_FUNCTION(pthreads_putenv)
+{
+	pthreads_globals_lock();
+
+	zend_try {
+		zend_fcall_info fci = empty_fcall_info;
+		zend_fcall_info_cache fcc = empty_fcall_info_cache;
+
+		fci.size = sizeof(zend_fcall_info);
+		fci.params = ZEND_CALL_ARG(execute_data, 1);
+		fci.param_count = ZEND_NUM_ARGS();
+		fci.retval = return_value;
+		fcc.function_handler = (zend_function*) &zend_putenv_function;
+#if PHP_VERSION_ID <= 70300
+		fcc.initialized = 1;
+#endif
+
+		zend_call_function(&fci, &fcc);
+	} zend_end_try();
+
+	pthreads_globals_unlock();
+}
+
+PHP_FUNCTION(pthreads_getenv)
+{
+	pthreads_globals_lock();
+
+	zend_try {
+		zend_fcall_info fci = empty_fcall_info;
+		zend_fcall_info_cache fcc = empty_fcall_info_cache;
+
+		fci.size = sizeof(zend_fcall_info);
+		fci.params = ZEND_CALL_ARG(execute_data, 1);
+		fci.param_count = ZEND_NUM_ARGS();
+		fci.retval = return_value;
+		fcc.function_handler = (zend_function*) &zend_getenv_function;
+#if PHP_VERSION_ID <= 70300
+		fcc.initialized = 1;
+#endif
+
+		zend_call_function(&fci, &fcc);
+	} zend_end_try();
+
+	pthreads_globals_unlock();
+}
+
+zend_function_entry php_pthreads_functions[] = {
+	PHP_FE(pthreads_putenv, NULL)
+	PHP_FE(pthreads_getenv, NULL)
+	PHP_FE_END
+};
+
 zend_module_entry pthreads_module_entry = {
   STANDARD_MODULE_HEADER,
   PHP_PTHREADS_EXTNAME,
-  NULL,
+  php_pthreads_functions,
   PHP_MINIT(pthreads),
   PHP_MSHUTDOWN(pthreads),
   PHP_RINIT(pthreads),
@@ -854,6 +909,7 @@ ZEND_MODULE_POST_ZEND_DEACTIVATE_D(pthreads)
 
 PHP_RINIT_FUNCTION(pthreads) {
 	ZEND_TSRMLS_CACHE_UPDATE();
+	void *function;
 
 	zend_hash_init(&PTHREADS_ZG(resolve), 15, NULL, NULL, 0);
 	zend_hash_init(&PTHREADS_ZG(filenames), 15, NULL, NULL, 0);
@@ -864,6 +920,34 @@ PHP_RINIT_FUNCTION(pthreads) {
 		if (memcmp(sapi_module.name, ZEND_STRL("cli")) == SUCCESS) {
 			sapi_module.deactivate = NULL;
 		}
+	}
+
+	function = zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("putenv"));
+
+	if (function) {
+		zend_function *pthreads_putenv;
+
+		memcpy(&zend_putenv_function, function, sizeof(zend_internal_function));
+
+		function_add_ref((zend_function*) &zend_putenv_function);
+
+		memcpy(function, zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("pthreads_putenv")), sizeof(zend_internal_function));
+
+		function_add_ref(function);
+	}
+
+	function = zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("getenv"));
+
+	if (function) {
+		zend_function *pthreads_getenv;
+
+		memcpy(&zend_getenv_function, function, sizeof(zend_internal_function));
+
+		function_add_ref((zend_function*) &zend_getenv_function);
+
+		memcpy(function, zend_hash_str_find_ptr(CG(function_table), ZEND_STRL("pthreads_getenv")), sizeof(zend_internal_function));
+
+		function_add_ref(function);
 	}
 
 	return SUCCESS;
