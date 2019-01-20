@@ -639,7 +639,7 @@ PHP_METHOD(Stream, enableCrypto) {
 		return;
 	}
 
-	if (enable && (ZEND_NUM_ARGS() < 3 || cryptokind == 0)) {
+	if (enable && (ZEND_NUM_ARGS() < 2 || cryptokind == 0)) {
 		zval *val;
 		pthreads_stream_t *threaded_stream = PTHREADS_FETCH_FROM(Z_OBJ_P(getThis()));
 
