@@ -315,14 +315,14 @@ static int pthreads_verify_callback(int preverify_ok, X509_STORE_CTX *ctx) { /* 
 
 	/* if allow_self_signed is set, make sure that verification succeeds */
 	if (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT &&
-		GET_VER_OPT("allow_self_signed") &&
+		PTHREADS_GET_VER_OPT("allow_self_signed") &&
 		zend_is_true(val)
 	) {
 		ret = 1;
 	}
 
 	/* check the depth */
-	GET_VER_OPT_LONG("verify_depth", allowed_depth);
+	PTHREADS_GET_VER_OPT_LONG("verify_depth", allowed_depth);
 	if ((zend_ulong)depth > allowed_depth) {
 		ret = 0;
 		X509_STORE_CTX_set_error(ctx, X509_V_ERR_CERT_CHAIN_TOO_LONG);
@@ -516,15 +516,15 @@ static int pthreads_openssl_apply_peer_verification_policy(SSL *ssl, X509 *peer,
 		stream = PTHREADS_FETCH_STREAMS_STREAM(threaded_stream);
 		sslsock = (pthreads_openssl_netstream_data_t*)stream->abstract;
 
-		must_verify_peer = GET_VER_OPT("verify_peer")
+		must_verify_peer = PTHREADS_GET_VER_OPT("verify_peer")
 			? zend_is_true(val)
 			: sslsock->is_client;
 
-		must_verify_peer_name = GET_VER_OPT("verify_peer_name")
+		must_verify_peer_name = PTHREADS_GET_VER_OPT("verify_peer_name")
 			? zend_is_true(val)
 			: sslsock->is_client;
 
-		must_verify_fingerprint = GET_VER_OPT("peer_fingerprint");
+		must_verify_fingerprint = PTHREADS_GET_VER_OPT("peer_fingerprint");
 		peer_fingerprint = val;
 
 		if ((must_verify_peer || must_verify_peer_name || must_verify_fingerprint) && peer == NULL) {
@@ -541,7 +541,7 @@ static int pthreads_openssl_apply_peer_verification_policy(SSL *ssl, X509 *peer,
 					/* fine */
 					break;
 				case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
-					if (GET_VER_OPT("allow_self_signed") && zend_is_true(val)) {
+					if (PTHREADS_GET_VER_OPT("allow_self_signed") && zend_is_true(val)) {
 						/* allowed */
 						break;
 					}
@@ -578,7 +578,7 @@ static int pthreads_openssl_apply_peer_verification_policy(SSL *ssl, X509 *peer,
 
 		/* verify the host name presented in the peer certificate */
 		if (must_verify_peer_name) {
-			GET_VER_OPT_STRING("peer_name", peer_name);
+			PTHREADS_GET_VER_OPT_STRING("peer_name", peer_name);
 
 			/* If no peer name was specified we use the autodetected url name in client environments */
 			if (peer_name == NULL && sslsock->is_client) {
@@ -605,7 +605,7 @@ static int pthreads_openssl_passwd_callback(char *buf, int num, int verify, void
 	char *passphrase = NULL;
 	/* TODO: could expand this to make a callback into PHP user-space */
 
-	GET_VER_OPT_STRING("passphrase", passphrase);
+	PTHREADS_GET_VER_OPT_STRING("passphrase", passphrase);
 
 	if (passphrase) {
 		if (Z_STRLEN_P(val) < (size_t)num - 1) {
@@ -701,7 +701,7 @@ static int pthreads_openssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_
 			}
 
 			/* check the depth */
-			GET_VER_OPT_LONG("verify_depth", allowed_depth);
+			PTHREADS_GET_VER_OPT_LONG("verify_depth", allowed_depth);
 
 			for (i = 0; i < cert_chain_ctx->cChain; i++) {
 				if (cert_chain_ctx->rgpChain[i]->cElement > allowed_depth) {
@@ -785,7 +785,7 @@ static int pthreads_openssl_win_cert_verify_callback(X509_STORE_CTX *x509_store_
 			if (chain_policy_status.dwError != 0) {
 				/* The chain does not match the policy */
 				if (is_self_signed && chain_policy_status.dwError == CERT_E_UNTRUSTEDROOT
-					&& GET_VER_OPT("allow_self_signed") && zend_is_true(val)) {
+					&& PTHREADS_GET_VER_OPT("allow_self_signed") && zend_is_true(val)) {
 					/* allow self-signed certs */
 					X509_STORE_CTX_set_error(x509_store_ctx, X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT);
 				} else {
@@ -900,8 +900,8 @@ static int pthreads_openssl_enable_peer_verification(SSL_CTX *ctx, pthreads_stre
 		stream = PTHREADS_FETCH_STREAMS_STREAM(threaded_stream);
 		sslsock = (pthreads_openssl_netstream_data_t*)stream->abstract;
 
-		GET_VER_OPT_STRING("cafile", cafile);
-		GET_VER_OPT_STRING("capath", capath);
+		PTHREADS_GET_VER_OPT_STRING("cafile", cafile);
+		PTHREADS_GET_VER_OPT_STRING("capath", capath);
 
 		if (cafile == NULL) {
 			cafile = zend_ini_string("openssl.cafile", sizeof("openssl.cafile")-1, 0);
@@ -961,7 +961,7 @@ static int pthreads_openssl_set_local_cert(SSL_CTX *ctx, pthreads_stream_t *thre
 	zval *val = NULL;
 	char *certfile = NULL;
 
-	GET_VER_OPT_STRING("local_cert", certfile);
+	PTHREADS_GET_VER_OPT_STRING("local_cert", certfile);
 
 	if (certfile && stream_lock(threaded_stream)) {
 		char resolved_path_buff[MAXPATHLEN];
@@ -977,7 +977,7 @@ static int pthreads_openssl_set_local_cert(SSL_CTX *ctx, pthreads_stream_t *thre
 					certfile);
 				return FAILURE;
 			}
-			GET_VER_OPT_STRING("local_pk", private_key);
+			PTHREADS_GET_VER_OPT_STRING("local_pk", private_key);
 
 			if (private_key) {
 				char resolved_path_buff_pk[MAXPATHLEN];
@@ -1458,12 +1458,12 @@ static int pthreads_openssl_enable_server_sni(pthreads_stream_t *threaded_stream
 	SSL_CTX *ctx;
 
 	/* If the stream ctx disables SNI we're finished here */
-	if (GET_VER_OPT("SNI_enabled") && !zend_is_true(val)) {
+	if (PTHREADS_GET_VER_OPT("SNI_enabled") && !zend_is_true(val)) {
 		return SUCCESS;
 	}
 
 	/* If no SNI cert array is specified we're finished here */
-	if (!GET_VER_OPT("SNI_server_certs")) {
+	if (!PTHREADS_GET_VER_OPT("SNI_server_certs")) {
 		return SUCCESS;
 	}
 
@@ -1566,13 +1566,13 @@ static void pthreads_openssl_enable_client_sni(pthreads_stream_t *threaded_strea
 	char *sni_server_name;
 
 	/* If SNI is explicitly disabled we're finished here */
-	if (GET_VER_OPT("SNI_enabled") && !zend_is_true(val)) {
+	if (PTHREADS_GET_VER_OPT("SNI_enabled") && !zend_is_true(val)) {
 		return;
 	}
 
 	sni_server_name = sslsock->url_name;
 
-	GET_VER_OPT_STRING("peer_name", sni_server_name);
+	PTHREADS_GET_VER_OPT_STRING("peer_name", sni_server_name);
 
 	if (sni_server_name) {
 		SSL_set_tlsext_host_name(sslsock->ssl_handle, sni_server_name);
@@ -1673,8 +1673,8 @@ int pthreads_openssl_setup_crypto(pthreads_stream_t *threaded_stream,
 		method = sslsock->is_client ? SSLv23_client_method() : SSLv23_server_method();
 		sslsock->ctx = SSL_CTX_new(method);
 
-		GET_VER_OPT_LONG("min_proto_version", min_version);
-		GET_VER_OPT_LONG("max_proto_version", max_version);
+		PTHREADS_GET_VER_OPT_LONG("min_proto_version", min_version);
+		PTHREADS_GET_VER_OPT_LONG("max_proto_version", max_version);
 		method_flags = pthreads_openssl_get_proto_version_flags(method_flags, min_version, max_version);
 #if PTHREADS_OPENSSL_API_VERSION < 0x10100
 		ssl_ctx_options = pthreads_openssl_get_crypto_method_ctx_flags(method_flags);
@@ -1688,17 +1688,17 @@ int pthreads_openssl_setup_crypto(pthreads_stream_t *threaded_stream,
 			return FAILURE;
 		}
 
-		if (GET_VER_OPT("no_ticket") && zend_is_true(val)) {
+		if (PTHREADS_GET_VER_OPT("no_ticket") && zend_is_true(val)) {
 			ssl_ctx_options |= SSL_OP_NO_TICKET;
 		}
 
 		ssl_ctx_options &= ~SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 
-		if (!GET_VER_OPT("disable_compression") || zend_is_true(val)) {
+		if (!PTHREADS_GET_VER_OPT("disable_compression") || zend_is_true(val)) {
 			ssl_ctx_options |= SSL_OP_NO_COMPRESSION;
 		}
 
-		if (GET_VER_OPT("verify_peer") && !zend_is_true(val)) {
+		if (PTHREADS_GET_VER_OPT("verify_peer") && !zend_is_true(val)) {
 			pthreads_openssl_disable_peer_verification(sslsock->ctx, threaded_stream);
 		} else if (FAILURE == pthreads_openssl_enable_peer_verification(sslsock->ctx, threaded_stream)) {
 			stream_unlock(threaded_stream);
@@ -1706,12 +1706,12 @@ int pthreads_openssl_setup_crypto(pthreads_stream_t *threaded_stream,
 		}
 
 		/* callback for the passphrase (for localcert) */
-		if (GET_VER_OPT("passphrase")) {
+		if (PTHREADS_GET_VER_OPT("passphrase")) {
 			SSL_CTX_set_default_passwd_cb_userdata(sslsock->ctx, threaded_stream);
 			SSL_CTX_set_default_passwd_cb(sslsock->ctx, pthreads_openssl_passwd_callback);
 		}
 
-		GET_VER_OPT_STRING("ciphers", cipherlist);
+		PTHREADS_GET_VER_OPT_STRING("ciphers", cipherlist);
 #ifndef PTHREADS_USE_OPENSSL_SYSTEM_CIPHERS
 		if (!cipherlist) {
 			cipherlist = PTHREADS_OPENSSL_DEFAULT_STREAM_CIPHERS;
@@ -1724,7 +1724,7 @@ int pthreads_openssl_setup_crypto(pthreads_stream_t *threaded_stream,
 			}
 		}
 
-		if (GET_VER_OPT("security_level")) {
+		if (PTHREADS_GET_VER_OPT("security_level")) {
 #ifdef HAVE_SEC_LEVEL
 			zend_long lval = zval_get_long(val);
 			if (lval < 0 || lval > 5) {
@@ -1738,7 +1738,7 @@ int pthreads_openssl_setup_crypto(pthreads_stream_t *threaded_stream,
 #endif
 		}
 
-		GET_VER_OPT_STRING("alpn_protocols", alpn_protocols);
+		PTHREADS_GET_VER_OPT_STRING("alpn_protocols", alpn_protocols);
 		if (alpn_protocols) {
 #ifdef HAVE_TLS_ALPN
 			{
