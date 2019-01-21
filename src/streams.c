@@ -463,6 +463,7 @@ zval *pthreads_stream_context_get_option(pthreads_stream_context_t *threaded_con
 			if (NULL != result && Z_ISNULL_P(result)) {
 				result = NULL;
 			}
+			zval_ptr_dtor(wrapperhash);
 		}
 		MONITOR_UNLOCK(threaded_context);
 	}
@@ -490,6 +491,9 @@ int pthreads_stream_context_set_option(pthreads_stream_context_t *threaded_conte
 		ZVAL_DEREF(optionvalue);
 		Z_TRY_ADDREF_P(optionvalue);
 		zend_update_property(pthreads_volatile_map_entry, wrapperhash, optionname, strlen(optionname), optionvalue);
+
+		zval_ptr_dtor(wrapperhash);
+		zval_ptr_dtor(optionvalue);
 
 		MONITOR_UNLOCK(threaded_context);
 	}
