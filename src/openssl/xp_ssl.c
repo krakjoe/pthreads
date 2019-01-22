@@ -1627,7 +1627,7 @@ static int pthreads_openssl_server_alpn_callback(SSL *ssl_handle,
 
 	pthreads_openssl_netstream_data_t *sslsock = arg;
 
-	if (SSL_select_next_proto((unsigned char **)out, outlen, sslsock->alpn_ctx.data, sslsock->alpn_ctx.len, in, inlen) != PTHREADS_OPENSSL_NPN_NEGOTIATED) {
+	if (SSL_select_next_proto((unsigned char **)out, outlen, sslsock->alpn_ctx.data, sslsock->alpn_ctx.len, in, inlen) != OPENSSL_NPN_NEGOTIATED) {
 		return SSL_TLSEXT_ERR_NOACK;
 	}
 
