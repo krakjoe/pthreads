@@ -807,6 +807,13 @@ static inline void pthreads_igbinary_free(void *ptr, void *context) {
 	(void)context;
 	free(ptr);
 }
+
+static const struct igbinary_memory_manager igbinary_mem_manager = {
+	pthreads_igbinary_malloc,
+	pthreads_igbinary_realloc,
+	pthreads_igbinary_free,
+	NULL
+};
 /* }}} */
 #endif
 
@@ -835,14 +842,7 @@ static int pthreads_store_tostring(zval *pzval, char **pstring, size_t *slength,
 			(Z_OBJCE_P(pzval)->serialize != zend_class_serialize_deny)) {
 			int ret = 0;
 #ifdef HAVE_PTHREADS_IGBINARY
-			struct igbinary_memory_manager manager = {
-				pthreads_igbinary_malloc,
-				pthreads_igbinary_realloc,
-				pthreads_igbinary_free,
-				NULL
-			};
-
-			ret = igbinary_serialize_ex((uint8_t **) pstring, slength, pzval, &manager);
+			ret = igbinary_serialize_ex((uint8_t **) pstring, slength, pzval, &igbinary_mem_manager);
 #else
 			php_serialize_data_t vars;
 
