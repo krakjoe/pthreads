@@ -364,41 +364,29 @@ void pthreads_call_user_join(pthreads_object_t* object) {
 	pthreads_call_t call = PTHREADS_CALL_EMPTY;
 	zval zresult;
 
-	if (pthreads_monitor_check(object->monitor, PTHREADS_MONITOR_ERROR)) {
-		return;
-	}
-
 	ZVAL_UNDEF(&zresult);
 
-	pthreads_monitor_add(object->monitor, PTHREADS_MONITOR_RUNNING);
-
-	zend_try {
-		if ((join = zend_hash_find_ptr(&object->std.ce->function_table, PTHREADS_G(strings).join))) {
-			if (join->type == ZEND_USER_FUNCTION) {
-				call.fci.size = sizeof(zend_fcall_info);
-				call.fci.retval = &zresult;
-				call.fci.object = &object->std;
-				call.fci.no_separation = 1;
+	if ((join = zend_hash_find_ptr(&object->std.ce->function_table, PTHREADS_G(strings).join))) {
+		if (join->type == ZEND_USER_FUNCTION) {
+			call.fci.size = sizeof(zend_fcall_info);
+			call.fci.retval = &zresult;
+			call.fci.object = &object->std;
+			call.fci.no_separation = 1;
 #if PHP_VERSION_ID < 70300
-				call.fcc.initialized = 1;
+			call.fcc.initialized = 1;
 #endif
-				call.fcc.object = &object->std;
-				call.fcc.calling_scope = object->std.ce;
-				call.fcc.called_scope = object->std.ce;
-				call.fcc.function_handler = join;
+			call.fcc.object = &object->std;
+			call.fcc.calling_scope = object->std.ce;
+			call.fcc.called_scope = object->std.ce;
+			call.fcc.function_handler = join;
 
-				zend_call_function(&call.fci, &call.fcc);
-			}
+			zend_call_function(&call.fci, &call.fcc);
 		}
-	} zend_catch {
-		pthreads_monitor_add(object->monitor, PTHREADS_MONITOR_ERROR);
-	} zend_end_try();
+	}
 
 	if (Z_TYPE(zresult) != IS_UNDEF) {
 		zval_ptr_dtor(&zresult);
 	}
-
-	pthreads_monitor_remove(object->monitor, PTHREADS_MONITOR_RUNNING);
 }
 
 /* {{{ */
