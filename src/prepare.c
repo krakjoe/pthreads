@@ -590,65 +590,10 @@ static inline void pthreads_prepare_ini(pthreads_object_t* thread) {
 } /* }}} */
 
 /* {{{ */
-static inline void pthreads_prepare_stdio_constants(pthreads_object_t* thread) {
-	zend_constant *zconstant;
-	zend_string *name;
-	int stdio_in, stdio_out, stdio_err;
-	
-	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_EG(thread->creator.ls, zend_constants), name, zconstant) {
-		int fd = -1;
-		php_stream * stream = NULL;
-		const char *mode = NULL;
-
-		if (zconstant->name) {
-			stdio_in = strncmp(name->val, "STDIN", name->len-1)==0;
-			stdio_out = strncmp(name->val, "STDOUT", name->len-1)==0;
-			stdio_err = strncmp(name->val, "STDERR", name->len-1)==0;
-
-			if((stdio_in || stdio_out || stdio_err) && !pthreads_constant_exists(name)) {
-				zend_constant constant;
-
-				if(stdio_in) {
-					fd = dup(STDIN_FILENO);
-					mode = "rb";
-				} else if(stdio_out) {
-					fd = dup(STDOUT_FILENO);
-					mode = "wb";
-				} else if(stdio_err) {
-					fd = dup(STDERR_FILENO);
-					mode = "wb";
-				}
-
-				if (fd == -1)	{
-					continue;
-				}
-				stream = php_stream_fopen_from_fd(fd, mode, NULL);
-
-				if (stream == NULL) {
-					close(fd);
-					continue;
-				}
-				php_stream_to_zval(stream,  &constant.value);
-
-#if PHP_VERSION_ID < 70300
-				constant.flags = zconstant->flags;
-				constant.module_number = zconstant->module_number;
-#else
-				ZEND_CONSTANT_SET_FLAGS(&constant, ZEND_CONSTANT_FLAGS(zconstant), ZEND_CONSTANT_MODULE_NUMBER(zconstant));
-#endif
-				constant.name = zend_string_new(name);
-
-				zend_register_constant(&constant);
-			}
-		}
-	} ZEND_HASH_FOREACH_END();
-} /* }}} */
-
-/* {{{ */
 static inline void pthreads_prepare_constants(pthreads_object_t* thread) {
 	zend_constant *zconstant;
 	zend_string *name;
-
+	
 	ZEND_HASH_FOREACH_STR_KEY_PTR(PTHREADS_EG(thread->creator.ls, zend_constants), name, zconstant) {
 		if (zconstant->name) {
 			if (strncmp(name->val, "STDIN", name->len-1)==0||
@@ -815,8 +760,6 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 	
 		if (thread->options & PTHREADS_INHERIT_INI)
 			pthreads_prepare_ini(thread);
-
-		pthreads_prepare_stdio_constants(thread);
 
 		if (thread->options & PTHREADS_INHERIT_CONSTANTS)
 			pthreads_prepare_constants(thread);

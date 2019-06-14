@@ -55,10 +55,10 @@ array(1) {
 file::_get: something3
 array(1) {
   [%i]=>
-  resource(5) of type (stream)
+  resource(2) of type (stream)
 }
 file::_get: something4
 array(1) {
   [%i]=>
-  resource(5) of type (stream)
+  resource(2) of type (stream)
 }
