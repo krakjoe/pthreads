@@ -52,14 +52,8 @@
 #include <ext/standard/info.h>
 #include <ext/standard/basic_functions.h>
 #include <ext/standard/php_var.h>
-#ifdef HAVE_SPL
 #include <ext/spl/spl_exceptions.h>
 #include <ext/spl/spl_iterators.h>
-#else
-extern zend_class_entry *spl_ce_InvalidArgumentException;
-extern zend_class_entry *spl_ce_Countable;
-#endif
-
 #include <Zend/zend.h>
 #include <Zend/zend_closures.h>
 #include <Zend/zend_compile.h>

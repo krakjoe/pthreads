@@ -79,12 +79,6 @@ zend_object_handlers pthreads_socket_handlers;
 zend_object_handlers *zend_handlers;
 void ***pthreads_instance = NULL;
 
-#ifndef HAVE_SPL
-zend_class_entry *spl_ce_InvalidArgumentException;
-zend_class_entry *spl_ce_Countable;
-zend_class_entry *spl_ce_RuntimeException;
-#endif
-
 #ifndef HAVE_PTHREADS_OBJECT_H
 #	include <src/object.h>
 #endif
@@ -803,12 +797,6 @@ PHP_MINIT_FUNCTION(pthreads)
 		*/
 		pthreads_instance = TSRMLS_CACHE;
 	}
-
-#ifndef HAVE_SPL
-	spl_ce_InvalidArgumentException = zend_exception_get_default();
-	spl_ce_Countable                = zend_exception_get_default();
-	spl_ce_RuntimeException		= zend_exception_get_default();
-#endif
 
 	zend_set_user_opcode_handler(ZEND_RECV, php_pthreads_recv);
 	zend_set_user_opcode_handler(ZEND_VERIFY_RETURN_TYPE, php_pthreads_verify_return_type);
