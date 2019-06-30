@@ -36,15 +36,6 @@
 # define SOCK_EINVAL EINVAL
 #endif
 
-#ifndef PHP_WIN32
-#define PTHREADS_INVALID_SOCKET -1
-#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd < 0)
-#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) close((sock)->fd)
-#else
-#define PTHREADS_INVALID_SOCKET INVALID_SOCKET
-#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd == INVALID_SOCKET)
-#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) closesocket((sock)->fd)
-#endif
 
 #define PTHREADS_IS_VALID_SOCKET(sock) !PTHREADS_IS_INVALID_SOCKET(sock)
 #define PTHREADS_CLEAR_SOCKET_ERROR(sock) (sock)->error = SUCCESS
@@ -1062,5 +1053,443 @@ void pthreads_socket_clear_error(zval *object) {
 
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 	PTHREADS_CLEAR_SOCKET_ERROR(threaded->store.sock);
+}
+
+void pthreads_init_sockets() {
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("AF_UNIX"), AF_UNIX);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("AF_INET"), AF_INET);
+#ifdef HAVE_IPV6
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("AF_INET6"), AF_INET6);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_STREAM"), SOCK_STREAM);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_DGRAM"), SOCK_DGRAM);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_RAW"), SOCK_RAW);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_SEQPACKET"), SOCK_SEQPACKET);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOCK_RDM"), SOCK_RDM);
+
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_DEBUG"), SO_DEBUG);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_REUSEADDR"), SO_REUSEADDR);
+#ifdef SO_REUSEPORT
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_REUSEPORT"), SO_REUSEPORT);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_KEEPALIVE"), SO_KEEPALIVE);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_DONTROUTE"), SO_DONTROUTE);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_LINGER"), SO_LINGER);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_BROADCAST"), SO_BROADCAST);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_OOBINLINE"), SO_OOBINLINE);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDBUF"), SO_SNDBUF);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RCVBUF"), SO_RCVBUF);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDLOWAT"), SO_SNDLOWAT);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RCVLOWAT"), SO_RCVLOWAT);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_SNDTIMEO"), SO_SNDTIMEO);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_RCVTIMEO"), SO_RCVTIMEO);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_TYPE"), SO_TYPE);
+#ifdef SO_FAMILY
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_FAMILY"), SO_FAMILY);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_ERROR"), SO_ERROR);
+#ifdef SO_BINDTODEVICE
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SO_BINDTODEVICE"), SO_BINDTODEVICE);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOMAXCONN"), SOMAXCONN);
+#ifdef TCP_NODELAY
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("TCP_NODELAY"), TCP_NODELAY);
+#endif
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("NORMAL_READ"), PTHREADS_NORMAL_READ);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("BINARY_READ"), PTHREADS_BINARY_READ);
+
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOL_SOCKET"), SOL_SOCKET);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOL_TCP"), IPPROTO_TCP);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("SOL_UDP"), IPPROTO_UDP);
+
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_OOB"), MSG_OOB);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_WAITALL"), MSG_WAITALL);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_CTRUNC"), MSG_CTRUNC);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_TRUNC"), MSG_TRUNC);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_PEEK"), MSG_PEEK);
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_DONTROUTE"), MSG_DONTROUTE);
+#ifdef MSG_EOR
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_EOR"), MSG_EOR);
+#endif
+#ifdef MSG_EOF
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_EOF"), MSG_EOF);
+#endif
+#ifdef MSG_CONFIRM
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_CONFIRM"), MSG_CONFIRM);
+#endif
+#ifdef MSG_ERRQUEUE
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_ERRQUEUE"), MSG_ERRQUEUE);
+#endif
+#ifdef MSG_NOSIGNAL
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_NOSIGNAL"), MSG_NOSIGNAL);
+#endif
+#ifdef MSG_MORE
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_MORE"), MSG_MORE);
+#endif
+#ifdef MSG_WAITFORONE
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_WAITFORONE"), MSG_WAITFORONE);
+#endif
+#ifdef MSG_CMSG_CLOEXEC
+	zend_declare_class_constant_long(pthreads_socket_entry, ZEND_STRL("MSG_CMSG_CLOEXEC"), MSG_CMSG_CLOEXEC);
+#endif
+
+#ifndef _WIN32
+#ifdef EPERM
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPERM"), EPERM);
+#endif
+#ifdef ENOENT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOENT"), ENOENT);
+#endif
+#ifdef EINTR
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EINTR"), EINTR);
+#endif
+#ifdef EIO
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EIO"), EIO);
+#endif
+#ifdef ENXIO
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENXIO"), ENXIO);
+#endif
+#ifdef E2BIG
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("E2BIG"), E2BIG);
+#endif
+#ifdef EBADF
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBADF"), EBADF);
+#endif
+#ifdef EAGAIN
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EAGAIN"), EAGAIN);
+#endif
+#ifdef ENOMEM
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOMEM"), ENOMEM);
+#endif
+#ifdef EACCES
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EACCES"), EACCES);
+#endif
+#ifdef EFAULT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EFAULT"), EFAULT);
+#endif
+#ifdef ENOTBLK
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTBLK"), ENOTBLK);
+#endif
+#ifdef EBUSY
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBUSY"), EBUSY);
+#endif
+#ifdef EEXIST
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EEXIST"), EEXIST);
+#endif
+#ifdef EXDEV
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EXDEV"), EXDEV);
+#endif
+#ifdef ENODEV
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENODEV"), ENODEV);
+#endif
+#ifdef ENOTDIR
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTDIR"), ENOTDIR);
+#endif
+#ifdef EISDIR
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EISDIR"), EISDIR);
+#endif
+#ifdef EINVAL
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EINVAL"), EINVAL);
+#endif
+#ifdef ENFILE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENFILE"), ENFILE);
+#endif
+#ifdef EMFILE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EMFILE"), EMFILE);
+#endif
+#ifdef ENOTTY
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTTY"), ENOTTY);
+#endif
+#ifdef ENOSPC
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOSPC"), ENOSPC);
+#endif
+#ifdef ESPIPE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ESPIPE"), ESPIPE);
+#endif
+#ifdef EROFS
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EROFS"), EROFS);
+#endif
+#ifdef EMLINK
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EMLINK"), EMLINK);
+#endif
+#ifdef EPIPE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPIPE"), EPIPE);
+#endif
+#ifdef ENAMETOOLONG
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENAMETOOLONG"), ENAMETOOLONG);
+#endif
+#ifdef ENOLCK
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOLCK"), ENOLCK);
+#endif
+#ifdef ENOSYS
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOSYS"), ENOSYS);
+#endif
+#ifdef ENOTEMPTY
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTEMPTY"), ENOTEMPTY);
+#endif
+#ifdef ELOOP
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ELOOP"), ELOOP);
+#endif
+#ifdef EWOULDBLOCK
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EWOULDBLOCK"), EWOULDBLOCK);
+#endif
+#ifdef ENOMSG
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOMSG"), ENOMSG);
+#endif
+#ifdef EIDRM
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EIDRM"), EIDRM);
+#endif
+#ifdef ECHRNG
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ECHRNG"), ECHRNG);
+#endif
+#ifdef EL2NSYNC
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EL2NSYNC"), EL2NSYNC);
+#endif
+#ifdef EL3HLT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EL3HLT"), EL3HLT);
+#endif
+#ifdef EL3RST
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EL3RST"), EL3RST);
+#endif
+#ifdef ELNRNG
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ELNRNG"), ELNRNG);
+#endif
+#ifdef EUNATCH
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EUNATCH"), EUNATCH);
+#endif
+#ifdef ENOCSI
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOCSI"), ENOCSI);
+#endif
+#ifdef EL2HLT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EL2HLT"), EL2HLT);
+#endif
+#ifdef EBADE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBADE"), EBADE);
+#endif
+#ifdef EBADR
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBADR"), EBADR);
+#endif
+#ifdef EXFULL
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EXFULL"), EXFULL);
+#endif
+#ifdef ENOANO
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOANO"), ENOANO);
+#endif
+#ifdef EBADRQC
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBADRQC"), EBADRQC);
+#endif
+#ifdef EBADSLT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBADSLT"), EBADSLT);
+#endif
+#ifdef ENOSTR
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOSTR"), ENOSTR);
+#endif
+#ifdef ENODATA
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENODATA"), ENODATA);
+#endif
+#ifdef ETIME
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ETIME"), ETIME);
+#endif
+#ifdef ENOSR
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOSR"), ENOSR);
+#endif
+#ifdef ENONET
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENONET"), ENONET);
+#endif
+#ifdef EREMOTE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EREMOTE"), EREMOTE);
+#endif
+#ifdef ENOLINK
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOLINK"), ENOLINK);
+#endif
+#ifdef EADV
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EADV"), EADV);
+#endif
+#ifdef ESRMNT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ESRMNT"), ESRMNT);
+#endif
+#ifdef ECOMM
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ECOMM"), ECOMM);
+#endif
+#ifdef EPROTO
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPROTO"), EPROTO);
+#endif
+#ifdef EMULTIHOP
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EMULTIHOP"), EMULTIHOP);
+#endif
+#ifdef EBADMSG
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBADMSG"), EBADMSG);
+#endif
+#ifdef ENOTUNIQ
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTUNIQ"), ENOTUNIQ);
+#endif
+#ifdef EBADFD
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBADFD"), EBADFD);
+#endif
+#ifdef EREMCHG
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EREMCHG"), EREMCHG);
+#endif
+#ifdef ERESTART
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ERESTART"), ERESTART);
+#endif
+#ifdef ESTRPIPE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ESTRPIPE"), ESTRPIPE);
+#endif
+#ifdef EUSERS
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EUSERS"), EUSERS);
+#endif
+#ifdef ENOTSOCK
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTSOCK"), ENOTSOCK);
+#endif
+#ifdef EDESTADDRREQ
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EDESTADDRREQ"), EDESTADDRREQ);
+#endif
+#ifdef EMSGSIZE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EMSGSIZE"), EMSGSIZE);
+#endif
+#ifdef EPROTOTYPE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPROTOTYPE"), EPROTOTYPE);
+#endif
+#ifdef ENOPROTOOPT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOPROTOOPT"), ENOPROTOOPT);
+#endif
+#ifdef EPROTONOSUPPORT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPROTONOSUPPORT"), EPROTONOSUPPORT);
+#endif
+#ifdef ESOCKTNOSUPPORT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ESOCKTNOSUPPORT"), ESOCKTNOSUPPORT);
+#endif
+#ifdef EOPNOTSUPP
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EOPNOTSUPP"), EOPNOTSUPP);
+#endif
+#ifdef EPFNOSUPPORT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPFNOSUPPORT"), EPFNOSUPPORT);
+#endif
+#ifdef EAFNOSUPPORT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EAFNOSUPPORT"), EAFNOSUPPORT);
+#endif
+#ifdef EADDRINUSE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EADDRINUSE"), EADDRINUSE);
+#endif
+#ifdef EADDRNOTAVAIL
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EADDRNOTAVAIL"), EADDRNOTAVAIL);
+#endif
+#ifdef ENETDOWN
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENETDOWN"), ENETDOWN);
+#endif
+#ifdef ENETUNREACH
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENETUNREACH"), ENETUNREACH);
+#endif
+#ifdef ENETRESET
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENETRESET"), ENETRESET);
+#endif
+#ifdef ECONNABORTED
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ECONNABORTED"), ECONNABORTED);
+#endif
+#ifdef ECONNRESET
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ECONNRESET"), ECONNRESET);
+#endif
+#ifdef ENOBUFS
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOBUFS"), ENOBUFS);
+#endif
+#ifdef EISCONN
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EISCONN"), EISCONN);
+#endif
+#ifdef ENOTCONN
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTCONN"), ENOTCONN);
+#endif
+#ifdef ESHUTDOWN
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ESHUTDOWN"), ESHUTDOWN);
+#endif
+#ifdef ETOOMANYREFS
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ETOOMANYREFS"), ETOOMANYREFS);
+#endif
+#ifdef ETIMEDOUT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ETIMEDOUT"), ETIMEDOUT);
+#endif
+#ifdef ECONNREFUSED
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ECONNREFUSED"), ECONNREFUSED);
+#endif
+#ifdef EHOSTDOWN
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EHOSTDOWN"), EHOSTDOWN);
+#endif
+#ifdef EHOSTUNREACH
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EHOSTUNREACH"), EHOSTUNREACH);
+#endif
+#ifdef EALREADY
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EALREADY"), EALREADY);
+#endif
+#ifdef EINPROGRESS
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EINPROGRESS"), EINPROGRESS);
+#endif
+#ifdef EISNAM
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EISNAM"), EISNAM);
+#endif
+#ifdef EREMOTEIO
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EREMOTEIO"), EREMOTEIO);
+#endif
+#ifdef EDQUOT
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EDQUOT"), EDQUOT);
+#endif
+#ifdef ENOMEDIUM
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOMEDIUM"), ENOMEDIUM);
+#endif
+#ifdef EMEDIUMTYPE
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EMEDIUMTYPE"), EMEDIUMTYPE);
+#endif
+#else
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EINTR"), WSAEINTR);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EBADF"), WSAEBADF);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EACCES"), WSAEACCES);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EFAULT"), WSAEFAULT);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EINVAL"), WSAEINVAL);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EMFILE"), WSAEMFILE);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EWOULDBLOCK"), WSAEWOULDBLOCK);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EINPROGRESS"), WSAEINPROGRESS);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EALREADY"), WSAEALREADY);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTSOCK"), WSAENOTSOCK);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EDESTADDRREQ"), WSAEDESTADDRREQ);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EMSGSIZE"), WSAEMSGSIZE);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPROTOTYPE"), WSAEPROTOTYPE);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOPROTOOPT"), WSAENOPROTOOPT);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPROTONOSUPPORT"), WSAEPROTONOSUPPORT);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ESOCKTNOSUPPORT"), WSAESOCKTNOSUPPORT);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EOPNOTSUPP"), WSAEOPNOTSUPP);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPFNOSUPPORT"), WSAEPFNOSUPPORT);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EAFNOSUPPORT"), WSAEAFNOSUPPORT);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EADDRINUSE"), WSAEADDRINUSE);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EADDRNOTAVAIL"), WSAEADDRNOTAVAIL);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENETDOWN"), WSAENETDOWN);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENETUNREACH"), WSAENETUNREACH);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENETRESET"), WSAENETRESET);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ECONNABORTED"), WSAECONNABORTED);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ECONNRESET"), WSAECONNRESET);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOBUFS"), WSAENOBUFS);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EISCONN"), WSAEISCONN);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTCONN"), WSAENOTCONN);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ESHUTDOWN"), WSAESHUTDOWN);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ETOOMANYREFS"), WSAETOOMANYREFS);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ETIMEDOUT"), WSAETIMEDOUT);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ECONNREFUSED"), WSAECONNREFUSED);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ELOOP"), WSAELOOP);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENAMETOOLONG"), WSAENAMETOOLONG);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EHOSTDOWN"), WSAEHOSTDOWN);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EHOSTUNREACH"), WSAEHOSTUNREACH);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ENOTEMPTY"), WSAENOTEMPTY);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EPROCLIM"), WSAEPROCLIM);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EUSERS"), WSAEUSERS);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EDQUOT"), WSAEDQUOT);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("ESTALE"), WSAESTALE);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EREMOTE"), WSAEREMOTE);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("EDISCON"), WSAEDISCON);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("SYSNOTREADY"), WSASYSNOTREADY);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("VERNOTSUPPORTED"), WSAVERNOTSUPPORTED);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("NOTINITIALISED"), WSANOTINITIALISED);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("HOST_NOT_FOUND"), WSAHOST_NOT_FOUND);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("TRY_AGAIN"), WSATRY_AGAIN);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("NO_RECOVERY"), WSANO_RECOVERY);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("NO_DATA"), WSANO_DATA);
+	zend_declare_class_constant_long(pthreads_socket_entry,  ZEND_STRL("NO_ADDRESS"), WSANO_ADDRESS);
+#endif
 }
 #endif

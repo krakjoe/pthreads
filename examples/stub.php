@@ -696,3 +696,375 @@ class Socket extends \Threaded
 
     public static function strerror(int $error) : ?string{}
 }
+
+class Streams
+{
+	public const STREAM_NOTIFY_CONNECT			= STREAM_NOTIFY_CONNECT;
+	public const STREAM_NOTIFY_AUTH_REQUIRED	= STREAM_NOTIFY_AUTH_REQUIRED;
+	public const STREAM_NOTIFY_AUTH_RESULT		= STREAM_NOTIFY_AUTH_RESULT;
+	public const STREAM_NOTIFY_MIME_TYPE_IS		= STREAM_NOTIFY_MIME_TYPE_IS;
+	public const STREAM_NOTIFY_FILE_SIZE_IS		= STREAM_NOTIFY_FILE_SIZE_IS;
+	public const STREAM_NOTIFY_REDIRECTED		= STREAM_NOTIFY_REDIRECTED;
+	public const STREAM_NOTIFY_PROGRESS			= STREAM_NOTIFY_PROGRESS;
+	public const STREAM_NOTIFY_FAILURE			= STREAM_NOTIFY_FAILURE;
+	public const STREAM_NOTIFY_COMPLETED		= STREAM_NOTIFY_COMPLETED;
+	public const STREAM_NOTIFY_RESOLVE			= STREAM_NOTIFY_RESOLVE;
+	
+	public const STREAM_NOTIFY_SEVERITY_INFO	= STREAM_NOTIFY_SEVERITY_INFO;
+	public const STREAM_NOTIFY_SEVERITY_WARN	= STREAM_NOTIFY_SEVERITY_WARN;
+	public const STREAM_NOTIFY_SEVERITY_ERR		= STREAM_NOTIFY_SEVERITY_ERR;
+	
+	public const STREAM_FILTER_READ				= STREAM_FILTER_READ;
+	public const STREAM_FILTER_WRITE			= STREAM_FILTER_WRITE;
+	public const STREAM_FILTER_ALL				= STREAM_FILTER_ALL;
+	
+	public const STREAM_CLIENT_ASYNC_CONNECT	= STREAM_CLIENT_ASYNC_CONNECT;
+	public const STREAM_CLIENT_CONNECT			= STREAM_CLIENT_CONNECT;
+	
+	public const STREAM_CRYPTO_METHOD_ANY_CLIENT		= STREAM_CRYPTO_METHOD_ANY_CLIENT;
+	public const STREAM_CRYPTO_METHOD_SSLv2_CLIENT		= STREAM_CRYPTO_METHOD_SSLv2_CLIENT;
+	public const STREAM_CRYPTO_METHOD_SSLv3_CLIENT		= STREAM_CRYPTO_METHOD_SSLv3_CLIENT;
+	public const STREAM_CRYPTO_METHOD_SSLv23_CLIENT 	= STREAM_CRYPTO_METHOD_SSLv23_CLIENT;
+	public const STREAM_CRYPTO_METHOD_TLS_CLIENT		= STREAM_CRYPTO_METHOD_TLS_CLIENT;
+	public const STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT	= STREAM_CRYPTO_METHOD_TLSv1_0_CLIENT;
+	public const STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT 	= STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT;
+	public const STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT	= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+	public const STREAM_CRYPTO_METHOD_ANY_SERVER		= STREAM_CRYPTO_METHOD_ANY_SERVER;
+	public const STREAM_CRYPTO_METHOD_SSLv2_SERVER		= STREAM_CRYPTO_METHOD_SSLv2_SERVER;
+	public const STREAM_CRYPTO_METHOD_SSLv3_SERVER		= STREAM_CRYPTO_METHOD_SSLv3_SERVER;
+	public const STREAM_CRYPTO_METHOD_SSLv23_SERVER		= STREAM_CRYPTO_METHOD_SSLv23_SERVER;
+	public const STREAM_CRYPTO_METHOD_TLS_SERVER		= STREAM_CRYPTO_METHOD_TLS_SERVER;
+	public const STREAM_CRYPTO_METHOD_TLSv1_0_SERVER	= STREAM_CRYPTO_METHOD_TLSv1_0_SERVER;
+	public const STREAM_CRYPTO_METHOD_TLSv1_1_SERVER	= STREAM_CRYPTO_METHOD_TLSv1_1_SERVER;
+	public const STREAM_CRYPTO_METHOD_TLSv1_2_SERVER	= STREAM_CRYPTO_METHOD_TLSv1_2_SERVER;
+	
+	public const STREAM_CRYPTO_PROTO_SSLv3		= STREAM_CRYPTO_METHOD_SSLv3_SERVER;
+	public const STREAM_CRYPTO_PROTO_TLSv1_0	= STREAM_CRYPTO_METHOD_TLSv1_0_SERVER;
+	public const STREAM_CRYPTO_PROTO_TLSv1_1	= STREAM_CRYPTO_METHOD_TLSv1_1_SERVER;
+	public const STREAM_CRYPTO_PROTO_TLSv1_2	= STREAM_CRYPTO_METHOD_TLSv1_2_SERVER;
+	
+	public const STREAM_SHUT_RD			= STREAM_SHUT_RD;
+	public const STREAM_SHUT_WR			= STREAM_SHUT_WR;
+	public const STREAM_SHUT_RDWR		= STREAM_SHUT_RDWR;
+	
+	public const STREAM_PF_INET			= AF_INET;
+	public const STREAM_PF_INET6		= AF_INET6;
+	public const STREAM_PF_UNIX			= AF_UNIX;
+	
+	public const STREAM_IPPROTO_IP		= IPPROTO_IP;
+	public const STREAM_IPPROTO_TCP		= IPPROTO_TCP;
+	public const STREAM_IPPROTO_UDP		= IPPROTO_UDP;
+	public const STREAM_IPPROTO_ICMP	= IPPROTO_ICMP;
+	public const STREAM_IPPROTO_RAW		= IPPROTO_RAW;
+	
+	public const STREAM_SOCK_STREAM		= SOCK_STREAM;
+	public const STREAM_SOCK_DGRAM		= SOCK_DGRAM;
+	public const STREAM_SOCK_RAW		= SOCK_RAW;
+	public const STREAM_SOCK_SEQPACKET 	= SOCK_SEQPACKET;
+	public const STREAM_SOCK_RDM		= SOCK_RDM;
+	
+	public const STREAM_PEEK			= STREAM_PEEK;
+	public const STREAM_OOB				= STREAM_OOB;
+	
+	public const STREAM_SERVER_BIND		= STREAM_XPORT_BIND;
+	public const STREAM_SERVER_LISTEN	= STREAM_XPORT_LISTEN;
+	
+	public function __construct() {
+		throw new Exception("Instantiation of 'Streams' is not allowed");
+	}
+	
+	public static function getFilters() : array {}
+	
+	public static function getTransports() : array {}
+	
+	public static function getWrappers() : array {}
+	
+	public static function registerWrapper(string $protocol, string $classname, int $flags = 0) : bool {}
+	
+	public static function unregisterWrapper(string $protocol) : bool {}
+	
+	public static function registerFilter(string $filtername, string $classname) : bool {}
+}
+
+class File extends \Threaded
+{
+	public const SEEK_SET = SEEK_SET;
+	public const SEEK_CUR = SEEK_CUR;
+	public const SEEK_END = SEEK_END;
+	public const LOCK_SH = LOCK_SH;
+	public const LOCK_EX = LOCK_EX;
+	public const LOCK_UN = LOCK_UN;
+	public const LOCK_NB = LOCK_NB;
+	
+	public function __construct() {
+		throw new Exception("Instantiation of 'File' is not allowed");
+	}
+	
+	/**
+	 * @param string $filename
+	 * @param bool $use_include_path optional
+	 * @return array|NULL
+	 */
+	public static function getMetaTags(string $filename, bool $use_include_path) : ?array {}
+	
+	/**
+	 * @param string $filename
+	 * @param bool $use_include_path optional
+	 * @param StreamContext $context optional
+	 * @param int $offset optional
+	 * @param int $maxlen optional
+	 * @return string|NULL
+	 */
+	public static function getContents(string $filename, bool $use_include_path = false, ?\StreamContext $context = null, int $offset = 0, int $maxlen = -1) : ?string {}
+	
+	public static function putContents(string $filename, $data, int $flags = 0, ?\StreamContext $context = null) : int {}
+	
+	public static function file(string $filename, int $flags = 0, ?\StreamContext $context = null) : ?array {}
+	
+	public static function tempName(string $dir, string $prefix) : ?string {}
+	
+	public static function tempFile() : ?\FileStream {}
+	
+	public static function open(string $filename, string $mode, bool $use_include_path = false, ?\StreamContext $context = null) : ?\FileStream {}
+	
+	public static function popen(string $filename, string $mode) : ?\FileStream {}
+	
+	public static function mkdir(string $pathname, int $mode = 0777, bool $recursive = false, ?\StreamContext $context = null) : bool {}
+	
+	public static function rmdir(string $pathname, ?\StreamContext $context = null) : bool {}
+	
+	public static function readfile(string $pathname, bool $use_include_path = false, ?\StreamContext $context = null) : int {}
+	
+	public static function rename(string $old_name, string $new_name, ?\StreamContext $context = null) : bool {}
+	
+	public static function unlink(string $filename, ?\StreamContext $context = null) : bool {}
+	
+	public static function copy(string $source_file, string $destination_file, ?\StreamContext $context = null) : bool {}
+	
+	public static function sockopen(string $hostname, int $port = -1, int &$errno, string &$errstr, float $timeout = ini_get("default_socket_timeout")) : ?\FileStream {}
+	
+	public static function psockopen(string $hostname, int $port = -1, int &$errno, string &$errstr, float $timeout = ini_get("default_socket_timeout")) : ?\FileStream {}
+}
+
+class Stream extends \Threaded
+{
+	public function __construct() {
+		throw new Exception("Instantiation of 'Stream' is not allowed");
+	}
+	
+	public const PTHREADS_STREAM_COPY_ALL = -1;
+	
+	public function copyToStream(Stream $dest, int $maxlength = -1, int $offset = 0) : int {} 
+	
+	public function appendFilter(string $filtername, int $read_write = null, $params = null) : ?\StreamFilter {}
+	
+	public function prependFilter(string $filtername, int $read_write = null, $params = null) : ?\StreamFilter {}
+	
+	public function getContents(int $maxlength = -1, int $offset = -1) : ?string {}
+	
+	public function getLine(int $length, string $ending = null) : ?string {}
+	
+	public function getMetaData() : ?array {}
+	
+	public function isLocal(string $stream_or_url) : bool {} // ??? implement ???
+	
+	public function isATTY() : bool {}
+	
+	public function resolveIncludePath(string $filename) : ?string {}
+	
+	public static function select(array &$read, array &$write, array &$except, int $tv_sec, int $tv_usec = 0) {}
+	
+	public function setBlocking(bool $mode) : bool {}
+	
+	public function setChunkSize(int $chunk_size) : int {}
+	
+	public function setReadBuffer(int $buffer) : int {}
+	
+	public function setTimeout(int $seconds, int $microseconds = 0) : bool {}
+	
+	public function setWriteBuffer(int $buffer) : int {}
+	
+	public function supportsLock() : bool {}
+	
+	public static function fromResource($stream) : Stream {}
+}
+
+class StreamContext extends \Threaded
+{
+	public function __construct(array $options = null, array $params = null) {}
+	
+	public function getOptions() : array {}
+	
+	public function getParams() : array {}
+	
+	public function setOption(string $wrapper, string $option, $value) : bool {}
+	
+	public function setOptions(array $options) : bool {}
+	
+	public function setParams(array $params) : bool {}
+	
+	public static function getDefault(array $options = null) : \StreamContext {}
+	
+	public static function setDefault(array $options) : \StreamContext {}
+}
+
+class StreamWrapper extends \Threaded
+{
+	public function __construct() {
+		throw new Exception("Instantiation of 'StreamWrapper' is not allowed");
+	}
+}
+
+class StreamFilter extends \Volatile
+{
+	public const PSFS_PASS_ON = 2;
+	public const PSFS_FEED_ME = 1;
+	public const PSFS_ERR_FATAL = 0;
+	
+	public const PSFS_FLAG_NORMAL = 0;
+	public const PSFS_FLAG_FLUSH_INC = 1;
+	public const PSFS_FLAG_FLUSH_CLOSE = 2;
+	
+	public function __construct() {
+		throw new Exception("Instantiation of 'StreamFilter' is not allowed");
+	}
+	
+	public function remove() {}
+}
+
+class StreamBucket extends \Volatile
+{
+	/**
+	 * @var string|null
+	 */
+	public $data;
+	
+	/**
+	 * @var long
+	 */
+	public $datalen;
+	
+	public function __construct(string $buffer) {}
+}
+
+class StreamBucketBrigade extends \Threaded
+{
+	public function __construct() {
+		throw new Exception("Instantiation of 'StreamBucketBrigade' is not allowed");
+	}
+	
+	public function append(StreamBucket $bucket, bool $separate = false) : void {}
+	
+	public function prepend(StreamBucket $bucket, bool $separate = false) : void {}
+	
+	public function fetch() : ?StreamBucket {}
+	
+	/**
+	 * Alias of self::fetch()
+	 * @return StreamBucket|NULL
+	 */
+	public function makeWriteable() : ?StreamBucket {}
+}
+
+class pthreads_user_filter extends \Volatile
+{	
+	/**
+	 * @var string
+	 */
+	public $filtername;
+
+	/**
+	 * @var string|null
+	 */
+	public $params;
+	
+	/** 
+	 * @var Stream|null
+	 * @optional
+	 */
+	public $stream;
+	
+	/**
+	 * @var StreamFilter|null
+	 * @optional
+	 */
+	public $filter;
+	
+	public function onClose() {}
+	
+	public function onCreate() {}
+	
+	public function filter(\StreamBucketBrigade $in, \StreamBucketBrigade $out, int &$consumed, int $closing) {}
+}
+
+class FileStream extends \Stream
+{
+	public function __construct() {
+		throw new Exception("Instantiation of 'FileStream' is not allowed");
+	}
+	
+	public function lock(int $operation, &$wouldblock) : bool {}
+	
+	public function close() : bool {}
+	
+	public function pclose() : bool {}
+	
+	public function eof() : bool {}
+	
+	public function gets(int $length = 1024) : ?string {}
+	
+	public function getc() : ?string {}
+	
+	public function getss(int $length = 1024, $allowable_tags = null) : ?string {}
+	
+	public function scanf(string $format, ...$args) {}
+	
+	public function write(string $input, int $maxlen = 0) : int {}
+	
+	public function flush() : bool {}
+	
+	public function rewind() : bool {}
+	
+	public function tell() : int {}
+	
+	public function seek(int $offset = SEEK_SET, int $whence) : int {}
+	
+	public function passthru() : int {}
+	
+	public function truncate(int $size) : bool {}
+	
+	public function stat() : ?array {}
+	
+	public function read(int $length) : ?string {}
+	
+	public function putcsv(array $fields, string $delimiter = ',', string $enclosure = '"', string $escape_char = '\\') : int {}
+	
+	public function getcsv($length, string $delimiter = ',', string $enclosure = '"', string $escape_char = '\\') : ?array  {}	
+}
+
+class SocketStream extends \FileStream
+{
+	public function __construct() {
+		throw new Exception("Instantiation of 'SocketStream' is not allowed");
+	}
+	
+	public static function createClient(string $remote_socket, int &$errno = null, string &$errstr = null,
+			float $timeout = ini_get("default_socket_timeout"), int $flags = \Stream::STREAM_CLIENT_CONNECT, ?\StreamContext $context = null) : ?\SocketStream {}
+			
+	public static function createServer(string $local_socket, int &$errno = null, string &$errstr = null,
+			int $flags = \Stream::STREAM_SERVER_BIND | \Stream::STREAM_SERVER_LISTEN, ?\StreamContext $context = null) : ?\SocketStream {}
+					
+	public static function createPair(int $domain, int $type, int $protocol) : ?array {}
+	
+	public function accept(float $timeout = ini_get("default_socket_timeout"), string &$peername = null) : ?\SocketStream {}
+	
+	public function enableCrypto(bool $enable, int $crypto_type = null, ?\Stream $session_stream = null) {}
+	
+	public function getName(bool $want_peer) : string {}
+	
+	public function recvfrom(int $length, int $flags = 0, string &$address = null) : ?string {}
+	
+	public function sendto(string $data, int $flags = 0, string $address = null) : int {}
+	
+	public function shutdown(int $how) : bool {}
+}

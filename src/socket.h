@@ -22,6 +22,17 @@
 #	include <config.h>
 #endif
 
+
+#ifndef PHP_WIN32
+#define PTHREADS_INVALID_SOCKET -1
+#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd < 0)
+#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) close((sock)->fd)
+#else
+#define PTHREADS_INVALID_SOCKET INVALID_SOCKET
+#define PTHREADS_IS_INVALID_SOCKET(sock) ((sock)->fd == INVALID_SOCKET)
+#define PTHREADS_CLOSE_SOCKET_INTERNAL(sock) closesocket((sock)->fd)
+#endif
+
 typedef struct _pthreads_socket_t {
 	php_socket_t fd;
 	zend_long domain;

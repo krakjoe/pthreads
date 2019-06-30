@@ -44,8 +44,8 @@ $custom = new Custom();
 $test = new Test($custom);
 $test->start() && $test->join();
 ?>
---EXPECT--
-object(Custom)#1 (0) {
+--EXPECTF--
+object(Custom)#%d (0) {
 }
 int(1)
 string(1) "1"

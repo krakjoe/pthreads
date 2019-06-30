@@ -42,7 +42,7 @@ var_dump($reflect->getDocComment());
 
 ?>
 --EXPECTF--
-object(ReflectionMethod)#2 (2) {
+object(ReflectionMethod)#%d (2) {
   ["name"]=>
   string(3) "run"
   ["class"]=>
@@ -54,7 +54,7 @@ string(%d) "/**
     * @package package
     * @subpackage subpackage
     */"
-object(ReflectionMethod)#2 (2) {
+object(ReflectionMethod)#%d (2) {
   ["name"]=>
   string(3) "run"
   ["class"]=>

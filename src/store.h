@@ -24,27 +24,17 @@
 
 #define IS_CLOSURE  (IS_PTR + 1)
 #define IS_PTHREADS (IS_PTR + 2)
-
-typedef HashTable pthreads_store_t;
-
-typedef struct _pthreads_storage {
-	zend_uchar 	type;
-	size_t 	length;
-	zend_bool 	exists;
-	union {
-		zend_long   lval;
-		double     dval;
-	} simple;
-	void    	*data;
-} pthreads_storage;
+#define IS_MAP      (IS_PTR + 3)
 
 pthreads_store_t* pthreads_store_alloc();
 void pthreads_store_sync(zval *object);
 int pthreads_store_merge(zval *destination, zval *from, zend_bool overwrite);
 int pthreads_store_delete(zval *object, zval *key);
+int _pthreads_store_delete(zval *object, zval *key, int std_obj_sync);
 int pthreads_store_read(zval *object, zval *key, int type, zval *read);
 zend_bool pthreads_store_isset(zval *object, zval *key, int has_set_exists);
 int pthreads_store_write(zval *object, zval *key, zval *write);
+int _pthreads_store_write(zval *object, zval *key, zval *write, int std_obj_sync);
 int pthreads_store_separate(zval *pzval, zval *seperated, zend_bool complex);
 void pthreads_store_separate_zval(zval *pzval);
 void pthreads_store_tohash(zval *object, HashTable *hash);
@@ -53,6 +43,8 @@ int pthreads_store_chunk(zval *object, zend_long size, zend_bool preserve, zval 
 int pthreads_store_pop(zval *object, zval *member);
 int pthreads_store_count(zval *object, zend_long *count);
 void pthreads_store_free(pthreads_store_t *store);
+//int pthreads_store_unshift(zval *object, zval *args);
+//int pthreads_store_clear(zval *object);
 
 /* {{{ * iteration helpers */
 void pthreads_store_reset(zval *object, HashPosition *position);

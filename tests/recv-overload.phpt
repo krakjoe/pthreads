@@ -34,10 +34,10 @@ $test->start() && $test->join();
 
 var_dump($test);
 ?>
---EXPECT--
-object(Test)#2 (1) {
+--EXPECTF--
+object(Test)#%d (1) {
   ["member"]=>
-  object(Custom)#1 (0) {
+  object(Custom)#%d (0) {
   }
 }
 

@@ -80,6 +80,18 @@ extern zend_class_entry *pthreads_volatile_entry;
 extern zend_class_entry *pthreads_thread_entry;
 extern zend_class_entry *pthreads_worker_entry;
 extern zend_class_entry *pthreads_socket_entry;
+extern zend_class_entry *pthreads_streams_entry;
+extern zend_class_entry *pthreads_stream_entry;
+extern zend_class_entry *pthreads_stream_context_entry;
+extern zend_class_entry *pthreads_stream_filter_entry;
+extern zend_class_entry *pthreads_stream_bucket_entry;
+extern zend_class_entry *pthreads_stream_wrapper_entry;
+extern zend_class_entry *pthreads_stream_brigade_entry;
+extern zend_class_entry *pthreads_user_filter_class_entry;
+extern zend_class_entry *pthreads_socket_stream_entry;
+extern zend_class_entry *pthreads_volatile_map_entry;
+extern zend_class_entry *pthreads_file_stream_entry;
+extern zend_class_entry *pthreads_file_entry;
 
 #ifndef IS_PTHREADS_CLASS
 #define IS_PTHREADS_CLASS(c) \
@@ -102,6 +114,7 @@ extern zend_class_entry *pthreads_socket_entry;
 #endif
 
 extern zend_object_handlers pthreads_handlers;
+extern zend_object_handlers pthreads_stream_handlers;
 extern zend_object_handlers pthreads_socket_handlers;
 extern zend_object_handlers *zend_handlers;
 
@@ -130,7 +143,13 @@ ZEND_END_MODULE_GLOBALS(pthreads)
 #define PTHREADS_EG(ls, v) PTHREADS_FETCH_CTX(ls, executor_globals_id, zend_executor_globals*, v)
 #define PTHREADS_SG(ls, v) PTHREADS_FETCH_CTX(ls, sapi_globals_id, sapi_globals_struct*, v)
 #define PTHREADS_PG(ls, v) PTHREADS_FETCH_CTX(ls, core_globals_id, php_core_globals*, v)
+#define PTHREADS_FG(ls, v) PTHREADS_FETCH_CTX(ls, file_globals_id, php_file_globals*, v)
+#define PTHREADS_BG(ls, v) PTHREADS_FETCH_CTX(ls, basic_globals_id, php_basic_globals*, v)
 #define PTHREADS_EG_ALL(ls) PTHREADS_FETCH_ALL(ls, executor_globals_id, zend_executor_globals*)
+
+#define PTHREADS_STD(v) ((v)->std)
+#define PTHREADS_STD_P(v) &((v)->std)
+#define PTHREADS_HT_P(v) &((v)->ht)
 
 static zend_string *zend_string_new(zend_string *s)
 {
@@ -173,6 +192,20 @@ typedef struct _pthreads_call_t {
 	zend_fcall_info_cache fcc;
 } pthreads_call_t; /* }}} */
 
+/* {{{ */
+typedef struct _pthreads_storage {
+	zend_uchar 	type;
+	size_t 	length;
+	zend_bool 	exists;
+	union {
+		zend_long   lval;
+		double     dval;
+	} simple;
+	void    	*data;
+} pthreads_storage; /* }}} */
+
+typedef HashTable pthreads_store_t;
+
 #define PTHREADS_CALL_EMPTY {empty_fcall_info, empty_fcall_info_cache}
 
 #ifndef HAVE_PTHREADS_MONITOR_H
@@ -183,12 +216,20 @@ typedef struct _pthreads_call_t {
 #	include <src/stack.h>
 #endif
 
+#ifndef HAVE_PTHREADS_THREAD_H
+#	include <src/thread.h>
+#endif
+
 #ifndef HAVE_PTHREADS_STORE_H
 #	include <src/store.h>
 #endif
 
-#ifndef HAVE_PTHREADS_THREAD_H
-#	include <src/thread.h>
+#ifndef HAVE_PTHREADS_HASH_H
+#	include <src/hash.h>
+#endif
+
+#ifndef HAVE_PTHREADS_STREAMS_H
+#	include <src/streams.h>
 #endif
 
 #endif

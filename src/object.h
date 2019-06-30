@@ -27,10 +27,28 @@
 #endif
 
 /* {{{ */
+pthreads_object_t* pthreads_object_init(zend_class_entry *ce); /* }}} */
+
+/* {{{ */
+int pthreads_object_compare(pthreads_object_t* left, pthreads_object_t *right); /* }}} */
+
+/* {{{ */
+void pthreads_ptr_dtor(pthreads_object_t* threaded);
+void pthreads_add_ref(pthreads_object_t* threaded);
+void pthreads_del_ref(pthreads_object_t* threaded);
+int pthreads_refcount(pthreads_object_t* threaded); /* }}} */
+
+/* {{{ */
 zend_object* pthreads_threaded_ctor(zend_class_entry *entry);
 zend_object* pthreads_worker_ctor(zend_class_entry *entry);
 zend_object* pthreads_thread_ctor(zend_class_entry *entry);
 zend_object* pthreads_socket_ctor(zend_class_entry *entry);
+zend_object* pthreads_stream_ctor(zend_class_entry *entry);
+zend_object* pthreads_stream_context_ctor(zend_class_entry *entry);
+zend_object* pthreads_stream_filter_ctor(zend_class_entry *entry);
+zend_object* pthreads_stream_wrapper_ctor(zend_class_entry *entry);
+zend_object* pthreads_stream_bucket_ctor(zend_class_entry *entry);
+zend_object* pthreads_stream_brigade_ctor(zend_class_entry *entry);
 void         pthreads_base_free(zend_object *object);
 zend_object* pthreads_base_clone(zval *object);
 HashTable*   pthreads_base_gc(zval *object, zval **table, int *n); /* }}} */
