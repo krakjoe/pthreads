@@ -258,7 +258,7 @@ void pthreads_socket_bind(zval *object, zend_string *address, zend_long port, zv
 			sa->sun_family = AF_UNIX;
 
 			if (ZSTR_LEN(address) >= sizeof(sa->sun_path)) {
-				zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+				zend_throw_exception_ex(spl_ce_InvalidArgumentException , 0,
 						"Invalid path: too long (maximum size is %d)",
 						(int)sizeof(sa->sun_path) - 1);
 				return;
@@ -334,7 +334,7 @@ void pthreads_socket_accept(zval *object, zend_class_entry *ce, zval *return_val
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
 	if (!instanceof_function(ce, pthreads_socket_entry)) {
-		zend_throw_exception_ex(spl_ce_RuntimeException, 0,
+		zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0,
 			"%s is not an instance of Socket",
 			ZSTR_VAL(ce->name));
 		return;
@@ -367,7 +367,7 @@ void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_
 			struct sockaddr_in6 sin6 = {0};
 
 			if (argc != 2) {
-				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Socket of type AF_INET6 requires 2 arguments");
+				zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "Socket of type AF_INET6 requires 2 arguments");
 				return;
 			}
 
@@ -388,7 +388,7 @@ void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_
 			struct sockaddr_in sin = {0};
 
 			if (argc != 2) {
-				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Socket of type AF_INET requires 2 arguments");
+				zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "Socket of type AF_INET requires 2 arguments");
 				return;
 			}
 
@@ -407,7 +407,7 @@ void pthreads_socket_connect(zval *object, int argc, zend_string *address, zend_
 			struct sockaddr_un s_un = {0};
 
 			if (ZSTR_LEN(address) >= sizeof(s_un.sun_path)) {
-				zend_throw_exception_ex(spl_ce_RuntimeException, 0, "Path too long");
+				zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "Path too long");
 				return;
 			}
 
@@ -504,7 +504,8 @@ void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zend_
 	PTHREADS_SOCKET_CHECK(threaded->store.sock);
 
 	if (length < 1) {
-		RETURN_FALSE;
+		zend_throw_exception(spl_ce_InvalidArgumentException, "Length must be at least 1", 0);
+		return;
 	}
 
 	buf = zend_string_alloc(length, 0);
@@ -759,7 +760,7 @@ static int pthreads_sockets_from_fd_set(zval *sockets, fd_set *fds) /* {{{ */
 }
 /* }}} */
 
-void pthreads_socket_select(zval *read, zval *write, zval *except, zval *sec, uint32_t usec, zval *errorno, zval *return_value) {
+void pthreads_socket_select(zval *read, zval *write, zval *except, zval *sec, zend_long usec, zval *errorno, zval *return_value) {
 	fd_set rfds, wfds, efds;
 	php_socket_t mfd = 0;
 	int result = SUCCESS, sets = 0;
@@ -788,7 +789,8 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, zval *sec, ui
 	}
 
 	if (!sets) {
-		RETURN_FALSE;
+		zend_throw_exception(spl_ce_InvalidArgumentException, "No valid sockets given", 0);
+		return;
 	}
 
 	PHP_SAFE_MAX_FD(mfd, 0);
@@ -802,6 +804,15 @@ void pthreads_socket_select(zval *read, zval *write, zval *except, zval *sec, ui
 			zval_copy_ctor(&tmp);
 			convert_to_long(&tmp);
 			sec = &tmp;
+		}
+
+		if (Z_LVAL_P(sec) < 0) {
+			zend_throw_exception(spl_ce_InvalidArgumentException, "sec cannot be negative", 0);
+			return;
+		}
+		if (usec < 0) {
+			zend_throw_exception(spl_ce_InvalidArgumentException, "usec cannot be negative", 0);
+			return;
 		}
 
 		/* Solaris + BSD do not like microsecond values which are >= 1 sec */
