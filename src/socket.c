@@ -66,7 +66,7 @@
 } while(0)
 
 #define PTHREADS_HANDLE_SOCKET_ERROR(eno, msg) do { \
-	if ((eno) != EAGAIN && (eno) != EWOULDBLOCK && (eno) != EINPROGRESS && (eno) != SOCK_EINVAL) { \
+	if ((eno) != EAGAIN && (eno) != EWOULDBLOCK && (eno) != EINPROGRESS) { \
 		char *estr = (eno) != SUCCESS ? \
 			php_socket_strerror((eno), NULL, 0) : \
 			NULL; \

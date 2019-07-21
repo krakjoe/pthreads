@@ -8,6 +8,7 @@ if (substr(PHP_OS, 0, 3) != 'WIN') {
 --FILE--
 <?php
     $socket = new Socket(\Socket::AF_INET, \Socket::SOCK_STREAM, \Socket::SOL_TCP);
+    $socket->bind("127.0.0.1", 19132);
     $socket->listen();
 
     try {
