@@ -591,6 +591,23 @@ void pthreads_socket_close(zval *object, zval *return_value) {
 	threaded->store.sock->fd = PTHREADS_INVALID_SOCKET;
 }
 
+#ifdef HAVE_SHUTDOWN
+void pthreads_socket_shutdown(zval *object, zend_long how_shutdown, zval *return_value) {
+	pthreads_object_t *threaded =
+		PTHREADS_FETCH_FROM(Z_OBJ_P(object));
+
+	PTHREADS_SOCKET_CHECK(threaded->store.sock);
+
+	if (shutdown(threaded->store.sock->fd, how_shutdown) != SUCCESS) {
+		PTHREADS_SOCKET_ERROR(threaded->store.sock, "Unable to shutdown socket", errno);
+
+		RETURN_FALSE;
+	}
+
+	RETURN_TRUE;
+}
+#endif
+
 void pthreads_socket_set_blocking(zval *object, zend_bool blocking, zval *return_value) {
 	pthreads_object_t *threaded =
 		PTHREADS_FETCH_FROM(Z_OBJ_P(object));

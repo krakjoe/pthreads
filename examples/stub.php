@@ -689,6 +689,8 @@ class Socket extends \Threaded
     public function getSockName(bool $port = true) : array{}
 
     public function close(){}
+    
+    public function shutdown(int $how) : bool{}
 
     public function getLastError(bool $clear = false){}
 

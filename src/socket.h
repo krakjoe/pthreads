@@ -46,6 +46,9 @@ void pthreads_socket_read(zval *object, zend_long length, zend_long flags, zend_
 void pthreads_socket_write(zval *object, zend_string *buf, zend_long length, zval *return_value);
 void pthreads_socket_send(zval *object, zend_string *buf, zend_long length, zend_long flags, zval *return_value);
 void pthreads_socket_close(zval *object, zval *return_value);
+#ifdef HAVE_SHUTDOWN
+void pthreads_socket_shutdown(zval *object, zend_long how_shutdown, zval *return_value);
+#endif
 void pthreads_socket_set_blocking(zval *object, zend_bool blocking, zval *return_value);
 void pthreads_socket_get_peer_name(zval *object, zend_bool port, zval *return_value);
 void pthreads_socket_get_sock_name(zval *object, zend_bool port, zval *return_value);
