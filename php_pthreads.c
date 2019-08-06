@@ -769,7 +769,7 @@ PHP_MINIT_FUNCTION(pthreads)
 	pthreads_handlers.set = NULL;
 	pthreads_handlers.get_gc = pthreads_base_gc;
 
-	pthreads_handlers.clone_obj = pthreads_base_clone;
+	pthreads_handlers.clone_obj = NULL;
 	pthreads_handlers.compare_objects = pthreads_compare_objects;
 
 	memcpy(&pthreads_socket_handlers, &pthreads_handlers, sizeof(zend_object_handlers));
