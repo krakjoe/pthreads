@@ -8,7 +8,7 @@ $threaded = new Threaded();
 $clone = clone $threaded;
 ?>
 --EXPECTF--
-Fatal error: Uncaught RuntimeException: Threaded objects cannot be cloned in %s:3
+Fatal error: Uncaught Error: Trying to clone an uncloneable object of class Threaded in %s:3
 Stack trace:
 #0 {main}
   thrown in %s on line 3
