@@ -42,6 +42,8 @@ PHP_METHOD(Socket, getLastError);
 PHP_METHOD(Socket, clearError);
 PHP_METHOD(Socket, strerror);
 
+PHP_METHOD(Socket, createListen);
+
 PHP_METHOD(Socket, close);
 
 ZEND_BEGIN_ARG_INFO_EX(Socket___construct, 0, 0, 3)
@@ -164,6 +166,7 @@ zend_function_entry pthreads_socket_methods[] = {
 	PHP_ME(Socket, close, Socket_void, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, getLastError, Socket_getLastError, ZEND_ACC_PUBLIC)
 	PHP_ME(Socket, clearError, Socket_void, ZEND_ACC_PUBLIC)
+	PHP_ME(Socket, createListen, Socket_void, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	PHP_ME(Socket, strerror, Socket_strerror, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 	{NULL, NULL, NULL}
 };
@@ -386,6 +389,17 @@ PHP_METHOD(Socket, clearError) {
 	}
 
 	pthreads_socket_clear_error(getThis());
+} /* }}} */
+
+/* {{{ proto Socket Socket::createListen(int port[, int backlog = 128]) */
+PHP_METHOD(Socket, createListen) {
+	zend_long	port, backlog = 128;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|l", &port, &backlog) == FAILURE) {
+		return;
+	}
+
+	pthreads_socket_create_listen(port, backlog, return_value);
 } /* }}} */
 
 /* {{{ proto string|null Socket::strerror(int error) */
