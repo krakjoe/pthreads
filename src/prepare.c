@@ -750,6 +750,10 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 		SG(server_context) = 
 			PTHREADS_SG(thread->creator.ls, server_context);
 
+		SG(request_info).argc = PTHREADS_SG(thread->creator.ls, request_info).argc;
+
+		SG(request_info).argv = PTHREADS_SG(thread->creator.ls, request_info).argv;
+
 		PG(expose_php) = 0;
 		PG(auto_globals_jit) = 0;
 
