@@ -756,6 +756,15 @@ int pthreads_prepared_startup(pthreads_object_t* thread, pthreads_monitor_t *rea
 		php_request_startup();
 		PG(during_request_startup) = 0;
 
+		zend_auto_global *auto_global;
+		ZEND_HASH_FOREACH_PTR(CG(auto_globals), auto_global) {
+			if (auto_global->auto_global_callback) {
+				//compiler would normally JIT these globals, but that won't happen for copied code
+				//ideally we would do manual JIT on function copy, but this will work as a stopgap for now
+				auto_global->armed = auto_global->auto_global_callback(auto_global->name);
+			} else auto_global->armed = 0;
+		} ZEND_HASH_FOREACH_END();
+
 		pthreads_prepare_sapi(thread);
 	
 		if (thread->options & PTHREADS_INHERIT_INI)
